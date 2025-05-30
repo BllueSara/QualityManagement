@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الصفحة الرئيسية</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/shared.css">
+    <link rel="stylesheet" href="../css/home.css">
+ 
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="hospital-logo">
+                <img src="/frontend/images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز">
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="#"  class="active"><img src="/frontend/images/home.svg" alt=""> الرئيسية</a></li>
+                    <li><a href="#"><img src="/frontend/images/profile.svg" alt=""> الحساب</a></li>
+                    <li><a href="#"><img src="/frontend/images/track 1.svg" alt=""> السجلات</a></li>
+                    <li><a href="#"><img src="/frontend/images/notfiction.svg" alt=""> الإشعارات</a></li>
+                    <li class="language">
+                        <a href="#"><img src="/frontend/images/langauage.svg" alt=""> عربي</a>
+                        <ul class="dropdown">
+                            <li><a href="#">عربي</a></li>
+                            <li><a href="#">English</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </nav>
+
+                <div class="system-title">
+                    <img src="/frontend/images/system-title.png" alt="نظام إدارة الجودة والسلامة">
+            </div>
+        </div>
+        
+    </header>
+
+    <main>
+        <div class="container">
+            <h1>الصفحة الرئيسية</h1>
+            <div class="cards-grid">
+                <div class="card" data-url="/frontend/html/example-reports-page.html">
+                    <div class="card-icon bg-purple"><img src="/frontend/images/ticket.svg" alt=""></div>
+                    <div class="card-title">التذاكر</div>
+                    <div class="card-subtitle">اضغط للدخول</div>
+                </div>
+                <div class="card" data-url="/frontend/html/departments.html">
+                    <div class="card-icon bg-blue"><img src="/frontend/images/department.svg" alt=""></div>
+                    <div class="card-title">الأقسام</div>
+                    <div class="card-subtitle">اضغط للدخول</div>
+                </div>
+                <div class="card" data-url="/frontend/html/example-dashboard-page.html">
+                    <div class="card-icon bg-red"><img src="/frontend/images/dashboard.svg" alt=""></div>
+                    <div class="card-title">الإحصائيات</div>
+                    <div class="card-subtitle">اضغط للدخول</div>
+                </div>
+                <div class="card" data-url="/frontend/html/example-accreditations-page.html">
+                    <div class="card-icon bg-lightblue"><img src="/frontend/images/e3tmadat.svg" alt=""></div>
+                    <div class="card-title">الإعتمادات</div>
+                    <div class="card-subtitle">اضغط للدخول</div>
+                </div>
+                <div class="card" data-url="/frontend/html/example-permissions-page.html">
+                    <div class="card-icon bg-green"><img src="/frontend/images/permision.svg" alt=""></div>
+                    <div class="card-title">الصلاحيات</div>
+                    <div class="card-subtitle">اضغط للدخول</div>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+
+<script src="../js/home.js"></script>
+</html>

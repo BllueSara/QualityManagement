@@ -1,0 +1,85 @@
+body {
+    font-family: 'Tajawal', Arial, sans-serif;
+    direction: rtl;
+    margin: 0;
+    background-color: #fff;
+}
+
+main {
+    padding-top: 90px;
+    max-width: 1200px;
+    margin: auto;
+}
+
+main h1 {
+    text-align: center;
+    font-size: 2em;
+    color: #333;
+    margin-bottom: 30px;
+}
+
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(280px, 1fr));
+    gap: 10px;
+    justify-content: center;
+    padding: 0 10px;
+}
+
+.cards-grid .card:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: 100%;
+    max-width:400px;
+  }
+  
+
+
+
+
+.card {
+    background-color: #fff;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    text-align: center;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+.card-icon {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    margin: 0 auto 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card-icon img {
+    width: 35px;
+    height: 35px;
+}
+
+.card-title {
+    font-size: 1.3em;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.card-subtitle {
+    font-size: 0.9em;
+    color: #888;
+}
+
+/* Colors */
+.bg-purple { background-color: #e0eaff; }
+.bg-blue { background-color: #e0f2f7; }
+.bg-red { background-color: #ffebee; }
+.bg-lightblue { background-color: #e3f2fd; }
+.bg-green { background-color: #e8f5e9; }
