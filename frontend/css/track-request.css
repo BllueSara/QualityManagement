@@ -1,0 +1,479 @@
+/* ===== استيراد خط Tajawal ===== */
+@import url("https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap");
+
+/* ===== إعادة تهيئة القيم الافتراضية ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Tajawal", sans-serif;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  background-color: #f2f4f7; /* لون خلفية فاتح */
+  color: #2d2d2d;            /* لون النص الأساسي */
+}
+
+body {
+  direction: rtl; /* من اليمين إلى اليسار */
+}
+
+/* ===== الهيدر العلوي ===== */
+.main-header {
+  background-color: #ffffff;        /* خلفية بيضاء */
+  border-bottom: 1px solid #e0e0e0; /* حد سفلي رمادي فاتح */
+  padding: 16px 32px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-title {
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: #2d2d2d;
+}
+
+.header-logo img {
+  height: 32px;
+}
+
+/* ===== خط أسفل الهيدر ===== */
+.header-divider {
+  height: 1px;
+  background-color: #e0e0e0;
+  opacity: 0.8;
+}
+
+/* ===== المحتوى الرئيسي ===== */
+.content-wrapper {
+  max-width: 1400px;  /* عرض متناسق مع باقي الصفحات */
+  margin: 40px auto;
+  padding: 0 20px;
+}
+
+/* ===== عنوان الصفحة والوصف ===== */
+.page-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.page-title {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #1f2937; /* لون غامق */
+  margin-bottom: 6px;
+}
+
+.page-subtitle {
+  font-size: 1rem;
+  color: #4b5563; /* رمادي متوسط */
+}
+
+/* ===== البطاقة البيضاء ===== */
+.track-card {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ===== القسم التالي ===== */
+.next-dept {
+  position: absolute;
+  top: 16px;
+  right: 24px;
+  font-size: 0.95rem;
+  color: #374151;
+}
+
+.next-dept .label-text {
+  font-weight: 400;
+}
+
+.next-dept .dept-name {
+  color: #f59e0b; /* أصفر فاتح */
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+/* ===== رأس البطاقة: الحالة والتحديث ===== */
+.track-top {
+  padding: 24px 32px 12px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ضبط محاذاة عنوان الحالة لليسار */
+.track-header {
+  text-align: left;
+}
+
+.track-status-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 4px;
+}
+
+.last-update {
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+/* ===== قسم التقدم (Progress) ===== */
+.track-progress-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+/* ===== سمت التقدم (النص) ===== */
+.progress-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+}
+
+.progress-label {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.progress-steps {
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+/* ===== دائرة التقدم ===== */
+.progress-circle {
+  width: 80px;
+  height: 80px;
+}
+
+.circular-chart {
+  display: block;
+  margin: auto;
+  max-width: 100%;
+  max-height: 100%;
+  transform: rotate(-90deg);
+}
+
+.circle-bg {
+  fill: none;
+  stroke: #f3f3f3;
+  stroke-width: 3.8;
+}
+
+.circle {
+  fill: none;
+  stroke: #2563eb; /* أزرق مرئي */
+  stroke-width: 3.8;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.3s ease;
+}
+
+/* نص النسبة داخل الدائرة */
+.percentage-text {
+  fill: #2563eb;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-anchor: middle;
+  transform-origin: 18px 18px; /* نستدعي مركز الـSVG */
+  transform: rotate(90deg);
+}
+
+
+/* ===== خط تقسيم أفقي ===== */
+.divider {
+  margin: 0 32px;
+  height: 1px;
+  background-color: #e5e7eb;
+  opacity: 0.5;
+}
+
+/* ===== قائمة Timeline المعدّلة (أيقونات دائرية + خطوط ربط) ===== */
+.timeline {
+  margin-top: 16px;
+  padding: 0 32px 24px 32px;
+  position: relative;
+}
+
+/* نحتفظ بهذه القاعدة لإمكانية تحريك الخط العمودي إذا لزم الأمر
+   لكن بجعل لونه شفاف لأننا نعتمد خطوطاً فردية لكل دائرة */
+.timeline::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 20px; /* إزاحة تقريبية من الجهة اليمنى */
+  width: 2px;
+  height: 100%;
+  background-color: transparent;
+}
+
+/* كل عنصر في التايملاين */
+.timeline-item {
+  position: relative;
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+/* غلاف الأيقونة (لتضمين الدائرة وعناصر الـpseudo) */
+.icon-wrapper {
+  width: 40px;               /* نوسع الغلاف قليلاً لإتاحة مساحة للخطوط */
+  display: flex;
+  justify-content: center;   /* توسيط الدائرة أفقياً */
+  position: relative;
+}
+
+/* الدائرة نفسها (قطر 32 بكسل) */
+.icon-bg {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;       /* نجعلها دائرية بالكامل */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;               /* فوق الخطوط حتى لا تُغطّي */
+}
+
+/* أيقونة ✓ أو ⏰ أو ● داخل الدائرة */
+.icon-bg i {
+  font-size: 0.95rem;
+  color: #ffffff;
+}
+
+/* نرسم الخط أسفل الدائرة */
+.icon-wrapper::after {
+  content: "";
+  position: absolute;
+  top: 50%;                 /* يبدأ في منتصف الغلاف عموديًا */
+  right: 50%;
+  transform: translateX(50%);
+  width: 2px;
+  height: calc(100% - 50% + 12px); /* يمتد حتى أسفل الغلاف */
+  background-color: #e5e7eb; /* لون رمادي فاتح */
+  z-index: 1;
+}
+
+/* نرسم الخط فوق الدائرة */
+.icon-wrapper::before {
+  content: "";
+  position: absolute;
+  bottom: 50%;               /* يبدأ في منتصف الغلاف عموديًا */
+  right: 50%;
+  transform: translateX(50%);
+  width: 2px;
+  height: calc(100% - 50% + 12px); /* يمتد حتى أعلى الغلاف */
+  background-color: #e5e7eb; /* لون رمادي فاتح */
+  z-index: 1;
+}
+
+/* نلغي الخط العلوي لأول عنصر */
+.timeline-item:first-child .icon-wrapper::before {
+  display: none;
+}
+
+/* نلغي الخط السفلي لآخر عنصر */
+.timeline-item:last-child .icon-wrapper::after {
+  display: none;
+}
+
+/* ألوان خلفية الدائرة بحسب الحالة */
+.completed-bg {
+  background-color: #2563eb; /* أزرق */
+}
+
+.pending-bg {
+  background-color: #f59e0b; /* أصفر */
+}
+
+.waiting-bg {
+  background-color: #cbd5e1; /* رمادي فاتح */
+}
+
+/* محتوى العنصر بجانب الدائرة */
+.timeline-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* اسم القسم في كل مرحلة */
+.timeline-dept {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 4px;
+}
+
+/* تفاصيل التاريخ والبدج */
+.timeline-details {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
+.timeline-date {
+  color: #6b7280;
+}
+
+/* البدج (معتمد أو قيد المراجعة أو في الانتظار) */
+.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border-radius: 8px;
+  color: #1f2937;
+}
+
+/* ألوان البدجات */
+.approved-badge {
+  background-color: #dcfce7; /* أخضر فاتح */
+  color: #166534;           /* أخضر داكن */
+}
+
+.pending-badge {
+  background-color: #fef9c3; /* أصفر فاتح */
+  color: #92400e;
+}
+
+.waiting-badge {
+  background-color: #f3f4f6; /* رمادي فاتح */
+  color: #6b7280;
+}
+
+/* ملاحظة قصيرة */
+.timeline-note {
+  font-size: 0.9rem;
+  color: #4b5563;
+}
+
+/* ===== تجاوب الصفحة ===== */
+/* شاشات أقل من 1024px */
+@media (max-width: 1024px) {
+  .content-wrapper {
+    max-width: 900px;
+  }
+  .track-top {
+    padding: 20px 24px 12px 24px;
+  }
+  .track-progress-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 16px 24px;
+  }
+  .divider {
+    margin: 0 24px;
+  }
+  .timeline {
+    padding: 0 24px 24px 24px;
+  }
+  .timeline::before {
+    display: none; /* نخفي الخط العام وراء العناصر */
+  }
+  .timeline-item {
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .timeline-note {
+    margin-right: 36px;
+  }
+}
+
+/* شاشات أقل من 768px */
+@media (max-width: 768px) {
+  .content-wrapper {
+    padding: 0 16px;
+  }
+  .page-header {
+    margin-bottom: 20px;
+  }
+  .track-top {
+    padding: 16px 16px 12px 16px;
+  }
+  .track-status-title {
+    font-size: 1.1rem;
+  }
+  .last-update {
+    font-size: 0.9rem;
+  }
+  .track-progress-container {
+    padding: 12px 16px;
+    gap: 12px;
+  }
+  .progress-circle {
+    width: 64px;
+    height: 64px;
+  }
+  .percentage-text {
+    font-size: 0.85rem;
+  }
+  .progress-label {
+    font-size: 0.9rem;
+  }
+  .progress-steps {
+    font-size: 0.85rem;
+  }
+  .divider {
+    margin: 0 16px;
+  }
+  .timeline {
+    padding: 0 16px 24px 16px;
+  }
+  .timeline::before {
+    display: none;
+  }
+  .timeline-item {
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .icon-wrapper {
+    width: 36px;
+  }
+  .icon-bg {
+    width: 28px;
+    height: 28px;
+  }
+  .icon-bg i {
+    font-size: 0.85rem;
+  }
+  .icon-wrapper::before,
+  .icon-wrapper::after {
+    height: calc(100% - 50% + 6px);
+  }
+  .timeline-dept {
+    font-size: 0.95rem;
+  }
+  .timeline-details {
+    font-size: 0.9rem;
+    gap: 6px;
+  }
+  .timeline-note {
+    margin-right: 32px;
+    font-size: 0.85rem;
+  }
+}
+

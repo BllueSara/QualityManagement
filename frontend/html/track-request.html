@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>تتبع الطلب - نظام إدارة الجودة والسلامة</title>
+
+  <!-- ===== استيراد خط Tajawal ===== -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- ===== Font Awesome للأيقونات ===== -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    crossorigin="anonymous"
+  />
+
+  <!-- ===== ربط ملف التنسيقات ===== -->
+  <link rel="stylesheet" href="/frontend/css/track-request.css" />
+</head>
+<body>
+  <!-- ===== الهيدر العلوي ===== -->
+  <header class="main-header">
+    <div class="header-container">
+      <div class="header-title">نظام إدارة الجودة والسلامة</div>
+      <div class="header-logo">
+        <img src="/frontend/images/hospital-logo.png" alt="شعار المستشفى" />
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== خط أفقي أسفل الهيدر ===== -->
+  <div class="header-divider"></div>
+
+  <!-- ===== المحتوى الرئيسي ===== -->
+  <main class="content-wrapper">
+    <!-- ===== عنوان الصفحة والوصف ===== -->
+    <div class="page-header">
+      <h1 class="page-title">تتبع الطلب</h1>
+    </div>
+
+    <!-- ===== بطاقة تتبع الطلب ===== -->
+    <div class="track-card">
+      <!-- ===== القسم التالي في أعلى اليمين ===== -->
+      <div class="next-dept">
+        <span class="label-text">القسم التالي:</span>
+        <span class="dept-name">قسم السلامة</span>
+      </div>
+
+      <!-- ===== رأس البطاقة: الحالة الحالية وأخر تحديث ===== -->
+      <div class="track-top">
+        <div class="track-header">
+          <h2 class="track-status-title">قيد المراجعة في قسم التفتيش</h2>
+          <span class="last-update">آخر تحديث: 23 فبراير 2024</span>
+        </div>
+
+        <!-- ===== قسم التقدم (Progress) ===== -->
+        <div class="track-progress-container">
+          <!-- نص التقدم -->
+          <div class="progress-info">
+            <span class="progress-label">تقدم الطلب</span>
+            <span class="progress-steps">3 من 4 خطوات مكتملة</span>
+          </div>
+          <!-- دائرة النسبة -->
+          <div class="progress-circle">
+            <svg viewBox="0 0 36 36" class="circular-chart blue">
+                              <text x="18" y="21" class="percentage-text">75%</text>
+
+              <path
+                class="circle-bg"
+                d="M18 2.0845
+                   a 15.9155 15.9155 0 0 1 0 31.831
+                   a 15.9155 15.9155 0 0 1 0 -31.831"
+              />
+              <path
+                class="circle"
+                stroke-dasharray="75,100"
+                d="M18 2.0845
+                   a 15.9155 15.9155 0 0 1 0 31.831
+                   a 15.9155 15.9155 0 0 1 0 -31.831"
+              />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== خط تقسيم أفقي ===== -->
+      <div class="divider"></div>
+
+      <!-- ===== قائمة Timeline ===== -->
+      <div class="timeline">
+        <!-- مرحلة مكتملة -->
+        <div class="timeline-item completed">
+          <div class="icon-wrapper">
+            <div class="icon-bg completed-bg">
+              <i class="fas fa-check"></i>
+            </div>
+          </div>
+          <div class="timeline-content">
+            <h3 class="timeline-dept">قسم الجودة</h3>
+            <div class="timeline-details">
+              <span class="timeline-date">20 فبراير 2024</span>
+              <span class="status-badge approved-badge">معتمد</span>
+            </div>
+            <p class="timeline-note">تم اعتماد الطلب بنجاح</p>
+          </div>
+        </div>
+
+        <!-- مرحلة قيد المراجعة -->
+        <div class="timeline-item pending">
+          <div class="icon-wrapper">
+            <div class="icon-bg pending-bg">
+              <i class="fas fa-clock"></i>
+            </div>
+          </div>
+          <div class="timeline-content">
+            <h3 class="timeline-dept">قسم السلامة</h3>
+            <div class="timeline-details">
+              <span class="timeline-date">22 فبراير 2024</span>
+              <span class="status-badge pending-badge">قيد المراجعة</span>
+            </div>
+            <p class="timeline-note">جاري مراجعة المستندات المطلوبة</p>
+          </div>
+        </div>
+
+        <!-- مرحلة في الانتظار -->
+        <div class="timeline-item waiting">
+          <div class="icon-wrapper">
+            <div class="icon-bg waiting-bg">
+              <i class="fas fa-circle"></i>
+            </div>
+          </div>
+          <div class="timeline-content">
+            <h3 class="timeline-dept">قسم التفتيش</h3>
+            <div class="timeline-details">
+              <span class="timeline-date">متوقع: 25 فبراير 2024</span>
+              <span class="status-badge waiting-badge">في الانتظار</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- نهاية التايملاين -->
+
+    </div>
+    <!-- نهاية بطاقة التتبع -->
+
+  </main>
+</body>
+</html>

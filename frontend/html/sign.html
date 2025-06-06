@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>توقيع بالنيابة - نظام إدارة الجودة والسلامة</title>
+
+  <!-- ===== استيراد خط Tajawal ===== -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- ===== Font Awesome للأيقونات ===== -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    crossorigin="anonymous"
+  />
+
+  <!-- ===== ربط ملف التنسيقات ===== -->
+  <link rel="stylesheet" href="/frontend/css/sign.css" />
+</head>
+<body>
+  <!-- ===== الهيدر العلوي ===== -->
+  <header class="main-header">
+    <div class="header-container">
+      <div class="header-title">نظام إدارة الجودة والسلامة</div>
+      <div class="header-logo">
+        <img src="/frontend/images/hospital-logo.png" alt="شعار المستشفى" />
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== المحتوى الرئيسي ===== -->
+  <main class="content-wrapper">
+    <!-- ===== عنوان الصفحة والوصف ===== -->
+    <div class="page-header">
+      <h1 class="page-title">توقيع بالنيابة</h1>
+      <p class="page-subtitle">المستندات التي تحتاج توقيعك بالنيابة عن الآخرين</p>
+    </div>
+
+    <!-- ===== بطاقة الجدول ===== -->
+    <div class="file-card">
+      <!-- جدول المستندات -->
+      <div class="table-container">
+        <table class="proxy-table">
+          <thead>
+            <tr>
+              <th class="col-file">اسم الملف</th>
+              <th class="col-signer">من وكلك</th>
+              <th class="col-action">الإجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- صف 1 -->
+            <tr>
+              <td class="col-file">
+                <i class="fas fa-file-alt file-icon"></i>
+                تقرير الحادث رقم 12
+              </td>
+              <td class="col-signer">
+                <i class="fas fa-user user-icon"></i>
+                د. أحمد السلمي
+              </td>
+              <td class="col-action">
+                <button class="btn-accept">
+                  <i class="fas fa-check-circle"></i>
+                  قبول
+                </button>
+                <button class="btn-reject">
+                  <i class="fas fa-times"></i>
+                  رفض
+                </button>
+              </td>
+            </tr>
+
+            <!-- صف 2 -->
+            <tr>
+              <td class="col-file">
+                <i class="fas fa-file-alt file-icon"></i>
+                طلب إجازة سنوية
+              </td>
+              <td class="col-signer">
+                <i class="fas fa-user user-icon"></i>
+                م. خالد العتيبي
+              </td>
+              <td class="col-action">
+                <button class="btn-accept">
+                  <i class="fas fa-check-circle"></i>
+                  قبول
+                </button>
+                <button class="btn-reject">
+                  <i class="fas fa-times"></i>
+                  رفض
+                </button>
+              </td>
+            </tr>
+
+            <!-- صف 3 -->
+            <tr>
+              <td class="col-file">
+                <i class="fas fa-file-alt file-icon"></i>
+                عقد توريد معدات
+              </td>
+              <td class="col-signer">
+                <i class="fas fa-user user-icon"></i>
+                أ. سارا المطيري
+              </td>
+              <td class="col-action">
+                <button class="btn-accept">
+                  <i class="fas fa-check-circle"></i>
+                  قبول
+                </button>
+                <button class="btn-reject">
+                  <i class="fas fa-times"></i>
+                  رفض
+                </button>
+              </td>
+            </tr>
+
+            <!-- صف 4 -->
+            <tr>
+              <td class="col-file">
+                <i class="fas fa-file-alt file-icon"></i>
+                محضر اجتماع اللجنة
+              </td>
+              <td class="col-signer">
+                <i class="fas fa-user user-icon"></i>
+                د. محمد القحطاني
+              </td>
+              <td class="col-action">
+                <button class="btn-accept">
+                  <i class="fas fa-check-circle"></i>
+                  قبول
+                </button>
+                <button class="btn-reject">
+                  <i class="fas fa-times"></i>
+                  رفض
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,379 @@
+/* ===== استيراد خط Tajawal ===== */
+@import url("https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap");
+
+/* ===== إعادة تهيئة القيم الافتراضية ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Tajawal", sans-serif;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  background-color: #ffffff; /* لون خلفية خفيف (مطابق لصفحة التذاكر) */
+  color: #2d2d2d;            /* لون النص الأساسي */
+}
+
+body {
+  direction: rtl; /* من اليمين إلى اليسار */
+}
+
+/* ===== الهيدر العلوي ===== */
+.main-header {
+  background-color: #ffffff;       /* خلفية بيضاء */
+  border-bottom: 1px solid #e0e0e0; /* حد سفلي رمادي فاتح */
+  padding: 16px 32px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-title {
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: #2d2d2d; /* غامق قليلًا */
+}
+
+.header-logo img {
+  height: 32px;
+}
+
+/* ===== المحتوى الرئيسي ===== */
+.content-wrapper {
+  max-width: 1800px;  /* نفس القيمة المستخدمة سابقًا */
+  margin: 40px auto;
+  padding: 0 20px;
+}
+
+/* ===== رأس الصفحة: زر وعداد الملفات ===== */
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+/* زر “إرسال للجميع” */
+.btn-send-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #2563eb; /* الأزرق الأساسي */
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-send-all i {
+  font-size: 1.1rem;
+}
+
+.btn-send-all:hover {
+  background-color: #1e40af; /* أزرق أغمق عند المرور */
+}
+
+/* عداد الملفات */
+.files-count {
+  font-size: 1rem;
+  color: #374151; /* رمادي غامق */
+}
+
+/* ===== عنوان الصفحة والوصف ===== */
+.page-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.page-title {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #1f2937; /* غامق جدًا */
+  margin-bottom: 8px;
+}
+
+.page-subtitle {
+  font-size: 1rem;
+  color: #4b5563; /* رمادي متوسط */
+}
+
+/* ===== بطاقة ملف بانتظار الاعتماد ===== */
+.file-card {
+  margin-bottom: 24px; /* تقليل المسافة بين البطاقات قليلًا */
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background-color: #ffffff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+/* رأس البطاقة */
+.file-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.file-info-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #6b7280; /* رمادي متوسط */
+  font-size: 0.95rem;
+}
+
+.building-icon {
+  font-size: 1.1rem;
+  color: #9ca3af; /* رمادي فاتح قليلاً */
+}
+
+.file-dept,
+.file-number {
+  font-weight: 400;
+}
+
+.separator {
+  margin: 0 4px;
+  color: #9ca3af; /* نفس لون الأيقونة */
+}
+
+.file-info-right .file-name {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+/* محتوى البطاقة العملي */
+.table-container {
+  overflow-x: auto;
+  background-color: transparent;
+  padding: 0 16px 16px; /* حشوة داخلية متناسقة من الجوانب وأسفل لجدول المحتوى */
+}
+
+.approvals-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px; /* لضمان أن الأعمدة لا تنضغط أكثر من اللازم */
+}
+
+.approvals-table thead {
+  background-color: #ffffff;
+}
+
+.approvals-table thead tr {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.approvals-table th,
+.approvals-table td {
+  padding: 12px 100px;
+  text-align: center;
+  font-size: 0.95rem;
+  color: #374151; /* نفس لون نص الجدول */
+  vertical-align: middle;
+}
+
+
+
+.approvals-table tbody tr:nth-child(even) {
+  background-color: #f9fafb; /* خلفية فاتحة للصفوط الزوجية */
+}
+
+/* ===== أعمدة الجدول ===== */
+.col-file {
+  width: 280px;
+  text-align: left; /* محاذاة اسم الملف لليسار داخل الخلية */
+}
+
+.col-dept {
+  width: 160px;
+}
+
+.col-role {
+  width: 180px;
+}
+
+.col-status {
+  width: 160px;
+}
+
+.col-action {
+  width: 160px;
+}
+
+/* ===== أزرار الإرسال والحالة ===== */
+/* زر “إرسال” */
+.btn-send {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #2563eb; /* الأزرق الأساسي */
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 0. nine five rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-send i {
+  font-size: 1rem;
+}
+
+.btn-send:hover {
+  background-color: #1e40af;
+}
+
+/* زر معطّل “تم الإرسال” */
+.btn-sent {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #f3f4f6; /* رمادي فاتح */
+  color: #6b7280;           /* رمادي متوسط */
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 0. nine five rem;
+  cursor: default;
+}
+
+.btn-sent i {
+  font-size: 1rem;
+}
+
+/* ===== تجاوب الصفحة ===== */
+/* شاشات أقل من 1400px */
+@media (max-width: 1400px) {
+  .content-wrapper {
+    max-width: 1200px;
+  }
+  .file-info-right .file-name {
+    font-size: 1.1rem;
+  }
+  .approvals-table {
+    min-width: 600px;
+  }
+  .col-file {
+    width: 240px;
+  }
+  .col-dept {
+    width: 140px;
+  }
+  .col-role {
+    width: 160px;
+  }
+  .col-status {
+    width: 140px;
+  }
+  .col-action {
+    width: 140px;
+  }
+  .btn-send,
+  .btn-sent {
+    padding: 6px 12px;
+    font-size: 0. nine rem;
+  }
+}
+
+/* شاشات أقل من 1024px */
+@media (max-width: 1024px) {
+  .content-wrapper {
+    max-width: 1000px;
+  }
+  .approvals-table {
+    min-width: 500px;
+  }
+  .col-file {
+    width: 200px;
+  }
+  .col-dept {
+    width: 130px;
+  }
+  .col-role {
+    width: 140px;
+  }
+  .col-status {
+    width: 130px;
+  }
+  .col-action {
+    width: 120px;
+  }
+  .btn-send,
+  .btn-sent {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+  }
+}
+
+/* شاشات أقل من 768px */
+@media (max-width: 768px) {
+  .top-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .btn-send-all {
+    width: 100%;
+    max-width: 200px;
+  }
+  .files-count {
+    font-size: 0. nine rem;
+  }
+  .page-header {
+    margin-bottom: 20px;
+  }
+  .file-card {
+    margin-bottom: 20px;
+  }
+  .file-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .file-info-left {
+    font-size: 0. nine rem;
+  }
+  .file-info-right .file-name {
+    font-size: 1rem;
+  }
+  .approvals-table {
+    min-width: 400px;
+  }
+  .col-file {
+    width: 150px;
+  }
+  .col-dept {
+    width: 100px;
+  }
+  .col-role {
+    width: 120px;
+  }
+  .col-status {
+    width: 110px;
+  }
+  .col-action {
+    width: 100px;
+  }
+  .btn-send,
+  .btn-sent {
+    padding: 6px 8px;
+    font-size: 0. eight five rem;
+    margin-bottom: 6px;
+  }
+}
