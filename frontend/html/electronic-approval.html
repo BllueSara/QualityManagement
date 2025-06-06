@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>الاعتماد الإلكتروني - نظام إدارة الجودة والسلامة</title>
+
+  <!-- ===== استيراد خط Tajawal ===== -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- ===== Font Awesome للأيقونات (لأيقونة علامة الصح في الرسالة) ===== -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    crossorigin="anonymous"
+  />
+
+  <!-- ===== ربط ملف التنسيقات ===== -->
+  <link rel="stylesheet" href="/frontend/css/electronic-approval.css" />
+</head>
+<body>
+
+  <!-- ===== الهيدر العلوي ===== -->
+  <header class="main-header">
+    <div class="header-container">
+      <div class="header-title">نظام إدارة الجودة والسلامة</div>
+      <div class="header-logo">
+        <!-- تأكد من وجود ملف hospital-logo.png في نفس المجلد -->
+        <img src="/frontend/images/hospital-logo.png" alt="شعار المستشفى" />
+      </div>
+    </div>
+  </header>
+
+  <!-- خط أفقي أسفل الهيدر -->
+  <div class="header-divider"></div>
+
+  <!-- ===== المحتوى الرئيسي ===== -->
+  <main class="content-wrapper">
+    <!-- ===== عنوان الصفحة والوصف ===== -->
+    <div class="page-header">
+      <h1 class="page-title">الاعتماد الإلكتروني</h1>
+      <p class="page-subtitle">
+        يُرجى تعبئة النموذج التالي لإتمام عملية الاعتماد الإلكتروني
+      </p>
+    </div>
+
+    <!-- ===== صندوق النموذج ===== -->
+    <div class="form-card">
+      <form id="approvalForm" novalidate>
+        <!-- حقل اسم الملف -->
+        <div class="form-group">
+          <label for="fileName">اسم الملف</label>
+          <input
+            type="text"
+            id="fileName"
+            name="fileName"
+            placeholder="سياسات قسم الجودة"
+            required
+          />
+        </div>
+
+        <!-- حقل اسم المستخدم -->
+        <div class="form-group">
+          <label for="username">اسم المستخدم</label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            placeholder="أدخل اسم المستخدم الخاص بك"
+            required
+          />
+        </div>
+
+        <!-- حقل المسمى الوظيفي -->
+        <div class="form-group">
+          <label for="jobTitle">المسمى الوظيفي</label>
+          <input
+            type="text"
+            id="jobTitle"
+            name="jobTitle"
+            placeholder="أدخل مسماك الوظيفي"
+            required
+          />
+        </div>
+
+        <!-- زر الاعتماد الإلكتروني -->
+        <button type="submit" id="submitBtn" class="btn-submit">
+          اعتماد إلكتروني
+        </button>
+      </form>
+
+      <!-- الرسالة التي تظهر بعد الإرسال؛ مخفية افتراضيًا -->
+      <div id="successMessage" class="success-message" role="alert">
+        <i class="fas fa-check-circle"></i>
+        تم إرسال طلب الاعتماد بنجاح
+      </div>
+    </div>
+  </main>
+
+<script src="electronic-approval.js"></script>
+
+
+</body>
+</html>

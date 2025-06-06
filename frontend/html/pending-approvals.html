@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ملفات بانتظار الاعتماد - نظام إدارة الجودة والسلامة</title>
+
+  <!-- ===== استيراد خط Tajawal ===== -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- ===== Font Awesome للأيقونات ===== -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    crossorigin="anonymous"
+  />
+
+  <!-- ===== ربط ملف التنسيقات ===== -->
+  <link rel="stylesheet" href="/frontend/css/pending-approvals.css" />
+</head>
+<body>
+  <!-- ===== الهيدر العلوي ===== -->
+  <header class="main-header">
+    <div class="header-container">
+      <div class="header-title">نظام إدارة الجودة والسلامة</div>
+      <div class="header-logo">
+        <img src="/frontend/images/hospital-logo.png" alt="شعار المستشفى" />
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== المحتوى الرئيسي ===== -->
+  <main class="content-wrapper">
+    <!-- ===== رأس الصفحة: زر وعداد الملفات ===== -->
+    <div class="top-bar">
+      <button class="btn-send-all">
+        <i class="fas fa-paper-plane"></i>
+        إرسال للجميع
+      </button>
+      <div class="files-count">عدد الملفات المنتظرة: 2 ملفات</div>
+    </div>
+
+    <!-- ===== بطاقة 1: تقرير الجودة الشهري - يونيو 2023 ===== -->
+    <div class="file-card">
+      <!-- رأس البطاقة: أيقونة القسم ورقم الملف والاسم -->
+<!-- رأس البطاقة بعد التعديل: ضُمّ عنوان التقرير أولاً ثم معلومات القسم ورقم الملف -->
+<div class="file-card-header">
+  <!-- 1. أولاً: عنوان التقرير ليظهر على أقصى اليمين -->
+  <div class="file-info-right">
+    <h2 class="file-name">تقرير الجودة الشهري - يونيو 2023</h2>
+  </div>
+  <!-- 2. ثانيًا: معلومات القسم ورقم الملف على الجهة اليسرى -->
+  <div class="file-info-left">
+    <i class="fas fa-building building-icon"></i>
+    <span class="file-dept">قسم الجودة والتطوير</span>
+    <span class="separator">·</span>
+    <span class="file-number">#12345</span>
+  </div>
+</div>
+
+      <!-- جدول المحتوى داخل البطاقة -->
+      <div class="table-container">
+        <table class="approvals-table">
+          <thead>
+            <tr>
+              <th class="col-name">اسم الشخص</th>
+              <th class="col-dept">القسم</th>
+              <th class="col-role">المسمى الوظيفي</th>
+              <th class="col-status">الحالة</th>
+              <th class="col-action">إجراء</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- صف 1 -->
+            <tr>
+              <td class="col-name">أحمد الزهراوي</td>
+              <td class="col-dept">الجودة</td>
+              <td class="col-role">مدير قسم</td>
+              <td class="col-status">بانتظار الإرسال</td>
+              <td class="col-action">
+                <button class="btn-send">
+                  <i class="fas fa-paper-plane"></i>
+                  إرسال
+                </button>
+              </td>
+            </tr>
+            <!-- صف 2 -->
+            <tr>
+              <td class="col-name">سارة التوجيزي</td>
+              <td class="col-dept">السلامة</td>
+              <td class="col-role">مشرف سلامة</td>
+              <td class="col-status">تم الإرسال</td>
+              <td class="col-action">
+                <button class="btn-sent" disabled>
+                  <i class="fas fa-check-circle"></i>
+                  تم الإرسال
+                </button>
+              </td>
+            </tr>
+            <!-- صف 3 -->
+            <tr>
+              <td class="col-name">خالد المطيري</td>
+              <td class="col-dept">التفتيش</td>
+              <td class="col-role">مراجع داخلي</td>
+              <td class="col-status">بانتظار الإرسال</td>
+              <td class="col-action">
+                <button class="btn-send">
+                  <i class="fas fa-paper-plane"></i>
+                  إرسال
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===== بطاقة 2: تقرير السلامة الأسبوعي ===== -->
+    <div class="file-card">
+      <!-- رأس البطاقة: أيقونة القسم ورقم الملف والاسم -->
+<div class="file-card-header">
+  <!-- 1. أولاً: عنوان التقرير ليظهر على أقصى اليمين -->
+  <div class="file-info-right">
+    <h2 class="file-name">تقرير السلامة الاسبوعي </h2>
+  </div>
+  <!-- 2. ثانيًا: معلومات القسم ورقم الملف على الجهة اليسرى -->
+  <div class="file-info-left">
+    <i class="fas fa-building building-icon"></i>
+    <span class="file-dept">قسم  السلامة</span>
+    <span class="separator">·</span>
+    <span class="file-number">#12389</span>
+  </div>
+</div>
+
+      <!-- جدول المحتوى داخل البطاقة -->
+      <div class="table-container">
+        <table class="approvals-table">
+          <thead>
+            <tr>
+              <th class="col-name">اسم الشخص</th>
+              <th class="col-dept">القسم</th>
+              <th class="col-role">المسمى الوظيفي</th>
+              <th class="col-status">الحالة</th>
+              <th class="col-action">إجراء</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- صف 1 -->
+            <tr>
+              <td class="col-name">محمد العتيبي</td>
+              <td class="col-dept">السلامة</td>
+              <td class="col-role">مدير السلامة</td>
+              <td class="col-status">بانتظار الإرسال</td>
+              <td class="col-action">
+                <button class="btn-send">
+                  <i class="fas fa-paper-plane"></i>
+                  إرسال
+                </button>
+              </td>
+            </tr>
+            <!-- صف 2 -->
+            <tr>
+              <td class="col-name">فاطمة القحطاني</td>
+              <td class="col-dept">الجودة</td>
+              <td class="col-role">مشرف جودة</td>
+              <td class="col-status">بانتظار الإرسال</td>
+              <td class="col-action">
+                <button class="btn-send">
+                  <i class="fas fa-paper-plane"></i>
+                  إرسال
+                </button>
+              </td>
+            </tr>
+            <!-- صف 3 -->
+            <tr>
+              <td class="col-name">عبدالله السبعي</td>
+              <td class="col-dept">التشغيل</td>
+              <td class="col-role">مدير العمليات</td>
+              <td class="col-status">تم الإرسال</td>
+              <td class="col-action">
+                <button class="btn-sent" disabled>
+                  <i class="fas fa-check-circle"></i>
+                  تم الإرسال
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
