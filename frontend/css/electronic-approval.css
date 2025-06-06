@@ -1,0 +1,172 @@
+/* ===== استيراد خط Tajawal ===== */
+@import url("https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap");
+
+/* ===== إعادة تهيئة القيم الافتراضية ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Tajawal", sans-serif;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  background-color: #f2f4f7; /* خلفية فاتحة جدًا */
+  color: #2d2d2d;            /* لون النص الأساسي */
+}
+
+body {
+  direction: rtl; /* اتجاه من اليمين إلى اليسار */
+}
+
+/* ===== الهيدر العلوي ===== */
+.main-header {
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 16px 32px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-title {
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: #2d2d2d;
+}
+
+.header-logo img {
+  height: 32px;
+}
+
+/* ===== خط أسفل الهيدر ===== */
+.header-divider {
+  height: 1px;
+  background-color: #e0e0e0;
+  opacity: 0.8;
+}
+
+/* ===== المحتوى الرئيسي ===== */
+.content-wrapper {
+  max-width: 600px;  /* ضبط عرض مناسب للنموذج */
+  margin: 40px auto;
+  padding: 0 20px;
+}
+
+/* ===== عنوان الصفحة والوصف ===== */
+.page-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.page-title {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #1f2937; /* لون داكن */
+  margin-bottom: 8px;
+}
+
+.page-subtitle {
+  font-size: 1rem;
+  color: #4b5563; /* رمادي متوسط */
+}
+
+/* ===== صندوق النموذج ===== */
+.form-card {
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  padding: 24px 20px 32px 20px;
+  position: relative;
+}
+
+/* كل حقل داخل النموذج ===== */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  margin-bottom: 6px;
+  font-size: 0.95rem;
+  color: #374151;
+}
+
+.form-group input {
+  padding: 10px 14px;
+  font-size: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background-color: #fafafa;
+  color: #2d2d2d;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #2563eb; /* نفس لون زر الاعتماد */
+}
+
+/* ===== زر الاعتماد ===== */
+.btn-submit {
+  display: inline-block;
+  width: 100%;
+  padding: 12px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #ffffff;
+  background-color: #2563eb; /* أزرق أساسي */
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-submit:hover {
+  background-color: #1e40af; /* أزرق أغمق عند المرور */
+}
+
+/* ===== الرسالة التي تظهر بعد الإرسال ===== */
+.success-message {
+  display: none;     /* مخفية افتراضيًا */
+  margin-top: 20px;
+  text-align: center;
+  color: #047857;    /* أخضر داكن */
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.success-message i {
+  margin-left: 6px;
+}
+
+/* عند إضافة الصنف visible ترَفَع العنصر للظهور */
+.success-message.visible {
+  display: block;
+}
+
+/* ===== تجاوب الصفحة ===== */
+@media (max-width: 480px) {
+  .content-wrapper {
+    max-width: 100%;
+    margin: 20px auto;
+    padding: 0 12px;
+  }
+
+  .form-card {
+    padding: 20px 12px 24px 12px;
+  }
+
+  .btn-submit {
+    font-size: 0.95rem;
+  }
+}

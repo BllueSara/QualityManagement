@@ -1,0 +1,386 @@
+/* ===== استيراد خط Tajawal ===== */
+@import url("https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap");
+
+/* ===== إعادة تهيئة القيم الافتراضية ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Tajawal", sans-serif;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  background-color: #f9fafb; /* خلفية فاتحة جداً */
+  color: #1f2937; /* لون النص الأساسي */
+}
+
+body {
+  direction: rtl; /* من اليمين إلى اليسار */
+}
+
+/* ===== الهيدر العلوي ===== */
+.main-header {
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 16px 32px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-title {
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.header-logo img {
+  height: 32px;
+}
+
+/* ===== المحتوى الرئيسي ===== */
+.content-wrapper {
+  max-width: 1100px;  /* زيادنا الحد الأقصى لحاوية المحتوى لتناسب الشاشات الكبيرة */
+  margin: 40px auto;
+  padding: 0 20px;
+}
+
+/* ===== عنوان الصفحة ===== */
+.page-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.page-title {
+  font-size: 2.2rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+/* ===== شريط البحث والفلاتر ===== */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 25px;
+  justify-content: flex-start; /* في RTL يعني أقصى اليمين */
+}
+
+.search-box {
+  position: relative;
+  width: 320px;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 10px 14px 10px 40px; /* مساحة للإيقونة في اليمين */
+  font-size: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: #374151;
+  transition: border-color 0.2s;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.search-icon {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 12px;
+  color: #9ca3af;
+  font-size: 1.2rem;
+}
+
+.filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  font-size: 1rem;
+  background-color: #ffffff;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.filter-btn i {
+  font-size: 1.1rem;
+}
+
+.filter-btn:hover {
+  background-color: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.filter-select {
+  padding: 10px 12px;
+  font-size: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: #374151;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+/* ===== جدول الاعتمادات ===== */
+.table-container {
+  overflow-x: auto; /* دعم التمرير الأفقي على الشاشات الصغيرة */
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.approvals-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 800px; /* لضمان عرض عمود الأزرار */
+}
+
+.approvals-table thead {
+  background-color: #ffffff;
+}
+
+.approvals-table thead tr {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.approvals-table th,
+.approvals-table td {
+  padding: 14px 18px;
+  text-align: center; /* المحاذاة الافتراضية */
+  font-size: 1rem;
+  color: #374151;
+  vertical-align: middle;
+}
+
+/* محاذاة عنوان عمود الاعتماد لليسار */
+.approvals-table th.col-actions {
+  text-align: left;
+}
+
+.approvals-table tbody tr:nth-child(even) {
+  background-color: #f9fafb;
+}
+
+/* ===== أعمدة الجدول ===== */
+.col-file {
+  width: 280px;
+  text-align: left; /* محاذاة اسم الملف لليسار */
+}
+
+.col-dept {
+  width: 180px;
+}
+
+.col-response {
+  width: 180px;
+}
+
+/* ===== عمود الاعتماد ===== */
+.col-actions {
+  width: 380px;               /* عرض أكبر للأزرار */
+  display: flex;
+  justify-content: flex-start; /* محاذاة الأزرار إلى أقصى اليسار */
+  gap: 8px;                   /* مسافة بين الأزرار */
+  padding-left: 10px;         /* حشوة بسيطة داخل الخلية */
+}
+
+/* ===== أزرار الاعتماد ===== */
+/* زر رفض */
+.btn-reject {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #fee2e2; /* أحمر فاتح */
+  color: #b91c1c; /* أحمر قاتم */
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-reject i {
+  font-size: 1rem;
+}
+
+.btn-reject:hover {
+  background-color: #fecaca;
+}
+
+/* زر QR Code */
+.btn-qr {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #e5e7eb; /* رمادي فاتح */
+  color: #374151;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-qr i {
+  font-size: 1rem;
+}
+
+.btn-qr:hover {
+  background-color: #d1d5db;
+}
+
+/* زر توقيع نيابي */
+.btn-delegate {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #bfdbfe; /* أزرق فاتح */
+  color: #1e3a8a; /* أزرق قاتم */
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-delegate i {
+  font-size: 1rem;
+}
+
+.btn-delegate:hover {
+  background-color: #93c5fd;
+}
+
+/* زر توقيع */
+.btn-sign {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #bbf7d0; /* أخضر فاتح */
+  color: #166534; /* أخضر قاتم */
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-sign i {
+  font-size: 1rem;
+}
+
+.btn-sign:hover {
+  background-color: #86efac;
+}
+
+/* ===== تجاوب الصفحة ===== */
+@media (max-width: 1400px) {
+  .content-wrapper {
+    max-width: 1200px;
+  }
+  .approvals-table {
+    min-width: 700px;
+  }
+  .col-actions {
+    width: 320px;
+    gap: 6px;
+  }
+  .btn-reject,
+  .btn-qr,
+  .btn-delegate,
+  .btn-sign {
+    padding: 6px 10px;
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 1024px) {
+  .content-wrapper {
+    max-width: 1000px;
+  }
+  .approvals-table {
+    min-width: 600px;
+  }
+  .col-file {
+    width: 240px;
+  }
+  .col-dept,
+  .col-response {
+    width: 160px;
+  }
+  .col-actions {
+    width: 280px;
+  }
+  .btn-reject,
+  .btn-qr,
+  .btn-delegate,
+  .btn-sign {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .filter-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .search-box,
+  .filter-btn,
+  .filter-select {
+    width: 100%;
+    max-width: 400px;
+  }
+  .approvals-table {
+    min-width: 500px;
+  }
+  .col-file {
+    width: 200px;
+  }
+  .col-dept,
+  .col-response {
+    width: 140px;
+  }
+  .col-actions {
+    width: 240px;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  .btn-reject,
+  .btn-qr,
+  .btn-delegate,
+  .btn-sign {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+  }
+}
