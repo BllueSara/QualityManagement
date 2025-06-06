@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الاعتمادات المرسلة لك</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/shared.css">
+    <link rel="stylesheet" href="../css/accreditations-inbox.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="hospital-logo">
+                <img src="../images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز">
+            </div>
+            <div class="system-title">
+                <img src="../images/system-title.png" alt="نظام إدارة الجودة والسلامة">
+            </div>
+        </div>
+    </header>
+    <main>
+        <div class="container">
+            <h1>الاعتمادات المرسلة لك</h1>
+            <div class="back-button-container">
+                <a href="#" onclick="history.back(); return false;" class="back-button">
+                    رجوع
+                    <img src="../images/Back.png" alt="رجوع" class="back-arrow-icon">
+                </a>
+            </div>
+            <div class="filters-bar">
+                <input type="text" class="search-input" placeholder="البحث في الملفات...">
+                <button class="filter-btn">اختر التاريخ</button>
+                <button class="filter-btn">جميع الحالات</button>
+                <button class="filter-btn">جميع الأقسام</button>
+                <button class="filter-btn">جميع الاعتمادات</button>
+            </div>
+            <div class="accreditations-table-wrapper">
+                <table class="accreditations-table">
+                    <thead>
+                        <tr>
+                            <th>اسم الملف</th>
+                            <th>القسم</th>
+                            <th>الرد</th>
+                            <th>الاعتماد</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>تقرير المبيعات الشهري</td>
+                            <td>المبيعات</td>
+                            <td>قيد الانتظار</td>
+                            <td>
+                                <button class="btn-danger">رفض</button>
+                                <button class="btn-secondary">QR Code</button>
+                                <button class="btn-secondary">توقيع بالنيابة</button>
+                                <button class="btn-primary">توقيع</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>طلب إجازة سنوية</td>
+                            <td>الموارد البشرية</td>
+                            <td>قيد الانتظار</td>
+                            <td>
+                                <button class="btn-danger">رفض</button>
+                                <button class="btn-secondary">QR Code</button>
+                                <button class="btn-secondary">توقيع بالنيابة</button>
+                                <button class="btn-primary">توقيع</button>
+                            </td>
+                        </tr>
+                        <!-- مزيد من الصفوف حسب الحاجة -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</body>
+</html> 

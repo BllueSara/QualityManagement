@@ -1,0 +1,294 @@
+/* ===== Ø§Ø³ØªÙŠØ±Ø§Ø¯ Ø®Ø· Tajawal ===== */
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap');
+
+/* ===== Ø¥Ø¹Ø§Ø¯Ø© ØªÙ‡ÙŠØ¦Ø© Ø§Ù„Ù‚ÙŠÙ… Ø§Ù„Ø§ÙØªØ±Ø§Ø¶ÙŠØ© ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Tajawal', sans-serif;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  background-color: #FFFFFF; /* Ù„ÙˆÙ† Ø®Ù„ÙÙŠØ© Ø®ÙÙŠÙ */
+  color: #2d2d2d;
+}
+
+body {
+  direction: rtl; /* Ù…Ù† Ø§Ù„ÙŠÙ…ÙŠÙ† Ø¥Ù„Ù‰ Ø§Ù„ÙŠØ³Ø§Ø± */
+  line-height: 1.6;
+}
+
+/* ===== Ø§Ù„Ù‡ÙŠØ¯Ø± Ø§Ù„Ø¹Ù„ÙˆÙŠ ===== */
+.main-header {
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 15px 30px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-title {
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: #2d2d2d;
+}
+
+.header-logo img {
+  height: 30px;
+}
+
+/* ===== Ø§Ù„Ù…Ø­ØªÙˆÙ‰ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ ===== */
+.content-wrapper {
+  max-width: 2000px;
+  margin: 30px auto;
+  padding: 0 20px;
+}
+
+.page-title {
+  font-size: 1.7rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: #1f2937;
+}
+
+/* ===== ØµÙ†Ø¯ÙˆÙ‚ Ø§Ù„Ø¨Ø­Ø« ÙˆØ²Ø± Ø§Ù„ØªØµÙÙŠØ© ===== */
+.search-filter-container {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 15px;
+}
+
+.search-box {
+  position: relative;
+  width: 240px;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 8px 12px 8px 36px; /* Ù…Ø³Ø§Ø­Ø© Ù„Ù„Ø¥ÙŠÙ‚ÙˆÙ†Ø© ÙÙŠ Ø§Ù„ÙŠÙ…ÙŠÙ† */
+  font-size: 0.95rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: #374151;
+  transition: border-color 0.2s;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.search-icon {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 12px;
+  color: #9ca3af;
+  font-size: 1rem;
+}
+
+.btn-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #ffffff;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.btn-filter i {
+  font-size: 0.95rem;
+}
+
+.btn-filter:hover {
+  background-color: #f9fafb;
+  border-color: #d1d5db;
+}
+
+/* ===== Ø¬Ø¯ÙˆÙ„ Ø¹Ø±Ø¶ Ø§Ù„ØªØ°Ø§ÙƒØ± ===== */
+.table-container {
+  overflow-x: auto; /* Ù„Ø¯Ø¹Ù… Ø§Ù„Ø´Ø§Ø´Ø§Øª Ø§Ù„ØµØºÙŠØ±Ø© */
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.tickets-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px; /* Ù„Ø¶Ù…Ø§Ù† Ø¹Ø±Ø¶ Ø¹Ù…ÙˆØ¯ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª */
+}
+
+.tickets-table thead {
+  background-color: #ffffff;
+}
+
+.tickets-table thead tr {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.tickets-table th,
+.tickets-table td {
+  padding: 12px 16px;
+  text-align: center;
+  font-size: 0.95rem;
+  color: #374151;
+  vertical-align: middle;
+}
+
+.tickets-table th {
+  font-weight: 500;
+}
+
+.tickets-table tbody tr:nth-child(even) {
+  background-color: #f9fafb;
+}
+
+.col-actions {
+  width: 120px;
+}
+
+.col-ticket {
+  width: 100px;
+}
+
+.col-status {
+  width: 110px;
+}
+
+.col-type,
+.col-location,
+.col-date {
+  width: 140px;
+}
+
+/* ===== Ø£ÙŠÙ‚ÙˆÙ†Ø§Øª Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª ===== */
+.action-icon {
+  font-size: 1rem;
+  margin: 0 6px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.view-icon {
+  color: #2563eb; /* Ø£Ø²Ø±Ù‚ */
+}
+.view-icon:hover {
+  color: #1e40af;
+}
+
+.edit-icon {
+  color: #f59e0b; /* Ø¨Ø±ØªÙ‚Ø§Ù„ÙŠ */
+}
+.edit-icon:hover {
+  color: #b45309;
+}
+
+.delete-icon {
+  color: #ef4444; /* Ø£Ø­Ù…Ø± */
+}
+.delete-icon:hover {
+  color: #b91c1c;
+}
+
+/* ===== Ø´Ø§Ø±Ø§Øª Ø§Ù„Ø­Ø§Ù„Ø© ===== */
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border-radius: 12px;
+  color: #1f2937;
+}
+
+.status-green {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.status-yellow {
+  background-color: #fef9c3;
+  color: #92400e;
+}
+
+.status-gray {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
+/* ===== Ù†Øµ Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ø³Ø¬Ù„Ø§Øª ===== */
+.records-info {
+  margin: 14px 0;
+  font-size: 0. ninerem;
+  color: #6b7280;
+}
+
+/* ===== Ø£Ø²Ø±Ø§Ø± Ø§Ù„ØªÙ†Ù‚Ù„ Pagination ===== */
+.pagination {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 30px;
+}
+
+.page-btn,
+.page-number {
+  padding: 8px 14px;
+  font-size: 0.95rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: #374151;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.page-btn[disabled] {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.page-number.active {
+  background-color: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+}
+
+.page-number:hover {
+  background-color: #f9fafb;
+  border-color: #d1d5db;
+}
+
+/* ===== ØªØ¬Ø§ÙˆØ¨ Ø§Ù„ØµÙØ­Ø© ===== */
+@media (max-width: 768px) {
+  .tickets-table {
+    min-width: 600px;
+  }
+
+  .col-type,
+  .col-location,
+  .col-date {
+    width: auto;
+  }
+}

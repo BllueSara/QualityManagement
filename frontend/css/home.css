@@ -30,12 +30,8 @@ main h1 {
     grid-column: 1 / -1;
     justify-self: center;
     width: 100%;
-    max-width:400px;
-  }
-  
-
-
-
+    max-width: 400px;
+}
 
 .card {
     background-color: #fff;
@@ -44,6 +40,9 @@ main h1 {
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     text-align: center;
     transition: transform 0.3s, box-shadow 0.3s;
+    text-decoration: none;
+    color: inherit;
+    display: block;
 }
 
 .card:hover {

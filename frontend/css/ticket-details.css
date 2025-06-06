@@ -1,0 +1,293 @@
+/* ===== Ø§Ø³ØªÙŠØ±Ø§Ø¯ Ø®Ø· Tajawal ===== */
+@import url("https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap");
+
+/* ===== Ø¥Ø¹Ø§Ø¯Ø© ØªÙ‡ÙŠØ¦Ø© Ø§Ù„Ù‚ÙŠÙ… Ø§Ù„Ø§ÙØªØ±Ø§Ø¶ÙŠØ© ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Tajawal", sans-serif;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  background-color: #f2f4f7; /* Ù„ÙˆÙ† Ø®Ù„ÙÙŠØ© Ø®ÙÙŠÙ */
+  color: #2d2d2d;
+}
+
+body {
+  direction: rtl; /* Ù…Ù† Ø§Ù„ÙŠÙ…ÙŠÙ† Ø¥Ù„Ù‰ Ø§Ù„ÙŠØ³Ø§Ø± */
+  line-height: 1.6;
+}
+
+/* ===== Ø§Ù„Ù‡ÙŠØ¯Ø± Ø§Ù„Ø¹Ù„ÙˆÙŠ ===== */
+.main-header {
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 15px 30px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-title {
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: #2d2d2d;
+}
+
+.header-logo img {
+  height: 30px;
+}
+
+/* ===== Ø§Ù„Ù…Ø­ØªÙˆÙ‰ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ ===== */
+.content-wrapper {
+  max-width: 1000px;
+  margin: 30px auto;
+  padding: 0 20px;
+}
+
+.page-title {
+  font-size: 1.7rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: #1f2937;
+}
+
+/* ===== ØªÙ†Ø³ÙŠÙ‚ Ø§Ù„Ø¨Ø·Ø§Ù‚Ø§Øª (Sections) ===== */
+.card-section {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  padding: 20px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+/* ===== Ø±Ø£Ø³ ÙƒÙ„ Ù‚Ø³Ù… ===== */
+.section-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.section-icon {
+  font-size: 1.2rem;
+  color: #2563eb;
+  margin-left: 8px;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+/* ===== Ù…Ø­ØªÙˆÙ‰ Ø§Ù„Ù‚Ø³Ù… ===== */
+.section-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Ø³Ø·Ø± Ù…Ù† Ø§Ù„Ø­Ù‚ÙˆÙ„ ÙŠØ¶Ù… Ø­Ù‚Ù„ÙŠÙ† Ø£Ùˆ Ø£ÙƒØ«Ø± Ø£ÙÙ‚ÙŠÙ‹Ø§ */
+.field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+/* Ù…Ø¬Ù…ÙˆØ¹Ø© Ø­Ù‚Ù„ ÙˆØ§Ø­Ø¯ (full-width) */
+.field-single {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ù…Ø¬Ù…ÙˆØ¹Ø© Ø­Ù‚Ù„ Ù…Ø¹ Ø§Ø³Ù… ÙˆØ¹Ø±Ø¶ Ø§Ù„Ù‚ÙŠÙ…Ø© */
+.field-group {
+  flex: 1 1 45%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ØªØ³Ù…ÙŠØ© Ø§Ù„Ø­Ù‚Ù„ */
+.field-label {
+  font-size: 0.95rem;
+  color: #4b5563;
+  margin-bottom: 6px;
+}
+
+/* Ø§Ù„Ù‚ÙŠÙ…Ø© Ø§Ù„Ù…Ø¹Ø±ÙˆØ¶Ø© Ù„Ù„Ø­Ù‚Ù„ */
+.field-value {
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  color: #1f2937;
+}
+
+/* ÙÙŠ Ø­Ø§Ù„Ø© Ø§Ù„Ø±Ø§Ø¯ÙŠÙˆ ÙÙ‚Ø· Ù„Ù„Ø¹Ø±Ø¶ */
+.radio-readonly {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 12px;
+}
+
+.radio-readonly input[type="radio"] {
+  accent-color: #3b82f6;
+}
+
+/* Ù†Øµ Ø§Ù„ÙˆÙ‚Øª Ø¯Ø§Ø®Ù„ Ù‚ÙŠÙ…Ø© Ø§Ù„Ø­Ù‚Ù„ */
+.time-text {
+  font-size: 0.95rem;
+  color: #1f2937;
+  margin-left: 8px;
+}
+
+/* Ø£ÙŠÙ‚ÙˆÙ†Ø© Ø§Ù„Ù…Ø±ÙÙ‚Ø§Øª */
+.attachments {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.95rem;
+  color: #374151;
+  margin-top: 6px;
+}
+
+.attachments i {
+  color: #6b7280;
+}
+
+/* ===== Ù‚Ø³Ù… Ø§Ù„ÙˆØ³ÙˆÙ… Tags ===== */
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tag {
+  background-color: #e5e7eb;
+  color: #374151;
+  padding: 6px 12px;
+  font-size: 0. nine5rem;
+  border-radius: 12px;
+}
+
+/* ===== Ù‚Ø³Ù… Ø¥Ø¶Ø§ÙØ© Ø±Ø¯ ===== */
+.reply-textarea {
+  width: 100%;
+  height: 100px;
+  resize: vertical;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background-color: #fafafa;
+  color: #1f2937;
+  transition: border-color 0.2s;
+  margin-bottom: 12px;
+}
+
+.reply-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+/* Ø²Ø± Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ø±Ø¯ */
+.btn-submit-reply {
+  padding: 8px 16px;
+  font-size: 0. nine5rem;
+  background-color: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  align-self: flex-start;
+}
+
+.btn-submit-reply:hover {
+  background-color: #1e40af;
+}
+
+/* ===== Ù‚Ø³Ù… Ø§Ù„Ø±Ø¯ÙˆØ¯ Ø§Ù„Ø³Ø§Ø¨Ù‚Ø© (Timeline) ===== */
+.timeline-section {
+  position: relative;
+}
+
+.timeline-content {
+  position: relative;
+  margin-left: 20px; /* ØªØ±Ùƒ Ù…Ø³Ø§ÙØ© Ù„Ù„Ø®Ø· Ø§Ù„Ø¹Ù…ÙˆØ¯ÙŠ */
+}
+
+.timeline-item {
+  position: relative;
+  margin-bottom: 24px;
+  padding-left: 16px;
+}
+
+/* Ø§Ù„Ù†Ù‚Ø·Ø© Ø¹Ù„Ù‰ Ø§Ù„Ø®Ø· */
+.timeline-dot {
+  position: absolute;
+  left: -8px;
+  top: 4px;
+  width: 12px;
+  height: 12px;
+  background-color: #2563eb;
+  border-radius: 50%;
+}
+
+/* Ù…Ø­ØªÙˆÙ‰ ÙƒÙ„ Ø±Ø¯ Ø³Ø§Ø¨Ù‚ */
+.timeline-body {
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.timeline-date {
+  font-size: 0. ninerem;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+
+.timeline-text {
+  font-size: 0.95rem;
+  color: #1f2937;
+  margin-bottom: 6px;
+}
+
+.timeline-author {
+  font-size: 0. ninerem;
+  color: #4b5563;
+  text-align: left;
+}
+
+/* ===== ØªØ¬Ø§ÙˆØ¨ Ø§Ù„ØµÙØ­Ø© Ù„Ù„Ø´Ø§Ø´Ø§Øª Ø§Ù„ØµØºÙŠØ±Ø© ===== */
+@media (max-width: 768px) {
+  .field-row {
+    flex-direction: column;
+  }
+  
+  .field-group {
+    flex: 1 1 100%;
+  }
+
+  .tags-container {
+    justify-content: flex-start;
+  }
+
+  .timeline-content {
+    margin-left: 12px;
+  }
+}

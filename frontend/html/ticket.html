@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>نظام إدارة الجودة والسلامة - إنشاء تذكرة</title>
+
+  <!-- استيراد خط "Tajawal" من Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet" />
+
+  <!-- ربط ملف التنسيقات -->
+  <link rel="stylesheet" href="/frontend/css/ticket.css" />
+</head>
+<body>
+  <!-- الهيدر العلوي -->
+  <header class="main-header">
+    <div class="header-container">
+      <div class="header-title">نظام إدارة الجودة والسلامة</div>
+      <div class="header-logo">
+        <!-- ضع هنا مسار شعار المستشفى الفعلي -->
+        <img src="/frontend/images/hospital-logo.png" alt="شعار المستشفى" />
+      </div>
+    </div>
+  </header>
+
+  <!-- المحتوى الرئيسي -->
+  <main class="content-wrapper">
+    <h1 class="page-title">إنشاء تذكرة</h1>
+
+    <form id="ticketForm" class="ticket-form" autocomplete="off">
+      <!-- ===== قسم: وقت وموقع الحدث ===== -->
+      <section class="form-section">
+        <h2 class="section-title">وقت وموقع الحدث</h2>
+        <div class="section-content">
+          <div class="row">
+            <!-- تاريخ الحدث -->
+            <div class="form-group">
+              <label for="eventDate">تاريخ الحدث</label>
+              <input type="date" id="eventDate" name="eventDate" placeholder="yyyy/mm/dd" />
+            </div>
+            <!-- وقت الحدث -->
+            <div class="form-group time-group">
+              <label>وقت الحدث</label>
+              <div class="time-options">
+                <input type="radio" id="timeMorning" name="eventTime" value="صباحاً" />
+                <label for="timeMorning">صباحاً</label>
+                <input type="radio" id="timeEvening" name="eventTime" value="مساءً" />
+                <label for="timeEvening">مساءً</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- موقع الحدث -->
+          <div class="form-group full-width">
+            <label for="eventLocation">موقع الحدث</label>
+            <input type="text" id="eventLocation" name="eventLocation" placeholder="ادخل موقع الحدث هنا" />
+          </div>
+
+          <div class="row">
+            <!-- القسم المبلغ -->
+            <div class="form-group">
+              <label for="reportingDept">القسم المبلغ</label>
+              <select id="reportingDept" name="reportingDept">
+                <option value="" disabled selected>اختر القسم</option>
+                <option value="الطوارئ">الطوارئ</option>
+                <option value="العيادات">العيادات</option>
+                <option value="التمريض">التمريض</option>
+                <!-- أضف المزيد حسب الحاجة -->
+              </select>
+            </div>
+            <!-- القسم المستجيب -->
+            <div class="form-group">
+              <label for="respondingDept">القسم المستجيب</label>
+              <select id="respondingDept" name="respondingDept">
+                <option value="" disabled selected>اختر القسم</option>
+                <option value="الطوارئ">الطوارئ</option>
+                <option value="العيادات">العيادات</option>
+                <option value="التمريض">التمريض</option>
+                <!-- أضف المزيد حسب الحاجة -->
+              </select>
+            </div>
+          </div>
+
+          <!-- الأقسام الأخرى المعنية -->
+          <div class="form-group full-width">
+            <label for="otherDepts">الأقسام الأخرى المعنية</label>
+            <textarea id="otherDepts" name="otherDepts" rows="3" placeholder="إذا وجد، اذكر الأقسام الأخرى"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== قسم: معلومات المريض ===== -->
+      <section class="form-section">
+        <h2 class="section-title">معلومات المريض</h2>
+        <div class="section-content">
+          <div class="row">
+            <!-- اسم المريض -->
+            <div class="form-group">
+              <label for="patientName">اسم المريض</label>
+              <input type="text" id="patientName" name="patientName" placeholder="ادخل اسم المريض" />
+            </div>
+            <!-- رقم الملف الطبي -->
+            <div class="form-group">
+              <label for="medicalRecordNo">رقم الملف الطبي</label>
+              <input type="text" id="medicalRecordNo" name="medicalRecordNo" placeholder="ادخل رقم الملف الطبي" />
+            </div>
+          </div>
+
+          <div class="row">
+            <!-- تاريخ الميلاد -->
+            <div class="form-group">
+              <label for="dob">تاريخ الميلاد</label>
+              <input type="date" id="dob" name="dob" placeholder="yyyy/mm/dd" />
+            </div>
+            <!-- الجنس -->
+            <div class="form-group gender-group">
+              <label>الجنس</label>
+              <div class="gender-options">
+                <input type="radio" id="genderMale" name="gender" value="ذكر" />
+                <label for="genderMale">ذكر</label>
+                <input type="radio" id="genderFemale" name="gender" value="أنثى" />
+                <label for="genderFemale">أنثى</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- نوع المريض -->
+          <div class="form-group patient-type-group">
+            <label>نوع المريض</label>
+            <div class="checkbox-options">
+              <div>
+                <input type="checkbox" id="typeInpatient" name="patientType" value="منوم" />
+                <label for="typeInpatient">منوم</label>
+              </div>
+              <div>
+                <input type="checkbox" id="typeOutpatient" name="patientType" value="مراجع" />
+                <label for="typeOutpatient">مراجع</label>
+              </div>
+              <div>
+                <input type="checkbox" id="typeStaff" name="patientType" value="موظف" />
+                <label for="typeStaff">موظف</label>
+              </div>
+              <div>
+                <input type="checkbox" id="typeVisitor" name="patientType" value="زائر" />
+                <label for="typeVisitor">زائر</label>
+              </div>
+              <div>
+                <input type="checkbox" id="typeOther" name="patientType" value="أخرى" />
+                <label for="typeOther">أخرى</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== قسم: نوع البلاغ ===== -->
+      <section class="form-section">
+        <h2 class="section-title">نوع البلاغ</h2>
+        <div class="section-content">
+          <div class="radio-group full-width">
+            <div>
+              <input type="radio" id="reportAccident" name="reportType" value="حادث" />
+              <label for="reportAccident">حادث</label>
+            </div>
+            <div>
+              <input type="radio" id="reportNearMiss" name="reportType" value="حدث قابل للتبليغ" />
+              <label for="reportNearMiss">حدث قابل للتبليغ</label>
+            </div>
+            <div>
+              <input type="radio" id="reportSerious" name="reportType" value="حدث جسيم" />
+              <label for="reportSerious">حدث جسيم</label>
+            </div>
+            <div>
+              <input type="radio" id="reportError" name="reportType" value="تنبيه خطأ" />
+              <label for="reportError">تنبيه خطأ</label>
+            </div>
+            <div>
+              <input type="radio" id="reportUnsafe" name="reportType" value="وضع غير آمن" />
+              <label for="reportUnsafe">وضع غير آمن</label>
+            </div>
+          </div>
+          <!-- حقل إضافي لوصف الحدث إن احتاج -->
+          <div class="form-group full-width">
+            <label for="reportShortDesc">وصف الحدث (اختياري)</label>
+            <input type="text" id="reportShortDesc" name="reportShortDesc" placeholder="أي تفاصيل قصيرة عن الحدث" />
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== قسم: وصف الحدث ===== -->
+      <section class="form-section">
+        <h2 class="section-title">وصف الحدث</h2>
+        <div class="section-content">
+          <div class="form-group full-width">
+            <textarea id="eventDescription" name="eventDescription" rows="5" placeholder="اكتب وصفاً مفصلاً للحدث هنا"></textarea>
+          </div>
+          <div class="form-group checkbox-options-inline">
+            <input type="checkbox" id="hasAdditionalInfo" name="hasAdditionalInfo" />
+            <label for="hasAdditionalInfo">يوجد معلومات إضافية مرفقة</label>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== قسم: معلومات المبلغ ===== -->
+      <section class="form-section">
+        <h2 class="section-title">معلومات المبلغ</h2>
+        <div class="section-content">
+          <div class="row">
+            <!-- اسم المبلغ -->
+            <div class="form-group">
+              <label for="reporterName">اسم المبلغ</label>
+              <input type="text" id="reporterName" name="reporterName" placeholder="ادخل اسم المبلغ" />
+            </div>
+            <!-- تاريخ الإبلاغ -->
+            <div class="form-group">
+              <label for="reportDate">تاريخ الإبلاغ</label>
+              <input type="date" id="reportDate" name="reportDate" placeholder="yyyy/mm/dd" />
+            </div>
+          </div>
+          <div class="row">
+            <!-- المسمي الوظيفي -->
+            <div class="form-group">
+              <label for="reporterPosition">المسمي الوظيفي</label>
+              <input type="text" id="reporterPosition" name="reporterPosition" placeholder="ادخل المسمي الوظيفي" />
+            </div>
+            <!-- رقم الجوال -->
+            <div class="form-group">
+              <label for="reporterPhone">رقم الجوال</label>
+              <input type="tel" id="reporterPhone" name="reporterPhone" placeholder="05XXXXXXXX" />
+            </div>
+          </div>
+          <!-- البريد الإلكتروني -->
+          <div class="form-group full-width">
+            <label for="reporterEmail">البريد الإلكتروني</label>
+            <input type="email" id="reporterEmail" name="reporterEmail" placeholder="example@domain.com" />
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== قسم: الإجراءات المتخذة ===== -->
+      <section class="form-section">
+        <h2 class="section-title">الإجراءات المتخذة</h2>
+        <div class="section-content">
+          <div class="form-group full-width">
+            <textarea id="actionsTaken" name="actionsTaken" rows="4" placeholder="صف الإجراءات التي تم اتخاذها"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== قسم: تصنيف الحدث (مع جميع التصنيفات والألوان نفسها) ===== -->
+      <section class="form-section">
+        <h2 class="section-title">تصنيف الحدث</h2>
+        <div class="section-content classification-grid">
+          <!-- العمود الأيسر -->
+          <div class="checkbox-item">
+            <input type="checkbox" id="catCleaning" name="classification" value="النظافة" />
+            <label for="catCleaning">النظافة</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="catSkinIntegrity" name="classification" value="تكامل الجلد" />
+            <label for="catSkinIntegrity">تكامل الجلد</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="catFall" name="classification" value="السقوط" />
+            <label for="catFall">السقوط</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="catSupplyChain" name="classification" value="مشكلات سلسلة الإمداد" />
+            <label for="catSupplyChain">مشكلات سلسلة الإمداد</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="catSecurityIssues" name="classification" value="قضايا أمنية" />
+            <label for="catSecurityIssues">قضايا أمنية</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="catPatientCare" name="classification" value="إدارة رعاية المرضى" />
+            <label for="catPatientCare">إدارة رعاية المرضى</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="catMedEquipIssues" name="classification" value="مشكلات الأجهزة الطبية" />
+            <label for="catMedEquipIssues">مشكلات الأجهزة الطبية</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="catHousing" name="classification" value="الإسكان" />
+            <label for="catHousing">الإسكان</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="catFoodServices" name="classification" value="خدمات الطعام" />
+            <label for="catFoodServices">خدمات الطعام</label>
+          </div>
+
+          <!-- العمود الأوسط -->
+          <div class="checkbox-item">
+            <input type="checkbox" id="catOccupationalHealth" name="classification" value="الصحة المهنية" />
+            <label for="catOccupationalHealth">الصحة المهنية</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="catHypertension" name="classification" value="فرط الضغط" />
+            <label for="catHypertension">فرط الضغط</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="catCommunicationIssues" name="classification" value="مشاكل التواصل" />
+            <label for="catCommunicationIssues">مشاكل التواصل</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="catMaternalIssues" name="classification" value="قضايا الولادة" />
+            <label for="catMaternalIssues">قضايا الولادة</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="catSeriousIncidents" name="classification" value="أحداث جسيمة" />
+            <label for="catSeriousIncidents">أحداث جسيمة</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="catStaffIssues" name="classification" value="قضايا الموظفين" />
+            <label for="catStaffIssues">قضايا الموظفين</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="catMedicalProcedures" name="classification" value="إجراءات طبية" />
+            <label for="catMedicalProcedures">إجراءات طبية</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="catEnvironmentSafety" name="classification" value="البيئة / السلامة" />
+            <label for="catEnvironmentSafety">البيئة / السلامة</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="catMedicalImaging" name="classification" value="التصوير الطبي" />
+            <label for="catMedicalImaging">التصوير الطبي</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="catIdentityDocs" name="classification" value="الهوية / المستندات / الموافقات" />
+            <label for="catIdentityDocs">الهوية / المستندات / الموافقات</label>
+          </div>
+
+          <!-- العمود الأيمن -->
+          <div class="checkbox-item">
+            <input type="checkbox" id="catInfectionControl" name="classification" value="قضايا مكافحة العدوى" />
+            <label for="catInfectionControl">قضايا مكافحة العدوى</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="catIVInjection" name="classification" value="الحقن الوريدي" />
+            <label for="catIVInjection">الحقن الوريدي</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="catMedication" name="classification" value="الدواء" />
+            <label for="catMedication">الدواء</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="catRadiationTherapy" name="classification" value="العلاج الإشعاعي" />
+            <label for="catRadiationTherapy">العلاج الإشعاعي</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="catLabServices" name="classification" value="خدمات المختبر" />
+            <label for="catLabServices">خدمات المختبر</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="catFacilityMaintenance" name="classification" value="صيانة المنشأة" />
+            <label for="catFacilityMaintenance">صيانة المنشأة</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="catITIssues" name="classification" value="قضايا تقنية المعلومات" />
+            <label for="catITIssues">قضايا تقنية المعلومات</label>
+          </div>
+          <div class="checkbox-item">
+            <input type="checkbox" id="catClinicalNutrition" name="classification" value="التغذية السريرية" />
+            <label for="catClinicalNutrition">التغذية السريرية</label>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== قسم: تفاصيل الإصابة ===== -->
+      <section class="form-section">
+        <h2 class="section-title">تفاصيل الإصابة</h2>
+        <div class="section-content">
+          <div class="row">
+            <div class="form-group">
+              <label>هل حدثت إصابة؟</label>
+              <div class="radio-options">
+                <input type="radio" id="injuryYes" name="hadInjury" value="نعم" />
+                <label for="injuryYes">نعم</label>
+                <input type="radio" id="injuryNo" name="hadInjury" value="لا" />
+                <label for="injuryNo">لا</label>
+              </div>
+            </div>
+            <div class="form-group full-width">
+              <label>نوع الإصابة</label>
+              <div class="radio-options">
+                <input type="radio" id="injuryPhysical" name="injuryType" value="جسدية" />
+                <label for="injuryPhysical">جسدية</label>
+                <input type="radio" id="injuryPsychic" name="injuryType" value="نفسية" />
+                <label for="injuryPsychic">نفسية</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== أزرار الإرسال والإلغاء ===== -->
+      <div class="form-actions">
+        <button type="button" class="btn-secondary" id="btnCancel">إلغاء / عودة</button>
+        <button type="submit" class="btn-primary">إرسال التذكرة</button>
+      </div>
+    </form>
+  </main>
+
+  <!-- استدعاء ملف الجافاسكربت -->
+  <script src="/frontend/js/ticekt.js"></script>
+</body>
+</html>

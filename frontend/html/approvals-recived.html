@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>الاعتمادات المرسلة لك - نظام إدارة الجودة والسلامة</title>
+
+    <!-- استيراد خط Tajawal -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet" />
+
+    <!-- Font Awesome للأيقونات -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+        crossorigin="anonymous" />
+
+    <!-- ربط ملف التنسيقات -->
+    <link rel="stylesheet" href="approvals-recived.css" />
+</head>
+
+<body>
+    <!-- ===== الهيدر العلوي ===== -->
+    <header class="main-header">
+        <div class="header-container">
+            <div class="header-title">نظام إدارة الجودة والسلامة</div>
+            <div class="header-logo">
+                <img src="hospital-logo.png" alt="شعار المستشفى" />
+            </div>
+        </div>
+    </header>
+
+    <!-- ===== المحتوى الرئيسي ===== -->
+    <main class="content-wrapper">
+        <!-- عنوان الصفحة -->
+        <div class="page-header">
+            <h1 class="page-title">الاعتمادات المرسلة لك</h1>
+        </div>
+
+        <!-- ===== شريط البحث والفلاتر ===== -->
+        <div class="filter-bar">
+            <!-- حقل البحث -->
+            <div class="search-box">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="searchInput" placeholder="البحث في الملفات..." autocomplete="off" />
+            </div>
+            <!-- فلتر التاريخ -->
+            <button id="dateFilterBtn" class="filter-btn">
+                <i class="fas fa-calendar-alt"></i> اختر التاريخ
+            </button>
+            <!-- فلتر الحالة -->
+            <select id="statusFilter" class="filter-select">
+                <option value="all">جميع الحالات</option>
+                <option value="pending">قيد الانتظار</option>
+                <option value="approved">معتمد</option>
+                <option value="rejected">مرفوض</option>
+            </select>
+            <!-- فلتر الأقسام -->
+            <select id="deptFilter" class="filter-select">
+                <option value="all">جميع الأقسام</option>
+                <option value="sales">المبيعات</option>
+                <option value="hr">الموارد البشرية</option>
+                <option value="procurement">المشتريات</option>
+                <option value="finance">المالية</option>
+                <option value="marketing">التسويق</option>
+            </select>
+        </div>
+
+        <!-- ===== جدول الاعتمادات ===== -->
+        <div class="table-container">
+            <table class="approvals-table">
+                <thead>
+                    <tr>
+                        <th class="col-file">اسم الملف</th>
+                        <th class="col-dept">القسم</th>
+                        <th class="col-response">الرد</th>
+                        <th class="col-actions">الاعتماد</th>
+                    </tr>
+                </thead>
+                <tbody id="approvalsBody">
+                    <!-- مثال صف 1 -->
+                    <tr data-status="pending" data-dept="sales">
+                        <td class="col-file">تقرير المبيعات الشهري</td>
+                        <td class="col-dept">المبيعات</td>
+                        <td class="col-response">قيد الانتظار</td>
+                        <td class="col-actions">
+                            <button class="btn-sign">
+                                <i class="fas fa-user-check"></i>
+                                توقيع
+                            </button>
+                            <button class="btn-delegate">
+                                <i class="fas fa-user-friends"></i>
+                                توقيع بالنيابة
+                            </button>
+                            <button class="btn-qr">
+                                <i class="fas fa-qrcode"></i>
+                                QR Code
+                            </button>
+                            <button class="btn-reject">
+                                <i class="fas fa-times"></i>
+                                رفض
+                            </button>
+                        </td>
+                    </tr>
+                    <!-- مثال صف 2 -->
+                    <tr data-status="pending" data-dept="hr">
+                        <td class="col-file">طلب إجازة سنوية</td>
+                        <td class="col-dept">الموارد البشرية</td>
+                        <td class="col-response">قيد الانتظار</td>
+                        <td class="col-actions">
+                            <button class="btn-sign">
+                                <i class="fas fa-user-check"></i>
+                                توقيع
+                            </button>
+                            <button class="btn-delegate">
+                                <i class="fas fa-user-friends"></i>
+                                توقيع بالنيابة
+                            </button>
+                            <button class="btn-qr">
+                                <i class="fas fa-qrcode"></i>
+                                QR Code
+                            </button>
+                            <button class="btn-reject">
+                                <i class="fas fa-times"></i>
+                                رفض
+                            </button>
+                        </td>
+                    </tr>
+                    <!-- مثال صف 3 -->
+                    <tr data-status="pending" data-dept="procurement">
+                        <td class="col-file">عقد توريد معدات</td>
+                        <td class="col-dept">المشتريات</td>
+                        <td class="col-response">قيد الانتظار</td>
+                        <td class="col-actions">
+                            <button class="btn-sign">
+                                <i class="fas fa-user-check"></i>
+                                توقيع
+                            </button>
+                            <button class="btn-delegate">
+                                <i class="fas fa-user-friends"></i>
+                                توقيع بالنيابة
+                            </button>
+                            <button class="btn-qr">
+                                <i class="fas fa-qrcode"></i>
+                                QR Code
+                            </button>
+                            <button class="btn-reject">
+                                <i class="fas fa-times"></i>
+                                رفض
+                            </button>
+                        </td>
+                    </tr>
+                    <!-- مثال صف 4 -->
+                    <tr data-status="pending" data-dept="finance">
+                        <td class="col-file">ميزانية الربع الثالث</td>
+                        <td class="col-dept">المالية</td>
+                        <td class="col-response">قيد الانتظار</td>
+                        <td class="col-actions">
+                            <button class="btn-sign">
+                                <i class="fas fa-user-check"></i>
+                                توقيع
+                            </button>
+                            <button class="btn-delegate">
+                                <i class="fas fa-user-friends"></i>
+                                توقيع بالنيابة
+                            </button>
+                            <button class="btn-qr">
+                                <i class="fas fa-qrcode"></i>
+                                QR Code
+                            </button>
+                            <button class="btn-reject">
+                                <i class="fas fa-times"></i>
+                                رفض
+                            </button>
+                        </td>
+                    </tr>
+                    <!-- مثال صف 5 -->
+                    <tr data-status="pending" data-dept="marketing">
+                        <td class="col-file">خطة التسويق السنوية</td>
+                        <td class="col-dept">التسويق</td>
+                        <td class="col-response">قيد الانتظار</td>
+                        <td class="col-actions">
+                            <button class="btn-sign">
+                                <i class="fas fa-user-check"></i>
+                                توقيع
+                            </button>
+                            <button class="btn-delegate">
+                                <i class="fas fa-user-friends"></i>
+                                توقيع بالنيابة
+                            </button>
+                            <button class="btn-qr">
+                                <i class="fas fa-qrcode"></i>
+                                QR Code
+                            </button>
+                            <button class="btn-reject">
+                                <i class="fas fa-times"></i>
+                                رفض
+                            </button>
+                        </td>
+                    </tr>
+                    <!-- يمكن إضافة المزيد من الصفوف هنا بنفس الشكل -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+</body>
+
+</html>

@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>عرض التذكرة - نظام إدارة الجودة والسلامة</title>
+
+  <!-- استيراد خط Tajawal -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Font Awesome للأيقونات -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    crossorigin="anonymous"
+  />
+
+  <!-- ربط ملف التنسيقات -->
+  <link rel="stylesheet" href="/frontend/css/ticket-details.css" />
+</head>
+<body>
+  <!-- ===== الهيدر العلوي ===== -->
+  <header class="main-header">
+    <div class="header-container">
+      <div class="header-title">نظام إدارة الجودة والسلامة</div>
+      <div class="header-logo">
+        <!-- تأكد من مسار الشعار الفعلي لديك -->
+        <img src="/frontend/images/hospital-logo.png" alt="شعار المستشفى" />
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== المحتوى الرئيسي ===== -->
+  <main class="content-wrapper">
+    <h1 class="page-title">عرض التذكرة</h1>
+
+    <!-- ===== قسم: تفاصيل الحدث ===== -->
+    <section class="card-section">
+      <div class="section-header">
+        <i class="fas fa-file-lines section-icon"></i>
+        <h2 class="section-title">تفاصيل الحدث</h2>
+      </div>
+      <div class="section-content">
+        <div class="field-row">
+          <!-- تاريخ الحدث -->
+          <div class="field-group">
+            <label class="field-label">تاريخ الحدث</label>
+            <div class="field-value">15 فبراير 2024</div>
+          </div>
+          <!-- وقت الحدث -->
+          <div class="field-group">
+            <label class="field-label">وقت الحدث</label>
+            <div class="field-value">
+              <span class="radio-readonly">
+                <input type="radio" checked disabled /> صباحاً
+              </span>
+              <span class="time-text">09:30</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="field-single">
+          <!-- موقع الحدث -->
+          <label class="field-label">موقع الحدث</label>
+          <div class="field-value">قسم الطوارئ - الطابق الأول</div>
+        </div>
+
+        <div class="field-row">
+          <!-- القسم المبلغ -->
+          <div class="field-group">
+            <label class="field-label">القسم المبلغ</label>
+            <div class="field-value">قسم الطوارئ</div>
+          </div>
+          <!-- القسم المستجيب -->
+          <div class="field-group">
+            <label class="field-label">القسم المستجيب</label>
+            <div class="field-value">إدارة السلامة</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== قسم: معلومات المريض ===== -->
+    <section class="card-section">
+      <div class="section-header">
+        <i class="fas fa-user-injured section-icon"></i>
+        <h2 class="section-title">معلومات المريض</h2>
+      </div>
+      <div class="section-content">
+        <div class="field-row">
+          <!-- اسم المريض -->
+          <div class="field-group">
+            <label class="field-label">اسم المريض</label>
+            <div class="field-value">أحمد محمد</div>
+          </div>
+          <!-- رقم الملف الطبي -->
+          <div class="field-group">
+            <label class="field-label">رقم الملف الطبي</label>
+            <div class="field-value">123456789</div>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <!-- الجنس -->
+          <div class="field-group">
+            <label class="field-label">الجنس</label>
+            <div class="field-value">
+              <span class="radio-readonly">
+                <input type="radio" checked disabled /> ذكر
+              </span>
+            </div>
+          </div>
+          <!-- نوع الشخص المعني -->
+          <div class="field-group">
+            <label class="field-label">نوع الشخص المعني</label>
+            <div class="field-value">
+              <span class="radio-readonly">
+                <input type="radio" checked disabled /> مراجع
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== قسم: نوع البلاغ ===== -->
+    <section class="card-section">
+      <div class="section-header">
+        <i class="fas fa-exclamation-triangle section-icon"></i>
+        <h2 class="section-title">نوع البلاغ</h2>
+      </div>
+      <div class="section-content">
+        <div class="field-value">
+          <span class="radio-readonly">
+            <input type="radio" disabled /> شبه خطأ
+          </span>
+          <span class="radio-readonly">
+            <input type="radio" checked disabled /> حادث
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== قسم: وصف الحدث ===== -->
+    <section class="card-section">
+      <div class="section-header">
+        <i class="fas fa-file-alt section-icon"></i>
+        <h2 class="section-title">وصف الحدث</h2>
+      </div>
+      <div class="section-content">
+        <div class="field-single">
+          <div class="field-value">
+            تم ملاحظة خطأ في إجراءات السلامة أثناء نقل المريض من قسم الطوارئ إلى قسم العناية المركزة
+          </div>
+        </div>
+        <div class="attachments">
+          <i class="fas fa-paperclip"></i> يوجد مرفقات
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== قسم: بيانات المبلغ ===== -->
+    <section class="card-section">
+      <div class="section-header">
+        <i class="fas fa-user section-icon"></i>
+        <h2 class="section-title">بيانات المبلغ</h2>
+      </div>
+      <div class="section-content">
+        <div class="field-row">
+          <!-- الاسم -->
+          <div class="field-group">
+            <label class="field-label">الاسم</label>
+            <div class="field-value">محمد أحمد</div>
+          </div>
+          <!-- رقم الجوال -->
+          <div class="field-group">
+            <label class="field-label">رقم الجوال</label>
+            <div class="field-value">05xxxxxxx</div>
+          </div>
+        </div>
+        <div class="field-row">
+          <!-- المسمي الوظيفي -->
+          <div class="field-group">
+            <label class="field-label">المسمي الوظيفي</label>
+            <div class="field-value">أخصائي سلامة</div>
+          </div>
+          <!-- البريد الإلكتروني -->
+          <div class="field-group">
+            <label class="field-label">البريد الإلكتروني</label>
+            <div class="field-value">mohammed@example.com</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== قسم: الإجراءات المتخذة ===== -->
+    <section class="card-section">
+      <div class="section-header">
+        <i class="fas fa-tools section-icon"></i>
+        <h2 class="section-title">الإجراءات المتخذة</h2>
+      </div>
+      <div class="section-content">
+        <div class="field-single">
+          <div class="field-value">
+            تم اتخاذ الإجراءات التصحيحية اللازمة وتحديث إجراءات السلامة في القسم
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== قسم: تصنيف الحدث ===== -->
+    <section class="card-section">
+      <div class="section-header">
+        <i class="fas fa-th-large section-icon"></i>
+        <h2 class="section-title">تصنيف الحدث</h2>
+      </div>
+      <div class="section-content">
+        <div class="tags-container">
+          <span class="tag">الأجهزة الطبية</span>
+          <span class="tag">البنية</span>
+          <span class="tag">قضايا أمنية</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== قسم: تفاصيل الإصابة ===== -->
+    <section class="card-section">
+      <div class="section-header">
+        <i class="fas fa-info-circle section-icon"></i>
+        <h2 class="section-title">تفاصيل الإصابة</h2>
+      </div>
+      <div class="section-content">
+        <div class="field-value">
+          <label class="field-label-inline">هل حدثت إصابة؟</label>
+          <span class="radio-readonly">
+            <input type="radio" checked disabled /> نعم
+          </span>
+        </div>
+        <div class="field-value">
+          <label class="field-label-inline">نوع الإصابة</label>
+          <span class="radio-readonly">
+            <input type="radio" checked disabled /> جسدية
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== قسم: إضافة رد / إجراء من الجهة المختصة ===== -->
+    <section class="card-section">
+      <div class="section-header">
+        <i class="fas fa-comments section-icon"></i>
+        <h2 class="section-title">إضافة رد / إجراء من الجهة المختصة</h2>
+      </div>
+      <div class="section-content">
+        <textarea
+          id="replyTextarea"
+          class="reply-textarea"
+          placeholder="اكتب ردّك هنا..."
+        ></textarea>
+        <button id="submitReply" class="btn-submit-reply">إرسال الرد</button>
+      </div>
+    </section>
+
+    <!-- ===== قسم: الردود السابقة ===== -->
+    <section class="card-section timeline-section">
+      <div class="section-header">
+        <i class="fas fa-clock section-icon"></i>
+        <h2 class="section-title">الردود السابقة</h2>
+      </div>
+      <div class="timeline-content">
+        <!-- أول رد سابق -->
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-body">
+            <div class="timeline-date">16 فبراير 2024 - 10:30 صباحاً</div>
+            <div class="timeline-text">
+              تم مراجعة الحالة وتحديث إجراءات السلامة في القسم.
+            </div>
+            <div class="timeline-author">د. أحمد محمد - قسم السلامة</div>
+          </div>
+        </div>
+        <!-- ثاني رد سابق -->
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-body">
+            <div class="timeline-date">15 فبراير 2024 - 02:30 مساءً</div>
+            <div class="timeline-text">
+              تم استلام البلاغ وجاري العمل على اتخاذ الإجراءات اللازمة.
+            </div>
+            <div class="timeline-author">م. سارة خالد - إدارة الجودة</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
