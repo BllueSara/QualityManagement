@@ -1,16 +1,47 @@
 /* Shared styles for elements used across multiple pages */
 
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
+
+:root {
+    --primary-color: #007bff;
+    --secondary-color: #f0f0f0;
+    --text-color: #333;
+    --light-text-color: #555;
+    --border-color: #ddd;
+    --background-color: #f5f7fa;
+    --white-color: #ffffff;
+    --shadow-light: 0 4px 15px rgba(0, 0, 0, 0.05);
+    --shadow-medium: 0 2px 10px rgba(0, 0, 0, 0.03);
+    --border-radius-small: 8px;
+    --border-radius-medium: 12px;
+    --spacing-1: 8px;
+    --spacing-2: 10px;
+    --spacing-3: 15px;
+    --spacing-4: 20px;
+    --spacing-5: 30px;
+}
+
+body {
+    font-family: 'Tajawal', sans-serif;
+    color: var(--text-color);
+    background-color: var(--background-color);
+    margin: 0;
+    padding-top: 80px; /* Space for fixed header */
+    line-height: 1.6;
+}
+
 /* --- Header Styles --- */
 header {
     width: 100%;
-    padding: 10px 20px;
-    background-color: #ffffff;
-    border-bottom: 1px solid #e0e0e0;
+    padding: 18px var(--spacing-4); /* Increased vertical padding for taller header */
+    background-color: var(--white-color);
+    border-bottom: 1px solid var(--border-color);
     position: fixed;
     top: 0;
     left: 0;
     z-index: 1000;
     box-sizing: border-box;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08); /* Slightly stronger shadow */
 }
 
 header .container {
@@ -20,41 +51,37 @@ header .container {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 20px;
+    padding: 0;
     box-sizing: border-box;
-    position: relative;
+    box-shadow: none;
 }
 
-.system-title {
-    order: 1;
-    margin-left: auto;
+.header-left,
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.hospital-logo {
+    order: 3; /* Changed to 3 to put it on the right in RTL */
 }
 
 nav {
     order: 2;
     flex: 1;
     display: flex;
-    justify-content: center;
-}
-
-.hospital-logo {
-    order: 3;
-    margin-right: auto;
-}
-
-.system-title img, .hospital-logo img {
-    max-height: 50px;
-    vertical-align: middle;
+    justify-content: center; /* Center the navigation items */
 }
 
 .system-title {
-    font-size: 1.2em;
-    color: #333;
+    order: 1;
 }
 
-.hospital-logo {
-    font-size: 1em;
-    color: #007bff;
+.hospital-logo img,
+.system-title img {
+    max-height: 40px;
+    vertical-align: middle;
 }
 
 nav ul {
@@ -73,7 +100,7 @@ nav ul li {
 
 nav ul li a {
     text-decoration: none;
-    color: #555;
+    color: var(--light-text-color);
     font-size: 1.2em;
     display: flex;
     align-items: center;
@@ -96,11 +123,11 @@ nav ul li a:hover {
     position: absolute;
     top: 100%;
     right: 0;
-    background: #fff;
-    border: 1px solid #e0e0e0;
-    border-radius: 5px;
+    background: var(--white-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-small);
     display: none;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: var(--shadow-medium);
 }
 
 .language:hover .dropdown {
@@ -112,17 +139,109 @@ nav ul li a:hover {
 }
 
 .language .dropdown li a {
-    color: #555;
+    color: var(--light-text-color);
     text-decoration: none;
     display: block;
     font-size: 0.9em;
 }
 
-/* Add responsive styles for header/nav from home.css */
+/* --- General Button Styles (kept for consistency with logs.css) --- */
+.btn-primary,
+.btn-secondary {
+    padding: 10px 20px;
+    border: none;
+    border-radius: var(--border-radius-small);
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-1);
+    transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: var(--white-color);
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.2);
+}
+
+.btn-secondary {
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+    background-color: #e0e0e0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary img, .btn-secondary img {
+    width: 20px;
+    height: 20px;
+}
+
+/* Utility classes */
+.visually-hidden {
+    position: absolute;
+    left: -9999px;
+    top: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
 @media (max-width: 768px) {
     nav ul {
         flex-direction: column;
         align-items: center;
         gap: 10px;
     }
+}
+
+/* Page Controls and Back Button (Moved from dashboard.css and logs.css for consistency) */
+.page-controls {
+    width: 100%;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    padding-inline-start: 0px; /* Adjusted for left alignment in RTL */
+    padding-inline-end: 50px; /* Adjusted for left alignment in RTL */
+    display: flex;
+    justify-content: flex-end; /* Aligns content to the left in RTL */
+}
+
+.back-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background-color: transparent;
+    color: #333;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 1em;
+    font-weight: normal;
+    transition: background-color 0.2s, box-shadow 0.2s;
+    box-shadow: none;
+    float: none;
+    margin-left: 0;
+    margin-inline-start: 0;
+    flex-direction: row; /* Ensure arrow is to the left of the text in RTL */
+}
+
+.back-button:hover {
+    background-color: transparent;
+    box-shadow: none;
+
+}
+
+.back-button img {
+    width: 20px;
+    height: 20px;
+    filter: none; /* Ensure the original color of the image is shown */
 } 

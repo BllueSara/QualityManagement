@@ -1,5 +1,6 @@
 body, h1, .accreditation-title {
     font-family: 'Tajawal', Arial, sans-serif;
+    background-color: #ffffff;
 }
 
 .accreditations-cards {
@@ -23,6 +24,8 @@ body, h1, .accreditation-title {
     transition: box-shadow 0.2s, transform 0.2s;
     text-align: center;
     padding: 32px 16px;
+    text-decoration: none;
+    color: inherit;
 }
 .accreditation-card:hover {
     box-shadow: 0 12px 32px rgba(0,0,0,0.16);
