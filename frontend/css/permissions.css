@@ -221,9 +221,7 @@ main {
     gap: 15px;
 }
 
-.permission-icon {
-    /* Removed as per user request */
-}
+
 
 .text-content {
     display: flex;

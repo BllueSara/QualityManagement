@@ -38,6 +38,21 @@
                 </button>
             </div>
 
+            <!-- Containers for conditional back buttons (initially hidden) -->
+            <div id="backToFoldersContainer" class="back-button-container" style="display: none;">
+                <button class="back-button" id="backToFoldersBtn">
+                    <img src="../images/Back.png" alt="رجوع" class="back-arrow-icon">
+                    العودة للمجلدات
+                </button>
+            </div>
+
+            <div id="backToFilesContainer" class="back-button-container" style="display: none;">
+                <button class="back-button" id="backToFilesBtn">
+                    <img src="../images/Back.png" alt="رجوع" class="back-arrow-icon">
+                    العودة للملفات
+                </button>
+            </div>
+
             <!-- Section for Folders -->
             <div class="folders-section">
                 <!-- Folder Controls Bar -->
@@ -48,32 +63,9 @@
                     </div>
                     <button class="btn-primary" id="addFolderBtn">إضافة مجلد +</button>
                 </div>
-                <!-- Folder cards will go here -->
                 <!-- Container for Folder Cards -->
-                <div class="folder-cards-grid">
-                     <div class="folder-card" data-folder-id="folder-1" data-folder-name="المجلد الأول">
-                        <div class="card-icons">
-                            <a href="#" class="edit-icon" data-id="folder-1"><img src="../images/edit.svg" alt="تعديل"></a>
-                            <a href="#" class="delete-icon" data-id="folder-1"><img src="../images/delet.svg" alt="حذف"></a>
-                        </div>
-                        <img src="../images/folders.svg" alt="مجلد">
-                        <div class="folder-info">
-                             <div class="folder-name">المجلد الأول</div>
-                             <div class="file-count">عدد الملفات: 12</div>
-                        </div>
-                     </div>
-                     <div class="folder-card" data-folder-id="folder-2" data-folder-name="المجلد الثاني">
-                        <div class="card-icons">
-                            <a href="#" class="edit-icon" data-id="folder-2"><img src="../images/edit.svg" alt="تعديل"></a>
-                            <a href="#" class="delete-icon" data-id="folder-2"><img src="../images/delet.svg" alt="حذف"></a>
-                        </div>
-                        <img src="../images/folders.svg" alt="مجلد">
-                        <div class="folder-info">
-                             <div class="folder-name">المجلد الثاني</div>
-                             <div class="file-count">عدد الملفات: 8</div>
-                        </div>
-                     </div>
-                     <!-- Add more folder cards as needed -->
+                <div class="folders-list">
+                     <!-- Folder cards will be dynamically loaded here by JavaScript -->
                 </div>
                 <!-- Add more folder cards as needed -->
             </div>
@@ -91,41 +83,27 @@
                  </div>
                  <!-- Container for File List -->
                  <div class="files-list">
-                 <!-- File list will go here -->
-                  <div class="file-item">
-                      <div class="item-icons">
-                          <a href="#" class="edit-icon" data-id="file-1"><img src="../images/edit.svg" alt="تعديل"></a>
-                          <a href="#" class="delete-icon" data-id="file-1"><img src="../images/delet.svg" alt="حذف"></a>
-                      </div>
-                      <img src="../images/pdf.svg" alt="ملف PDF">
-                      <div class="file-info">
-                           <div class="file-name">تقرير المبيعات الشهري</div>
-                           <div class="file-date">٢٣ يناير ٢٠٢٤</div>
-                      </div>
-                   </div>
-                   <div class="file-item">
-                      <div class="item-icons">
-                          <a href="#" class="edit-icon" data-id="file-2"><img src="../images/edit.svg" alt="تعديل"></a>
-                          <a href="#" class="delete-icon" data-id="file-2"><img src="../images/delet.svg" alt="حذف"></a>
-                      </div>
-                      <img src="../images/word.svg" alt="ملف Word">
-                      <div class="file-info">
-                           <div class="file-name">خطة العمل السنوية</div>
-                           <div class="file-date">٢٢ يناير ٢٠٢٤</div>
-                      </div>
-                   </div>
-                   <div class="file-item">
-                      <div class="item-icons">
-                          <a href="#" class="edit-icon" data-id="file-3"><img src="../images/edit.svg" alt="تعديل"></a>
-                          <a href="#" class="delete-icon" data-id="file-3"><img src="../images/delet.svg" alt="حذف"></a>
-                      </div>
-                      <img src="../images/word.svg" alt="ملف Word">
-                      <div class="file-info">
-                           <div class="file-name">ملخص الاجتماع</div>
-                           <div class="file-date">٢١ يناير ٢٠٢٤</div>
-                      </div>
-                   </div>
-               </div>
+                 <!-- File list will be dynamically loaded here by JavaScript -->
+                 </div>
+            </div>
+
+            <!-- Section for File Details - Initially Hidden -->
+            <div class="file-details-section" style="display: none;">
+                <h2>تفاصيل الملف</h2>
+                <div class="file-detail-card">
+                    <div class="file-detail-header">
+                        <h3 id="detailFileName">اسم الملف هنا</h3>
+                        <div class="detail-icons">
+                            <a href="#" class="edit-icon" id="detailEditIcon"><img src="../images/edit.svg" alt="تعديل"></a>
+                            <a href="#" class="delete-icon" id="detailDeleteIcon"><img src="../images/delet.svg" alt="حذف"></a>
+                        </div>
+                    </div>
+                    <div class="file-detail-body">
+                        <p><strong>تاريخ الإنشاء:</strong> <span id="detailFileDate"></span></p>
+                        <p><strong>الملاحظات:</strong> <span id="detailFileNotes"></span></p>
+                        <a href="#" id="detailFileLink" target="_blank" class="download-link">عرض الملف</a>
+                    </div>
+                </div>
             </div>
 
         </div>
@@ -146,18 +124,6 @@
                     <label for="folderName">اسم المجلد</label>
                     <input type="text" id="folderName" placeholder="أدخل اسم المجلد" required>
                 </div>
-
-                 <div class="form-group">
-                     <label for="folderFile">إرفاق ملف</label>
-                     <div class="file-drop-area">
-                         <img src="../images/attach.svg" alt="أيقونة إرفاق" class="attach-icon">
-                         <input type="file" id="folderFile" accept="image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
-                         <div class="file-upload-text">
-                             <span class="choose-file-button">اختر ملف</span>
-                             <span class="supported-files">أو ملفات الصور, PDF, DOCX</span>
-                         </div>
-                     </div>
-                 </div>
             </div>
             
             <div class="modal-buttons">
@@ -218,7 +184,7 @@
 <div id="editFolderModal" class="modal-overlay">
     <div class="modal-content">
         <div class="modal-header">
-             <h3><img src="../images/folder.svg" alt="أيقونة مجلد" style="width: 24px; height: 24px; vertical-align: middle; margin-left: 10px;"> تعديل مجلد</h3>
+             <h3><img src="../images/folders.svg" alt="أيقونة مجلد" style="width: 24px; height: 24px; vertical-align: middle; margin-left: 10px;"> تعديل مجلد</h3>
              <span class="close-button">&times;</span>
         </div>
         
@@ -231,19 +197,7 @@
                 <input type="text" id="editFolderName" placeholder="أدخل اسم المجلد" required>
             </div>
 
-             <div class="form-group">
-                 <label for="editFolderFile">إرفاق ملف جديد (اختياري)</label>
-                 <div class="file-drop-area">
-                     <img src="../images/attach.svg" alt="أيقونة إرفاق" class="attach-icon">
-                     <input type="file" id="editFolderFile" accept="image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
-                     <div class="file-upload-text">
-                         <span class="choose-file-button">اختر ملف</span>
-                         <span class="supported-files">أو ملفات الصور, PDF, DOCX</span>
-                     </div>
-                 </div>
-             </div>
-             <!-- Optional: Display current file name/preview if available -->
-             <!-- <div id="currentFolderFile" style="margin-top: 10px;">الملف الحالي: <span id="currentFolderFileName"></span></div> -->
+             <!-- Removed file input for folder editing -->
         </div>
 
         <div class="modal-buttons">
@@ -293,6 +247,25 @@
         <div class="modal-buttons">
             <button class="btn-primary" id="updateContentBtn">تحديث</button>
             <button class="btn-secondary" id="cancelEditContentBtn">إلغاء</button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Folder Modal -->
+<div id="deleteFolderModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>تأكيد حذف المجلد</h3>
+            <span class="close-button">&times;</span>
+        </div>
+        <hr>
+        <div class="modal-body">
+            <input type="hidden" id="deleteFolderId">
+            <p>هل أنت متأكد أنك تريد حذف هذا المجلد؟ سيؤدي هذا إلى حذف جميع المحتويات بداخله.</p>
+        </div>
+        <div class="modal-buttons">
+            <button class="btn-danger" id="confirmDeleteFolderBtn">حذف</button>
+            <button class="btn-secondary" id="cancelDeleteFolderBtn">إلغاء</button>
         </div>
     </div>
 </div>
