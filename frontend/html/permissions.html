@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة الصلاحيات</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/shared.css">
+    <link rel="stylesheet" href="../css/permissions.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-right">
+                <div class="hospital-logo">
+                    <img src="/frontend/images/hospital-logo.png" alt="شعار المستشفى">
+                </div>
+            </div>
+            <div class="header-left">
+                <div class="system-title">
+                    <img src="/frontend/images/system-title.png" alt="نظام إدارة الجودة والسلامة">
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="permissions-container">
+            <!-- Users Sidebar -->
+            <div class="users-sidebar">
+                <div class="search-bar">
+                    <input type="text" placeholder="بحث عن مستخدم">
+                    <img src="/frontend/images/search.svg" alt="بحث">
+                </div>
+                <button class="add-user-btn">
+                    <img src="/frontend/images/plus.svg" alt="إضافة">
+                    <span>إضافة مستخدم جديد</span>
+                </button>
+                <div class="user-list">
+                    <div class="user-item active">
+                        <img src="/frontend/images/avatar-ahmed.png" alt="أحمد محمد" class="user-avatar">
+                        <div class="user-info">
+                            <div class="user-name">أحمد محمد</div>
+                            <div class="user-email">ahmed@example.com</div>
+                        </div>
+                        <div class="user-status active"></div>
+                    </div>
+                    <div class="user-item">
+                        <img src="/frontend/images/avatar-sara.png" alt="سارة خالد" class="user-avatar">
+                        <div class="user-info">
+                            <div class="user-name">سارة خالد</div>
+                            <div class="user-email">sara@example.com</div>
+                        </div>
+                        <div class="user-status"></div>
+                    </div>
+                    <div class="user-item">
+                        <img src="/frontend/images/avatar-mohamed.png" alt="محمد علي" class="user-avatar">
+                        <div class="user-info">
+                            <div class="user-name">محمد علي</div>
+                            <div class="user-email">mohamed@example.com</div>
+                        </div>
+                        <div class="user-status"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Permissions Content -->
+            <div class="permissions-content">
+                <div class="user-profile-header">
+                    <h2>أحمد محمد</h2>
+                    <span class="status active">نشط</span>
+                    <div class="action-buttons-top">
+                        <button class="btn-delete"><img src="/frontend/images/trash.svg" alt="حذف"> حذف</button>
+                        <button class="btn-primary"><img src="/frontend/images/key.svg" alt="إعادة تعيين"> إعادة تعيين كلمة المرور</button>
+                        <button class="btn-primary"><img src="/frontend/images/users.svg" alt="تغيير الدور"> تغيير الدور</button>
+                    </div>
+                </div>
+
+                <h3>صلاحيات الوصول</h3>
+
+                <div class="permission-section">
+                    <div class="permission-item">
+                        <div class="permission-details">
+                            <div class="text-content">
+                                <div class="permission-title">إضافة</div>
+                                <div class="permission-description">السماح بإضافة عناصر جديدة</div>
+                            </div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" checked>
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="permission-item">
+                        <div class="permission-details">
+                            <div class="text-content">
+                                <div class="permission-title">تعديل</div>
+                                <div class="permission-description">السماح بتعديل العناصر الموجودة</div>
+                            </div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="permission-item">
+                        <div class="permission-details">
+                            <div class="text-content">
+                                <div class="permission-title">حذف</div>
+                                <div class="permission-description">السماح بحذف العناصر</div>
+                            </div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="permission-item">
+                        <div class="permission-details">
+                            <div class="text-content">
+                                <div class="permission-title">تصدير (موثق)</div>
+                                <div class="permission-description">تصدير البيانات الموثقة</div>
+                            </div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="permission-item">
+                        <div class="permission-details">
+                            <div class="text-content">
+                                <div class="permission-title">تصدير (غير موثق)</div>
+                                <div class="permission-description">تصدير البيانات غير الموثقة</div>
+                            </div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="permission-item">
+                        <div class="permission-details">
+                            <div class="text-content">
+                                <div class="permission-title">طباعة (موثق)</div>
+                                <div class="permission-description">طباعة المستندات الموثقة</div>
+                            </div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="permission-item">
+                        <div class="permission-details">
+                            <div class="text-content">
+                                <div class="permission-title">طباعة (غير موثق)</div>
+                                <div class="permission-description">طباعة المستندات غير الموثقة</div>
+                            </div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="permission-item">
+                        <div class="permission-details">
+                            <div class="text-content">
+                                <div class="permission-title">عرض (موثق)</div>
+                                <div class="permission-description">عرض البيانات الموثقة</div>
+                            </div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="permission-item">
+                        <div class="permission-details">
+                            <div class="text-content">
+                                <div class="permission-title">عرض (غير موثق)</div>
+                                <div class="permission-description">عرض البيانات غير الموثقة</div>
+                            </div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="bottom-action-buttons">
+                    <button class="btn-secondary"><img src="/frontend/images/settings.svg" alt="تعديل"> تعديل</button>
+                    <button class="btn-delete"><img src="/frontend/images/trash.svg" alt="حذف"> حذف</button>
+                    <button class="btn-primary"><img src="/frontend/images/excel.svg" alt="تصدير إلى Excel"> Excel تصدير إلى</button>
+                    <button class="btn-primary"><img src="/frontend/images/pdf.svg" alt="تصدير إلى PDF"> PDF تصدير إلى</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add User Modal -->
+    <div id="addUserModal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title">إضافة مستخدم جديد</h2>
+
+            <div class="modal-section">
+                <h3>معلومات المستخدم</h3>
+                <div class="form-group">
+                    <label for="userName">اسم المستخدم</label>
+                    <input type="text" id="userName" placeholder="أدخل اسم المستخدم">
+                </div>
+                <div class="form-group">
+                    <label for="jobTitle">المسمى الوظيفي</label>
+                    <input type="text" id="jobTitle" placeholder="أدخل المسمى الوظيفي">
+                </div>
+                <div class="form-group">
+                    <label for="department">القسم</label>
+                    <select id="department">
+                        <option value="">اختر القسم</option>
+                        <option value="hr">الموارد البشرية</option>
+                        <option value="it">تكنولوجيا المعلومات</option>
+                        <option value="finance">المالية</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="email">البريد الإلكتروني</label>
+                    <input type="email" id="email" placeholder="أدخل البريد الإلكتروني">
+                </div>
+                <div class="form-group">
+                    <label for="password">كلمة المرور</label>
+                    <input type="password" id="password" placeholder="أدخل كلمة المرور">
+                </div>
+            </div>
+
+            <!-- Permissions section removed as per user request -->
+
+            <div class="modal-actions">
+                <button class="btn-secondary" id="cancelAddUser">إلغاء</button>
+                <button class="btn-primary" id="saveUser">حفظ المستخدم</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/permissions.js"></script>
+</body>
+</html> 

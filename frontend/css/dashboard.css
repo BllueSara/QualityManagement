@@ -1,0 +1,152 @@
+/* General body styling */
+body {
+    font-family: 'Tajawal', sans-serif;
+    margin: 0;
+    background-color: #ffffff;
+    direction: rtl; /* Right-to-left for Arabic */
+    text-align: right;
+}
+
+.container {
+    width: 90%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px 0;
+}
+
+/* Header Styling */
+header {
+    background-color: #fff;
+    padding: 15px 0;
+    border-bottom: 1px solid #eee;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+header .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.hospital-logo img {
+    height: 50px; /* Adjust as needed */
+}
+
+
+
+
+
+.system-title img {
+    height: 40px; /* Adjust as needed */
+}
+
+/* Main Content Styling */
+main {
+    padding: 20px 0;
+}
+
+main h1 {
+    color: #333;
+    margin-bottom: 25px;
+    font-size: 28px;
+    font-weight: 700;
+}
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.stat-card {
+    background-color: #fff;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    display: flex;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-left: 20px;
+    flex-shrink: 0;
+}
+
+.stat-icon img {
+    width: 30px;
+    height: 30px;
+}
+
+.red-bg {
+    background-color: #ffe6e6; /* Light red */
+}
+
+.green-bg {
+    background-color: #e6ffe6; /* Light green */
+}
+
+.blue-bg {
+    background-color: #e6f2ff; /* Light blue */
+}
+
+.orange-bg {
+    background-color: #fff2e6; /* Light orange */
+}
+
+.stat-info {
+    flex-grow: 1;
+}
+
+.stat-label {
+    color: #666;
+    font-size: 16px;
+    margin-bottom: 5px;
+}
+
+.stat-value {
+    color: #333;
+    font-size: 32px;
+    font-weight: 700;
+}
+
+.stat-percentage {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #5cb85c; /* Default green for positive, change as needed */
+}
+
+.stat-percentage.negative {
+    color: #d9534f; /* Red for negative percentage */
+}
+
+/* Chart Styling */
+.chart-container {
+    background-color: #fff;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    height: 400px; /* Fixed height for the chart */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+main h2 {
+    color: #333;
+    margin-bottom: 20px;
+    font-size: 22px;
+    font-weight: 700;
+} 
