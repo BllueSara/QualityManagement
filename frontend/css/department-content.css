@@ -65,7 +65,7 @@ main h1 {
     flex-shrink: 0;
 }
 
-.folder-cards-grid {
+.folders-list {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Responsive grid for folder cards */
     gap: 20px; /* Space between folder cards */
@@ -118,7 +118,7 @@ main h1 {
 }
 
 /* Styles for icons within folder cards */
-.folder-card .card-icons {
+.folder-card .item-icons {
     position: absolute; /* Position icons absolutely within the card */
     top: 15px; /* Adjust vertical position from top */
     left: 15px; /* Adjust horizontal position from left (in RTL) */
@@ -126,7 +126,7 @@ main h1 {
     gap: 10px; /* Space between icons */
 }
 
-.folder-card .card-icons a {
+.folder-card .item-icons a {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -135,7 +135,7 @@ main h1 {
     text-decoration: none; /* Remove underline from link */
 }
 
-.folder-card .card-icons img {
+.folder-card .item-icons img {
     width: 18px; /* Icon image size */
     height: 18px;
 }
