@@ -1,112 +1,89 @@
- /**
+/**
  * script.js
  * ------------- 
  * منطق الفلترة والبحث في صفحة "سجلات النظام".
  * نفترض أن جدول السجلات محمّل مسبقًا في الذاكرة (DOM).
  */
 
-document.addEventListener('DOMContentLoaded', function () {
-    // 1. الحصول على المراجع لعناصر الفلترة والزرّين والجدول
-    const fromDateInput   = document.getElementById('from-date');      // حقل "من تاريخ"
-    const toDateInput     = document.getElementById('to-date');        // حقل "إلى تاريخ"
-    const actionTypeSelect= document.getElementById('action-type');    // قائمة نوع الإجراء
-    const userNameSelect  = document.getElementById('user-name');      // قائمة المستخدمين
-    const searchInput     = document.getElementById('search-input');   // حقل البحث
-    const applyBtn        = document.getElementById('apply-filter');   // زر "تطبيق التصفية"
-    const resetBtn        = document.getElementById('reset-filter');   // زر "إعادة التعيين"
-    const logsBody        = document.getElementById('logs-body');      // جسم الجدول (<tbody>)
+document.addEventListener('DOMContentLoaded', () => {
+    const applyFilterBtn = document.getElementById('apply-filter');
+    const resetFilterBtn = document.getElementById('reset-filter');
+    const fromDateInput = document.getElementById('from-date');
+    const toDateInput = document.getElementById('to-date');
+    const actionTypeSelect = document.getElementById('action-type');
+    const userNameSelect = document.getElementById('user-name');
+    const searchInput = document.getElementById('search-input');
+    const logsBody = document.getElementById('logs-body');
 
-    // 2. دالة تبين أو تخفي صفوف الجدول بناءً على شروط الفلترة
-    function filterTable() {
-        // قراءة القيم المدخلة في حقول الفلترة
-        const fromDateValue    = fromDateInput.value ? new Date(fromDateInput.value) : null;
-        const toDateValue      = toDateInput.value   ? new Date(toDateInput.value)   : null;
-        const selectedAction   = actionTypeSelect.value;
-        const selectedUser     = userNameSelect.value;
-        const searchKeyword    = searchInput.value.trim().toLowerCase();
+    // Function to apply filters (placeholder for now)
+    const applyFilters = () => {
+        const fromDate = fromDateInput.value;
+        const toDate = toDateInput.value;
+        const actionType = actionTypeSelect.value;
+        const userName = userNameSelect.value;
+        const searchTerm = searchInput.value.toLowerCase();
 
-        // المرور على كل صف داخل <tbody>
-        Array.from(logsBody.rows).forEach(row => {
-            // قراءة قيم data-attributes من السطر
-            const rowDateStr   = row.getAttribute('data-date');          // مثال: "2024-01-22T09:15:00"
-            const rowDate      = rowDateStr ? new Date(rowDateStr) : null;
-            const rowUser      = row.getAttribute('data-user') || '';
-            const rowAction    = row.getAttribute('data-action') || '';
-            const rowText      = row.innerText.trim().toLowerCase();     // نص كامل الصف لأجل البحث النصي
+        console.log('Applying Filters:');
+        console.log('From Date:', fromDate);
+        console.log('To Date:', toDate);
+        console.log('Action Type:', actionType);
+        console.log('User Name:', userName);
+        console.log('Search Term:', searchTerm);
 
-            let isVisible = true; // افتراض: نُظهر الصفّ ما لم يُخالف شرطًا
+        // In a real application, you would filter the table rows here
+        // For now, we just log the filter values.
 
-            // 2.1. فلترة التاريخ (إن تم تحديد “من تاريخ” أو “إلى تاريخ”)
-            if (fromDateValue && rowDate) {
-                // إذا كان تاريخ الصف أقلّ من "من تاريخ" => أخفِه
-                if (rowDate < fromDateValue) {
-                    isVisible = false;
-                }
+        // Example: Filtering rows (simplified)
+        const rows = logsBody.querySelectorAll('tr');
+        rows.forEach(row => {
+            const rowDate = row.dataset.date ? new Date(row.dataset.date) : null;
+            const rowUser = row.dataset.user ? row.dataset.user.toLowerCase() : '';
+            const rowAction = row.dataset.action ? row.dataset.action.toLowerCase() : '';
+            const rowText = row.textContent.toLowerCase();
+
+            let isVisible = true;
+
+            // Date filter
+            if (fromDate && rowDate && rowDate < new Date(fromDate)) {
+                isVisible = false;
             }
-            if (isVisible && toDateValue && rowDate) {
-                // إذا كان تاريخ الصف أكبر من "إلى تاريخ" (في نهاية اليوم) => أخفِه
-                // نضيف آخر اليوم لليوم المحدد في toDateValue
-                const endOfToDate = new Date(toDateValue);
-                endOfToDate.setHours(23, 59, 59);
-                if (rowDate > endOfToDate) {
-                    isVisible = false;
-                }
+            if (toDate && rowDate && rowDate > new Date(toDate)) {
+                isVisible = false;
             }
 
-            // 2.2. فلترة اسم المستخدم (إن اختار المستخدم قيمة غير فارغة)
-            if (isVisible && selectedUser) {
-                if (rowUser !== selectedUser) {
-                    isVisible = false;
-                }
+            // Action Type filter
+            if (actionType && rowAction !== actionType.toLowerCase()) {
+                isVisible = false;
             }
 
-            // 2.3. فلترة نوع الإجراء (إن اختار قيمة غير فارغة)
-            if (isVisible && selectedAction) {
-                if (rowAction !== selectedAction) {
-                    isVisible = false;
-                }
+            // User Name filter
+            if (userName && rowUser !== userName.toLowerCase()) {
+                isVisible = false;
             }
 
-            // 2.4. البحث النصي (إن كان هناك كلمة للبحث)
-            if (isVisible && searchKeyword) {
-                if (!rowText.includes(searchKeyword)) {
-                    isVisible = false;
-                }
+            // Search filter
+            if (searchTerm && !rowText.includes(searchTerm)) {
+                isVisible = false;
             }
 
-            // أخيرًا، إظهار الصف أو إخفاؤه
-            row.style.display = isVisible ? '' : 'none';
+            row.style.display = isVisible ? 'table-row' : 'none';
         });
-    }
+    };
 
-    // 3. دالة لإعادة تهيئة (Reset) جميع الفلاتر وإظهار كل الصفوف
-    function resetFilters() {
-        fromDateInput.value    = '';
-        toDateInput.value      = '';
+    // Function to reset filters
+    const resetFilters = () => {
+        fromDateInput.value = '';
+        toDateInput.value = '';
         actionTypeSelect.value = '';
-        userNameSelect.value   = '';
-        searchInput.value      = '';
+        userNameSelect.value = '';
+        searchInput.value = '';
+        applyFilters(); // Apply filters after resetting to show all rows
+    };
 
-        // إظهار كل الصفوف
-        Array.from(logsBody.rows).forEach(row => {
-            row.style.display = '';
-        });
-    }
+    // Event Listeners
+    applyFilterBtn.addEventListener('click', applyFilters);
+    resetFilterBtn.addEventListener('click', resetFilters);
 
-    // 4. إضافة مستمع إلى زرّ "تطبيق التصفية"
-    applyBtn.addEventListener('click', function (e) {
-        e.preventDefault(); // منع السلوك الافتراضي (إن وُجد)
-        filterTable();
-    });
-
-    // 5. إضافة مستمع إلى زرّ "إعادة التعيين"
-    resetBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        resetFilters();
-    });
-
-    // 6. إضافة مستمع عند كتابة نص في حقل البحث ليُنفّذ البحث فوريًا
-    searchInput.addEventListener('input', function () {
-        filterTable();
-    });
+    // Initial filter application (to show all rows on page load)
+    applyFilters();
 });

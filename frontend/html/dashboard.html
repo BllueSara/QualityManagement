@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إحصائيات التذاكر</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/shared.css">
+    <link rel="stylesheet" href="../css/dashboard.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-right">
+                <div class="hospital-logo">
+                    <img src="/frontend/images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز">
+                </div>
+            </div>
+            <div class="header-left">
+                <div class="system-title">
+                    <img src="/frontend/images/system-title.png" alt="نظام إدارة الجودة والسلامة">
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="page-controls">
+            <a href="index.html" class="back-button">
+                <img src="../images/Back.png" alt="رجوع">
+                <span>رجوع</span>
+            </a>
+        </div>
+        <div class="container">
+            <h1>إحصائيات التذاكر</h1>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon red-bg">
+                        <img src="/frontend/images/rejected.svg" alt="rejected tickets">
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-label">التذاكر المرفوضة</div>
+                        <div class="stat-value">67</div>
+                    </div>
+                    <div class="stat-percentage">-0%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green-bg">
+                        <img src="/frontend/images/closed.svg" alt="closed tickets">
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-label">التذاكر المغلقة</div>
+                        <div class="stat-value">456</div>
+                    </div>
+                    <div class="stat-percentage">+22%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon blue-bg">
+                        <img src="/frontend/images/current.svg" alt="current tickets">
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-label">التذاكر الجارية</div>
+                        <div class="stat-value">183</div>
+                    </div>
+                    <div class="stat-percentage">+8%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon orange-bg">
+                        <img src="/frontend/images/new.svg" alt="new tickets">
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-label">التذاكر الجديدة</div>
+                        <div class="stat-value">245</div>
+                    </div>
+                    <div class="stat-percentage">+15%</div>
+                </div>
+            </div>
+
+            <h2>التذاكر المغلقة خلال آخر 7 أيام</h2>
+            <div class="chart-container">
+                <canvas id="ticketsChart"></canvas>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="../js/dashboard.js"></script>
+</body>
+</html> 

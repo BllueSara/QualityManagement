@@ -1,0 +1,532 @@
+/* General Layout for Permissions Page */
+body {
+    background-color: #ffffff;
+    margin: 0;
+    font-family: 'Tajawal', sans-serif;
+    direction: rtl;
+    text-align: right;
+}
+
+main {
+    padding: 20px;
+    display: flex;
+    gap: 20px;
+    max-width: 1400px;
+    margin: 20px auto; /* Center the main content */
+}
+
+.permissions-container {
+    display: flex;
+    width: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+/* Users Sidebar */
+.users-sidebar {
+    width: 300px;
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 12px 0 0 12px;
+    border-left: 1px solid #eee;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.search-bar {
+    position: relative;
+    margin-bottom: 15px;
+    width: 250px; /* Reduced width for search input */
+}
+
+.search-bar input {
+    width: 80%;
+    padding: 8px 12px 8px 35px; /* Adjust padding for icon on left, reduced vertical padding */
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.9em; /* Smaller font size */
+    color: #333;
+}
+
+.search-bar img {
+    position: absolute;
+    top: 50%;
+   left: 10px;
+    transform: translateY(-60%);
+    width: 18px;
+    height: 18px;
+}
+
+.add-user-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.add-user-btn:hover {
+    background-color: #0056b3;
+}
+
+.add-user-btn img {
+    width: 18px;
+    height: 18px;
+    filter: brightness(0) invert(1); /* For white icon */
+}
+
+.user-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.user-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    position: relative;
+}
+
+.user-item:hover {
+    background-color: #f0f0f0;
+}
+
+.user-item.active {
+    background-color: #e6f2ff; /* Light blue for active user */
+}
+
+.user-avatar {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    margin-left: 15px; /* Space between avatar and info in RTL */
+    object-fit: cover;
+}
+
+.user-info {
+    flex-grow: 1;
+}
+
+.user-name {
+    font-weight: 600;
+    color: #333;
+    font-size: 1.1em;
+}
+
+.user-email {
+    font-size: 0.85em;
+    color: #666;
+}
+
+.user-status {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #ccc; /* Grey for inactive */
+}
+
+.user-status.active {
+    background-color: #28a745; /* Green for active */
+}
+
+/* Permissions Content */
+.permissions-content {
+    flex-grow: 1;
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 0 12px 12px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.user-profile-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 20px;
+}
+
+.user-profile-header h2 {
+    margin: 0;
+    font-size: 2em;
+    color: #333;
+}
+
+.user-profile-header .status {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.8em;
+    font-weight: 500;
+    background-color: #e0ffe0; /* Light green */
+    color: #28a745; /* Green */
+}
+
+.action-buttons-top {
+    display: flex;
+    gap: 10px;
+    margin-right: auto; /* Push buttons to the left in RTL */
+}
+
+.permissions-content h3 {
+    font-size: 1.5em;
+    color: #333;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.permission-section {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.permission-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #fdfdfd;
+    padding: 15px 20px;
+    border-radius: 10px;
+    border: 1px solid #eee;
+    transition: border-color 0.2s;
+}
+
+.permission-item:hover {
+    border-color: #007bff;
+}
+
+.permission-details {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.permission-icon {
+    /* Removed as per user request */
+}
+
+.text-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.permission-title {
+    font-weight: 600;
+    color: #333;
+    font-size: 1.1em;
+}
+
+.permission-description {
+    font-size: 0.85em;
+    color: #777;
+}
+
+/* Toggle Switch Styles */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 24px;
+    margin-left: 10px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: 0.4s;
+}
+
+input:checked + .slider {
+    background-color: #007bff;
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 1px #007bff;
+}
+
+input:checked + .slider:before {
+    transform: translateX(24px); /* Moves to the right in LTR, so to the left in RTL */
+}
+
+/* Rounded sliders */
+.slider.round {
+    border-radius: 24px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+/* Bottom Action Buttons */
+.bottom-action-buttons {
+    display: flex;
+    justify-content: flex-start; /* Align to the right in RTL */
+    gap: 10px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+    margin-top: auto; /* Push to the bottom */
+}
+
+.btn-delete {
+    background-color: #dc3545;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s;
+}
+
+.btn-delete:hover {
+    background-color: #c82333;
+}
+
+.btn-delete img {
+    width: 18px;
+    height: 18px;
+    filter: brightness(0) invert(1); /* For white icon */
+}
+
+/* General button styles for btn-primary and btn-secondary are in shared.css */
+/* Ensure the correct image filters for these buttons if they have icons */
+.btn-primary img,
+.btn-secondary img {
+    filter: brightness(0) invert(1); /* Example for white icons on colored buttons */
+}
+
+/* Adjust filter for specific icons if needed */
+.btn-primary img[alt="تغيير الدور"], /* Assuming users.svg */
+.btn-primary img[alt="تصدير إلى Excel"], /* Assuming excel.svg */
+.btn-primary img[alt="تصدير إلى PDF"] /* Assuming pdf.svg */
+{
+    filter: brightness(0) invert(1);
+}
+
+.btn-secondary img[alt="تعديل"] /* Assuming settings.svg */
+{
+    filter: brightness(0) invert(20%) sepia(0%) saturate(0%) hue-rotate(18deg) brightness(97%) contrast(92%); /* Dark grey filter */
+}
+
+/* Responsive Adjustments */
+@media (max-width: 992px) {
+    main {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .permissions-container {
+        flex-direction: column;
+        width: 100%;
+        border-radius: 12px;
+    }
+
+    .users-sidebar {
+        width: 100%;
+        border-radius: 12px 12px 0 0;
+        border-bottom: 1px solid #eee;
+        border-left: none;
+    }
+
+    .permissions-content {
+        border-radius: 0 0 12px 12px;
+        padding: 20px;
+    }
+
+    .user-profile-header {
+        flex-wrap: wrap;
+        justify-content: center;
+        text-align: center;
+    }
+
+    .action-buttons-top {
+        margin-right: 0;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .permissions-content h2 {
+        width: 100%;
+        text-align: center;
+    }
+
+    .bottom-action-buttons {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}
+
+/* Add User Modal Styles */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+    display: flex; /* Use flexbox for centering */
+    align-items: center; /* Center vertically */
+    justify-content: center; /* Center horizontally */
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: auto;
+    padding: 25px; /* Reduced padding */
+    border-radius: 12px;
+    width: 90%;
+    max-width: 750px; /* Reduced max-width for a more compact look */
+    box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 25px; /* Reduced gap */
+    justify-content: space-between;
+}
+
+.modal-title {
+    font-size: 1.6em; /* Slightly smaller font size */
+    color: #333;
+    margin-bottom: 15px; /* Reduced margin */
+    text-align: center;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px; /* Reduced padding */
+    width: 100%;
+}
+
+.modal-section {
+    flex: 1;
+    min-width: 300px; /* Adjusted min-width for sections */
+    margin-bottom: 15px; /* Reduced margin */
+    display: flex;
+    flex-direction: column;
+    gap: 12px; /* Reduced spacing within sections */
+}
+
+.modal-section h3 {
+    font-size: 1.2em; /* Slightly smaller font size */
+    color: #333;
+    margin-bottom: 12px; /* Reduced margin */
+    padding-bottom: 8px; /* Reduced padding */
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.form-group {
+    margin-bottom: 12px; /* Reduced margin */
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px; /* Reduced margin */
+    font-weight: 500;
+    color: #555;
+}
+
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group input[type="password"],
+.form-group select {
+    width: 100%;
+    padding: 10px 12px; /* Reduced padding */
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.95em; /* Slightly smaller font size */
+    color: #333;
+}
+
+.form-group select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url('data:image/svg+xml;utf8,<svg fill="#000000" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
+    background-repeat: no-repeat;
+    background-position: left 15px top 50%;
+    background-size: 18px;
+}
+
+.modal .permission-item {
+    padding: 12px 15px;
+    margin-bottom: 10px;
+    background-color: #fdfdfd; /* Ensure background color for permission items */
+    border: 1px solid #eee;
+    border-radius: 10px;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-start;
+    gap: 10px;
+    padding-top: 15px; /* Reduced padding */
+    border-top: 1px solid #eee;
+    margin-top: auto;
+    width: 100%;
+}
+
+/* Override specific styles for the modal's input fields to match the image */
+.modal .form-group input,
+.modal .form-group select {
+    background-color: #f9f9f9;
+    border: 1px solid #eee;
+    padding: 8px 10px; /* Further reduced padding */
+    font-size: 0.9em; /* Further reduced font size */
+    border-radius: 6px;
+    box-sizing: border-box; /* Ensure consistent sizing */
+}
+
+.modal .form-group input::placeholder {
+    color: #bbb;
+}
+
+.modal .form-group label {
+    font-weight: normal;
+    color: #666;
+} 
