@@ -8,9 +8,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../css/shared.css">
-  
     <link rel="stylesheet" href="../css/register.css">
-    <script src="../js/register.js" defer></script>
+   
 </head>
 <body>
     <header>
@@ -70,10 +69,8 @@
                     <div class="input-icon-wrapper">
                         <select id="reg-department" name="department" required>
                             <option value="">اختر القسم</option>
-                            <option value="1">القسم الأول</option>
-                            <option value="2">القسم الثاني</option>
-                            <!-- تأكد من تحديث هذه القيم لتتوافق مع معرفات الأقسام في قاعدة البيانات -->
-                            <!-- Add more options here -->
+                            <!-- الأقسام سيتم جلبها ديناميكياً بواسطة JavaScript -->
+                            <option value="__ADD_NEW_DEPARTMENT__">إضافة قسم جديد</option>
                         </select>
                          <!-- Department icon placeholder (if needed, might style select with CSS) -->
                          <img src="../images/arrwo.png" alt="أيقونة سهم" class="icon select-arrow-icon">
@@ -88,5 +85,30 @@
             </form>
         </div>
     </main>
+
+    <!-- Add New Department Modal (copied from departments.html) -->
+    <div id="addDepartmentModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>إضافة قسم</h3>
+            <hr>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="departmentName">اسم القسم</label>
+                    <input type="text" id="departmentName" placeholder="أدخل اسم القسم">
+                </div>
+                 <div class="form-group">
+                    <label for="departmentImage">مسار الصورة</label>
+                    <input type="file" id="departmentImage" accept="image/*">
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-primary" id="saveAddDepartment">حفظ</button>
+                <button class="btn-secondary" id="cancelAddDepartment">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
 </body>
+
+<script src="../js/register.js"></script>
 </html> 
