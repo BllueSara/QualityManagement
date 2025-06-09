@@ -7,6 +7,8 @@ const authRoutes = require('./routes/auth');
 const departmentRoutes = require('./routes/departments');
 const contentRoutes = require('./routes/contentRoutes');
 const folderRoutes = require('./routes/folderRoutes');
+const path = require('path');
+
 const port = 3000;
 
 // Middleware
@@ -46,7 +48,10 @@ db.connect((err) => {
 app.get('/', (req, res) => {
     res.send('الخادم يعمل بشكل صحيح!');
 });
-
+app.use(
+  '/',
+  express.static(path.join(__dirname, '../frontend'))
+);
 // تشغيل الخادم
 app.listen(port, () => {
     console.log(`الخادم يعمل على http://localhost:${port}`);

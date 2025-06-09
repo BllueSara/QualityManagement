@@ -19,15 +19,26 @@
 
 <body>
     <!-- ===== الهيدر العلوي ===== -->
-    <header class="main-header">
-        <div class="header-container">
-            <div class="header-title">نظام إدارة الجودة والسلامة</div>
-            <div class="header-logo">
-        <img src="/frontend/images/hospital-logo.png" alt="شعار المستشفى" />
+  <header class="main-header">
+    <div class="header-container">
+      <div class="system-title">
+          <img src="/frontend/images/system-title.png" alt="نظام إدارة الجودة والسلامة">
+  </div>
+       <div class="hospital-logo">
+                <img src="/frontend/images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز">
             </div>
-        </div>
-    </header>
-
+    </div>
+  </header>
+        <div class="header-actions">
+    <button class="back-btn" onclick="history.back()">
+        <i class="fas fa-arrow-left"></i>
+        <span>رجوع</span>
+  </button>
+  <button class="home-btn" onclick="window.location.href='index.html'">
+    <i class="fas fa-home"></i>
+    <span>الرئيسية</span>
+  </button>
+</div>
     <!-- ===== المحتوى الرئيسي ===== -->
     <main class="content-wrapper">
         <!-- عنوان الصفحة -->
@@ -201,6 +212,125 @@
             </table>
         </div>
     </main>
+      <!-- ===== توقيع (Signature) Modal ===== -->
+<!-- ===== توقيع (Signature) Modal ===== -->
+<div id="signatureModal" class="modal-overlay" style="display: none;">
+  <div class="modal">
+    <!-- رأس المودال -->
+    <div class="modal-header">
+      <button class="modal-close">&times;</button>
+      <h2 class="modal-title">توقيع</h2>
+    </div>
+    <!-- جسم المودال -->
+    <div class="modal-body">
+      <div class="canvas-wrapper">
+        <canvas id="signaturePad"></canvas>
+      </div>
+    </div>
+    <!-- تذييل المودال -->
+    <div class="modal-footer">
+      <button id="btnConfirmSignature" class="btn-confirm">تأكيد التوقيع</button>
+      <button id="btnClear" class="btn-cancel">مسح</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== رفض الطلب Modal ===== -->
+<div id="rejectModal" class="modal-overlay" style="display: none;">
+  <div class="modal">
+    <!-- رأس المودال -->
+    <div class="modal-header">
+      <button class="modal-close" data-modal="rejectModal">&times;</button>
+      <h2 class="modal-title" style="color: #2563eb;">رفض الطلب</h2>
+    </div>
+    <!-- جسم المودال -->
+    <div class="modal-body">
+      <label for="rejectReason" class="body-label">يرجى كتابة سبب الرفض</label>
+      <textarea id="rejectReason" class="body-textarea" rows="4"></textarea>
+    </div>
+    <!-- تذييل المودال -->
+    <div class="modal-footer">
+      <button id="btnSendReason" class="btn-confirm">إرسال السبب</button>
+      <button class="btn-cancel" data-modal="rejectModal">إلغاء</button>
+    </div>
+  </div>
+</div>
+<!-- ===== مودال QR Code ===== -->
+<div id="qrModal" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <!-- رأس المودال -->
+    <div class="modal-header">
+      <h2 class="modal-title">رمز الاستجابة السريعة (QR Code)</h2>
+      <button class="modal-close" data-modal="qrModal">&times;</button>
+    </div>
+    <!-- جسم المودال -->
+    <div class="modal-body">
+      <div class="qr-wrapper">
+        <canvas id="qrCanvas"></canvas>
+      </div>
+      <p class="qr-instruction">امسح الكود للمصادقة أو المعاينة</p>
+      <p id="qrSuccessMsg" class="qr-success" style="display:none;">
+    تم الاعتماد الإلكتروني
+  </p>
+    </div>
+    <!-- تذييل المودال -->
+<div class="modal-footer">
+  <button id="btnElectronicApprove" class="btn-confirm">
+    اعتماد إلكتروني
+  </button>
+  <button id="btnDownloadQR" class="btn-confirm">
+    <i class="fas fa-download"></i> تحميل الكود
+  </button>
+  <button class="btn-cancel" data-modal="qrModal">إغلاق</button>
+</div>
+
+  </div>
+</div>
+<!-- ===== توقيع بالنيابة عن Modal ===== -->
+<div id="delegateModal" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <!-- رأس المودال -->
+    <div class="modal-header">
+      <button class="modal-close" data-modal="delegateModal">&times;</button>
+      <h2 class="modal-title">توقيع بالنيابة عن</h2>
+    </div>
+    <!-- جسم المودال -->
+    <div class="modal-body">
+      <form id="delegateForm" novalidate>
+        <div class="form-group">
+          <label for="delegateUser">اسم المستخدم</label>
+          <input type="text" id="delegateUser" name="delegateUser" placeholder="" required />
+        </div>
+        <div class="form-group">
+          <label for="delegateDept">القسم</label>
+          <select id="delegateDept" name="delegateDept" required>
+            <option value="" disabled selected>اختر القسم</option>
+            <option value="sales">المبيعات</option>
+            <option value="hr">الموارد البشرية</option>
+            <option value="procurement">المشتريات</option>
+            <option value="finance">المالية</option>
+            <option value="marketing">التسويق</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="delegateNotes">ملاحظات</label>
+          <textarea id="delegateNotes" name="delegateNotes" rows="4" placeholder=""></textarea>
+        </div>
+      </form>
+    </div>
+    <!-- تذييل المودال -->
+    <div class="modal-footer">
+      <button id="btnDelegateConfirm" class="btn-confirm">تأكيد</button>
+      <button class="btn-cancel" data-modal="delegateModal">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- QRCode.js من CDN لتوليد QR -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+
+    <script src="../js/approvals-recived.js"></script>
+
 </body>
 
 </html>

@@ -1,7 +1,5 @@
-/* ===== Ø§Ø³ØªÙŠØ±Ø§Ø¯ Ø®Ø· Tajawal ===== */
 @import url("https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap");
 
-/* ===== Ø¥Ø¹Ø§Ø¯Ø© ØªÙ‡ÙŠØ¦Ø© Ø§Ù„Ù‚ÙŠÙ… Ø§Ù„Ø§ÙØªØ±Ø§Ø¶ÙŠØ© ===== */
 * {
   margin: 0;
   padding: 0;
@@ -13,16 +11,63 @@ html,
 body {
   width: 100%;
   height: 100%;
-  background-color: #ffffff; /* Ø®Ù„ÙÙŠØ© Ø±Ù…Ø§Ø¯ÙŠØ© ÙØ§ØªØ­Ø© */
+  background-color: #ffffff; 
   color: #2d2d2d;
 }
 
 body {
-  direction: rtl; /* Ù…Ù† Ø§Ù„ÙŠÙ…ÙŠÙ† Ø¥Ù„Ù‰ Ø§Ù„ÙŠØ³Ø§Ø± */
+  direction: rtl;
   line-height: 1.6;
 }
+.header-actions {
+  position: relative;
+  height: 50px;
+  margin-bottom: 16px;
+  width: 100%;
+  top: 10px;
+}
 
-/* ===== Ø§Ù„Ù‡ÙŠØ¯Ø± Ø§Ù„Ø¹Ù„ÙˆÙŠ ===== */
+/* زرّ الرجوع على أقصى يسار بلا حواف خارجية */
+.back-btn {
+  position: absolute;
+  left: 50px;              /* flush لأقصى يسار */
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  font-size: 18px;      /* حجم يناسب النص */
+  color: #1D4ED8;
+  cursor: pointer;
+  padding: 0 12px;      /* مسافة داخلية مناسبة */
+  font-family: inherit; /* يرث ستايل الخط */
+}
+
+/* زرّ الرئيسية في المنتصف */
+.home-btn {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #1D4ED8;
+  cursor: pointer;
+  padding: 0 12px;
+  font-family: inherit;
+}
+
+/* تأثير عند المرور بالفأرة */
+.back-btn:hover,
+.home-btn:hover {
+  opacity: 0.7;
+}
 .main-header {
   background-color: #ffffff;
   border-bottom: 1px solid #e0e0e0;
@@ -31,7 +76,11 @@ body {
   top: 0;
   z-index: 100;
 }
-
+.hospital-logo img,
+.system-title img {
+    max-height: 40px;
+    vertical-align: middle;
+}
 .header-container {
   display: flex;
   justify-content: space-between;
@@ -48,7 +97,6 @@ body {
   height: 30px;
 }
 
-/* ===== Ø§Ù„Ù…Ø­ØªÙˆÙ‰ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ ===== */
 .content-wrapper {
   max-width: 1500px;
   margin: 30px auto;
@@ -62,25 +110,22 @@ body {
   color: #1f2937;
 }
 
-/* ===== Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ø·Ù„Ø¨Ø§Øª ===== */
 .total-count {
   font-size: 0.95rem;
   color: #4b5563;
-  text-align: left; /* ÙŠØ¸Ù‡Ø± Ø¹Ù„Ù‰ Ø§Ù„ÙŠØ³Ø§Ø± ÙÙŠ RTL */
+  text-align: left; 
   margin-bottom: 20px;
 }
 
-/* ===== ØµÙ†Ø¯ÙˆÙ‚ Ø§Ù„Ø¨Ø­Ø« ÙˆØ§Ù„ØªØµÙÙŠØ© ===== */
 .search-filter-container {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 12px;
   margin-bottom: 15px;
-  justify-content: flex-start; /* ÙÙŠ RTL => Ø£Ù‚ØµÙ‰ Ø§Ù„ÙŠÙ…ÙŠÙ† */
+  justify-content: flex-start; 
 }
 
-/* ØµÙ†Ø¯ÙˆÙ‚ Ø§Ù„Ø¨Ø­Ø« */
 .search-box {
   position: relative;
   width: 240px;
@@ -88,7 +133,7 @@ body {
 
 .search-box input {
   width: 100%;
-  padding: 8px 12px 8px 36px; /* Ù…Ø³Ø§ÙØ© Ù„Ù„Ø¢ÙŠÙ‚ÙˆÙ†Ø© Ù…Ù† Ø§Ù„ÙŠÙ…ÙŠÙ† */
+  padding: 8px 50px 8px 36px; 
   font-size: 0.95rem;
   border: 1px solid #e5e7eb;
   border-radius: 6px;
@@ -111,7 +156,6 @@ body {
   font-size: 1rem;
 }
 
-/* Ù‚ÙˆØ§Ø¦Ù… Ø§Ù„ØªØµÙÙŠØ© (Ø§Ù„Ø­Ø§Ù„Ø© ÙˆØ§Ù„Ø£Ù‚Ø³Ø§Ù…) */
 .filter-select {
   padding: 8px 10px;
   font-size: 0.95rem;
@@ -119,7 +163,7 @@ body {
   border-radius: 6px;
   background-color: #ffffff;
   color: #374151;
-  appearance: none; /* Ù„Ø¥Ø®ÙØ§Ø¡ Ø§Ù„Ø³Ù‡Ù… Ø§Ù„Ø§ÙØªØ±Ø§Ø¶ÙŠ Ø£Ø­ÙŠØ§Ù†Ø§Ù‹ */
+  appearance: none; 
   cursor: pointer;
   transition: border-color 0.2s;
 }
@@ -129,12 +173,11 @@ body {
   border-color: #3b82f6;
 }
 
-/* Ø²Ø± ØªØµÙÙŠØ© Ø§Ù„Ù†ØªØ§Ø¦Ø¬ */
 .btn-filter {
   display: flex;
   align-items: center;
   gap: 6px;
-  background-color: #2563eb; /* Ø£Ø²Ø±Ù‚ Ø£Ø³Ø§Ø³ÙŠ */
+  background-color: #2563eb; 
   color: #ffffff;
   border: none;
   border-radius: 6px;
@@ -152,9 +195,8 @@ body {
   background-color: #1e40af;
 }
 
-/* ===== Ø¬Ø¯ÙˆÙ„ Ø¹Ø±Ø¶ Ø§Ù„Ø·Ù„Ø¨Ø§Øª ===== */
 .table-container {
-  overflow-x: auto; /* Ø¯Ø¹Ù… Ø§Ù„Ø´Ø§Ø´Ø§Øª Ø§Ù„ØµØºÙŠØ±Ø© */
+  overflow-x: auto;
   background-color: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
@@ -192,10 +234,9 @@ body {
   background-color: #f9fafb;
 }
 
-/* Ø£Ø¹Ù…Ø¯Ø© Ø§Ù„Ø¬Ø¯ÙˆÙ„ */
 .col-file {
   width: 240px;
-  text-align: left; /* Ø§Ø³Ù… Ø§Ù„Ù…Ù„Ù ÙˆØ§Ù„Ù…Ø­Ø§Ø°Ø§Ø© Ù„Ù„ÙŠØ³Ø§Ø± */
+  text-align: left; 
 }
 
 .col-dept {
@@ -214,13 +255,11 @@ body {
   width: 140px;
 }
 
-/* Ø£ÙŠÙ‚ÙˆÙ†Ø© Ø§Ù„Ù…Ù„Ù */
 .file-icon {
   margin-left: 6px;
   color: #6b7280;
 }
 
-/* Ø²Ø± ØªØªØ¨Ø¹ Ø§Ù„Ø·Ù„Ø¨ */
 .btn-track {
   padding: 6px 16px;
   font-size: 0. nine5rem;
@@ -237,7 +276,6 @@ body {
   color: #ffffff;
 }
 
-/* Ø¹Ù„Ø§Ù…Ø§Øª Ø§Ù„Ø­Ø§Ù„Ø© (Badges) */
 .badge {
   display: inline-block;
   padding: 4px 10px;
@@ -247,32 +285,27 @@ body {
   color: #1f2937;
 }
 
-/* Ù‚ÙŠØ¯ Ø§Ù„Ù…Ø±Ø§Ø¬Ø¹Ø© */
 .badge-pending {
-  background-color: #fef3c7; /* Ø£ØµÙØ± ÙØ§ØªØ­ */
+  background-color: #fef3c7; 
   color: #92400e;
 }
 
-/* ØªÙ…Øª Ø§Ù„Ù…ÙˆØ§ÙÙ‚Ø© */
 .badge-approved {
-  background-color: #dcfce7; /* Ø£Ø®Ø¶Ø± ÙØ§ØªØ­ */
+  background-color: #dcfce7; 
   color: #166534;
 }
 
-/* Ù…Ø±ÙÙˆØ¶ */
 .badge-rejected {
-  background-color: #fee2e2; /* Ø£Ø­Ù…Ø± ÙØ§ØªØ­ */
+  background-color: #fee2e2; 
   color: #991b1b;
 }
 
-/* ===== Ù†Øµ Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ø³Ø¬Ù„Ø§Øª ===== */
 .records-info {
   margin: 14px 0;
   font-size: 0. nine5rem;
   color: #6b7280;
 }
 
-/* ===== Ø£Ø²Ø±Ø§Ø± Ø§Ù„ØªÙ†Ù‚Ù„ Pagination ===== */
 .pagination {
   display: flex;
   justify-content: flex-end;
@@ -297,13 +330,11 @@ body {
   font-size: 1rem;
 }
 
-/* Ø§Ù„Ø²Ø± ØºÙŠØ± Ø§Ù„Ù†Ø´Ø· */
 .page-btn[disabled] {
   cursor: not-allowed;
   opacity: 0.6;
 }
 
-/* Ø±Ù‚Ù… Ø§Ù„ØµÙØ­Ø© Ø§Ù„Ù†Ø´Ø· */
 .page-number.active {
   background-color: #2563eb;
   color: #ffffff;
@@ -315,12 +346,11 @@ body {
   border-color: #d1d5db;
 }
 
-/* Ø§Ù„ØªØ¬Ø§ÙˆØ¨ Ù„Ù„Ø´Ø§Ø´Ø§Øª Ø§Ù„ØµØºÙŠØ±Ø© */
 @media (max-width: 768px) {
   .approvals-table {
     min-width: 600px;
   }
   .col-notes {
-    display: none; /* Ø¥Ø®ÙØ§Ø¡ Ø¹Ù…ÙˆØ¯ Ø§Ù„Ù…Ù„Ø§Ø­Ø¸Ø§Øª ÙÙŠ Ø§Ù„Ù‡ÙˆØ§ØªÙ */
+    display: none; 
   }
 }

@@ -1,46 +1,79 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>الاعتمادات</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../css/shared.css">
-    <link rel="stylesheet" href="../css/approvals-types.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>الاعتمادات</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../css/shared.css"/>
+  <link rel="stylesheet" href="../css/approvals-types.css"/>
 </head>
 <body>
-    <header>
-        <div class="container">
-            <div class="hospital-logo">
-                <img src="../images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز">
-            </div>
-            <div class="system-title">
-                <img src="../images/system-title.png" alt="نظام إدارة الجودة والسلامة">
-            </div>
+  <header class="main-header">
+    <div class="header-container">
+      <div class="hospital-logo">
+        <img src="../images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز"/>
+      </div>
+      <div class="header-title">
+        نظام إدارة الجودة والسلامة
+      </div>
+    </div>
+  </header>
+    <div class="header-actions">
+    <button class="back-btn" onclick="history.back()">
+        <i class="fas fa-arrow-left"></i>
+        <span>رجوع</span>
+  </button>
+  <button class="home-btn" onclick="window.location.href='index.html'">
+    <i class="fas fa-home"></i>
+    <span>الرئيسية</span>
+  </button>
+</div>
+  <main class="content-wrapper">
+    <div class="page-header">
+      <h1 class="page-title">الاعتمادات</h1>
+      <p class="page-subtitle">إدارة الاعتمادات الخاصة بك</p>
+    </div>
+
+    <div class="cards-container">
+      <a href="approvals.html" class="ticket-card">
+        <div class="card-icon">
+          <img src="../images/e3tmad.svg" alt="طلباتي" class="icon-img"/>
         </div>
-    </header>
-    <main>
-        <div class="container">
-            <h1>الاعتمادات</h1>
-            <div class="back-button-container">
-                <a href="#" onclick="history.back(); return false;" class="back-button">
-                    رجوع
-                    <img src="../images/Back.png" alt="رجوع" class="back-arrow-icon">
-                </a>
-            </div>
-            <div class="accreditations-cards">
-                <a href="approvals.html" class="accreditation-card">
-                    <img src="../images/e3tmad.svg" alt="طلباتي" class="accreditation-icons">
-                    <div class="accreditation-title">طلباتي</div>
-                </a>
-                <a href="approvals-recived.html" class="accreditation-card">
-                    <img src="../images/inpox.svg" alt="الطلبات المرسلة لك" class="accreditation-icon" onerror="this.style.display='none';this.parentNode.innerHTML='<div style=\'font-size:48px;color:#2563eb;margin-bottom:18px;\'>📥</div><div class=\'accreditation-title\'>الطلبات المرسلة لك</div>'">
-                    <div class="accreditation-title">الطلبات المرسلة لك</div>
-                </a>
-            </div>
+        <h2 class="card-title">طلباتي</h2>
+        <p class="card-desc">عرض طلبات الاعتماد التي تقدمت بها</p>
+      </a>
+
+      <a href="approvals-recived.html" class="ticket-card">
+        <div class="card-icon">
+          <img src="../images/inpox.svg" alt="الطلبات المرسلة لك" class="icon-img" onerror="this.style.display='none';this.parentNode.innerHTML='📥';"/>
         </div>
-    </main>
+        <h2 class="card-title">الطلبات المرسلة لك</h2>
+        <p class="card-desc">الاعتمادات الموجهة إليك للمراجعة</p>
+      </a>
+
+      <!-- البطاقة الثالثة: توقيع بالنيابة -->
+      <a href="sign.html" class="ticket-card">
+        <div class="card-icon">
+          <i class="fas fa-user-secret" style="font-size:2.5rem;color:#2563eb;"></i>
+        </div>
+        <h2 class="card-title">توقيع بالنيابة</h2>
+        <p class="card-desc">التوقيع على الوثائق نيابةً عن الآخرين</p>
+      </a>
+            <a href="pending-approvals.html" class="ticket-card admin-only">
+        <div class="card-icon">
+          <i class="fas fa-user-shield" style="font-size:2.5rem;color:#2563eb;"></i>
+        </div>
+        <h2 class="card-title"> ملفات الاعتمادات</h2>
+        <p class="card-desc">قراءة ملفات الاعتمادات </p>
+      </a>
+    </div>
+
+  </main>
+
+  <!-- Font Awesome -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous"></script>
 </body>
-</html> 
+</html>

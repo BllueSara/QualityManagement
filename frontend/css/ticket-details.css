@@ -1,7 +1,5 @@
-/* ===== Ø§Ø³ØªÙŠØ±Ø§Ø¯ Ø®Ø· Tajawal ===== */
 @import url("https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap");
 
-/* ===== Ø¥Ø¹Ø§Ø¯Ø© ØªÙ‡ÙŠØ¦Ø© Ø§Ù„Ù‚ÙŠÙ… Ø§Ù„Ø§ÙØªØ±Ø§Ø¶ÙŠØ© ===== */
 * {
   margin: 0;
   padding: 0;
@@ -13,21 +11,73 @@ html,
 body {
   width: 100%;
   height: 100%;
-  background-color: #f2f4f7; /* Ù„ÙˆÙ† Ø®Ù„ÙÙŠØ© Ø®ÙÙŠÙ */
+  background-color: #ffffff; 
   color: #2d2d2d;
 }
 
 body {
-  direction: rtl; /* Ù…Ù† Ø§Ù„ÙŠÙ…ÙŠÙ† Ø¥Ù„Ù‰ Ø§Ù„ÙŠØ³Ø§Ø± */
+  direction: rtl; 
   line-height: 1.6;
 }
+.hospital-logo img,
+.system-title img {
+  max-height: 40px;
+  vertical-align: middle;
+}
+.header-actions {
+  position: relative;
+  height: 50px;
+  margin-bottom: 16px;
+  width: 100%;
+  top: 10px;
+}
 
-/* ===== Ø§Ù„Ù‡ÙŠØ¯Ø± Ø§Ù„Ø¹Ù„ÙˆÙŠ ===== */
+/* زرّ الرجوع على أقصى يسار بلا حواف خارجية */
+.back-btn {
+  position: absolute;
+  left: 50px;              /* flush لأقصى يسار */
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  font-size: 18px;      /* حجم يناسب النص */
+  color: #1D4ED8;
+  cursor: pointer;
+  padding: 0 12px;      /* مسافة داخلية مناسبة */
+  font-family: inherit; /* يرث ستايل الخط */
+}
+
+/* زرّ الرئيسية في المنتصف */
+.home-btn {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #1D4ED8;
+  cursor: pointer;
+  padding: 0 12px;
+  font-family: inherit;
+}
+
+/* تأثير عند المرور بالفأرة */
+.back-btn:hover,
+.home-btn:hover {
+  opacity: 0.7;
+}
 .main-header {
   background-color: #ffffff;
   border-bottom: 1px solid #e0e0e0;
   padding: 15px 30px;
-  position: sticky;
+  position: static;
   top: 0;
   z-index: 100;
 }
@@ -48,11 +98,10 @@ body {
   height: 30px;
 }
 
-/* ===== Ø§Ù„Ù…Ø­ØªÙˆÙ‰ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ ===== */
 .content-wrapper {
   max-width: 1000px;
-  margin: 30px auto;
-  padding: 0 20px;
+  margin: 16px auto;     /* خفّضنا الهامش العمودي */
+  padding: 0 12px;
 }
 
 .page-title {
@@ -61,18 +110,15 @@ body {
   margin-bottom: 20px;
   color: #1f2937;
 }
-
-/* ===== ØªÙ†Ø³ÙŠÙ‚ Ø§Ù„Ø¨Ø·Ø§Ù‚Ø§Øª (Sections) ===== */
 .card-section {
-  background-color: #ffffff;
+  background: #fff;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  padding: 20px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  border-radius: 6px;
+  margin-bottom: 8px;    /* بدل 20px */
+  padding: 12px;         /* بدل 20px */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
-/* ===== Ø±Ø£Ø³ ÙƒÙ„ Ù‚Ø³Ù… ===== */
 .section-header {
   display: flex;
   align-items: center;
@@ -91,41 +137,35 @@ body {
   color: #1f2937;
 }
 
-/* ===== Ù…Ø­ØªÙˆÙ‰ Ø§Ù„Ù‚Ø³Ù… ===== */
 .section-content {
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
 
-/* Ø³Ø·Ø± Ù…Ù† Ø§Ù„Ø­Ù‚ÙˆÙ„ ÙŠØ¶Ù… Ø­Ù‚Ù„ÙŠÙ† Ø£Ùˆ Ø£ÙƒØ«Ø± Ø£ÙÙ‚ÙŠÙ‹Ø§ */
 .field-row {
   display: flex;
   flex-wrap: wrap;
   gap: 20px;
 }
 
-/* Ù…Ø¬Ù…ÙˆØ¹Ø© Ø­Ù‚Ù„ ÙˆØ§Ø­Ø¯ (full-width) */
 .field-single {
   display: flex;
   flex-direction: column;
 }
 
-/* Ù…Ø¬Ù…ÙˆØ¹Ø© Ø­Ù‚Ù„ Ù…Ø¹ Ø§Ø³Ù… ÙˆØ¹Ø±Ø¶ Ø§Ù„Ù‚ÙŠÙ…Ø© */
 .field-group {
   flex: 1 1 45%;
   display: flex;
   flex-direction: column;
 }
 
-/* ØªØ³Ù…ÙŠØ© Ø§Ù„Ø­Ù‚Ù„ */
 .field-label {
   font-size: 0.95rem;
   color: #4b5563;
   margin-bottom: 6px;
 }
 
-/* Ø§Ù„Ù‚ÙŠÙ…Ø© Ø§Ù„Ù…Ø¹Ø±ÙˆØ¶Ø© Ù„Ù„Ø­Ù‚Ù„ */
 .field-value {
   background-color: #f9fafb;
   border: 1px solid #e5e7eb;
@@ -135,7 +175,6 @@ body {
   color: #1f2937;
 }
 
-/* ÙÙŠ Ø­Ø§Ù„Ø© Ø§Ù„Ø±Ø§Ø¯ÙŠÙˆ ÙÙ‚Ø· Ù„Ù„Ø¹Ø±Ø¶ */
 .radio-readonly {
   display: inline-flex;
   align-items: center;
@@ -147,14 +186,12 @@ body {
   accent-color: #3b82f6;
 }
 
-/* Ù†Øµ Ø§Ù„ÙˆÙ‚Øª Ø¯Ø§Ø®Ù„ Ù‚ÙŠÙ…Ø© Ø§Ù„Ø­Ù‚Ù„ */
 .time-text {
   font-size: 0.95rem;
   color: #1f2937;
   margin-left: 8px;
 }
 
-/* Ø£ÙŠÙ‚ÙˆÙ†Ø© Ø§Ù„Ù…Ø±ÙÙ‚Ø§Øª */
 .attachments {
   display: flex;
   align-items: center;
@@ -168,7 +205,6 @@ body {
   color: #6b7280;
 }
 
-/* ===== Ù‚Ø³Ù… Ø§Ù„ÙˆØ³ÙˆÙ… Tags ===== */
 .tags-container {
   display: flex;
   flex-wrap: wrap;
@@ -183,7 +219,6 @@ body {
   border-radius: 12px;
 }
 
-/* ===== Ù‚Ø³Ù… Ø¥Ø¶Ø§ÙØ© Ø±Ø¯ ===== */
 .reply-textarea {
   width: 100%;
   height: 100px;
@@ -203,7 +238,6 @@ body {
   border-color: #3b82f6;
 }
 
-/* Ø²Ø± Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ø±Ø¯ */
 .btn-submit-reply {
   padding: 8px 16px;
   font-size: 0. nine5rem;
@@ -220,14 +254,13 @@ body {
   background-color: #1e40af;
 }
 
-/* ===== Ù‚Ø³Ù… Ø§Ù„Ø±Ø¯ÙˆØ¯ Ø§Ù„Ø³Ø§Ø¨Ù‚Ø© (Timeline) ===== */
 .timeline-section {
   position: relative;
 }
 
 .timeline-content {
   position: relative;
-  margin-left: 20px; /* ØªØ±Ùƒ Ù…Ø³Ø§ÙØ© Ù„Ù„Ø®Ø· Ø§Ù„Ø¹Ù…ÙˆØ¯ÙŠ */
+  margin-left: 20px; 
 }
 
 .timeline-item {
@@ -236,7 +269,6 @@ body {
   padding-left: 16px;
 }
 
-/* Ø§Ù„Ù†Ù‚Ø·Ø© Ø¹Ù„Ù‰ Ø§Ù„Ø®Ø· */
 .timeline-dot {
   position: absolute;
   left: -8px;
@@ -247,7 +279,6 @@ body {
   border-radius: 50%;
 }
 
-/* Ù…Ø­ØªÙˆÙ‰ ÙƒÙ„ Ø±Ø¯ Ø³Ø§Ø¨Ù‚ */
 .timeline-body {
   background-color: #f9fafb;
   border: 1px solid #e5e7eb;
@@ -273,7 +304,6 @@ body {
   text-align: left;
 }
 
-/* ===== ØªØ¬Ø§ÙˆØ¨ Ø§Ù„ØµÙØ­Ø© Ù„Ù„Ø´Ø§Ø´Ø§Øª Ø§Ù„ØµØºÙŠØ±Ø© ===== */
 @media (max-width: 768px) {
   .field-row {
     flex-direction: column;

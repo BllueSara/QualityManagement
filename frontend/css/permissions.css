@@ -1,4 +1,11 @@
 /* General Layout for Permissions Page */
+html, body, h1, h2, h3, h4, h5, h6,
+p, span, a, button, input, select, textarea,
+label, .modal, .modal-content, .permission-item,
+.switch, .slider, .user-item, .btn-primary, .btn-secondary,
+.btn-delete, .btn-confirm, .btn-cancel {
+  font-family: 'Tajawal', sans-serif !important;
+}
 body {
     background-color: #ffffff;
     margin: 0;
@@ -14,7 +21,83 @@ main {
     max-width: 1400px;
     margin: 20px auto; /* Center the main content */
 }
+.header-actions {
+  position: relative;
+  height: 50px;
+  margin-bottom: 16px;
+  width: 100%;
+  top: 10px;
+}
 
+/* زرّ الرجوع على أقصى يسار بلا حواف خارجية */
+.back-btn {
+  position: absolute;
+  left: 50px;              /* flush لأقصى يسار */
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  font-size: 18px;      /* حجم يناسب النص */
+  color: #1D4ED8;
+  cursor: pointer;
+  padding: 0 12px;      /* مسافة داخلية مناسبة */
+  font-family: inherit; /* يرث ستايل الخط */
+}
+
+/* زرّ الرئيسية في المنتصف */
+.home-btn {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #1D4ED8;
+  cursor: pointer;
+  padding: 0 12px;
+  font-family: inherit;
+}
+
+/* تأثير عند المرور بالفأرة */
+.back-btn:hover,
+.home-btn:hover {
+  opacity: 0.7;
+}
+.main-header {
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 15px 30px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.hospital-logo img,
+.system-title img {
+    max-height: 40px;
+    vertical-align: middle;
+}
+.header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-title {
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: #2d2d2d;
+}
+
+.header-logo img {
+  height: 30px;
+}
 .permissions-container {
     display: flex;
     width: 100%;
@@ -221,8 +304,6 @@ main {
     gap: 15px;
 }
 
-
-
 .text-content {
     display: flex;
     flex-direction: column;
@@ -324,6 +405,15 @@ input:checked + .slider:before {
 .btn-delete:hover {
     background-color: #c82333;
 }
+input::placeholder,
+textarea::placeholder,
+select::placeholder {
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  color: #999;
+  opacity: 1;
+}
 
 .btn-delete img {
     width: 18px;
@@ -410,7 +500,6 @@ input:checked + .slider:before {
     height: 100%; /* Full height */
     overflow: auto; /* Enable scroll if needed */
     background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
-    display: flex; /* Use flexbox for centering */
     align-items: center; /* Center vertically */
     justify-content: center; /* Center horizontally */
 }
@@ -528,3 +617,28 @@ input:checked + .slider:before {
     font-weight: normal;
     color: #666;
 } 
+.search-bar {
+  position: relative;
+  margin-bottom: 15px;
+  width: 100%;
+}
+.search-bar input {
+  width: 100%;
+  padding: 8px 12px 8px 35px;
+}
+.search-icon {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  color: #999;
+  font-size: 1.1em;
+}
+.add-user-btn i {
+  font-size: 1.2em;
+}
+.user-avatar-icon {
+  font-size: 2.2em;
+  color: #999;
+  margin-left: 15px;
+}
