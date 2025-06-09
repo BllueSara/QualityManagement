@@ -25,14 +25,24 @@
   <!-- ===== الهيدر العلوي ===== -->
   <header class="main-header">
     <div class="header-container">
-      <div class="header-title">نظام إدارة الجودة والسلامة</div>
-      <div class="header-logo">
-        <!-- تأكد من مسار الشعار الفعلي لديك -->
-        <img src="/frontend/images/hospital-logo.png" alt="شعار المستشفى" />
+      <div class="system-title">
+        <img src="/frontend/images/system-title.png" alt="نظام إدارة الجودة والسلامة">
+      </div>
+      <div class="hospital-logo">
+        <img src="/frontend/images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز">
       </div>
     </div>
   </header>
-
+       <div class="header-actions">
+    <button class="back-btn" onclick="history.back()">
+        <i class="fas fa-arrow-left"></i>
+        <span>رجوع</span>
+  </button>
+  <button class="home-btn" onclick="window.location.href='index.html'">
+    <i class="fas fa-home"></i>
+    <span>الرئيسية</span>
+  </button>
+</div>
   <!-- ===== المحتوى الرئيسي ===== -->
   <main class="content-wrapper">
     <h1 class="page-title">عرض التذكرة</h1>

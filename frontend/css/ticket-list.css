@@ -1,7 +1,5 @@
-/* ===== Ø§Ø³ØªÙŠØ±Ø§Ø¯ Ø®Ø· Tajawal ===== */
 @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap');
 
-/* ===== Ø¥Ø¹Ø§Ø¯Ø© ØªÙ‡ÙŠØ¦Ø© Ø§Ù„Ù‚ÙŠÙ… Ø§Ù„Ø§ÙØªØ±Ø§Ø¶ÙŠØ© ===== */
 * {
   margin: 0;
   padding: 0;
@@ -13,16 +11,64 @@ html,
 body {
   width: 100%;
   height: 100%;
-  background-color: #FFFFFF; /* Ù„ÙˆÙ† Ø®Ù„ÙÙŠØ© Ø®ÙÙŠÙ */
+  background-color: #FFFFFF; 
   color: #2d2d2d;
 }
 
 body {
-  direction: rtl; /* Ù…Ù† Ø§Ù„ÙŠÙ…ÙŠÙ† Ø¥Ù„Ù‰ Ø§Ù„ÙŠØ³Ø§Ø± */
+  direction: rtl; 
   line-height: 1.6;
 }
 
-/* ===== Ø§Ù„Ù‡ÙŠØ¯Ø± Ø§Ù„Ø¹Ù„ÙˆÙŠ ===== */
+.header-actions {
+  position: relative;
+  height: 50px;
+  margin-bottom: 16px;
+  width: 100%;
+  top: 10px;
+}
+
+/* زرّ الرجوع على أقصى يسار بلا حواف خارجية */
+.back-btn {
+  position: absolute;
+  left: 50px;              /* flush لأقصى يسار */
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  font-size: 18px;      /* حجم يناسب النص */
+  color: #1D4ED8;
+  cursor: pointer;
+  padding: 0 12px;      /* مسافة داخلية مناسبة */
+  font-family: inherit; /* يرث ستايل الخط */
+}
+
+/* زرّ الرئيسية في المنتصف */
+.home-btn {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #1D4ED8;
+  cursor: pointer;
+  padding: 0 12px;
+  font-family: inherit;
+}
+
+/* تأثير عند المرور بالفأرة */
+.back-btn:hover,
+.home-btn:hover {
+  opacity: 0.7;
+}
 .main-header {
   background-color: #ffffff;
   border-bottom: 1px solid #e0e0e0;
@@ -32,6 +78,11 @@ body {
   z-index: 100;
 }
 
+.hospital-logo img,
+.system-title img {
+    max-height: 40px;
+    vertical-align: middle;
+}
 .header-container {
   display: flex;
   justify-content: space-between;
@@ -48,7 +99,6 @@ body {
   height: 30px;
 }
 
-/* ===== Ø§Ù„Ù…Ø­ØªÙˆÙ‰ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ ===== */
 .content-wrapper {
   max-width: 2000px;
   margin: 30px auto;
@@ -59,10 +109,10 @@ body {
   font-size: 1.7rem;
   font-weight: 600;
   margin-bottom: 20px;
+  text-align: center;
   color: #1f2937;
 }
 
-/* ===== ØµÙ†Ø¯ÙˆÙ‚ Ø§Ù„Ø¨Ø­Ø« ÙˆØ²Ø± Ø§Ù„ØªØµÙÙŠØ© ===== */
 .search-filter-container {
   display: flex;
   justify-content: flex-end;
@@ -78,7 +128,7 @@ body {
 
 .search-box input {
   width: 100%;
-  padding: 8px 12px 8px 36px; /* Ù…Ø³Ø§Ø­Ø© Ù„Ù„Ø¥ÙŠÙ‚ÙˆÙ†Ø© ÙÙŠ Ø§Ù„ÙŠÙ…ÙŠÙ† */
+  padding: 8px 50px 8px 36px; 
   font-size: 0.95rem;
   border: 1px solid #e5e7eb;
   border-radius: 6px;
@@ -124,9 +174,8 @@ body {
   border-color: #d1d5db;
 }
 
-/* ===== Ø¬Ø¯ÙˆÙ„ Ø¹Ø±Ø¶ Ø§Ù„ØªØ°Ø§ÙƒØ± ===== */
 .table-container {
-  overflow-x: auto; /* Ù„Ø¯Ø¹Ù… Ø§Ù„Ø´Ø§Ø´Ø§Øª Ø§Ù„ØµØºÙŠØ±Ø© */
+  overflow-x: auto; 
   background-color: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
@@ -136,7 +185,7 @@ body {
 .tickets-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 720px; /* Ù„Ø¶Ù…Ø§Ù† Ø¹Ø±Ø¶ Ø¹Ù…ÙˆØ¯ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª */
+  min-width: 720px;
 }
 
 .tickets-table thead {
@@ -182,7 +231,6 @@ body {
   width: 140px;
 }
 
-/* ===== Ø£ÙŠÙ‚ÙˆÙ†Ø§Øª Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª ===== */
 .action-icon {
   font-size: 1rem;
   margin: 0 6px;
@@ -191,27 +239,26 @@ body {
 }
 
 .view-icon {
-  color: #2563eb; /* Ø£Ø²Ø±Ù‚ */
+  color: #2563eb; 
 }
 .view-icon:hover {
   color: #1e40af;
 }
 
 .edit-icon {
-  color: #f59e0b; /* Ø¨Ø±ØªÙ‚Ø§Ù„ÙŠ */
+  color: #f59e0b; 
 }
 .edit-icon:hover {
   color: #b45309;
 }
 
 .delete-icon {
-  color: #ef4444; /* Ø£Ø­Ù…Ø± */
+  color: #ef4444; 
 }
 .delete-icon:hover {
   color: #b91c1c;
 }
 
-/* ===== Ø´Ø§Ø±Ø§Øª Ø§Ù„Ø­Ø§Ù„Ø© ===== */
 .status-badge {
   display: inline-block;
   padding: 4px 10px;
@@ -236,14 +283,12 @@ body {
   color: #6b7280;
 }
 
-/* ===== Ù†Øµ Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„Ø³Ø¬Ù„Ø§Øª ===== */
 .records-info {
   margin: 14px 0;
   font-size: 0. ninerem;
   color: #6b7280;
 }
 
-/* ===== Ø£Ø²Ø±Ø§Ø± Ø§Ù„ØªÙ†Ù‚Ù„ Pagination ===== */
 .pagination {
   display: flex;
   justify-content: flex-end;
@@ -280,7 +325,6 @@ body {
   border-color: #d1d5db;
 }
 
-/* ===== ØªØ¬Ø§ÙˆØ¨ Ø§Ù„ØµÙØ­Ø© ===== */
 @media (max-width: 768px) {
   .tickets-table {
     min-width: 600px;

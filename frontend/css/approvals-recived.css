@@ -20,7 +20,55 @@ body {
 body {
   direction: rtl; /* من اليمين إلى اليسار */
 }
+.header-actions {
+  position: relative;
+  height: 50px;
+  margin-bottom: 16px;
+  width: 100%;
+  top: 10px;
+}
 
+/* زرّ الرجوع على أقصى يسار بلا حواف خارجية */
+.back-btn {
+  position: absolute;
+  left: 50px;              /* flush لأقصى يسار */
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  font-size: 18px;      /* حجم يناسب النص */
+  color: #1D4ED8;
+  cursor: pointer;
+  padding: 0 12px;      /* مسافة داخلية مناسبة */
+  font-family: inherit; /* يرث ستايل الخط */
+}
+
+/* زرّ الرئيسية في المنتصف */
+.home-btn {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #1D4ED8;
+  cursor: pointer;
+  padding: 0 12px;
+  font-family: inherit;
+}
+
+/* تأثير عند المرور بالفأرة */
+.back-btn:hover,
+.home-btn:hover {
+  opacity: 0.7;
+}
 /* ===== الهيدر العلوي ===== */
 .main-header {
   background-color: #ffffff;
@@ -30,7 +78,11 @@ body {
   top: 0;
   z-index: 100;
 }
-
+.hospital-logo img,
+.system-title img {
+    max-height: 40px;
+    vertical-align: middle;
+}
 .header-container {
   display: flex;
   justify-content: space-between;
@@ -83,7 +135,7 @@ body {
 
 .search-box input {
   width: 100%;
-  padding: 10px 14px 10px 40px; /* مساحة للإيقونة في اليمين */
+  padding: 10px 90px 10px 40px; /* مساحة للإيقونة في اليمين */
   font-size: 1rem;
   border: 1px solid #e5e7eb;
   border-radius: 6px;
@@ -301,6 +353,247 @@ body {
 .btn-sign:hover {
   background-color: #86efac;
 }
+
+/* Overlay */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.2);
+  display: none;
+  align-items: center; justify-content: center;
+  z-index: 2000;
+}
+
+/* صندوق المودال */
+.modal {
+  background-color: #ffffff;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 420px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+/* رأس المودال */
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 24px 0;
+}
+.modal-close {
+  background: none; border: none;
+  font-size: 1.25rem; color: #6b7280;
+  cursor: pointer;
+}
+.modal-close:hover { color: #374151; }
+.modal-title {
+  margin: 0; font-size: 1.2rem; font-weight: 600;
+  color: #1f2937;
+}
+
+/* جسم المودال */
+.modal-body {
+  padding: 16px 24px;
+}
+.canvas-wrapper {
+  width: 100%; height: 200px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  background-color: #f9fafb;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+}
+.canvas-wrapper canvas {
+  width: 100%; height: 100%;
+  display: block;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+/* تذييل المودال */
+.modal-footer {
+  display: flex; justify-content: flex-start;
+  gap: 12px; padding: 0 24px 24px;
+}
+.btn-confirm {
+  padding: 10px 20px;
+  background-color: #2563eb; color: #ffffff;
+  border: none; border-radius: 6px;
+  font-size: 0.95rem; font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.btn-confirm:hover {
+  background-color: #1e40af;
+}
+.btn-cancel {
+  padding: 10px 20px;
+  background-color: #ffffff; color: #374151;
+  border: 1px solid #d1d5db; border-radius: 6px;
+  font-size: 0.95rem; font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+.btn-cancel:hover {
+  background-color: #f9fafb;
+  border-color: #cbd5e1;
+}
+/* ===== إصلاح التفاعلية على المودال والكانفاس ===== */
+
+#rejectModal .modal {
+  max-width: 480px;
+}
+
+#rejectModal .modal-header,
+#rejectModal .modal-footer,
+#rejectModal .modal-body {
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+#rejectModal .modal-body {
+  padding-top: 8px;
+}
+
+#rejectModal .body-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 1rem;
+  color: #374151;
+}
+
+#rejectModal .body-textarea {
+  width: 100%;
+  padding: 12px;
+  font-size: 0.95rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background-color: #ffffff;
+  resize: none;
+  outline: none;
+  box-sizing: border-box;
+}
+
+/* override footer gap for symmetry */
+#rejectModal .modal-footer {
+  gap: 12px;
+  padding-bottom: 20px;
+}
+
+/* زر إرسال السبب: نفس btn-confirm */
+#rejectModal .btn-confirm {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+/* زر إلغاء: نفس btn-cancel */
+#rejectModal .btn-cancel {
+  background-color: #ffffff;
+  color: #374151;
+}
+/* ===== ستايل مودال QR Code ===== */
+#qrModal .modal {
+  max-width: 480px;
+}
+
+/* تخصيص مساحة الكانفاس */
+.qr-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+#qrCanvas {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+/* جملة التعليمات */
+.qr-instruction {
+  text-align: center;
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin: 0 24px 16px;
+}
+#btnElectronicApprove {
+  background-color: #10b981; /* أخضر متوسط */
+}
+#btnElectronicApprove:hover {
+  background-color: #059669;
+}
+.qr-success {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 1rem;
+  color: #10b981; /* أخضر مريح */
+  font-weight: 500;
+}
+/* ===== مودال التوقيع بالنيابة عن ===== */
+#delegateModal .modal {
+  max-width: 480px;
+}
+
+/* استخدم نفس البادينغ والزوايا من المودالات الأخرى */
+#delegateModal .modal-header,
+#delegateModal .modal-footer,
+#delegateModal .modal-body {
+  padding: 16px 24px;
+}
+
+#delegateModal .modal-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+/* تنسيق الحقول */
+#delegateModal .form-group {
+  margin-bottom: 16px;
+}
+
+#delegateModal .form-group label {
+  display: block;
+  font-size: 0.95rem;
+  color: #4b5563;
+  margin-bottom: 6px;
+}
+
+#delegateModal .form-group input,
+#delegateModal .form-group select,
+#delegateModal .form-group textarea {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 0.95rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: #1f2937;
+  transition: border-color 0.2s;
+}
+
+#delegateModal .form-group input:focus,
+#delegateModal .form-group select:focus,
+#delegateModal .form-group textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+/* أزرار المودال */
+#delegateModal .modal-footer {
+  justify-content: flex-start;
+  gap: 12px;
+}
+
+#btnDelegateConfirm {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+#btnDelegateConfirm:hover {
+  background-color: #1e40af;
+}
+
+/* ستايل المودال والأزرار كما في المشاركة السابقة */
 
 /* ===== تجاوب الصفحة ===== */
 @media (max-width: 1400px) {

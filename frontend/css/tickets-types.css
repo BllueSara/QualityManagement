@@ -1,7 +1,6 @@
 /* ===== Ø§Ø³ØªÙŠØ±Ø§Ø¯ Ø®Ø· Tajawal ===== */
 @import url("https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap");
 
-/* ===== Ø¥Ø¹Ø§Ø¯Ø© ØªÙ‡ÙŠØ¦Ø© Ø§Ù„Ù‚ÙŠÙ… Ø§Ù„Ø§ÙØªØ±Ø§Ø¶ÙŠØ© ===== */
 * {
   margin: 0;
   padding: 0;
@@ -13,15 +12,14 @@ html,
 body {
   width: 100%;
   height: 100%;
-  background-color: #ffffff; /* Ø®Ù„ÙÙŠØ© ÙØ§ØªØ­Ø© Ø¬Ø¯Ø§Ù‹ */
-  color: #1f2937; /* Ù„ÙˆÙ† Ø§Ù„Ù†Øµ Ø§Ù„Ø£Ø³Ø§Ø³ÙŠ */
+  background-color: #ffffff; 
+  color: #1f2937; 
 }
 
 body {
-  direction: rtl; /* Ù…Ù† Ø§Ù„ÙŠÙ…ÙŠÙ† Ø¥Ù„Ù‰ Ø§Ù„ÙŠØ³Ø§Ø± */
+  direction: rtl; 
 }
 
-/* ===== Ø§Ù„Ù‡ÙŠØ¯Ø± Ø§Ù„Ø¹Ù„ÙˆÙŠ ===== */
 .main-header {
   background-color: #ffffff;
   border-bottom: 1px solid #e0e0e0;
@@ -47,46 +45,43 @@ body {
   height: 32px;
 }
 
-/* ===== Ø§Ù„Ù…Ø­ØªÙˆÙ‰ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ ===== */
-.content-wrapper {
-  max-width: 1800px;  /* Ø²ÙŠØ§Ø¯Ù†Ø§ Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ù‚ØµÙ‰ Ù„Ø­Ø§ÙˆÙŠØ© Ø§Ù„Ù…Ø­ØªÙˆÙ‰ */
-  margin: 40px auto;
-  padding: 0 20px;
+
+main {
+    padding-top: 90px;
+    max-width: 1200px;
+    margin: auto;
 }
 
-/* ===== Ø¹Ù†ÙˆØ§Ù† Ø§Ù„ØµÙØ­Ø© ÙˆØ§Ù„ÙˆØµÙ ===== */
 .page-header {
   text-align: center;
   margin-bottom: 40px;
 }
 
 .page-title {
-  font-size: 2.2rem;  /* Ø±ÙØ¹ Ø­Ø¬Ù… Ø§Ù„Ø¹Ù†ÙˆØ§Ù† Ù‚Ù„ÙŠÙ„Ø§Ù‹ */
+  font-size: 2.2rem;  
   font-weight: 600;
   color: #1f2937;
   margin-bottom: 8px;
 }
 
 .page-subtitle {
-  font-size: 1.1rem;  /* Ø±ÙØ¹ Ø­Ø¬Ù… Ø§Ù„ÙˆØµÙ Ù‚Ù„ÙŠÙ„Ø§Ù‹ */
+  font-size: 1.1rem;  
   color: #4b5563;
 }
 
-/* ===== Ø­Ø§ÙˆÙŠØ© Ø§Ù„Ø¨Ø·Ø§Ù‚Ø§Øª ===== */
 .cards-container {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 40px; /* Ø²ÙŠØ§Ø¯Ø© Ø§Ù„Ù…Ø³Ø§ÙØ© Ø¨ÙŠÙ† Ø§Ù„Ø¨Ø·Ø§Ù‚Ø§Øª */
+  gap: 40px; 
 }
 
-/* ===== ØªÙ†Ø³ÙŠÙ‚ Ø§Ù„Ø¨Ø·Ø§Ù‚Ø© ===== */
 .ticket-card {
   background-color: #ffffff;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  width: 500px;            /* Ø±ÙØ¹Øª Ø§Ù„Ø¹Ø±Ø¶ Ø¥Ù„Ù‰ 500px */
-  padding: 48px 40px;      /* Ø²ÙŠØ§Ø¯Ø© Ø§Ù„Ø­Ø´ÙˆØ§Øª Ø§Ù„Ø¯Ø§Ø®Ù„ÙŠØ© */
+  width: 500px;          
+  padding: 48px 40px;     
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -99,43 +94,39 @@ body {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
 }
 
-/* ===== Ø£ÙŠÙ‚ÙˆÙ†Ø© Ø§Ù„Ø¨Ø·Ø§Ù‚Ø© ===== */
 .card-icon {
-  width: 96px;             /* Ø²ÙŠØ§Ø¯Ø© Ù‚Ø·Ø± Ø§Ù„Ø¯Ø§Ø¦Ø±Ø© */
+  width: 96px;            
   height: 96px;
-  background-color: #eef2ff; /* Ù„ÙˆÙ† Ø£Ø²Ø±Ù‚ ÙØ§ØªØ­ Ù„Ù„Ø®Ù„ÙÙŠØ© */
+  background-color: #eef2ff; 
   border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-bottom: 32px;      /* Ø²ÙŠØ§Ø¯Ø© Ø§Ù„Ù…Ø³Ø§ÙØ© Ø£Ø³ÙÙ„ Ø§Ù„Ø£ÙŠÙ‚ÙˆÙ†Ø© */
+  margin-bottom: 32px;   
 }
 
 .card-icon i {
-  font-size: 2.5rem;       /* ØªÙƒØ¨ÙŠØ± Ø§Ù„Ø£ÙŠÙ‚ÙˆÙ†Ø© */
-  color: #2563eb;          /* Ø£Ø²Ø±Ù‚ Ø£Ø³Ø§Ø³ÙŠ */
+  font-size: 2.5rem;      
+  color: #2563eb;       
 }
 
-/* ===== Ø¹Ù†ÙˆØ§Ù† Ø§Ù„Ø¨Ø·Ø§Ù‚Ø© ===== */
 .card-title {
-  font-size: 1.75rem;      /* Ø±ÙØ¹ Ø­Ø¬Ù… Ø§Ù„Ø®Ø· */
+  font-size: 1.75rem;      
   font-weight: 500;
   color: #1f2937;
   margin-bottom: 12px;
 }
 
-/* ===== ÙˆØµÙ Ø§Ù„Ø¨Ø·Ø§Ù‚Ø© ===== */
 .card-desc {
-  font-size: 1.1rem;       /* Ø±ÙØ¹ Ø­Ø¬Ù… Ø§Ù„Ù†Øµ Ù‚Ù„ÙŠÙ„Ø§Ù‹ */
+  font-size: 1.1rem;       
   color: #4b5563;
-  margin-bottom: 28px;     /* Ø²ÙŠØ§Ø¯Ø© Ø§Ù„Ù…Ø³Ø§ÙØ© Ø£Ø³ÙÙ„ Ø§Ù„ÙˆØµÙ */
+  margin-bottom: 28px;     
 }
 
-/* ===== Ø²Ø± Ø§Ù„Ø¨Ø·Ø§Ù‚Ø© - Ø§Ù„ÙˆØ¶Ø¹ Ø§Ù„Ù†Ø§ÙØ± (Outline) ===== */
 .card-btn-outline {
   display: inline-block;
-  padding: 14px 28px;      /* Ø±ÙØ¹ Ø§Ù„Ø­Ø´ÙˆØ§Øª Ù„Ù„Ø²Ø± */
-  font-size: 1.05rem;      /* Ø±ÙØ¹ Ø­Ø¬Ù… Ø§Ù„Ø®Ø· */
+  padding: 14px 28px;      
+  font-size: 1.05rem;      
   font-weight: 500;
   color: #2563eb;
   border: 2px solid #2563eb;
@@ -150,11 +141,10 @@ body {
   color: #ffffff;
 }
 
-/* ===== Ø²Ø± Ø§Ù„Ø¨Ø·Ø§Ù‚Ø© - Ø§Ù„ÙˆØ¶Ø¹ Ø§Ù„ØµÙ„Ø¨ (Solid) ===== */
 .card-btn-solid {
   display: inline-block;
-  padding: 14px 28px;      /* Ø±ÙØ¹ Ø§Ù„Ø­Ø´ÙˆØ§Øª Ù„Ù„Ø²Ø± */
-  font-size: 1.05rem;      /* Ø±ÙØ¹ Ø­Ø¬Ù… Ø§Ù„Ø®Ø· */
+  padding: 14px 28px;      
+  font-size: 1.05rem;      
   font-weight: 500;
   color: #ffffff;
   background-color: #2563eb;
@@ -168,13 +158,12 @@ body {
   background-color: #1e40af;
 }
 
-/* ===== ØªØ¬Ø§ÙˆØ¨ Ø§Ù„ØµÙØ­Ø© ===== */
 @media (max-width: 1400px) {
   .content-wrapper {
-    max-width: 1200px;   /* Ø®ÙÙÙ†Ø§ Ø§Ù„Ø­Ø¯ Ù‚Ù„ÙŠÙ„Ø§Ù‹ Ù„Ù„Ø´Ø§Ø´Ø§Øª Ø§Ù„Ù…ØªÙˆØ³Ø·Ø© Ø§Ù„ÙƒØ¨ÙŠØ±Ø© */
+    max-width: 1200px;   
   }
   .ticket-card {
-    width: 420px;        /* ØªØµØºÙŠØ± Ø§Ù„Ø¨Ø·Ø§Ù‚Ø© Ù‚Ù„ÙŠÙ„Ø§Ù‹ */
+    width: 420px;        
     padding: 40px 32px;
   }
   .card-icon {
@@ -202,7 +191,7 @@ body {
     max-width: 1000px;
   }
   .ticket-card {
-    width: 360px;        /* ØªØµØºÙŠØ± Ø¥Ø¶Ø§ÙÙŠ */
+    width: 360px;        
     padding: 36px 28px;
   }
   .card-icon {
@@ -234,7 +223,7 @@ body {
   .ticket-card {
     width: 100%;
     max-width: 400px;
-    padding: 28px 20px;     /* ØªØ®ÙÙŠÙ Ø§Ù„Ø­Ø´ÙˆØ§Øª ÙÙŠ Ø§Ù„Ø´Ø§Ø´Ø§Øª Ø§Ù„ØµØºÙŠØ±Ø© */
+    padding: 28px 20px;    
   }
 
   .card-icon {

@@ -156,4 +156,8 @@ document.addEventListener("DOMContentLoaded", () => {
         showPage(1);
       }
     });
+      document.querySelector('.btn-track')
+    .addEventListener('click', () => {
+      window.location.href = 'track-request.html';
+    });
   });

@@ -44,37 +44,82 @@ main {
 /* ============================
    الهيدر (الشعار، اسم المستشفى، زر الرجوع)
 ============================ */
-header {
-    background-color: #ffffff;
-    padding: 15px 0;
-    border-bottom: 1px solid #eee;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+.header-actions {
+  position: relative;
+  height: 50px;
+  margin-bottom: 16px;
+  width: 100%;
+  top: 10px;
 }
 
-header .container {
-    display: flex;
-    justify-content: space-between; /* Pushes content to the ends */
-    align-items: center;
-    padding: 0 20px; /* Padding for header content */
-    margin: 0 auto;
-    max-width: 1200px;
-    background-color: transparent;
-    box-shadow: none;
+/* زرّ الرجوع على أقصى يسار بلا حواف خارجية */
+.back-btn {
+  position: absolute;
+  left: 50px;              /* flush لأقصى يسار */
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  font-size: 18px;      /* حجم يناسب النص */
+  color: #1D4ED8;
+  cursor: pointer;
+  padding: 0 12px;      /* مسافة داخلية مناسبة */
+  font-family: inherit; /* يرث ستايل الخط */
 }
 
-.header-left,
-.header-right {
-    display: flex;
-    align-items: center;
-    gap: 15px;
+/* زرّ الرئيسية في المنتصف */
+.home-btn {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #1D4ED8;
+  cursor: pointer;
+  padding: 0 12px;
+  font-family: inherit;
 }
 
-.hospital-logo img {
-    height: 40px;
+/* تأثير عند المرور بالفأرة */
+.back-btn:hover,
+.home-btn:hover {
+  opacity: 0.7;
 }
-
+.main-header {
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 15px 30px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.hospital-logo img,
 .system-title img {
-    height: 30px;
+    max-height: 40px;
+    vertical-align: middle;
+}
+.header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-title {
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: #2d2d2d;
+}
+
+.header-logo img {
+  height: 30px;
 }
 
 /* ============================

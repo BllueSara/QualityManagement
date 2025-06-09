@@ -23,15 +23,26 @@
 </head>
 <body>
   <!-- ===== الهيدر العلوي ===== -->
-  <header class="main-header">
+ <header class="main-header">
     <div class="header-container">
-      <div class="header-title">نظام إدارة الجودة والسلامة</div>
-      <div class="header-logo">
-        <img src="/frontend//images/hospital-logo.png" alt="شعار المستشفى" />
-      </div>
+      <div class="system-title">
+          <img src="/frontend/images/system-title.png" alt="نظام إدارة الجودة والسلامة">
+  </div>
+       <div class="hospital-logo">
+                <img src="/frontend/images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز">
+            </div>
     </div>
   </header>
-
+          <div class="header-actions">
+    <button class="back-btn" onclick="history.back()">
+        <i class="fas fa-arrow-left"></i>
+        <span>رجوع</span>
+  </button>
+  <button class="home-btn" onclick="window.location.href='index.html'">
+    <i class="fas fa-home"></i>
+    <span>الرئيسية</span>
+  </button>
+</div>
   <!-- ===== المحتوى الرئيسي ===== -->
   <main class="content-wrapper">
     <h1 class="page-title">اعتماداتي</h1>
@@ -99,7 +110,7 @@
               <span class="badge badge-pending">قيد المراجعة</span>
             </td>
             <td class="col-track">
-              <button class="btn-track">تتبع الطلب</button>
+<button class="btn-track" style="cursor: pointer;">تتبع الطلب</button>
             </td>
           </tr>
           <!-- 2 -->
@@ -114,7 +125,7 @@
               <span class="badge badge-approved">تمت الموافقة</span>
             </td>
             <td class="col-track">
-              <button class="btn-track">تتبع الطلب</button>
+<button class="btn-track" style="cursor: pointer;">تتبع الطلب</button>
             </td>
           </tr>
           <!-- 3 -->
@@ -129,7 +140,7 @@
               <span class="badge badge-rejected">مرفوض</span>
             </td>
             <td class="col-track">
-              <button class="btn-track">تتبع الطلب</button>
+<button class="btn-track" style="cursor: pointer;">تتبع الطلب</button>
             </td>
           </tr>
           <!-- 4 -->
@@ -144,7 +155,7 @@
               <span class="badge badge-pending">قيد المراجعة</span>
             </td>
             <td class="col-track">
-              <button class="btn-track">تتبع الطلب</button>
+<button class="btn-track" style="cursor: pointer;">تتبع الطلب</button>
             </td>
           </tr>
           <!-- 5 -->
@@ -159,7 +170,7 @@
               <span class="badge badge-approved">تمت الموافقة</span>
             </td>
             <td class="col-track">
-              <button class="btn-track">تتبع الطلب</button>
+<button class="btn-track" style="cursor: pointer;">تتبع الطلب</button>
             </td>
           </tr>
           <!-- هذه الصفوف الخمسة الأولى في الصفحة الأولى -->
@@ -175,7 +186,7 @@
               <span class="badge badge-pending">قيد المراجعة</span>
             </td>
             <td class="col-track">
-              <button class="btn-track">تتبع الطلب</button>
+<button class="btn-track" style="cursor: pointer;">تتبع الطلب</button>
             </td>
           </tr>
           <tr data-status="rejected" data-dept="hr">
@@ -189,7 +200,7 @@
               <span class="badge badge-rejected">مرفوض</span>
             </td>
             <td class="col-track">
-              <button class="btn-track">تتبع الطلب</button>
+<button class="btn-track" style="cursor: pointer;">تتبع الطلب</button>
             </td>
           </tr>
           <tr data-status="approved" data-dept="training">
@@ -203,7 +214,7 @@
               <span class="badge badge-approved">تمت الموافقة</span>
             </td>
             <td class="col-track">
-              <button class="btn-track">تتبع الطلب</button>
+<button class="btn-track" style="cursor: pointer;">تتبع الطلب</button>
             </td>
           </tr>
           <tr data-status="pending" data-dept="finance">
@@ -217,7 +228,7 @@
               <span class="badge badge-pending">قيد المراجعة</span>
             </td>
             <td class="col-track">
-              <button class="btn-track">تتبع الطلب</button>
+<button class="btn-track" style="cursor: pointer;">تتبع الطلب</button>
             </td>
           </tr>
           <tr data-status="approved" data-dept="services">
@@ -231,7 +242,7 @@
               <span class="badge badge-approved">تمت الموافقة</span>
             </td>
             <td class="col-track">
-              <button class="btn-track">تتبع الطلب</button>
+<button class="btn-track" style="cursor: pointer;">تتبع الطلب</button>
             </td>
           </tr>
           <tr data-status="rejected" data-dept="training">
@@ -245,7 +256,7 @@
               <span class="badge badge-rejected">مرفوض</span>
             </td>
             <td class="col-track">
-              <button class="btn-track">تتبع الطلب</button>
+<button class="btn-track" style="cursor: pointer;">تتبع الطلب</button>
             </td>
           </tr>
           <tr data-status="pending" data-dept="hr">
@@ -259,7 +270,7 @@
               <span class="badge badge-pending">قيد المراجعة</span>
             </td>
             <td class="col-track">
-              <button class="btn-track">تتبع الطلب</button>
+<button class="btn-track" style="cursor: pointer;">تتبع الطلب</button>
             </td>
           </tr>
         </tbody>
