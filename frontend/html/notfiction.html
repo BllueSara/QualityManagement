@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,32 +9,35 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+        crossorigin="anonymous" />
     <link rel="stylesheet" href="../css/shared.css">
     <link rel="stylesheet" href="../css/notifications.css">
 </head>
+
 <body>
-    <header>
-        <div class="container">
-            <div class="header-right">
-                <div class="hospital-logo">
-                    <img src="/frontend/images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز">
-                </div>
+    <header class="main-header">
+        <div class="header-container">
+            <div class="system-title">
+                <img src="/frontend/images/system-title.png" alt="نظام إدارة الجودة والسلامة">
             </div>
-            <div class="header-left">
-                <div class="system-title">
-                    <img src="/frontend/images/system-title.png" alt="نظام إدارة الجودة والسلامة">
-                </div>
+            <div class="hospital-logo">
+                <img src="/frontend/images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز">
             </div>
         </div>
     </header>
-
+    <div class="header-actions">
+        <button class="back-btn" onclick="history.back()">
+            <i class="fas fa-arrow-left"></i>
+            <span>رجوع</span>
+        </button>
+        <button class="home-btn" onclick="window.location.href='index.html'">
+            <i class="fas fa-home"></i>
+            <span>الرئيسية</span>
+        </button>
+    </div>
     <main>
-        <div class="page-controls">
-            <a href="index.html" class="back-button">
-                <img src="../images/Back.png" alt="رجوع">
-                <span>رجوع</span>
-            </a>
-        </div>
+
         <div class="container">
             <section class="notifications-header">
                 <h1 class="page-title">الإشعارات</h1>
@@ -42,7 +46,7 @@
                         <input type="text" id="search-input" placeholder="البحث في الإشعارات...">
                     </div>
                     <div class="input-group">
-                       
+
                         <select id="notification-type" name="notification-type">
                             <option value="">نوع الإشعار</option>
                             <option value="ticket">تذكرة</option>
@@ -63,7 +67,7 @@
                         <div class="notification-description">طلب صيانة جهاز الحاسوب في القسم التقني</div>
                     </div>
                     <div class="notification-meta">
-                        <div class="notification-time">منذ 5 دقائق</div>
+                        <div class="notification-time">منذ 5 دقائق</div>*
                         <div class="read-indicator"></div>
                     </div>
                 </div>
@@ -112,4 +116,5 @@
 
     <script src="../js/notifications.js"></script>
 </body>
-</html> 
+
+</html>

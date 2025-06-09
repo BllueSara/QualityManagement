@@ -26,11 +26,60 @@ body {
     color: var(--text-color);
     background-color: var(--background-color);
     margin: 0;
-    padding-top: 80px; /* Space for fixed header */
     line-height: 1.6;
 }
 
 /* --- Header Styles --- */
+/* حاوية الأزرار */
+.header-actions {
+  position: relative;
+  height: 50px;
+  margin-bottom: 16px;
+  width: 100%;
+  top: 90px;
+}
+
+/* زرّ الرجوع على أقصى يسار بلا حواف خارجية */
+.back-btn {
+  position: absolute;
+  left: 50px;              /* flush لأقصى يسار */
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  font-size: 18px;      /* حجم يناسب النص */
+  color: #1D4ED8;
+  cursor: pointer;
+  padding: 0 12px;      /* مسافة داخلية مناسبة */
+  font-family: inherit; /* يرث ستايل الخط */
+}
+
+/* زرّ الرئيسية في المنتصف */
+.home-btn {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #1D4ED8;
+  cursor: pointer;
+  padding: 0 12px;
+  font-family: inherit;
+}
+
+/* تأثير عند المرور بالفأرة */
+.back-btn:hover,
+.home-btn:hover {
+  opacity: 0.7;
+}
 header {
     width: 100%;
     padding: 18px var(--spacing-4); /* Increased vertical padding for taller header */
@@ -41,21 +90,14 @@ header {
     left: 0;
     z-index: 1000;
     box-sizing: border-box;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08); /* Slightly stronger shadow */
 }
 
 header .container {
-    max-width: 1200px;
-    width: 100%;
-    margin: auto;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0;
-    box-sizing: border-box;
-    box-shadow: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* يوزّع العناصر: أول وآخر على الأطراف، والثالث يبقى في الوسط */
+  padding: 0 var(--spacing-4);
 }
-
 .header-left,
 .header-right {
     display: flex;

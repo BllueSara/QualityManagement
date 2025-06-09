@@ -17,22 +17,34 @@
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     crossorigin="anonymous"
   />
+    <link rel="stylesheet" href="../css/shared.css">
 
   <!-- ربط ملف التنسيقات -->
   <link rel="stylesheet" href="/frontend/css/tickets-types.css" />
 </head>
 <body>
   <!-- ===== الهيدر العلوي ===== -->
-  <header class="main-header">
-    <div class="header-container">
-      <div class="header-title">نظام إدارة الجودة والسلامة</div>
-      <div class="header-logo">
-        <!-- تأكد من مسار شعار المستشفى الفعلي لديك -->
-        <img src="/frontend/images/hospital-logo.png" alt="شعار المستشفى" />
-      </div>
-    </div>
-  </header>
-
+    <header>
+        <div class="container">
+            <div class="hospital-logo">
+                <img src="/frontend/images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز">
+            </div>
+                <div class="system-title">
+                    <img src="/frontend/images/system-title.png" alt="نظام إدارة الجودة والسلامة">
+            </div>
+        </div>
+        
+    </header>
+        <div class="header-actions">
+    <button class="back-btn" onclick="history.back()">
+        <i class="fas fa-arrow-left"></i>
+        <span>رجوع</span>
+  </button>
+  <button class="home-btn" onclick="window.location.href='index.html'">
+    <i class="fas fa-home"></i>
+    <span>الرئيسية</span>
+  </button>
+</div>
   <!-- ===== المحتوى الرئيسي ===== -->
   <main class="content-wrapper">
     <div class="page-header">

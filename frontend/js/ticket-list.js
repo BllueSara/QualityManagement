@@ -102,4 +102,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const recordsInfo = document.querySelector('.records-info');
       recordsInfo.textContent = `عرض ${visibleRows.length} من ${rows.length} تذكرة`;
     });
+      document.querySelector('.view-icon')
+    .addEventListener('click', () => {
+      // هنا الطريق للصفحة الثانية:
+      window.location.href = 'ticket-details.html';
+    });
   });
