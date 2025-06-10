@@ -45,4 +45,11 @@
 .table-container,
 .header-actions {
   overflow: visible !important;
+}/* فاصل القسم داخل قائمة المستخدمين */
+.dropdown-divider {
+  padding: 6px 12px;
+  font-weight: 600;
+  background: #f3f4f6;
+  color: #374151;
+  cursor: default;
 }
