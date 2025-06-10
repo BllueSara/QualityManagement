@@ -1,0 +1,48 @@
+    body { font-family: 'Tajawal', sans-serif; margin: 0; padding: 0; background: #fff; }
+    .main-header { background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .header-container { display: flex; justify-content: space-between; align-items: center; padding: 12px 24px; }
+    .header-actions { display: flex; gap: 8px; padding: 12px 24px; background: #fff; }
+    .file-card { background: #fff; border-radius: 8px; margin: 24px; overflow: visible; }
+    .file-card-header { padding: 16px; border-bottom: 1px solid #e5e7eb; }
+    .file-name { margin: 0; font-size: 1.5rem; color: #1f2937; }
+    .table-container { overflow-x: auto; padding: 16px; }
+    .approvals-table { width: 100%; border-collapse: collapse; min-width: 800px; }
+    .approvals-table th,
+    .approvals-table td { padding: 14px 16px; text-align: center; border-bottom: 1px solid #e5e7eb; vertical-align: middle; }
+    .approvals-table thead th { background: #fafbfc; font-weight: 600; }
+    .approvals-table tbody tr:nth-child(even) { background: #f9fafb; }
+
+    /* BADGES */
+    .badge-pending { background: #f3f4f6; color: #374151; padding: 4px 8px; border-radius: 12px; font-size: .9rem; }
+    .badge-done { background: #e5e7eb; color: #6b7280; padding: 4px 8px; border-radius: 12px; font-size: .9rem; }
+    .badge { display: inline-block; border: 1px solid #ccc; background: #f3f4f6; padding: 4px 8px; margin: 2px; border-radius: 4px; }
+    .selected-cell { min-width: 180px; }
+
+    /* CUSTOM DROPDOWN */
+    .dropdown-custom { position: relative; width: 100%; max-width: 220px; margin: 0 auto; }
+    .dropdown-btn { width: 100%; padding: 8px 32px 8px 12px; border: 1px solid #ccc; border-radius: 4px; background: #fff; text-align: right; cursor: pointer; position: relative; }
+    .dropdown-btn::before { content: "▼"; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #666; }
+    .dropdown-content { position: absolute; top: calc(100% + 4px); left: 0; width: 100%; background: #fff; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); z-index: 100; display: none; max-height: 200px; overflow-y: auto; }
+    .dropdown-content.active { display: block; }
+    .dropdown-search { width: calc(100% - 24px); margin: 8px 12px; padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; }
+    .dropdown-item { padding: 8px 12px; cursor: pointer; }
+    .dropdown-item:hover { background: #f0f0f0; }
+    .dropdown-item.selected { background: #e0f2fe; }
+    /* اجعل الارتفاع الرأسي ظاهراً */
+.table-container {
+  overflow-x: auto;
+  overflow-y: visible !important;
+}
+
+/* امنح القائمة طبقة ظهور أعلى */
+.dropdown-content {
+  position: absolute;
+  z-index: 9999;
+}
+
+/* إذا كنت تستخدم ملف-card أو أي حاوية بها overflow hidden أو auto */
+.file-card,
+.table-container,
+.header-actions {
+  overflow: visible !important;
+}
