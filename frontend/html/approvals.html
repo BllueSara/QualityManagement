@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>اعتماداتي - نظام إدارة الجودة والسلامة</title>
+  <title>طلباتي - نظام إدارة الجودة والسلامة</title>
 
   <!-- استيراد خط Tajawal -->
   <link
@@ -45,10 +45,10 @@
 </div>
   <!-- ===== المحتوى الرئيسي ===== -->
   <main class="content-wrapper">
-    <h1 class="page-title">اعتماداتي</h1>
+    <h1 class="page-title">طلباتي</h1>
 
     <!-- إجمالي الطلبات -->
-    <div class="total-count">إجمالي الطلبات: <span id="totalRequests">12</span></div>
+    <div class="total-count">إجمالي الطلبات: <span id="totalRequests">0</span></div>
 
     <!-- ===== صندوق البحث والتصفية ===== -->
     <div class="search-filter-container">
@@ -67,16 +67,16 @@
         <option value="all">جميع الحالات</option>
         <option value="pending">قيد المراجعة</option>
         <option value="approved">تمت الموافقة</option>
-        <option value="rejected">مرفوض</option>
+        <!-- No rejected status for content approvals, it's either approved or pending -->
       </select>
-      <!-- قائمة الأقسام -->
+      <!-- قائمة الأقسام - This will be populated dynamically -->
       <select id="filterDept" class="filter-select">
         <option value="all">جميع الأقسام</option>
-        <option value="hr">الموارد البشرية</option>
-        <option value="finance">المالية</option>
-        <option value="services">الخدمات</option>
-        <option value="training">التطوير المهني</option>
       </select>
+        <!-- قائمة المجلدات - New filter for folders -->
+        <select id="filterFolder" class="filter-select">
+            <option value="all">جميع المجلدات</option>
+        </select>
       <!-- زر تصفية النتائج -->
       <button id="btnFilter" class="btn-primary btn-filter">
         <i class="fas fa-sliders-h"></i>
@@ -89,198 +89,25 @@
       <table class="approvals-table">
         <thead>
           <tr>
-            <th class="col-file">اسم الملف</th>
+            <th class="col-file">اسم المحتوى</th>
+            <th class="col-folder">المجلد</th>
             <th class="col-dept">القسم</th>
-            <th class="col-notes">الملاحظات</th>
-            <th class="col-status">حالة الطلب</th>
-            <th class="col-track">تتبع الطلب</th>
+            <th class="col-status">حالة الاعتماد</th>
+            <th class="col-date">تاريخ الرفع</th>
+            <th class="col-actions">الإجراءات</th>
           </tr>
         </thead>
         <tbody id="approvalsBody">
-          <!-- مثال صف ثابت؛ سيتم تعديل البيانات ديناميكياً عبر JS إذا لزم الأمر -->
-          <!-- 1 -->
-          <tr data-status="pending" data-dept="hr">
-            <td class="col-file">
-              <i class="fas fa-file-alt file-icon"></i>
-              طلب إجازة سنوية
-            </td>
-            <td class="col-dept">الموارد البشرية</td>
-            <td class="col-notes">بانتظار موافقة المدير</td>
-            <td class="col-status">
-              <span class="badge badge-pending">قيد المراجعة</span>
-            </td>
-            <td class="col-track">
-<button class="btn-track" style="cursor: pointer;">تتبع الطلب</button>
-            </td>
-          </tr>
-          <!-- 2 -->
-          <tr data-status="approved" data-dept="finance">
-            <td class="col-file">
-              <i class="fas fa-file-alt file-icon"></i>
-              طلب مشتريات
-            </td>
-            <td class="col-dept">المالية</td>
-            <td class="col-notes">تمت الموافقة بنجاح</td>
-            <td class="col-status">
-              <span class="badge badge-approved">تمت الموافقة</span>
-            </td>
-            <td class="col-track">
-<button class="btn-track" style="cursor: pointer;">تتبع الطلب</button>
-            </td>
-          </tr>
-          <!-- 3 -->
-          <tr data-status="rejected" data-dept="services">
-            <td class="col-file">
-              <i class="fas fa-file-alt file-icon"></i>
-              طلب صيانة
-            </td>
-            <td class="col-dept">الخدمات</td>
-            <td class="col-notes">يرجى مراجعة المتطلبات</td>
-            <td class="col-status">
-              <span class="badge badge-rejected">مرفوض</span>
-            </td>
-            <td class="col-track">
-<button class="btn-track" style="cursor: pointer;">تتبع الطلب</button>
-            </td>
-          </tr>
-          <!-- 4 -->
-          <tr data-status="pending" data-dept="training">
-            <td class="col-file">
-              <i class="fas fa-file-alt file-icon"></i>
-              طلب تدريب
-            </td>
-            <td class="col-dept">التطوير المهني</td>
-            <td class="col-notes">قيد المراجعة من قبل المشرف</td>
-            <td class="col-status">
-              <span class="badge badge-pending">قيد المراجعة</span>
-            </td>
-            <td class="col-track">
-<button class="btn-track" style="cursor: pointer;">تتبع الطلب</button>
-            </td>
-          </tr>
-          <!-- 5 -->
-          <tr data-status="approved" data-dept="finance">
-            <td class="col-file">
-              <i class="fas fa-file-alt file-icon"></i>
-              طلب معدات مكتبية
-            </td>
-            <td class="col-dept">المالية</td>
-            <td class="col-notes">تم اعتماد الطلب</td>
-            <td class="col-status">
-              <span class="badge badge-approved">تمت الموافقة</span>
-            </td>
-            <td class="col-track">
-<button class="btn-track" style="cursor: pointer;">تتبع الطلب</button>
-            </td>
-          </tr>
-          <!-- هذه الصفوف الخمسة الأولى في الصفحة الأولى -->
-          <!-- يمكنك إضافة المزيد من الصفوف (حتى 12) ثم السكربت سيتولى تقسيمهم في صفحات لاحقاً -->
-          <tr data-status="pending" data-dept="services">
-            <td class="col-file">
-              <i class="fas fa-file-alt file-icon"></i>
-              طلب أجهزة طبية
-            </td>
-            <td class="col-dept">الخدمات</td>
-            <td class="col-notes">بانتظار موافقة الإدارة</td>
-            <td class="col-status">
-              <span class="badge badge-pending">قيد المراجعة</span>
-            </td>
-            <td class="col-track">
-<button class="btn-track" style="cursor: pointer;">تتبع الطلب</button>
-            </td>
-          </tr>
-          <tr data-status="rejected" data-dept="hr">
-            <td class="col-file">
-              <i class="fas fa-file-alt file-icon"></i>
-              طلب إعادة هيكلة
-            </td>
-            <td class="col-dept">الموارد البشرية</td>
-            <td class="col-notes">لم يستوفِ الشروط</td>
-            <td class="col-status">
-              <span class="badge badge-rejected">مرفوض</span>
-            </td>
-            <td class="col-track">
-<button class="btn-track" style="cursor: pointer;">تتبع الطلب</button>
-            </td>
-          </tr>
-          <tr data-status="approved" data-dept="training">
-            <td class="col-file">
-              <i class="fas fa-file-alt file-icon"></i>
-              طلب دورة داخلية
-            </td>
-            <td class="col-dept">التطوير المهني</td>
-            <td class="col-notes">تمت الموافقة من مدير القسم</td>
-            <td class="col-status">
-              <span class="badge badge-approved">تمت الموافقة</span>
-            </td>
-            <td class="col-track">
-<button class="btn-track" style="cursor: pointer;">تتبع الطلب</button>
-            </td>
-          </tr>
-          <tr data-status="pending" data-dept="finance">
-            <td class="col-file">
-              <i class="fas fa-file-alt file-icon"></i>
-              طلب ميزانية إضافية
-            </td>
-            <td class="col-dept">المالية</td>
-            <td class="col-notes">في انتظار الاعتماد</td>
-            <td class="col-status">
-              <span class="badge badge-pending">قيد المراجعة</span>
-            </td>
-            <td class="col-track">
-<button class="btn-track" style="cursor: pointer;">تتبع الطلب</button>
-            </td>
-          </tr>
-          <tr data-status="approved" data-dept="services">
-            <td class="col-file">
-              <i class="fas fa-file-alt file-icon"></i>
-              طلب توصيل مستلزمات
-            </td>
-            <td class="col-dept">الخدمات</td>
-            <td class="col-notes">تمت الموافقة ورفع الطلب</td>
-            <td class="col-status">
-              <span class="badge badge-approved">تمت الموافقة</span>
-            </td>
-            <td class="col-track">
-<button class="btn-track" style="cursor: pointer;">تتبع الطلب</button>
-            </td>
-          </tr>
-          <tr data-status="rejected" data-dept="training">
-            <td class="col-file">
-              <i class="fas fa-file-alt file-icon"></i>
-              طلب ورشة تدريبية
-            </td>
-            <td class="col-dept">التطوير المهني</td>
-            <td class="col-notes">النصاب غير كافٍ</td>
-            <td class="col-status">
-              <span class="badge badge-rejected">مرفوض</span>
-            </td>
-            <td class="col-track">
-<button class="btn-track" style="cursor: pointer;">تتبع الطلب</button>
-            </td>
-          </tr>
-          <tr data-status="pending" data-dept="hr">
-            <td class="col-file">
-              <i class="fas fa-file-alt file-icon"></i>
-              طلب تعديل رواتب
-            </td>
-            <td class="col-dept">الموارد البشرية</td>
-            <td class="col-notes">بانتظار قرار الإدارة العليا</td>
-            <td class="col-status">
-              <span class="badge badge-pending">قيد المراجعة</span>
-            </td>
-            <td class="col-track">
-<button class="btn-track" style="cursor: pointer;">تتبع الطلب</button>
-            </td>
-          </tr>
+          <!-- Content items will be dynamically loaded here by JavaScript -->
         </tbody>
       </table>
+        <div id="noContentMessage" style="display: none; text-align: center; padding: 20px;">لا يوجد ملفات مرفوعة بواسطة هذا المستخدم.</div>
     </div>
 
     <!-- نص يوضح عدد العروض -->
     <div class="records-info">
-      عرض <span id="startRecord">1</span>-
-      <span id="endRecord">5</span> من <span id="totalCount">12</span> طلب
+      عرض <span id="startRecord">0</span>-
+      <span id="endRecord">0</span> من <span id="totalCount">0</span> طلب
     </div>
 
     <!-- ===== أزرار التنقل بين الصفحات ===== -->
@@ -288,9 +115,9 @@
       <button class="page-btn" id="prevPage" disabled>
         <i class="fas fa-chevron-right"></i>
       </button>
-      <button class="page-number active" data-page="1">1</button>
-      <button class="page-number" data-page="2">2</button>
-      <button class="page-number" data-page="3">3</button>
+      <div id="pageNumbers" class="page-numbers-container">
+        <!-- Page numbers will be dynamically loaded here -->
+      </div>
       <button class="page-btn" id="nextPage">
         <i class="fas fa-chevron-left"></i>
       </button>
