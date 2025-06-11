@@ -4,9 +4,13 @@ const cors = require('cors');
 const app = express();
 const mysql = require('mysql2'); // إعادة هذا السطر
 const authRoutes = require('./routes/auth');
+const usersRouter          = require('./routes/users.routes');           // /api/users/*
+const permissionsRouter    = require('./routes/permissions.routes');     // /api/users/:id/permissions
+const permissionsDefRouter = require('./routes/permissionsDef.routes');  // /api/permissions/*
 const departmentRoutes = require('./routes/departments');
 const contentRoutes = require('./routes/contentRoutes');
 const folderRoutes = require('./routes/folderRoutes');
+
 const path = require('path');
 
 const port = 3000;
@@ -21,6 +25,7 @@ app.use('/uploads', express.static('uploads'));
 
 // إضافة مسارات المصادقة
 app.use('/api/auth', authRoutes);
+app.use('/api', usersRouter);
 
 // إضافة مسارات الأقسام (تعديل المسار ليشمل محتويات الأقسام)
 app.use('/api/departments', departmentRoutes);
@@ -28,7 +33,8 @@ app.use('/api/departments', contentRoutes);
 app.use('/api', departmentRoutes);
 app.use('/api', contentRoutes);
 app.use('/api', folderRoutes);
-
+app.use('/api', permissionsRouter);
+app.use('/api', permissionsDefRouter);
 const db = mysql.createConnection({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,     // اليوزر (root أو غيره)
