@@ -16,43 +16,51 @@ const pool = mysql.createPool({
 // الحصول على جميع مجلدات قسم معين
 const getFolders = async (req, res) => {
     try {
-        // منطق التحقق من التوكن (JWT) هنا
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
             return res.status(401).json({ message: 'غير مصرح: لا يوجد توكن أو التوكن غير صالح' });
         }
         const token = authHeader.split(' ')[1];
+        let decodedToken;
         try {
-            jwt.verify(token, process.env.JWT_SECRET);
+            decodedToken = jwt.verify(token, process.env.JWT_SECRET);
         } catch (error) {
             return res.status(401).json({ message: 'غير مصرح: توكن غير صالح' });
         }
-        // نهاية منطق التحقق من التوكن
 
-        const departmentId = req.params.departmentId;
+        const departmentId = req.params.departmentId; // Get departmentId from URL params
+        if (!departmentId) {
+            return res.status(400).json({ message: 'معرف القسم مطلوب.' });
+        }
+
         const connection = await pool.getConnection();
 
-        // التحقق من وجود القسم
-        const [department] = await connection.execute(
-            'SELECT name FROM departments WHERE id = ?',
+        // Verify if the department exists
+        const [departmentCheck] = await connection.execute(
+            'SELECT id, name FROM departments WHERE id = ?',
             [departmentId]
         );
 
-        if (department.length === 0) {
+        if (departmentCheck.length === 0) {
             connection.release();
-            return res.status(404).json({ message: 'القسم غير موجود' });
+            return res.status(404).json({ message: 'القسم غير موجود.' });
         }
 
-        // جلب المجلدات
+        // Authorization check - Removed department_id specific check for non-admins
+        // All authenticated users can now view folders within any department.
+        // Content approval logic will be handled at the content level.
+
         const [folders] = await connection.execute(
             'SELECT * FROM folders WHERE department_id = ? ORDER BY created_at DESC',
             [departmentId]
         );
 
+        const departmentName = departmentCheck[0].name;
+
         connection.release();
         res.json({
             message: 'تم جلب المجلدات بنجاح',
-            departmentName: department[0].name,
+            departmentName: departmentName,
             data: folders
         });
     } catch (error) {
@@ -92,6 +100,17 @@ const createFolder = async (req, res) => {
             return res.status(404).json({ message: 'القسم غير موجود' });
         }
 
+        // التحقق من عدم تكرار اسم المجلد داخل القسم نفسه
+        const [existingFolder] = await connection.execute(
+            'SELECT id FROM folders WHERE name = ? AND department_id = ?',
+            [name, departmentId]
+        );
+
+        if (existingFolder.length > 0) {
+            connection.release();
+            return res.status(409).json({ message: 'يوجد مجلد بنفس الاسم في هذا القسم بالفعل.' });
+        }
+
         // إضافة المجلد
         const [result] = await connection.execute(
             'INSERT INTO folders (name, department_id) VALUES (?, ?)',
@@ -128,6 +147,30 @@ const updateFolder = async (req, res) => {
         const folderId = req.params.folderId;
         const { name } = req.body;
         const connection = await pool.getConnection();
+
+        // الحصول على department_id للمجلد الحالي للتحقق من التكرار
+        const [currentFolder] = await connection.execute(
+            'SELECT department_id FROM folders WHERE id = ?',
+            [folderId]
+        );
+
+        if (currentFolder.length === 0) {
+            connection.release();
+            return res.status(404).json({ message: 'المجلد غير موجود.' });
+        }
+
+        const departmentId = currentFolder[0].department_id;
+
+        // التحقق من عدم تكرار اسم المجلد داخل القسم نفسه (باستثناء المجلد الحالي)
+        const [existingFolder] = await connection.execute(
+            'SELECT id FROM folders WHERE name = ? AND department_id = ? AND id != ?',
+            [name, departmentId, folderId]
+        );
+
+        if (existingFolder.length > 0) {
+            connection.release();
+            return res.status(409).json({ message: 'يوجد مجلد آخر بنفس الاسم في هذا القسم بالفعل.' });
+        }
 
         // تحديث المجلد
         const [result] = await connection.execute(

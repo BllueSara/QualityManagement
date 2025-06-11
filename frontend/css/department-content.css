@@ -67,7 +67,7 @@ main h1 {
 
 .folders-list {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Responsive grid for folder cards */
+    grid-template-columns: repeat(3, 1fr); /* Changed to display 3 folders per row */
     gap: 20px; /* Space between folder cards */
     justify-content: center; /* Center the grid items */
 }
