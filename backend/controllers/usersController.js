@@ -11,21 +11,34 @@ const db = mysql.createPool({
 
 // 1) جلب كل المستخدمين
 const getUsers = async (req, res) => {
+  const departmentId = req.query.departmentId;
+
   try {
-    const [rows] = await db.execute(
-      `SELECT 
-         u.id,
-         u.username AS name,
-         u.email,
-         u.role,
-         u.department_id AS departmentId,
-         d.name AS departmentName,
-         u.created_at,
-         u.updated_at
-       FROM users u
-       LEFT JOIN departments d ON u.department_id = d.id
-       ORDER BY u.created_at DESC`
-    );
+    let query = `
+      SELECT 
+        u.id,
+        u.username AS name,
+        u.email,
+        u.role,
+        u.department_id AS departmentId,
+        d.name AS departmentName,
+        u.created_at,
+        u.updated_at
+      FROM users u
+      LEFT JOIN departments d ON u.department_id = d.id
+    `;
+
+    const params = [];
+
+    if (departmentId) {
+      query += ` WHERE u.department_id = ?`;
+      params.push(departmentId);
+    }
+
+    query += ` ORDER BY u.created_at DESC`;
+
+    const [rows] = await db.execute(query, params);
+
     res.status(200).json({
       status: 'success',
       data: rows
@@ -35,6 +48,7 @@ const getUsers = async (req, res) => {
     res.status(500).json({ status:'error', message:'حدث خطأ في السيرفر' });
   }
 };
+
 
 // 2) جلب مستخدم محدد
 const getUserById = async (req, res) => {
