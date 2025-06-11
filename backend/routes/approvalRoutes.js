@@ -2,13 +2,17 @@ const express = require('express');
 const router  = express.Router();
 const {
   getUserPendingApprovals,
-  handleApproval
+  handleApproval,
+  getAssignedApprovals // ✅ أضف هذا
 } = require('../controllers/approvalController');
 
-// صفحة اعتماداتي
-router.get('/',     getUserPendingApprovals);
 
-// اعتماد/رفض محتوى
-router.post('/:contentId/approve', handleApproval);
+
+router.get('/', getUserPendingApprovals); // /api/approvals
+
+router.post('/:contentId/approve', handleApproval); 
+router.get('/assigned-to-me', getAssignedApprovals);
+
+
 
 module.exports = router;

@@ -1,6 +1,6 @@
 // permissions.js
 
-const apiBase      = 'http://localhost:3000/api';
+const apiBase      = 'http://localhost:3006/api';
 let authToken      = localStorage.getItem('token') || null;
 let selectedUserId = null;
 
