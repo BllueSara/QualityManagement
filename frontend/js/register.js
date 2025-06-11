@@ -218,4 +218,4 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('حدث خطأ أثناء التسجيل. يرجى المحاولة مرة أخرى.');
         }
     });
-}); 
+});  
