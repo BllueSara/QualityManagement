@@ -7,6 +7,7 @@ const path    = require('path');
 const app = express();
 
 // Serve static files from all directories
+
 app.use(express.static(path.join(__dirname)));
 app.use(express.static(path.join(__dirname, '..')));
 app.use(express.static(path.join(__dirname, '..', '..')));
@@ -22,6 +23,7 @@ const folderRouter           = require('./routes/folderRoutes');
 const folderContentRouter    = require('./routes/folderContentRoutes');
 const contentRouter          = require('./routes/contentRoutes');
 const approvalRouter         = require('./routes/approvalRoutes');
+const ticketRouter           = require('./routes/ticketRoutes');
 const pendingApprovalRoutes = require('./routes/pendingApprovals.routes');
 
 
@@ -39,6 +41,7 @@ app.use('/api/users',       usersRouter);
 app.use('/api/permissions/definitions', permsDefRouter);
 app.use('/api/permissions', permsRouter);
 app.use('/api/departments', deptRouter);
+app.use('/api/tickets',     ticketRouter);
 
 // folders nested under departments
 app.use('/api/departments/:departmentId/folders', folderRouter);

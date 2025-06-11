@@ -1,29 +1,46 @@
 // routes/folderContentRoutes.js
 const express = require('express');
-const router  = express.Router();
 const { 
   getContentsByFolderId, 
-  addContent, 
-  updateContent, 
-  deleteContent, 
+  addContent,
+  updateContent,
+  deleteContent,
   downloadContent,
   getContentById,
-  approveContent
+  approveContent,
+  upload    // middleware من الـ controller
 } = require('../controllers/contentController');
 
-// GET  /api/folders/:folderId/contents
+const router = express.Router();
+
+// جلب المحتويات في مجلد
 router.get('/:folderId/contents', getContentsByFolderId);
-// POST /api/folders/:folderId/contents
-router.post('/:folderId/contents', addContent);
-// PUT  /api/contents/:contentId
-router.put('/contents/:contentId', updateContent);
-// DELETE /api/contents/:contentId
-router.delete('/contents/:contentId', deleteContent);
-// GET  /api/contents/:contentId
-router.get('/contents/:contentId', getContentById);
-// GET  /api/contents/:contentId/download
-router.get('/contents/:contentId/download', downloadContent);
-// POST /api/contents/:contentId/approve
-router.post('/contents/:contentId/approve', approveContent);
+
+// إضافة محتوى جديد في المجلد (title + file)
+// الحقل النصّي title في req.body، والملف في req.file
+router.post(
+  '/:folderId/contents',
+  upload.single('file'),
+  addContent
+);
+
+// تحديث محتوى
+router.put(
+  '/:contentId', 
+  upload.single('file'),
+  updateContent
+);
+
+// حذف محتوى
+router.delete('/:contentId', deleteContent);
+
+// تحميل محتوى
+router.get('/:contentId/download', downloadContent);
+
+// جلب محتوى مفرد
+router.get('/:contentId', getContentById);
+
+// اعتماد محتوى
+router.post('/:contentId/approve', approveContent);
 
 module.exports = router;
