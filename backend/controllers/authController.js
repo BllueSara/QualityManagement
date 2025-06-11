@@ -121,7 +121,7 @@ const login = async (req, res) => {
         }
 
         const [users] = await db.execute(
-            'SELECT id, username, email, password, department_id FROM users WHERE email = ?',
+            'SELECT id, username, email, password, department_id, role FROM users WHERE email = ?',
             [email]
         );
 
@@ -144,7 +144,7 @@ const login = async (req, res) => {
         }
 
         const token = jwt.sign(
-            { id: user.id, email: user.email, department_id: user.department_id },
+            { id: user.id, email: user.email, department_id: user.department_id, role: user.role },
             process.env.JWT_SECRET,
             { expiresIn: '1h' }
         );
