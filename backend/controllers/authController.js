@@ -110,7 +110,6 @@ const register = async (req, res) => {
         username 
       },
       process.env.JWT_SECRET,
-      { expiresIn: '1h' }
     );
 
     res.status(201).json({
@@ -190,7 +189,6 @@ const login = async (req, res) => {
         username: user.username
       },
       process.env.JWT_SECRET,
-      { expiresIn: '1h' }
     );
 
     res.status(200).json({
@@ -393,12 +391,24 @@ const adminResetPassword = async (req, res) => {
     });
   }
 };
-
+function checkRole(allowedRoles = []) {
+  return (req, res, next) => {
+    const user = req.user;
+    if (!user || !user.role) {
+      return res.status(401).json({ status: 'error', message: 'مستخدم غير مصادق' });
+    }
+    if (!allowedRoles.includes(user.role)) {
+      return res.status(403).json({ status: 'error', message: 'ليس لديك صلاحية الوصول إلى هذا القسم' });
+    }
+    next();
+  };
+}
 module.exports = {
   register,
   login,
   forgotPassword,
   resetPassword,
   authenticateToken,
-  adminResetPassword
+  adminResetPassword,
+  checkRole
 };

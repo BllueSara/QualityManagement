@@ -1,5 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     // console.log('DOMContentLoaded event fired in department-content.js');
+      let isInitialFetch = true;  // ← الفلاج
+
     const foldersSection = document.querySelector('.folders-section');
     const folderContentsSection = document.querySelector('.folder-contents-section');
     const folderCards = document.querySelectorAll('.folder-card');
@@ -16,9 +18,28 @@ document.addEventListener('DOMContentLoaded', function() {
     // Get references for Add Content Modal
     const addContentBtn = document.getElementById('addContentBtn');
     const addContentModal = document.getElementById('addContentModal');
+// امنع أي نقرة داخل المودال من الارتداد للعناصر أدناه
+if (addContentModal) {
+  addContentModal.addEventListener('click', function(e) {
+    e.stopPropagation();
+  });
+}
+
     const addContentCloseBtn = addContentModal ? addContentModal.querySelector('.close-button') : null;
     const cancelContentBtn = addContentModal ? addContentModal.querySelector('#cancelContentBtn') : null;
     const createContentBtn = addContentModal ? addContentModal.querySelector('#createContentBtn') : null;
+// ربط زر 'إنشاء المحتوى' بدالة handleCreateContent
+if (createContentBtn) {
+  createContentBtn.type = 'button';           // تأكد أنّه type="button"
+if (createContentBtn) {
+  createContentBtn.type = 'button';
+  createContentBtn.addEventListener('click', function(event) {
+    // هنا نمنع صعود الحدث للعناصر الأب (كالـ folder-card)
+    event.stopPropagation();
+    // بعدها نستدعي رفع المحتوى
+    handleCreateContent();
+  });
+}}
 
     // console.log('addContentBtn:', addContentBtn);
     // console.log('addContentModal:', addContentModal);
@@ -26,6 +47,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Get references for Add Content Modal Form
     const addContentForm = addContentModal ? addContentModal.querySelector('#addContentFormElement') : null;
+if (addContentForm) {
+  addContentForm.addEventListener('submit', e => e.preventDefault());
+}
+if (cancelContentBtn) {
+  cancelContentBtn.type = 'button';
+  cancelContentBtn.addEventListener('click', closeAddContentModal);
+}
+
 
     // Get references for Edit Folder Modal
     const editFolderModal = document.getElementById('editFolderModal');
@@ -62,6 +91,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentDepartmentId = null; // متغير لتخزين معرف القسم الحالي
     let currentFolderId = null; // متغير لتخزين معرف المجلد الحالي
 
+    
     // دالة لجلب التوكن من localStorage (مكررة، يمكن نقلها إلى shared.js)
     function getToken() {
         const token = localStorage.getItem('token');
@@ -87,85 +117,87 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // دالة لجلب مجلدات القسم بناءً على departmentId
-    async function fetchFolders(departmentId) {
-        console.log('fetchFolders called for departmentId:', departmentId);
-        currentDepartmentId = departmentId; // حفظ معرف القسم الحالي
-        foldersSection.style.display = 'block';
-        folderContentsSection.style.display = 'none';
-        backToFilesContainer.style.display = 'none';
+  async function fetchFolders(departmentId) {
+  // إذا كنا فعلاً داخل مجلد (currentFolderId != null)، نتجاهل أي استدعاء لاحق
+  if (currentFolderId !== null) {
+    console.log('⛔️ Skipping fetchFolders because currentFolderId =', currentFolderId);
+    return;
+  }
 
-        try {
-            const response = await fetch(`http://localhost:3006/api/departments/${departmentId}/folders`, {
-                headers: {
-                    'Authorization': `Bearer ${getToken()}`
-                }
-            });
-            const data = await response.json();
-            console.log('Fetch folders response status:', response.status);
-            console.log('Fetch folders response data:', data);
+  console.log('🔥 fetchFolders() fired for departmentId:', departmentId);
+  currentDepartmentId = departmentId;
+  foldersSection.style.display = 'block';
+  folderContentsSection.style.display = 'none';
+  backToFilesContainer.style.display = 'none';
 
-            if (response.ok) {
-                const foldersList = document.querySelector('.folders-list');
-                foldersList.innerHTML = '';
-                
-                folderContentTitle.textContent = data.departmentName || 'مجلدات القسم';
+  try {
+    const response = await fetch(
+      `http://localhost:3006/api/departments/${departmentId}/folders`, {
+        headers: { 'Authorization': `Bearer ${getToken()}` }
+      }
+    );
+    const data = await response.json();
 
-                if (data.data && data.data.length > 0) {
-                    data.data.forEach(folder => {
-                        const folderItem = document.createElement('div');
-                        folderItem.className = 'folder-card';
-                        folderItem.dataset.id = folder.id;
-                        folderItem.innerHTML = `
-                            <div class="item-icons">
-                                <a href="#" class="edit-icon" data-id="${folder.id}"><img src="../images/edit.svg" alt="تعديل"></a>
-                                <a href="#" class="delete-icon" data-id="${folder.id}"><img src="../images/delet.svg" alt="حذف"></a>
-                            </div>
-                            <img src="../images/folders.svg" alt="مجلد">
-                            <div class="folder-info">
-                                <div class="folder-name">${folder.name}</div>
-                                <div class="folder-date">${new Date(folder.createdAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
-                            </div>
-                        `;
-                        foldersList.appendChild(folderItem);
-
-                        folderItem.addEventListener('click', function(e) {
-                            if (!e.target.closest('.edit-icon') && !e.target.closest('.delete-icon')) {
-                                const folderId = this.dataset.id;
-                                console.log('Folder clicked, fetching contents for folderId:', folderId);
-                                fetchFolderContents(folderId);
-                            }
-                        });
-                    });
-                     console.log('Folders rendered to list. Number of folders:', data.data.length);
-                } else {
-                    foldersList.innerHTML = '<div class="no-content">لا يوجد مجلدات في هذا القسم.</div>';
-                    console.log('No folders found for this department.');
-                }
-            } else {
-                showToast(data.message || 'فشل جلب مجلدات القسم.', 'error');
-                console.error('Failed to fetch folders:', data.message);
-            }
-        } catch (error) {
-            console.error('Error fetching folders:', error);
-            showToast('حدث خطأ في الاتصال بجلب مجلدات القسم.', 'error');
-        }
+    if (!response.ok) {
+      showToast(data.message || 'فشل جلب مجلدات القسم.', 'error');
+      console.error('Failed to fetch folders:', data);
+      return;
     }
+
+    const foldersList = document.querySelector('.folders-list');
+    foldersList.innerHTML = '';
+    folderContentTitle.textContent = data.departmentName || 'مجلدات القسم';
+
+    if (data.data.length) {
+      data.data.forEach(folder => {
+        const card = document.createElement('div');
+        card.className = 'folder-card';
+        card.dataset.id = folder.id;
+        card.innerHTML = `
+          <div class="item-icons">
+            <a href="#" class="edit-icon" data-id="${folder.id}"><img src="../images/edit.svg"></a>
+            <a href="#" class="delete-icon" data-id="${folder.id}"><img src="../images/delet.svg"></a>
+          </div>
+          <img src="../images/folders.svg">
+          <div class="folder-info">
+            <div class="folder-name">${folder.name}</div>
+            <div class="folder-date">${new Date(folder.createdAt).toLocaleDateString('ar-EG', {year:'numeric',month:'long',day:'numeric'})}</div>
+          </div>
+        `;
+        foldersList.appendChild(card);
+
+        card.addEventListener('click', e => {
+          if (!e.target.closest('.edit-icon') && !e.target.closest('.delete-icon')) {
+            fetchFolderContents(folder.id);
+          }
+        });
+      });
+    } else {
+      foldersList.innerHTML = '<div class="no-content">لا يوجد مجلدات في هذا القسم.</div>';
+    }
+  } catch (err) {
+    console.error('Error fetching folders:', err);
+    showToast('حدث خطأ في الاتصال بجلب مجلدات القسم.', 'error');
+  }
+}
+
 
     // دالة لجلب محتويات المجلد بناءً على folderId
     async function fetchFolderContents(folderId) {
-        // console.log('fetchFolderContents called for folderId:', folderId);
         currentFolderId = folderId; // حفظ معرف المجلد الحالي
-        // console.log('fetchFolderContents: currentFolderId set to', currentFolderId);
         const addContentBtn = document.getElementById('addContentBtn');
         if (addContentBtn) {
             addContentBtn.dataset.folderId = folderId;
-            // console.log('addContentBtn data-folder-id set to:', folderId);
         }
-        foldersSection.style.display = 'none';
-        folderContentsSection.style.display = 'block';
-        backToFilesContainer.style.display = 'none';
         
-        const userRole = getUserRoleFromToken(); // جلب دور المستخدم
+        // تحديث حالة العرض فقط إذا لم نكن في حالة عرض المحتويات
+        if (folderContentsSection.style.display === 'none') {
+            foldersSection.style.display = 'none';
+            folderContentsSection.style.display = 'block';
+            backToFilesContainer.style.display = 'none';
+        }
+        
+        const userRole = getUserRoleFromToken();
 
         try {
             const response = await fetch(`http://localhost:3006/api/folders/${folderId}/contents`, {
@@ -173,8 +205,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Authorization': `Bearer ${getToken()}`
                 }
             });
-            const data = await response.json(); // Read the body once
-            console.log('Fetch contents response:', data);
+            const data = await response.json();
 
             if (response.ok) {
                 const filesList = document.querySelector('.files-list');
@@ -219,14 +250,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         // عند النقر على الملف، افتح المحتوى مباشرة
                         fileItem.addEventListener('click', function(e) {
                             if (!e.target.closest('.edit-icon') && !e.target.closest('.delete-icon')) {
-                                // console.log('Attempting to open file. content:', content);
-                                // console.log('Attempting to open file. content.fileUrl:', content.fileUrl);
                                 if (content.fileUrl) {
                                     const fullFileUrl = `http://localhost:3006/uploads/${content.fileUrl}`;
-                                    // console.log('Opening full URL:', fullFileUrl);
                                     window.open(fullFileUrl, '_blank');
                                 } else {
-                                    console.warn('File URL not available for content:', content);
                                     showToast('رابط الملف غير متوفر.', 'error'); 
                                 }
                             }
@@ -235,13 +262,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else {
                     filesList.innerHTML = '<div class="no-content">لا يوجد محتوى في هذا المجلد</div>';
                 }
-                // Ensure the correct section is displayed after content is fetched/populated
-                foldersSection.style.display = 'none';
-                folderContentsSection.style.display = 'block';
             } else {
-                console.error('Failed to fetch folder contents. Status:', response.status);
-                const errorText = await response.text(); // Get raw response text
-                console.error('Error response text:', errorText);
                 showToast(data.message || 'فشل جلب محتويات المجلد.', 'error');
             }
         } catch (error) {
@@ -398,32 +419,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Function to handle Create Content
-    async function handleCreateContent(event) {
-        event.preventDefault(); // Prevent default form submission
-        const folderIdToUpload = document.getElementById('addContentFolderId').value; // Get folder ID from hidden input
-        // console.log('handleCreateContent: Attempting to create content for folderIdToUpload:', folderIdToUpload);
+    async function handleCreateContent() {
+        const folderIdToUpload = document.getElementById('addContentFolderId').value;
+        const contentTitle = document.getElementById('contentTitle').value;
+        const contentFile = document.getElementById('contentFile').files[0];
 
-        const contentTitleInput = document.getElementById('contentTitle');
-        const contentFileInput = document.getElementById('contentFile');
-
-        // console.log('contentTitleInput:', contentTitleInput);
-        // console.log('contentFileInput:', contentFileInput);
-
-        if (!contentTitleInput || !contentFileInput) {
-            console.error('Content title input or file input element not found.');
-            showToast('حدث خطأ داخلي: لم يتم العثور على حقول الإدخال.', 'error');
-            return;
-        }
-
-        const contentTitle = contentTitleInput.value;
-        const contentFile = contentFileInput.files[0];
-
-        if (!folderIdToUpload) {
-            showToast('الرجاء اختيار مجلد أولاً.', 'error');
-            console.warn('handleCreateContent: folderIdToUpload is missing.');
-            return;
-        }
-        if (!contentTitle || !contentFile) {
+        if (!folderIdToUpload || !contentTitle || !contentFile) {
             showToast('الرجاء إدخال عنوان واختيار ملف.', 'error');
             return;
         }
@@ -433,32 +434,29 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('file', contentFile);
 
         try {
-            const response = await fetch(`http://localhost:3006/api/folders/${folderIdToUpload}/contents`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${getToken()}`
-                },
-                body: formData
-            });
-
-            const result = await response.json(); // Read the body once
+            const response = await fetch(
+                `http://localhost:3006/api/folders/${folderIdToUpload}/contents`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${getToken()}` },
+                    body: formData
+                }
+            );
+            const result = await response.json();
 
             if (response.ok) {
-                showToast(result.message || `تم رفع المحتوى بنجاح في المجلد: ${folderIdToUpload} وهو في انتظار الاعتمادات اللازمة.`, 'success');
+                showToast(result.message || 'تم رفع المحتوى بنجاح!', 'success');
                 closeAddContentModal();
-                // التأكد من أن قسم المحتويات معروض وأن قسم المجلدات مخفي
-                foldersSection.style.display = 'none';
-                folderContentsSection.style.display = 'block';
-                await fetchFolderContents(folderIdToUpload); // تحديث قائمة المحتويات باستخدام الـ folderId الصحيح
+                await fetchFolderContents(folderIdToUpload);
             } else {
-                showToast(`فشل إضافة المحتوى في المجلد ${folderIdToUpload}: ${result.message || 'خطأ غير معروف'}`, 'error');
-                console.error('Failed to add content:', result.message);
+                showToast(`فشل إضافة المحتوى: ${result.message||'خطأ'}`, 'error');
             }
-        } catch (error) {
-            console.error('Error adding content:', error);
-            showToast(`حدث خطأ في الاتصال بإضافة المحتوى للمجلد ${folderIdToUpload}.`, 'error');
+        } catch (err) {
+            console.error(err);
+            showToast('خطأ في الاتصال بالخادم.', 'error');
         }
     }
+
+
 
     // --- Edit/Delete Modal Functions ---
 
@@ -759,15 +757,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Event listener for the Create Content Form Submission
-    if (addContentForm) { 
-        addContentForm.addEventListener('submit', handleCreateContent);
-    } else {
-        // This else block should ideally not be reached if HTML form is present
-        // console.error('Add Content Form not found! Cannot attach submit listener. Falling back to button click.');
-        if (createContentBtn) {
-            createContentBtn.addEventListener('click', handleCreateContent);
-        }
-    }
+   
 
     // --- Event Listeners for Edit/Delete Icons --- (Assuming icons are added in HTML)
 
@@ -914,10 +904,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const departmentIdFromUrl = urlParams.get('departmentId');
     console.log('departmentIdFromUrl from URL params:', departmentIdFromUrl);
 
-    if (departmentIdFromUrl) {
-        // إذا كان هناك معرف قسم في الـ URL، اعرض مجلدات القسم
-        fetchFolders(departmentIdFromUrl);
-    } else {
+if (departmentIdFromUrl && isInitialFetch) {
+  fetchFolders(departmentIdFromUrl);
+  isInitialFetch = false;
+}
+ else {
         console.warn('departmentId not found in URL. Cannot fetch folders.');
     }
 
@@ -965,6 +956,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('confirmDeleteContentBtn').addEventListener('click', handleDeleteContent);
 
 }); // End of DOMContentLoaded 
+
 
 function showToast(message, type = 'info', duration = 3006) {
     let toastContainer = document.getElementById('toast-container');
