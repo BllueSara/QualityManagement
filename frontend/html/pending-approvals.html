@@ -2,207 +2,129 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>ملفات بانتظار الاعتماد - نظام إدارة الجودة والسلامة</title>
 
-  <!-- ===== استيراد خط Tajawal ===== -->
-  <link
-    href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap"
-    rel="stylesheet"
-  />
+  <!-- خطوط وأيقونات -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous"/>
 
-  <!-- ===== Font Awesome للأيقونات ===== -->
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-    crossorigin="anonymous"
-  />
-
-  <!-- ===== ربط ملف التنسيقات ===== -->
-  <link rel="stylesheet" href="/frontend/css/pending-approvals.css" />
+  <!-- ملفات التنسيقات -->
+  <link rel="stylesheet" href="/frontend/css/pending-approvals.css"/>
+  <link rel="stylesheet" href="/frontend/css/pending-ticket.css"/>
 </head>
 <body>
+
   <!-- ===== الهيدر العلوي ===== -->
   <header class="main-header">
     <div class="header-container">
       <div class="system-title">
-          <img src="/frontend/images/system-title.png" alt="نظام إدارة الجودة والسلامة">
-  </div>
-       <div class="hospital-logo">
-                <img src="/frontend/images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز">
-            </div>
+        <img src="/frontend/images/system-title.png" alt="نظام إدارة الجودة والسلامة">
+      </div>
+      <div class="hospital-logo">
+        <img src="/frontend/images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز">
+      </div>
     </div>
   </header>
-        <div class="header-actions">
+
+  <!-- ===== أزرار التنقل ===== -->
+  <div class="header-actions">
     <button class="back-btn" onclick="history.back()">
-        <i class="fas fa-arrow-left"></i>
-        <span>رجوع</span>
-  </button>
-  <button class="home-btn" onclick="window.location.href='index.html'">
-    <i class="fas fa-home"></i>
-    <span>الرئيسية</span>
-  </button>
-</div>
+      <i class="fas fa-arrow-left"></i>
+      <span>رجوع</span>
+    </button>
+    <button class="home-btn" onclick="window.location.href='index.html'">
+      <i class="fas fa-home"></i>
+      <span>الرئيسية</span>
+    </button>
+  </div>
 
-  <!-- ===== المحتوى الرئيسي ===== -->
-  <main class="content-wrapper">
-    <!-- ===== رأس الصفحة: زر وعداد الملفات ===== -->
-    <div class="top-bar">
-      <button class="btn-send-all">
-        <i class="fas fa-paper-plane"></i>
-        إرسال للجميع
-      </button>
-      <div class="files-count">عدد الملفات المنتظرة: 2 ملفات</div>
+  <!-- ===== بطاقة التقارير بانتظار الاعتماد ===== -->
+  <div class="file-card">
+    <div class="file-card-header">
+      <h2 class="file-name">ملفات بانتظار الاعتماد</h2>
     </div>
-
-    <!-- ===== بطاقة 1: تقرير الجودة الشهري - يونيو 2023 ===== -->
-    <div class="file-card">
-      <!-- رأس البطاقة: أيقونة القسم ورقم الملف والاسم -->
-<!-- رأس البطاقة بعد التعديل: ضُمّ عنوان التقرير أولاً ثم معلومات القسم ورقم الملف -->
-<div class="file-card-header">
-  <!-- 1. أولاً: عنوان التقرير ليظهر على أقصى اليمين -->
-  <div class="file-info-right">
-    <h2 class="file-name">تقرير الجودة الشهري - يونيو 2023</h2>
-  </div>
-  <!-- 2. ثانيًا: معلومات القسم ورقم الملف على الجهة اليسرى -->
-  <div class="file-info-left">
-    <i class="fas fa-building building-icon"></i>
-    <span class="file-dept">قسم الجودة والتطوير</span>
-    <span class="separator">·</span>
-    <span class="file-number">#12345</span>
-  </div>
-</div>
-
-      <!-- جدول المحتوى داخل البطاقة -->
-      <div class="table-container">
-        <table class="approvals-table">
-          <thead>
-            <tr>
-              <th class="col-name">اسم الشخص</th>
-              <th class="col-dept">القسم</th>
-              <th class="col-role">المسمى الوظيفي</th>
-              <th class="col-status">الحالة</th>
-              <th class="col-action">إجراء</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- صف 1 -->
-            <tr>
-              <td class="col-name">أحمد الزهراوي</td>
-              <td class="col-dept">الجودة</td>
-              <td class="col-role">مدير قسم</td>
-              <td class="col-status">بانتظار الإرسال</td>
-              <td class="col-action">
-                <button class="btn-send">
-                  <i class="fas fa-paper-plane"></i>
-                  إرسال
-                </button>
-              </td>
-            </tr>
-            <!-- صف 2 -->
-            <tr>
-              <td class="col-name">سارة التوجيزي</td>
-              <td class="col-dept">السلامة</td>
-              <td class="col-role">مشرف سلامة</td>
-              <td class="col-status">تم الإرسال</td>
-              <td class="col-action">
-                <button class="btn-sent" disabled>
-                  <i class="fas fa-check-circle"></i>
-                  تم الإرسال
-                </button>
-              </td>
-            </tr>
-            <!-- صف 3 -->
-            <tr>
-              <td class="col-name">خالد المطيري</td>
-              <td class="col-dept">التفتيش</td>
-              <td class="col-role">مراجع داخلي</td>
-              <td class="col-status">بانتظار الإرسال</td>
-              <td class="col-action">
-                <button class="btn-send">
-                  <i class="fas fa-paper-plane"></i>
-                  إرسال
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+    <div class="table-container">
+      <table class="approvals-table">
+        <thead>
+          <tr>
+            <th>التقرير</th>
+            <th>القسم</th>
+            <th>المُختارون</th>
+            <th>الحالة</th>
+            <th>الإجراء</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- تقرير 1 -->
+          <tr data-id="rep-001">
+            <td>تقرير الجودة الشهري - يونيو 2023</td>
+            <td>
+              <div class="dropdown-custom" data-type="dept">
+                <button class="dropdown-btn">اختر القسم</button>
+                <div class="dropdown-content">
+                  <input type="text" class="dropdown-search" placeholder="ابحث...">
+                  <div class="dropdown-item" data-value="quality">الجودة</div>
+                  <div class="dropdown-item" data-value="safety">السلامة</div>
+                  <div class="dropdown-item" data-value="inspection">التفتيش</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="dropdown-custom" data-type="users">
+                <button class="dropdown-btn" disabled>اختر القسم أولاً</button>
+                <div class="dropdown-content">
+                  <input class="dropdown-search" placeholder="ابحث...">
+                  <!-- تُعبأ آلياً بعد اختيار القسم -->
+                </div>
+              </div>
+            </td>
+            <td class="selected-cell"></td>
+            <td><span class="badge-pending">بانتظار الإرسال</span></td>
+            <td>
+              <button class="btn-send" style="padding:6px 12px;">
+                <i class="bi bi-send"></i>
+                إرسال
+              </button>
+            </td>
+          </tr>
+          <!-- تقرير 2 -->
+          <tr data-id="rep-002">
+            <td>تقرير السلامة الأسبوعي</td>
+            <td>
+              <div class="dropdown-custom" data-type="dept">
+                <button class="dropdown-btn">اختر القسم</button>
+                <div class="dropdown-content">
+                  <input type="text" class="dropdown-search" placeholder="ابحث...">
+                  <div class="dropdown-item" data-value="quality">الجودة</div>
+                  <div class="dropdown-item" data-value="safety">السلامة</div>
+                  <div class="dropdown-item" data-value="operations">التشغيل</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="dropdown-custom" data-type="users">
+                <button class="dropdown-btn" disabled>اختر القسم أولاً</button>
+                <div class="dropdown-content">
+                  <input class="dropdown-search" placeholder="ابحث...">
+                </div>
+              </div>
+            </td>
+            <td class="selected-cell"></td>
+            <td><span class="badge-pending">بانتظار الإرسال</span></td>
+            <td>
+              <button class="btn-send" style="padding:6px 12px;">
+                <i class="bi bi-send"></i>
+                إرسال
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-
-    <!-- ===== بطاقة 2: تقرير السلامة الأسبوعي ===== -->
-    <div class="file-card">
-      <!-- رأس البطاقة: أيقونة القسم ورقم الملف والاسم -->
-<div class="file-card-header">
-  <!-- 1. أولاً: عنوان التقرير ليظهر على أقصى اليمين -->
-  <div class="file-info-right">
-    <h2 class="file-name">تقرير السلامة الاسبوعي </h2>
   </div>
-  <!-- 2. ثانيًا: معلومات القسم ورقم الملف على الجهة اليسرى -->
-  <div class="file-info-left">
-    <i class="fas fa-building building-icon"></i>
-    <span class="file-dept">قسم  السلامة</span>
-    <span class="separator">·</span>
-    <span class="file-number">#12389</span>
-  </div>
-</div>
 
-      <!-- جدول المحتوى داخل البطاقة -->
-      <div class="table-container">
-        <table class="approvals-table">
-          <thead>
-            <tr>
-              <th class="col-name">اسم الشخص</th>
-              <th class="col-dept">القسم</th>
-              <th class="col-role">المسمى الوظيفي</th>
-              <th class="col-status">الحالة</th>
-              <th class="col-action">إجراء</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- صف 1 -->
-            <tr>
-              <td class="col-name">محمد العتيبي</td>
-              <td class="col-dept">السلامة</td>
-              <td class="col-role">مدير السلامة</td>
-              <td class="col-status">بانتظار الإرسال</td>
-              <td class="col-action">
-                <button class="btn-send">
-                  <i class="fas fa-paper-plane"></i>
-                  إرسال
-                </button>
-              </td>
-            </tr>
-            <!-- صف 2 -->
-            <tr>
-              <td class="col-name">فاطمة القحطاني</td>
-              <td class="col-dept">الجودة</td>
-              <td class="col-role">مشرف جودة</td>
-              <td class="col-status">بانتظار الإرسال</td>
-              <td class="col-action">
-                <button class="btn-send">
-                  <i class="fas fa-paper-plane"></i>
-                  إرسال
-                </button>
-              </td>
-            </tr>
-            <!-- صف 3 -->
-            <tr>
-              <td class="col-name">عبدالله السبعي</td>
-              <td class="col-dept">التشغيل</td>
-              <td class="col-role">مدير العمليات</td>
-              <td class="col-status">تم الإرسال</td>
-              <td class="col-action">
-                <button class="btn-sent" disabled>
-                  <i class="fas fa-check-circle"></i>
-                  تم الإرسال
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </main>
+  <script src="/frontend/js/pending-approvals.js"></script>
 </body>
 </html>
