@@ -6,6 +6,12 @@ const path    = require('path');
 
 const app = express();
 
+// Serve static files from all directories
+app.use(express.static(path.join(__dirname)));
+app.use(express.static(path.join(__dirname, '..')));
+app.use(express.static(path.join(__dirname, '..', '..')));
+
+
 // Routers
 const authRouter             = require('./routes/auth');
 const usersRouter            = require('./routes/users.routes');
@@ -16,6 +22,11 @@ const folderRouter           = require('./routes/folderRoutes');
 const folderContentRouter    = require('./routes/folderContentRoutes');
 const contentRouter          = require('./routes/contentRoutes');
 const approvalRouter         = require('./routes/approvalRoutes');
+const pendingApprovalRoutes = require('./routes/pendingApprovals.routes');
+
+
+
+
 
 app.use(cors());
 app.use(express.json());
@@ -39,6 +50,9 @@ app.use('/api/folders', folderContentRouter);
 app.use('/api/contents', contentRouter);
 
 app.use('/api/approvals', approvalRouter);
+
+
+app.use('/api/pending-approvals', pendingApprovalRoutes);
 
 // serve static frontend
 app.use('/', express.static(path.join(__dirname, '../frontend')));
