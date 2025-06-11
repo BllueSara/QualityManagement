@@ -38,6 +38,7 @@ const getContentsByFolderId = async (req, res) => {
         let decodedToken;
         try {
             decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+            console.log('Decoded Token Role in getContentsByFolderId:', decodedToken.role);
         } catch (error) {
             return res.status(401).json({ message: 'غير مصرح: توكن غير صالح' });
         }
