@@ -152,62 +152,72 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Render table rows based on `filteredContents` for the current page
-    function renderTable() {
-        approvalsBody.innerHTML = '';
-        if (filteredContents.length === 0) {
-            noContentMessage.style.display = 'block';
-            updateRecordInfo(0, 0, 0);
-            updateTotalCount(0);
-            updatePaginationButtons(0);
-            return;
-        }
+function renderTable() {
+  approvalsBody.innerHTML = '';
 
-        noContentMessage.style.display = 'none';
+  if (filteredContents.length === 0) {
+    noContentMessage.style.display = 'block';
+    updateRecordInfo(0, 0, 0);
+    updateTotalCount(0);
+    updatePaginationButtons(0);
+    return;
+  }
+  noContentMessage.style.display = 'none';
 
-        const startIdx = (currentPage - 1) * rowsPerPage;
-        const endIdx = startIdx + rowsPerPage;
-        const contentsToDisplay = filteredContents.slice(startIdx, endIdx);
+  const startIdx = (currentPage - 1) * rowsPerPage;
+  const endIdx   = startIdx + rowsPerPage;
+  const contentsToDisplay = filteredContents.slice(startIdx, endIdx);
 
-        contentsToDisplay.forEach(content => {
-            const approvalStatusText = content.is_approved ? 'معتمد' : 'قيد المراجعة';
-            const approvalStatusClass = content.is_approved ? 'badge-approved' : 'badge-pending';
-            const fileIcon = '<i class="fas fa-file-alt file-icon"></i>';
+  contentsToDisplay.forEach(content => {
+    console.log('DEBUG content object:', content);
+    console.log('DEBUG content.fileUrl:', content.fileUrl);
 
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td class="col-file">
-                    ${fileIcon}
-                    ${content.title}
-                </td>
-                <td class="col-folder">${content.folderName || '-'}</td>
-                <td class="col-dept">${content.departmentName || '-'}</td>
-                <td class="col-status">
-                    <span class="badge ${approvalStatusClass}">${approvalStatusText}</span>
-                </td>
-                <td class="col-date">${new Date(content.createdAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}</td>
-                <td class="col-actions">
-                    <button class="btn-track" data-content-url="http://localhost:3006/uploads/${content.fileUrl}" style="cursor: pointer;">عرض الملف</button>
-                </td>
-            `;
-            approvalsBody.appendChild(row);
-        });
+    const approvalStatusText  = content.is_approved ? 'معتمد' : 'قيد المراجعة';
+    const approvalStatusClass = content.is_approved ? 'badge-approved' : 'badge-pending';
+    const fileIcon            = '<i class="fas fa-file-alt file-icon"></i>';
 
-        // Attach event listeners for "عرض الملف" buttons
-        approvalsBody.querySelectorAll('.btn-track').forEach(button => {
-            button.addEventListener('click', function() {
-                const contentUrl = this.getAttribute('data-content-url');
-                if (contentUrl) {
-                    window.open(contentUrl, '_blank');
-                } else {
-                    showToast('رابط الملف غير متوفر.', 'error');
-                }
-            });
-        });
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td class="col-file">
+        ${fileIcon}
+        ${content.title}
+      </td>
+      <td class="col-folder">${content.folderName || '-'}</td>
+      <td class="col-dept">${content.departmentName || '-'}</td>
+      <td class="col-status">
+        <span class="badge ${approvalStatusClass}">${approvalStatusText}</span>
+      </td>
+      <td class="col-date">${new Date(content.createdAt)
+        .toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}
+      </td>
+      <td class="col-actions">
+        <button class="btn-track" data-file-path="${content.fileUrl}" style="cursor: pointer;">
+          عرض الملف
+        </button>
+      </td>
+    `;
+    approvalsBody.appendChild(row);
+  });
 
-        updateRecordInfo(startIdx + 1, startIdx + contentsToDisplay.length, filteredContents.length);
-        updateTotalCount(filteredContents.length);
-        updatePaginationButtons(filteredContents.length);
-    }
+  // بعد بناء الصفوف، ضف الـ listeners
+  approvalsBody.querySelectorAll('.btn-track').forEach(button => {
+    button.addEventListener('click', function() {
+      const filePath = this.dataset.filePath;
+      console.log('DEBUG clicked filePath:', filePath);
+      if (!filePath) {
+        showToast('رابط الملف غير متوفر.', 'error');
+        return;
+      }
+      const fileUrl = `http://localhost:3006/uploads/${filePath}`;
+      window.open(fileUrl, '_blank');
+    });
+  });
+
+  updateRecordInfo(startIdx + 1, startIdx + contentsToDisplay.length, filteredContents.length);
+  updateTotalCount(filteredContents.length);
+  updatePaginationButtons(filteredContents.length);
+}
+
 
     // Update pagination buttons
     function updatePaginationButtons(totalFilteredRows) {
