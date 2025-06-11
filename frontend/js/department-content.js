@@ -187,16 +187,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         const approvalStatus = content.is_approved ? 'معتمد' : 'في انتظار الاعتماد';
                         const approvalClass = content.is_approved ? 'approved' : 'pending';
                         
-                        let approveButtonHtml = '';
-                        if (userRole === 'admin' && !content.is_approved) {
-                            approveButtonHtml = `<a href="#" class="approve-icon" data-id="${content.id}"><img src="../images/check.svg" alt="موافقة"></a>`;
-                        }
-
                         const fileItem = document.createElement('div');
                         fileItem.className = 'file-item';
                         fileItem.innerHTML = `
                             <div class="item-icons">
-                                ${approveButtonHtml}
                                 <a href="#" class="edit-icon" data-id="${content.id}"><img src="../images/edit.svg" alt="تعديل"></a>
                                 <a href="#" class="delete-icon" data-id="${content.id}"><img src="../images/delet.svg" alt="حذف"></a>
                             </div>
@@ -222,18 +216,9 @@ document.addEventListener('DOMContentLoaded', function() {
                             openDeleteContentModal(content.id);
                         });
 
-                        // إضافة event listener لزر الموافقة إذا كان موجوداً
-                        if (userRole === 'admin' && !content.is_approved) {
-                            fileItem.querySelector('.approve-icon').addEventListener('click', function(e) {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleApproveContent(content.id);
-                            });
-                        }
-
                         // عند النقر على الملف، افتح المحتوى مباشرة
                         fileItem.addEventListener('click', function(e) {
-                            if (!e.target.closest('.edit-icon') && !e.target.closest('.delete-icon') && !e.target.closest('.approve-icon')) {
+                            if (!e.target.closest('.edit-icon') && !e.target.closest('.delete-icon')) {
                                 // console.log('Attempting to open file. content:', content);
                                 // console.log('Attempting to open file. content.fileUrl:', content.fileUrl);
                                 if (content.fileUrl) {
