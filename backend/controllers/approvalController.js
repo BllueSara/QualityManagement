@@ -44,72 +44,97 @@ const getUserPendingApprovals = async (req, res) => {
  */
 const handleApproval = async (req, res) => {
   const { contentId } = req.params;
-  const { approved, notes, signature } = req.body;
+  const userId = req.user.id;
+  const { approved, signature, notes } = req.body;
+
+  if (typeof approved !== 'boolean' || !signature) {
+    return res.status(400).json({ status: 'error', message: 'البيانات ناقصة' });
+  }
 
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).json({ status:'error', message:'لا يوجد توكن' });
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const userId = decoded.id;
-
-    // حفظ سجل التوقيع في جدول approval_logs
+    // حفظ الموافقة مع التوقيع
     await db.execute(`
-      INSERT INTO approval_logs (content_id, approver_id, status, comments, signature)
-      VALUES (?, ?, ?, ?, ?)
-    `, [
-      contentId,
-      userId,
-      approved ? 'approved' : 'rejected',
-      notes || '',
-      signature || null
-    ]);
+      UPDATE approval_logs
+      SET status = ?, signature = ?, notes = ?, approved_at = NOW()
+      WHERE content_id = ? AND approver_id = ?
+    `, [approved ? 'approved' : 'rejected', signature, notes || '', contentId, userId]);
 
-    // جلب المعتمدين لهذا المحتوى
-    const [approvers] = await db.execute(
-      `SELECT COUNT(DISTINCT user_id) AS total FROM content_approvers WHERE content_id = ?`,
-      [contentId]
-    );
-    const totalApprovers = approvers[0].total;
+    // التحقق هل كلهم وافقوا
+    const [remaining] = await db.execute(`
+      SELECT COUNT(*) AS count
+      FROM content_approvers ca
+      LEFT JOIN approval_logs al ON ca.content_id = al.content_id AND ca.user_id = al.approver_id
+      WHERE ca.content_id = ? AND (al.status IS NULL OR al.status != 'approved')
+    `, [contentId]);
 
-    const [approvals] = await db.execute(
-      `SELECT COUNT(*) AS approvedCount FROM approval_logs 
-       WHERE content_id = ? AND status = 'approved'`,
-      [contentId]
-    );
+    if (remaining[0].count === 0) {
+      // الكل وافق → توليد نسخة PDF موقعة
+      await generateFinalSignedPDF(contentId);
+    }
 
-    const approvedCount = approvals[0].approvedCount;
-    const isFullyApproved = approvedCount >= totalApprovers;
-
-    // تحديث جدول المحتوى
-    await db.execute(`
-      UPDATE contents
-      SET 
-        approval_status = ?,
-        is_approved     = ?,
-        approved_by     = ?,
-        updated_at      = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `, [
-      isFullyApproved ? 'approved' : 'pending',
-      isFullyApproved ? 1 : 0,
-      isFullyApproved ? userId : null,
-      contentId
-    ]);
-
-    res.status(200).json({
-      status: 'success',
-      message: isFullyApproved 
-        ? 'تم الاعتماد النهائي' 
-        : `تم تسجيل ${approved ? 'موافقة' : 'رفض'}`
-    });
-
+    res.status(200).json({ status: 'success', message: 'تم التوقيع' });
   } catch (err) {
-    console.error('Error handleApproval:', err);
-    res.status(500).json({ status: 'error', message: 'فشل أثناء تنفيذ الاعتماد' });
+    console.error('handleApproval Error:', err);
+    res.status(500).json({ status: 'error', message: 'فشل التوقيع' });
   }
 };
+
+
+
+const fs = require('fs');
+const path = require('path');
+const { PDFDocument, rgb } = require('pdf-lib');
+
+async function generateFinalSignedPDF(contentId) {
+  const originalPath = path.join(__dirname, `../../uploads/${contentId}.pdf`);
+  const outputPath = path.join(__dirname, `../../signed/final_${contentId}.pdf`);
+
+  if (!fs.existsSync(originalPath)) {
+    console.error('الملف غير موجود:', originalPath);
+    return;
+  }
+
+  const pdfBytes = fs.readFileSync(originalPath);
+  const pdfDoc = await PDFDocument.load(pdfBytes);
+  const page = pdfDoc.getPages()[0];
+
+  const [logs] = await db.execute(`
+    SELECT u.full_name, al.signature
+    FROM approval_logs al
+    JOIN users u ON al.approver_id = u.id
+    WHERE al.content_id = ? AND al.status = 'approved'
+  `, [contentId]);
+
+  let y = 700;
+
+  for (const log of logs) {
+    if (!log.signature) continue;
+
+    const imageBytes = Buffer.from(log.signature.split(',')[1], 'base64');
+    const img = await pdfDoc.embedPng(imageBytes);
+    const dims = img.scale(0.4);
+
+    page.drawText(log.full_name, {
+      x: 50,
+      y: y + 40,
+      size: 12,
+      color: rgb(0, 0, 0)
+    });
+
+    page.drawImage(img, {
+      x: 50,
+      y: y,
+      width: dims.width,
+      height: dims.height,
+    });
+
+    y -= dims.height + 60;
+  }
+
+  const finalBytes = await pdfDoc.save();
+  fs.writeFileSync(outputPath, finalBytes);
+}
+
 
 
 
