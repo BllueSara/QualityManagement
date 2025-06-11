@@ -40,190 +40,280 @@
     <main>
         <div class="permissions-container">
             <!-- Users Sidebar -->
-            <div class="users-sidebar">
-                <div class="search-bar">
-                    <input type="text" placeholder="بحث عن مستخدم" />
-                    <i class="fas fa-search search-icon"></i>
-                </div>
-                <button class="add-user-btn">
-                    <i class="fas fa-user-plus"></i>
-                    <span>إضافة مستخدم جديد</span>
-                </button>
-                <div class="user-list">
-                    <div class="user-item active">
-                        <i class="fas fa-user-circle user-avatar-icon"></i>
-                        <div class="user-info">
-                            <div class="user-name">أحمد محمد</div>
-                            <div class="user-email">ahmed@example.com</div>
-                        </div>
-                        <span class="user-status active"></span>
-                    </div>
-
-                    <div class="user-item">
-                        <i class="fas fa-user-circle user-avatar-icon"></i>
-                        <div class="user-info">
-                            <div class="user-name">سارة خالد</div>
-                            <div class="user-email">sara@example.com</div>
-                        </div>
-                        <div class="user-status"></div>
-                    </div>
-                    <div class="user-item">
-                        <i class="fas fa-user-circle user-avatar-icon"></i>
-                        <div class="user-info">
-                            <div class="user-name">محمد علي</div>
-                            <div class="user-email">mohamed@example.com</div>
-                        </div>
-                        <div class="user-status"></div>
-                    </div>
-                </div>
-            </div>
+  <div class="users-sidebar">
+        <div class="search-bar">
+          <input type="text" id="user-search" placeholder="بحث عن مستخدم" />
+          <i class="fas fa-search search-icon"></i>
+        </div>
+        <button class="add-user-btn" id="add-user-btn"><i class="fas fa-user-plus"></i><span>إضافة مستخدم جديد</span></button>
+        <div class="user-list" id="user-list">
+          <!-- سيتم تحميل المستخدمين هنا ديناميكياً -->
+        </div>
+      </div>
 
             <!-- Permissions Content -->
-            <div class="permissions-content">
-                <div class="user-profile-header">
-                    <h2>أحمد محمد</h2>
-                    <span class="status active">نشط</span>
-                    <div class="action-buttons-top">
-                        <button class="btn-delete">
-                            <i class="fas fa-trash-alt"></i> حذف
-                        </button>
-                        <button class="btn-primary">
-                            <i class="fas fa-key"></i> إعادة تعيين كلمة المرور
-                        </button>
-                        <button class="btn-primary">
-                            <i class="fas fa-users-cog"></i> تغيير الدور
-                        </button>
-                    </div>
+           <div class="permissions-content">
+<!-- قبل اختيار المستخدم -->
+<div class="user-profile-header">
+  <div class="action-buttons-top">
+    <button class="btn-delete" id="btn-delete-user">
+      <i class="fas fa-trash-alt"></i> حذف
+    </button>
+    <button class="btn-primary" id="btn-reset-password">
+      <i class="fas fa-key"></i> إعادة تعيين كلمة المرور
+    </button>
+    <button class="btn-primary" id="btn-change-role">
+      <i class="fas fa-users-cog"></i> تغيير الدور
+    </button>
+  </div>
 
-                </div>
+  <div class="profile-extra" id="profile-extra">
+    <h2 id="profile-name"></h2>
+    <span id="profile-status" class="status"></span>
+    <span class="badge-pill dept-badge" id="profile-department"></span>
+    <span class="badge-pill role-badge" id="profile-role"></span>
+  </div>
+</div>
+
 
                 <h3>صلاحيات الوصول</h3>
 
-                <div class="permission-section">
-                    <div class="permission-item">
-                        <div class="permission-details">
-                            <div class="text-content">
-                                <div class="permission-title">إضافة</div>
-                                <div class="permission-description">السماح بإضافة عناصر جديدة</div>
-                            </div>
-                        </div>
-                        <label class="switch">
-                            <input type="checkbox" checked>
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                    <div class="permission-item">
-                        <div class="permission-details">
-                            <div class="text-content">
-                                <div class="permission-title">تعديل</div>
-                                <div class="permission-description">السماح بتعديل العناصر الموجودة</div>
-                            </div>
-                        </div>
-                        <label class="switch">
-                            <input type="checkbox">
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                    <div class="permission-item">
-                        <div class="permission-details">
-                            <div class="text-content">
-                                <div class="permission-title">حذف</div>
-                                <div class="permission-description">السماح بحذف العناصر</div>
-                            </div>
-                        </div>
-                        <label class="switch">
-                            <input type="checkbox">
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                    <div class="permission-item">
-                        <div class="permission-details">
-                            <div class="text-content">
-                                <div class="permission-title">تصدير (موثق)</div>
-                                <div class="permission-description">تصدير البيانات الموثقة</div>
-                            </div>
-                        </div>
-                        <label class="switch">
-                            <input type="checkbox">
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                    <div class="permission-item">
-                        <div class="permission-details">
-                            <div class="text-content">
-                                <div class="permission-title">تصدير (غير موثق)</div>
-                                <div class="permission-description">تصدير البيانات غير الموثقة</div>
-                            </div>
-                        </div>
-                        <label class="switch">
-                            <input type="checkbox">
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                    <div class="permission-item">
-                        <div class="permission-details">
-                            <div class="text-content">
-                                <div class="permission-title">طباعة (موثق)</div>
-                                <div class="permission-description">طباعة المستندات الموثقة</div>
-                            </div>
-                        </div>
-                        <label class="switch">
-                            <input type="checkbox">
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                    <div class="permission-item">
-                        <div class="permission-details">
-                            <div class="text-content">
-                                <div class="permission-title">طباعة (غير موثق)</div>
-                                <div class="permission-description">طباعة المستندات غير الموثقة</div>
-                            </div>
-                        </div>
-                        <label class="switch">
-                            <input type="checkbox">
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                    <div class="permission-item">
-                        <div class="permission-details">
-                            <div class="text-content">
-                                <div class="permission-title">عرض (موثق)</div>
-                                <div class="permission-description">عرض البيانات الموثقة</div>
-                            </div>
-                        </div>
-                        <label class="switch">
-                            <input type="checkbox">
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                    <div class="permission-item">
-                        <div class="permission-details">
-                            <div class="text-content">
-                                <div class="permission-title">عرض (غير موثق)</div>
-                                <div class="permission-description">عرض البيانات غير الموثقة</div>
-                            </div>
-                        </div>
-                        <label class="switch">
-                            <input type="checkbox">
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                </div>
+<div class="permission-section">
+  <!-- الأقسام -->
+  <div class="permission-group">
+    <h4 class="group-title">الأقسام</h4>
+    <div class="permission-item">
+      <div class="permission-details">
+        <div class="text-content">
+          <div class="permission-title">إضافة قسم</div>
+        </div>
+      </div>
+      <label class="switch"data-key="add_section">
+        <input type="checkbox" >
+        <span class="slider round"></span>
+      </label>
+    </div>
+    <div class="permission-item">
+      <div class="permission-details">
+        <div class="text-content">
+          <div class="permission-title">تعديل قسم</div>
+        </div>
+      </div>
+      <label class="switch"data-key="edit_section">
+        <input type="checkbox" >
+        <span class="slider round"></span>
+      </label>
+    </div>
+    <div class="permission-item">
+      <div class="permission-details">
+        <div class="text-content">
+          <div class="permission-title">حذف قسم</div>
+        </div>
+      </div>
+      <label class="switch" data-key="delete_section">
+        <input type="checkbox">
+        <span class="slider round"></span>
+      </label>
+    </div>
+  </div>
 
-                <div class="bottom-action-buttons">
-                    <button class="btn-secondary">
-                        <i class="fas fa-sliders-h"></i> تعديل
-                    </button>
-                    <button class="btn-delete">
-                        <i class="fas fa-trash-alt"></i> حذف
-                    </button>
-                    <button class="btn-primary">
-                        <i class="fas fa-file-excel"></i> تصدير إلى Excel
-                    </button>
-                    <button class="btn-primary">
-                        <i class="fas fa-file-pdf"></i> تصدير إلى PDF
-                    </button>
-                </div>
+  <!-- المحتوى -->
+  <div class="permission-group">
+    <h4 class="group-title">المحتوى</h4>
+    <div class="permission-item">
+      <div class="permission-details">
+        <div class="text-content">
+          <div class="permission-title">إضافة محتوى</div>
+        </div>
+      </div>
+      <label class="switch"data-key="add_content">
+        <input type="checkbox" >
+        <span class="slider round"></span>
+      </label>
+    </div>
+    <div class="permission-item">
+      <div class="permission-details">
+        <div class="text-content">
+          <div class="permission-title">تعديل محتوى</div>
+        </div>
+      </div>
+      <label class="switch" data-key="edit_content">
+        <input type="checkbox">
+        <span class="slider round"></span>
+      </label>
+    </div>
+    <div class="permission-item">
+      <div class="permission-details">
+        <div class="text-content">
+          <div class="permission-title">حذف محتوى</div>
+        </div>
+      </div>
+      <label class="switch" data-key="delete_content">
+        <input type="checkbox">
+        <span class="slider round"></span>
+      </label>
+    </div>
+  </div>
+
+  <!-- التذاكر -->
+  <div class="permission-group">
+    <h4 class="group-title">التذاكر</h4>
+    <div class="permission-item">
+      <div class="permission-details">
+        <div class="text-content">
+          <div class="permission-title">عرض التذاكر</div>
+        </div>
+      </div>
+      <label class="switch" data-key="view_tickets">
+        <input type="checkbox" >
+        <span class="slider round"></span>
+      </label>
+    </div>
+    <div class="permission-item">
+      <div class="permission-details">
+        <div class="text-content">
+          <div class="permission-title">تحويل تذاكر</div>
+        </div>
+      </div>
+      <label class="switch" data-key="transfer_tickets" >
+        <input type="checkbox">
+        <span class="slider round"></span>
+      </label>
+    </div>
+    <div class="permission-item">
+      <div class="permission-details">
+        <div class="text-content">
+          <div class="permission-title">تتبع التذاكر</div>
+        </div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" data-key="track_tickets">
+        <span class="slider round"></span>
+      </label>
+    </div>
+  </div>
+
+  <!-- الاعتمادات -->
+  <div class="permission-group">
+    <h4 class="group-title">الاعتمادات</h4>
+    <div class="permission-item">
+      <div class="permission-details">
+        <div class="text-content">
+          <div class="permission-title">عرض الاعتمادات</div>
+        </div>
+      </div>
+      <label class="switch" data-key="view_credits" >
+        <input type="checkbox">
+        <span class="slider round"></span>
+      </label>
+    </div>
+    <div class="permission-item">
+      <div class="permission-details">
+        <div class="text-content">
+          <div class="permission-title">تحويل اعتمادات</div>
+        </div>
+      </div>
+      <label class="switch" data-key="transfer_credits">
+        <input type="checkbox">
+        <span class="slider round"></span>
+      </label>
+    </div>
+    <div class="permission-item">
+      <div class="permission-details">
+        <div class="text-content">
+          <div class="permission-title">تتبع اعتمادات</div>
+        </div>
+      </div>
+      <label class="switch" data-key="track_credits">
+        <input type="checkbox">
+        <span class="slider round"></span>
+      </label>
+    </div>
+  </div>
+
+  <!-- التوقيع -->
+  <div class="permission-group">
+    <h4 class="group-title">التوقيع</h4>
+    <div class="permission-item">
+      <div class="permission-details">
+        <div class="text-content">
+          <div class="permission-title">توقيع</div>
+        </div>
+      </div>
+      <label class="switch" data-key="sign">
+        <input type="checkbox">
+        <span class="slider round"></span>
+      </label>
+    </div>
+    <div class="permission-item">
+      <div class="permission-details">
+        <div class="text-content">
+          <div class="permission-title">توقيع بالنيابة</div>
+        </div>
+      </div>
+      <label class="switch" data-key="sign_on_behalf">
+        <input type="checkbox">
+        <span class="slider round"></span>
+      </label>
+    </div>
+  </div>
+
+  <!-- الحسابات -->
+  <div class="permission-group">
+    <h4 class="group-title">الحسابات</h4>
+    <div class="permission-item">
+      <div class="permission-details">
+        <div class="text-content">
+          <div class="permission-title">إضافة مستخدم</div>
+        </div>
+      </div>
+      <label class="switch" data-key="add_user">
+        <input type="checkbox">
+        <span class="slider round"></span>
+      </label>
+    </div>
+    <div class="permission-item">
+      <div class="permission-details">
+        <div class="text-content">
+          <div class="permission-title">تغيير الدور</div>
+        </div>
+      </div>
+      <label class="switch" data-key="change_role">
+        <input type="checkbox" >
+        <span class="slider round"></span>
+      </label>
+    </div>
+    <div class="permission-item">
+      <div class="permission-details">
+        <div class="text-content">
+          <div class="permission-title">حذف حساب</div>
+        </div>
+      </div>
+      <label class="switch" data-key="delete_user">
+        <input type="checkbox" >
+        <span class="slider round"></span>
+      </label>
+    </div>
+    <div class="permission-item">
+      <div class="permission-details">
+        <div class="text-content">
+          <div class="permission-title">تغيير كلمة السر</div>
+        </div>
+      </div>
+      <label class="switch"data-key="change_password">
+        <input type="checkbox">
+        <span class="slider round"></span>
+      </label>
+    </div>
+  </div>
+</div>
+
+
+
+            <div class="bottom-action-buttons">
+          <button class="btn-primary" id="btn-export-excel"><i class="fas fa-file-excel"></i> تصدير إلى Excel</button>
+          <button class="btn-primary" id="btn-export-pdf"><i class="fas fa-file-pdf"></i> تصدير إلى PDF</button>
+        </div>
 
             </div>
         </div>
@@ -262,8 +352,7 @@
                     <input type="password" id="password" placeholder="أدخل كلمة المرور">
                 </div>
             </div>
-
-            <!-- Permissions section removed as per user request -->
+    <!-- Permissions section removed as per user request -->
 
             <div class="modal-actions">
                 <button class="btn-secondary" id="cancelAddUser">إلغاء</button>
@@ -271,7 +360,17 @@
             </div>
         </div>
     </div>
-
+<div id="role-popup" class="role-popup">
+  <div class="role-content">
+    <h4>اختر الدور</h4>
+    <select id="role-select" class="role-select"></select>
+    <div class="role-buttons">
+      <button class="btn-primary" id="btn-save-role">حفظ</button>
+      <button class="btn-secondary" id="btn-cancel-role">إلغاء</button>
+    </div>
+  </div>
+</div>
+        
     <script src="../js/permissions.js"></script>
 </body>
 

@@ -249,7 +249,7 @@ main {
 }
 
 .user-profile-header h2 {
-    margin: 0;
+    margin-top: 20px;
     font-size: 2em;
     color: #333;
 }
@@ -623,7 +623,6 @@ select::placeholder {
   width: 100%;
 }
 .search-bar input {
-  width: 100%;
   padding: 8px 12px 8px 35px;
 }
 .search-icon {
@@ -642,3 +641,147 @@ select::placeholder {
   color: #999;
   margin-left: 15px;
 }
+
+.permission-group {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+}
+.group-title {
+  margin-bottom: 0.5rem;
+  font-size: 1.2em;
+  color: #333;
+}
+
+/* خلفية شفافة تغطي الشاشة */
+/* صندوق الحوار مخفي بشكل افتراضي */
+#role-popup {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+/* عند إضافة الكلاس show يصبح مرئياً */
+#role-popup.show {
+  display: flex;
+}
+
+
+/* صندوق الحوار */
+#role-popup .role-content {
+  background: #fff;
+  border-radius: 8px;
+  padding: 24px;
+  width: 320px;
+  max-width: 90%;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  text-align: center;
+}
+
+/* عنوان الصندوق */
+#role-popup .role-content h4 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-size: 1.2em;
+  color: #333;
+}
+
+/* قائمة الأدوار */
+.role-select {
+  width: 100%;
+  padding: 8px 12px;
+  margin-bottom: 20px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1em;
+  box-sizing: border-box;
+}
+
+/* أزرار الحفظ والإلغاء */
+.role-buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.role-buttons .btn-primary,
+.role-buttons .btn-secondary {
+  flex: 1;
+  padding: 10px 0;
+  font-size: 1em;
+}
+
+.user-meta {
+  font-size: 0.85em;
+  color: #666;
+  margin-top: 4px;
+}
+.user-dept {
+  margin-right: 8px;
+}
+.user-role {
+  font-weight: 500;
+}
+/* الإخفاء والظهور */
+/* 1) حاوية header تصبح فليكس */
+.user-profile-header {
+  display: flex;
+    flex-direction: column;  /* صفين عمودياً */
+
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap; /* يسمح بالالتفاف على الشاشات الضيقة */
+}
+
+/* 2) الشارات (status + القسم + الرول) */
+.user-profile-header .status,
+#profile-department,
+#profile-role {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 32px;
+  border-radius: 16px;
+  font-size: 0.85em;
+  font-weight: 500;
+  color: #fff;
+  text-align: center;
+  white-space: nowrap;
+  padding: 0 8px;
+  /* إضافة مسافة جانبية */
+  margin-right: 12px;
+  margin-top: 30px;
+}
+
+
+/* 3) ألوان مخصصة لكل badge */
+.user-profile-header .status.active {
+  background-color: #43a047; /* أخضر للحالة النشطة */
+}
+.user-profile-header .status:not(.active) {
+  background-color: #888;    /* رمادي للحالة غير النشطة */
+}
+#profile-department {
+  background-color: #1e88e5; /* أزرق للقسم */
+}
+#profile-role {
+  background-color: #43a047; /* أخضر للرول */
+}
+
+/* 4) تأكد من ظهور هذه الشارات فقط عند اختيار مستخدم */
+#profile-extra { 
+  display: none; 
+  margin-left: auto;
+  margin-top: 50px;
+}
+.user-profile-header.active #profile-extra {
+  display: flex;
+}
+
+/* عند اختيار مستخدم، اضف الكلاس active للحاوية */
