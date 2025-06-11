@@ -44,79 +44,113 @@ const getUserPendingApprovals = async (req, res) => {
  */
 const handleApproval = async (req, res) => {
   const { contentId } = req.params;
-  const { approved, notes } = req.body;
+  const { approved, notes, signature } = req.body;
 
   try {
-    // استخراج المستخدم من التوكن
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ status:'error', message:'لا يوجد توكن' });
+
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const userId = decoded.id;
-    const username = decoded.username;
 
-    // جلب الـcontent الحالي و approvals_log و approvers_required
-    const [contents] = await db.execute(
-      `SELECT approvals_log, approvers_required FROM contents WHERE id = ?`,
+    // حفظ سجل التوقيع في جدول approval_logs
+    await db.execute(`
+      INSERT INTO approval_logs (content_id, approver_id, status, comments, signature)
+      VALUES (?, ?, ?, ?, ?)
+    `, [
+      contentId,
+      userId,
+      approved ? 'approved' : 'rejected',
+      notes || '',
+      signature || null
+    ]);
+
+    // جلب المعتمدين لهذا المحتوى
+    const [approvers] = await db.execute(
+      `SELECT COUNT(DISTINCT user_id) AS total FROM content_approvers WHERE content_id = ?`,
       [contentId]
     );
-    if (contents.length === 0) 
-      return res.status(404).json({ status:'error', message:'المحتوى غير موجود' });
+    const totalApprovers = approvers[0].total;
 
-    let approvalsLog = JSON.parse(contents[0].approvals_log || '[]');
-    const approversRequired = JSON.parse(contents[0].approvers_required || '[]');
-
-    // إضافة أو تحديث سجل الاعتماد
-    // إذا كان المستخدم موجود مسبقًا، نحدث الـlog، وإلا نضيف سجل جديد
-    const existingIndex = approvalsLog.findIndex(l => l.user_id === userId);
-    const entry = {
-      user_id:  userId,
-      username: username,
-      approved: Boolean(approved),
-      notes:    notes || '',
-      timestamp: new Date().toISOString()
-    };
-    if (existingIndex >= 0) {
-      approvalsLog[existingIndex] = entry;
-    } else {
-      approvalsLog.push(entry);
-    }
-
-    // حساب من وافق
-    const approvedCount = approvalsLog.filter(l => l.approved).length;
-    const isFullyApproved = approvedCount >= approversRequired.length;
-
-    // تحديث جدول contents
-    await db.execute(
-      `UPDATE contents
-         SET approvals_log   = ?,
-             is_approved     = ?,
-             approval_status = ?,
-             approved_by     = ?,
-             updated_at      = CURRENT_TIMESTAMP
-       WHERE id = ?`,
-      [
-        JSON.stringify(approvalsLog),
-        isFullyApproved ? 1 : 0,
-        isFullyApproved ? 'approved' : 'pending',
-        isFullyApproved ? userId : null,
-        contentId
-      ]
+    const [approvals] = await db.execute(
+      `SELECT COUNT(*) AS approvedCount FROM approval_logs 
+       WHERE content_id = ? AND status = 'approved'`,
+      [contentId]
     );
 
+    const approvedCount = approvals[0].approvedCount;
+    const isFullyApproved = approvedCount >= totalApprovers;
+
+    // تحديث جدول المحتوى
+    await db.execute(`
+      UPDATE contents
+      SET 
+        approval_status = ?,
+        is_approved     = ?,
+        approved_by     = ?,
+        updated_at      = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `, [
+      isFullyApproved ? 'approved' : 'pending',
+      isFullyApproved ? 1 : 0,
+      isFullyApproved ? userId : null,
+      contentId
+    ]);
+
     res.status(200).json({
-      status:'success',
+      status: 'success',
       message: isFullyApproved 
-        ? 'تم الاعتماد بالكامل' 
-        : `تم وضع ${approved ? 'موافق' : 'مرفوض'} بنجاح`
+        ? 'تم الاعتماد النهائي' 
+        : `تم تسجيل ${approved ? 'موافقة' : 'رفض'}`
     });
+
   } catch (err) {
     console.error('Error handleApproval:', err);
-    res.status(500).json({ status:'error', message:'خطأ في السيرفر' });
+    res.status(500).json({ status: 'error', message: 'فشل أثناء تنفيذ الاعتماد' });
+  }
+};
+
+
+
+
+
+
+
+const getAssignedApprovals = async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ status: 'error', message: 'لا يوجد توكن' });
+
+    const token = authHeader.split(' ')[1];
+    const decoded = require('jsonwebtoken').verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id;
+
+    const [rows] = await db.execute(`
+      SELECT
+        c.id,
+        c.title,
+        c.approval_status,
+        d.name AS department_name
+      FROM contents c
+      JOIN content_approvers ca ON c.id = ca.content_id
+      JOIN users u ON ca.user_id = u.id
+      LEFT JOIN folders f ON c.folder_id = f.id
+      LEFT JOIN departments d ON f.department_id = d.id
+      WHERE u.id = ?
+    `, [userId]);
+
+    res.json({ status: 'success', data: rows });
+  } catch (err) {
+    console.error('getAssignedApprovals error:', err);
+    res.status(500).json({ status: 'error', message: 'خطأ في جلب البيانات' });
   }
 };
 
 module.exports = {
   getUserPendingApprovals,
-  handleApproval
+  handleApproval,
+  getAssignedApprovals,
 };
+
+

@@ -1,180 +1,193 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const modal    = document.getElementById("signatureModal");
-  const canvas   = document.getElementById("signaturePad");
-  const ctx      = canvas.getContext("2d");
-  const btnClear = document.getElementById("btnClear");
-  const btnConfirm = document.getElementById("btnConfirmSignature");
-  const btnClose = modal.querySelector(".modal-close");
+const apiBase = 'http://localhost:3006/api';
+const token = localStorage.getItem('token');
 
-  // إعادة ضبط حجم الكانفاس ومقياسه
+async function fetchJSON(url, opts = {}) {
+  opts.headers = {
+    'Content-Type': 'application/json',
+    ...(opts.headers || {}),
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+  };
+  const res = await fetch(url, opts);
+  if (!res.ok) throw new Error(await res.text());
+  return await res.json();
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  if (!token) return alert("لا يوجد توكن. الرجاء تسجيل الدخول.");
+
+  try {
+    const res = await fetchJSON(`${apiBase}/approvals/assigned-to-me`);
+    renderApprovals(res.data);
+  } catch (err) {
+    console.error("خطأ في جلب الاعتمادات:", err);
+    alert("حدث خطأ أثناء تحميل البيانات");
+  }
+
+  setupSignatureModal();
+});
+
+function renderApprovals(items) {
+  const tbody = document.getElementById("approvalsBody");
+  tbody.innerHTML = "";
+
+  items.forEach(item => {
+    const tr = document.createElement("tr");
+    tr.dataset.id = item.id;
+    tr.dataset.status = item.approval_status;
+    tr.dataset.dept = item.department_name;
+
+    tr.innerHTML = `
+      <td>${item.title}</td>
+      <td>${item.department_name || '-'}</td>
+      <td class="col-response">${statusLabel(item.approval_status)}</td>
+      <td class="col-actions">
+        <button class="btn-sign"><i class="fas fa-user-check"></i> توقيع</button>
+        <button class="btn-delegate"><i class="fas fa-user-friends"></i> توقيع بالنيابة</button>
+        <button class="btn-qr"><i class="fas fa-qrcode"></i> QR Code</button>
+        <button class="btn-reject"><i class="fas fa-times"></i> رفض</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  initActions();
+}
+
+function statusLabel(status) {
+  switch (status) {
+    case 'approved': return '✅ معتمد';
+    case 'rejected': return '❌ مرفوض';
+    default: return '🕓 قيد الانتظار';
+  }
+}
+
+// ------------------------------
+// الأحداث الأساسية
+// ------------------------------
+
+function initActions() {
+  document.querySelectorAll('.btn-sign').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const tr = e.target.closest('tr');
+      const contentId = tr.dataset.id;
+      openSignatureModal(contentId);
+    });
+  });
+
+  document.querySelectorAll('.btn-reject').forEach(btn => {
+    btn.addEventListener('click', () => alert('فتح نافذة الرفض هنا'));
+  });
+
+  document.querySelectorAll('.btn-delegate').forEach(btn => {
+    btn.addEventListener('click', () => alert('فتح نافذة التوقيع بالنيابة'));
+  });
+
+  document.querySelectorAll('.btn-qr').forEach(btn => {
+    btn.addEventListener('click', () => alert('فتح QR Code'));
+  });
+}
+
+// ------------------------------
+// التوقيع
+// ------------------------------
+
+let selectedContentId = null;
+
+function openSignatureModal(contentId) {
+  selectedContentId = contentId;
+  document.getElementById('signatureModal').style.display = 'flex';
+  clearCanvas();
+}
+
+function closeSignatureModal() {
+  document.getElementById('signatureModal').style.display = 'none';
+  clearCanvas();
+}
+
+function clearCanvas() {
+  const canvas = document.getElementById('signatureCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function setupSignatureModal() {
+  const canvas = document.getElementById('signatureCanvas');
+  const ctx = canvas.getContext('2d');
+  let drawing = false;
+
+  // ضبط أبعاد الكانفاس حسب الدقة
   function resizeCanvas() {
     const rect = canvas.parentElement.getBoundingClientRect();
-    canvas.width  = rect.width  * devicePixelRatio;
+    canvas.width = rect.width * devicePixelRatio;
     canvas.height = rect.height * devicePixelRatio;
-
-    // إعادة التحويلات إلى الوضع الافتراضي
     if (ctx.resetTransform) ctx.resetTransform();
-    else ctx.setTransform(1,0,0,1,0,0);
-
-    // مقياس DPI
+    else ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.scale(devicePixelRatio, devicePixelRatio);
     ctx.lineWidth = 2;
-    ctx.lineCap   = "round";
+    ctx.lineCap = "round";
   }
+
   window.addEventListener("resize", resizeCanvas);
   resizeCanvas();
 
-  // أحداث الرسم
-  let drawing = false;
   function getPos(e) {
     const r = canvas.getBoundingClientRect();
     const x = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
     const y = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
-    return {x,y};
+    return { x, y };
   }
-  canvas.addEventListener("mousedown", e => { drawing=true; const p=getPos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); });
-  canvas.addEventListener("mousemove", e => { if(drawing){ const p=getPos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); } });
-  canvas.addEventListener("mouseup",   () => drawing=false);
-  canvas.addEventListener("mouseleave",() => drawing=false);
-  canvas.addEventListener("touchstart",e => { drawing=true; const p=getPos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); });
-  canvas.addEventListener("touchmove", e => { if(drawing){ const p=getPos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); } });
-  canvas.addEventListener("touchend",  () => drawing=false);
 
-  // مسح الكانفاس
-  btnClear.addEventListener("click", () => {
-    ctx.clearRect(0,0,canvas.width,canvas.height);
+  canvas.addEventListener("mousedown", e => {
+    drawing = true;
+    const p = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
   });
-
-  // إغلاق المودال
-  btnClose.addEventListener("click", () => modal.style.display = "none");
-
-  // فتح المودال عند الضغط على أي زر توقيع
-document.querySelectorAll(".btn-sign").forEach(btn => {
-  btn.addEventListener("click", () => {
-    // أولاً نظّف الكانفاس
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    // اعرض المودال
-    modal.style.display = "flex";
-    // ثم أعد احتساب أبعاد الـ canvas بحسب wrapper الآن الظاهر
-    resizeCanvas();
+  canvas.addEventListener("mousemove", e => {
+    if (!drawing) return;
+    const p = getPos(e);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
   });
-});
-
-  // تأكيد التوقيع (هنا يمكنك إرسال dataURL للـ API أو إدراجها في الجدول)
-  btnConfirm.addEventListener("click", () => {
-    const dataURL = canvas.toDataURL("image/png");
-    console.log("توقيع:", dataURL);
-    modal.style.display = "none";
+  canvas.addEventListener("mouseup", () => drawing = false);
+  canvas.addEventListener("mouseleave", () => drawing = false);
+  canvas.addEventListener("touchstart", e => {
+    drawing = true;
+    const p = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
   });
-    const rejectModal = document.getElementById("rejectModal");
-  const btnRejects  = document.querySelectorAll(".btn-reject");
-  const btnCancel   = rejectModal.querySelector(".btn-cancel");
-  const btnSend     = document.getElementById("btnSendReason");
-  const textarea    = document.getElementById("rejectReason");
-
-  // فتح المودال عند الضغط على أي زر رفض
-  btnRejects.forEach(btn => {
-    btn.addEventListener("click", () => {
-      textarea.value = "";                // مسح السابق
-      rejectModal.style.display = "flex";
-    });
+  canvas.addEventListener("touchmove", e => {
+    if (!drawing) return;
+    const p = getPos(e);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
   });
-  // إغلاق المودال
-  [btnClose, btnCancel].forEach(el => {
-    el.addEventListener("click", () => {
-      rejectModal.style.display = "none";
-    });
-  });
+  canvas.addEventListener("touchend", () => drawing = false);
 
-  // إرسال السبب
-  btnSend.addEventListener("click", () => {
-    const reason = textarea.value.trim();
-    if (!reason) {
-      alert("يرجى كتابة سبب الرفض."); return;
+  document.getElementById('clearSignature').addEventListener('click', clearCanvas);
+
+  document.getElementById('submitSignature').addEventListener('click', async () => {
+    const base64Signature = canvas.toDataURL('image/png');
+
+    try {
+      await fetchJSON(`${apiBase}/approvals/${selectedContentId}/approve`, {
+        method: 'POST',
+        body: JSON.stringify({
+          approved: true,
+          signature: base64Signature,
+          notes: ''
+        })
+      });
+
+      alert('✅ تم إرسال التوقيع بنجاح');
+      closeSignatureModal();
+      location.reload();
+    } catch (err) {
+      console.error('فشل التوقيع:', err);
+      alert('حدث خطأ أثناء إرسال التوقيع');
     }
-    // مثال: طباعة السبب أو إرساله للـ API
-    console.log("سبب الرفض:", reason);
-    rejectModal.style.display = "none";
-  });
-  const qrModal    = document.getElementById("qrModal");
-  const btnQR      = document.querySelectorAll(".btn-qr");
-  const btnClosee   = qrModal.querySelectorAll("[data-modal='qrModal']");
-  const qrCanvas   = document.getElementById("qrCanvas");
-  const btnDownload= document.getElementById("btnDownloadQR");
-  const btnApprove = document.getElementById("btnElectronicApprove");
-  const successMsg = document.getElementById("qrSuccessMsg");
-
-  // تهيئة QRious
-  const qr = new QRious({ element: qrCanvas, size: 200, value: "" });
-
-  // فتح البوب-آب
-  btnQR.forEach(btn => btn.addEventListener("click", () => {
-    qr.value = window.location.origin + "/frontend/html/electronic-approval.html";
-    console.log("رابط الاعتماد الإلكتروني:", qr.value);
-
-    // أخفِ الرسالة في كل مرة يُفتح فيها
-    successMsg.style.display = "none";
-    // أظهر الأزرار
-    btnApprove.style.display = btnDownload.style.display = btnCancel.style.display = "inline-flex";
-    qrModal.style.display = "flex";
-  }));
-
-  // إغلاق
-  btnClosee.forEach(el => el.addEventListener("click", () => {
-    qrModal.style.display = "none";
-  }));
-
-  // تنزيل الكود
-  btnDownload.addEventListener("click", () => {
-    const link = document.createElement("a");
-    link.href = qrCanvas.toDataURL("image/png");
-    link.download = "qr-code.png";
-    link.click();
   });
 
-  // اعتماد إلكتروني داخل المودال
-  btnApprove.addEventListener("click", () => {
-    // أعرض رسالة النجاح
-    successMsg.style.display = "block";
-    // أخفِ الأزرار حتى لا يكرر المستخدم
-    btnApprove.style.display = btnDownload.style.display = btnCancel.style.display = "none";
-  });
-  const delegateModal = document.getElementById("delegateModal");
-  const btnDelegates  = document.querySelectorAll(".btn-delegate");
-  const btnCloseee      = delegateModal.querySelectorAll("[data-modal='delegateModal']");
-  const btnConfirmm    = document.getElementById("btnDelegateConfirm");
-  const form          = document.getElementById("delegateForm");
-
-  // فتح المودال عند الضغط على أي زر توقيع نيابي
-  btnDelegates.forEach(btn => {
-    btn.addEventListener("click", () => {
-      form.reset();                      // إعادة تعيين الحقول
-      delegateModal.style.display = "flex";
-    });
-  });
-
-  // إغلاق المودال عبر (×) أو زر إلغاء
-  btnCloseee.forEach(el => {
-    el.addEventListener("click", () => {
-      delegateModal.style.display = "none";
-    });
-  });
-
-  // عند تأكيد التوقيع نيابي
-  btnConfirmm.addEventListener("click", () => {
-    if (!form.checkValidity()) {
-      form.reportValidity();
-      return;
-    }
-    // اجمع البيانات حسب الحاجة
-    const data = {
-      user: document.getElementById("delegateUser").value.trim(),
-      dept: document.getElementById("delegateDept").value,
-      notes: document.getElementById("delegateNotes").value.trim()
-    };
-    console.log("توقيع نيابي عن:", data);
-    // هنا يمكنك إرسال البيانات إلى الـ API أو تحديث الجدول
-
-    delegateModal.style.display = "none";
-  });
-});
+  document.querySelector('.modal-close').addEventListener('click', closeSignatureModal);
+}
