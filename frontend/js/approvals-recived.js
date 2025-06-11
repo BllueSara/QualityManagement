@@ -96,6 +96,7 @@ let selectedContentId = null;
 function openSignatureModal(contentId) {
   selectedContentId = contentId;
   document.getElementById('signatureModal').style.display = 'flex';
+ 
   clearCanvas();
 }
 
@@ -112,64 +113,75 @@ function clearCanvas() {
 
 function setupSignatureModal() {
   const canvas = document.getElementById('signatureCanvas');
+  if (!canvas) return;
+
   const ctx = canvas.getContext('2d');
   let drawing = false;
 
-  // ضبط أبعاد الكانفاس حسب الدقة
   function resizeCanvas() {
-    const rect = canvas.parentElement.getBoundingClientRect();
-    canvas.width = rect.width * devicePixelRatio;
-    canvas.height = rect.height * devicePixelRatio;
-    if (ctx.resetTransform) ctx.resetTransform();
-    else ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.scale(devicePixelRatio, devicePixelRatio);
+    const wrapper = canvas.parentElement;
+    const rect = wrapper.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+
     ctx.lineWidth = 2;
-    ctx.lineCap = "round";
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#000';
   }
 
-  window.addEventListener("resize", resizeCanvas);
+  // إعادة تحجيم عند الفتح
   resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
 
   function getPos(e) {
-    const r = canvas.getBoundingClientRect();
-    const x = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
-    const y = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
-    return { x, y };
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+      x: clientX - rect.left,
+      y: clientY - rect.top
+    };
   }
 
-  canvas.addEventListener("mousedown", e => {
+  canvas.addEventListener('mousedown', e => {
     drawing = true;
-    const p = getPos(e);
+    const pos = getPos(e);
     ctx.beginPath();
-    ctx.moveTo(p.x, p.y);
+    ctx.moveTo(pos.x, pos.y);
   });
-  canvas.addEventListener("mousemove", e => {
+
+  canvas.addEventListener('mousemove', e => {
     if (!drawing) return;
-    const p = getPos(e);
-    ctx.lineTo(p.x, p.y);
+    const pos = getPos(e);
+    ctx.lineTo(pos.x, pos.y);
     ctx.stroke();
   });
-  canvas.addEventListener("mouseup", () => drawing = false);
-  canvas.addEventListener("mouseleave", () => drawing = false);
-  canvas.addEventListener("touchstart", e => {
+
+  canvas.addEventListener('mouseup', () => drawing = false);
+  canvas.addEventListener('mouseleave', () => drawing = false);
+
+  canvas.addEventListener('touchstart', e => {
     drawing = true;
-    const p = getPos(e);
+    const pos = getPos(e);
     ctx.beginPath();
-    ctx.moveTo(p.x, p.y);
+    ctx.moveTo(pos.x, pos.y);
   });
-  canvas.addEventListener("touchmove", e => {
+
+  canvas.addEventListener('touchmove', e => {
     if (!drawing) return;
-    const p = getPos(e);
-    ctx.lineTo(p.x, p.y);
+    const pos = getPos(e);
+    ctx.lineTo(pos.x, pos.y);
     ctx.stroke();
   });
-  canvas.addEventListener("touchend", () => drawing = false);
 
-  document.getElementById('clearSignature').addEventListener('click', clearCanvas);
+  canvas.addEventListener('touchend', () => drawing = false);
 
-  document.getElementById('submitSignature').addEventListener('click', async () => {
+  document.getElementById('btnClear').addEventListener('click', () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  });
+
+  document.getElementById('btnConfirmSignature').addEventListener('click', async () => {
     const base64Signature = canvas.toDataURL('image/png');
-
     try {
       await fetchJSON(`${apiBase}/approvals/${selectedContentId}/approve`, {
         method: 'POST',
@@ -179,15 +191,15 @@ function setupSignatureModal() {
           notes: ''
         })
       });
-
-      alert('✅ تم إرسال التوقيع بنجاح');
+      alert('✅ تم إرسال التوقيع');
       closeSignatureModal();
       location.reload();
     } catch (err) {
-      console.error('فشل التوقيع:', err);
-      alert('حدث خطأ أثناء إرسال التوقيع');
+      console.error('فشل الإرسال:', err);
+      alert('خطأ أثناء إرسال التوقيع');
     }
   });
 
-  document.querySelector('.modal-close').addEventListener('click', closeSignatureModal);
+  document.querySelector('#signatureModal .modal-close').addEventListener('click', closeSignatureModal);
 }
+
