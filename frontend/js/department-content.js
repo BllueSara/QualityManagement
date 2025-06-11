@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', function() {
         backToFilesContainer.style.display = 'none';
 
         try {
-            const response = await fetch(`http://localhost:3000/api/departments/${departmentId}/folders`, {
+            const response = await fetch(`http://localhost:3006/api/departments/${departmentId}/folders`, {
                 headers: {
                     'Authorization': `Bearer ${getToken()}`
                 }
@@ -168,7 +168,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const userRole = getUserRoleFromToken(); // جلب دور المستخدم
 
         try {
-            const response = await fetch(`http://localhost:3000/api/folders/${folderId}/contents`, {
+            const response = await fetch(`http://localhost:3006/api/folders/${folderId}/contents`, {
                 headers: {
                     'Authorization': `Bearer ${getToken()}`
                 }
@@ -222,7 +222,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 // console.log('Attempting to open file. content:', content);
                                 // console.log('Attempting to open file. content.fileUrl:', content.fileUrl);
                                 if (content.fileUrl) {
-                                    const fullFileUrl = `http://localhost:3000/uploads/${content.fileUrl}`;
+                                    const fullFileUrl = `http://localhost:3006/uploads/${content.fileUrl}`;
                                     // console.log('Opening full URL:', fullFileUrl);
                                     window.open(fullFileUrl, '_blank');
                                 } else {
@@ -254,7 +254,7 @@ document.addEventListener('DOMContentLoaded', function() {
     async function handleApproveContent(contentId) {
         console.log('Attempting to approve content with ID:', contentId);
         try {
-            const response = await fetch(`http://localhost:3000/api/contents/${contentId}/approve`, {
+            const response = await fetch(`http://localhost:3006/api/contents/${contentId}/approve`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${getToken()}`,
@@ -306,7 +306,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         try {
-            const response = await fetch(`http://localhost:3000/api/departments/${currentDepartmentId}/folders`, {
+            const response = await fetch(`http://localhost:3006/api/departments/${currentDepartmentId}/folders`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${getToken()}`,
@@ -433,7 +433,7 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('file', contentFile);
 
         try {
-            const response = await fetch(`http://localhost:3000/api/folders/${folderIdToUpload}/contents`, {
+            const response = await fetch(`http://localhost:3006/api/folders/${folderIdToUpload}/contents`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${getToken()}`
@@ -466,7 +466,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Opening edit modal for folder:', folderId);
          if (editFolderModal) {
              try {
-                 const response = await fetch(`http://localhost:3000/api/folders/${folderId}`, {
+                 const response = await fetch(`http://localhost:3006/api/folders/${folderId}`, {
                      headers: {
                          'Authorization': `Bearer ${getToken()}`
                      }
@@ -511,7 +511,7 @@ document.addEventListener('DOMContentLoaded', function() {
          }
 
          try {
-             const response = await fetch(`http://localhost:3000/api/folders/${folderId}`, {
+             const response = await fetch(`http://localhost:3006/api/folders/${folderId}`, {
                  method: 'PUT',
                  headers: {
                      'Authorization': `Bearer ${getToken()}`,
@@ -569,7 +569,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         try {
-            const response = await fetch(`http://localhost:3000/api/folders/${folderId}`, {
+            const response = await fetch(`http://localhost:3006/api/folders/${folderId}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${getToken()}`
@@ -596,7 +596,7 @@ document.addEventListener('DOMContentLoaded', function() {
          console.log('Opening edit modal for content:', contentId);
          if (editContentModal) {
              try {
-                 const response = await fetch(`http://localhost:3000/api/contents/${contentId}`, {
+                 const response = await fetch(`http://localhost:3006/api/contents/${contentId}`, {
                      headers: {
                          'Authorization': `Bearer ${getToken()}`
                      }
@@ -648,7 +648,7 @@ document.addEventListener('DOMContentLoaded', function() {
          }
 
          try {
-             const response = await fetch(`http://localhost:3000/api/contents/${contentId}`, {
+             const response = await fetch(`http://localhost:3006/api/contents/${contentId}`, {
                  method: 'PUT',
                  headers: {
                      'Authorization': `Bearer ${getToken()}`,
@@ -938,7 +938,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         try {
-            const response = await fetch(`http://localhost:3000/api/contents/${contentId}`, {
+            const response = await fetch(`http://localhost:3006/api/contents/${contentId}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${getToken()}`
@@ -966,7 +966,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 }); // End of DOMContentLoaded 
 
-function showToast(message, type = 'info', duration = 3000) {
+function showToast(message, type = 'info', duration = 3006) {
     let toastContainer = document.getElementById('toast-container');
     if (!toastContainer) {
         toastContainer = document.createElement('div');

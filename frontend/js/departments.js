@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // دالة لجلب الأقسام وعرضها
     async function fetchDepartments() {
         try {
-            const response = await fetch('http://localhost:3000/api/departments', {
+            const response = await fetch('http://localhost:3006/api/departments', {
                 headers: {
                     'Authorization': `Bearer ${getToken()}`
                 }
@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <a href="#" class="edit-icon" data-id="${department.id}" data-name="${department.name}" data-image="${department.image}"><img src="../images/edit.svg" alt="تعديل"></a>
                             <a href="#" class="delete-icon" data-id="${department.id}"><img src="../images/delet.svg" alt="حذف"></a>
                         </div>
-                        <div class="card-icon bg-blue"><img src="http://localhost:3000/${department.image}" alt="${department.name}"></div>
+                        <div class="card-icon bg-blue"><img src="http://localhost:3006/${department.image}" alt="${department.name}"></div>
                         <div class="card-title">${department.name}</div>
                         <div class="card-subtitle"></div>
                     `;
@@ -141,7 +141,7 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('image', imageFile);
 
         try {
-            const response = await fetch('http://localhost:3000/api/departments', {
+            const response = await fetch('http://localhost:3006/api/departments', {
                 method: 'POST',
                 // لا نحتاج لـ 'Content-Type': 'application/json' مع FormData
                 headers: {
@@ -183,7 +183,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         try {
-            const response = await fetch(`http://localhost:3000/api/departments/${id}`, {
+            const response = await fetch(`http://localhost:3006/api/departments/${id}`, {
                 method: 'PUT',
                 // لا نحتاج لـ 'Content-Type': 'application/json' مع FormData
                 headers: {
@@ -212,7 +212,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const id = deleteModalConfirmBtn.dataset.departmentId; // Get ID from stored data attribute
 
         try {
-            const response = await fetch(`http://localhost:3000/api/departments/${id}`, {
+            const response = await fetch(`http://localhost:3006/api/departments/${id}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${getToken()}`

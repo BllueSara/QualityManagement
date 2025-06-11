@@ -1,64 +1,55 @@
+// server.js
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
+const cors    = require('cors');
+const path    = require('path');
+
 const app = express();
-const mysql = require('mysql2'); // إعادة هذا السطر
-const authRoutes = require('./routes/auth');
-const usersRouter          = require('./routes/users.routes');           // /api/users/*
-const permissionsRouter    = require('./routes/permissions.routes');     // /api/users/:id/permissions
-const permissionsDefRouter = require('./routes/permissionsDef.routes');  // /api/permissions/*
-const departmentRoutes = require('./routes/departments');
-const contentRoutes = require('./routes/contentRoutes');
-const folderRoutes = require('./routes/folderRoutes');
 
-const path = require('path');
+// Routers
+const authRouter             = require('./routes/auth');
+const usersRouter            = require('./routes/users.routes');
+const permsDefRouter         = require('./routes/permissionsDef.routes');
+const permsRouter            = require('./routes/permissions.routes');
+const deptRouter             = require('./routes/departments');
+const folderRouter           = require('./routes/folderRoutes');
+const folderContentRouter    = require('./routes/folderContentRoutes');
+const contentRouter          = require('./routes/contentRoutes');
+const approvalRouter         = require('./routes/approvalRoutes');
 
-const port = 3000;
-
-// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// خدمة الملفات الثابتة من مجلد uploads
-app.use('/uploads', express.static('uploads'));
+// Mounting API endpoints
+app.use('/api/auth',        authRouter);
+app.use('/api/users',       usersRouter);
+app.use('/api/permissions/definitions', permsDefRouter);
+app.use('/api/permissions', permsRouter);
+app.use('/api/departments', deptRouter);
 
-// إضافة مسارات المصادقة
-app.use('/api/auth', authRoutes);
-app.use('/api', usersRouter);
+// folders nested under departments
+app.use('/api/departments/:departmentId/folders', folderRouter);
 
-// إضافة مسارات الأقسام (تعديل المسار ليشمل محتويات الأقسام)
-app.use('/api/departments', departmentRoutes);
-app.use('/api/departments', contentRoutes);
-app.use('/api', departmentRoutes);
-app.use('/api', contentRoutes);
-app.use('/api', folderRoutes);
-app.use('/api', permissionsRouter);
-app.use('/api', permissionsDefRouter);
-const db = mysql.createConnection({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,     // اليوزر (root أو غيره)
-    password: process.env.DB_PASSWORD, // كلمة المرور
-    database: process.env.DB_NAME  // اسم قاعدة البيانات
-});
-  
-db.connect((err) => {
-    if (err) {
-        console.error('❌ MySQL connection error:', err); // لو في خطأ، يطبع رسالة خطأ
-    } else {
-        console.log('✅ Connected to MySQL!'); // لو كل شي تمام، يطبع تم الاتصال
-    }
+// contents nested under folders
+app.use('/api/folders', folderContentRouter);
+
+// global content endpoints (my-uploads)
+app.use('/api/contents', contentRouter);
+
+app.use('/api/approvals', approvalRouter);
+
+// serve static frontend
+app.use('/', express.static(path.join(__dirname, '../frontend')));
+
+app.get('/health', (req, res) => res.send('OK'));
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ status: 'error', message: 'Internal Server Error' });
 });
 
-// Route افتراضي
-app.get('/', (req, res) => {
-    res.send('الخادم يعمل بشكل صحيح!');
-});
-app.use(
-  '/',
-  express.static(path.join(__dirname, '../frontend'))
-);
-// تشغيل الخادم
-app.listen(port, () => {
-    console.log(`الخادم يعمل على http://localhost:${port}`);
+const PORT = process.env.PORT || 3006;
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
 });

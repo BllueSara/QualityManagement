@@ -1,16 +1,17 @@
+// routes/folderRoutes.js
 const express = require('express');
-const router = express.Router();
-const folderController = require('../controllers/folderController');
-// const authMiddleware = require('../middleware/authMiddleware'); // تم إزالته
+const router  = express.Router({ mergeParams: true });
+const { getFolders, createFolder, updateFolder, deleteFolder, getFolderById } = require('../controllers/folderController');
 
-// تطبيق middleware المصادقة على جميع المسارات (تم إزالته)
-// router.use(authMiddleware);
+// GET  /api/departments/:departmentId/folders
+router.get('/',            getFolders);
+// POST /api/departments/:departmentId/folders
+router.post('/',           createFolder);
+// GET  /api/departments/:departmentId/folders/:folderId
+router.get('/:folderId',   getFolderById);
+// PUT  /api/departments/:departmentId/folders/:folderId
+router.put('/:folderId',   updateFolder);
+// DELETE /api/departments/:departmentId/folders/:folderId
+router.delete('/:folderId',deleteFolder);
 
-// مسارات المجلدات
-router.get('/departments/:departmentId/folders', folderController.getFolders);
-router.get('/folders/:folderId', folderController.getFolderById);
-router.post('/departments/:departmentId/folders', folderController.createFolder);
-router.put('/folders/:folderId', folderController.updateFolder);
-router.delete('/folders/:folderId', folderController.deleteFolder);
-
-module.exports = router; 
+module.exports = router;
