@@ -7,7 +7,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Helper function to show toast messages
-    function showToast(message, type = 'info', duration = 3000) {
+    function showToast(message, type = 'info', duration = 3006) {
         let toastContainer = document.getElementById('toast-container');
         if (!toastContainer) {
             toastContainer = document.createElement('div');
@@ -64,7 +64,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!token) return; // Cannot populate without token
 
             // Fetch departments (assuming you have a backend endpoint for this)
-            const deptResponse = await fetch('http://localhost:3000/api/departments', {
+            const deptResponse = await fetch('http://localhost:3006/api/departments', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (deptResponse.ok) {
@@ -100,7 +100,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            const response = await fetch('http://localhost:3000/api/contents/my-uploads', {
+            const response = await fetch('http://localhost:3006/api/contents/my-uploads', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -186,7 +186,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 </td>
                 <td class="col-date">${new Date(content.createdAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}</td>
                 <td class="col-actions">
-                    <button class="btn-track" data-content-url="http://localhost:3000/uploads/${content.fileUrl}" style="cursor: pointer;">عرض الملف</button>
+                    <button class="btn-track" data-content-url="http://localhost:3006/uploads/${content.fileUrl}" style="cursor: pointer;">عرض الملف</button>
                 </td>
             `;
             approvalsBody.appendChild(row);

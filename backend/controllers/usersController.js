@@ -9,9 +9,7 @@ const db = mysql.createPool({
   database: process.env.DB_NAME || 'Quality'
 });
 
- // 1) جلب كل المستخدمين
-// controllers/usersController.js
-
+// 1) جلب كل المستخدمين
 const getUsers = async (req, res) => {
   try {
     const [rows] = await db.execute(
@@ -21,12 +19,17 @@ const getUsers = async (req, res) => {
          u.email,
          u.role,
          u.department_id AS departmentId,
-         d.name         AS departmentName
+         d.name AS departmentName,
+         u.created_at,
+         u.updated_at
        FROM users u
-       LEFT JOIN departments d
-         ON u.department_id = d.id`
+       LEFT JOIN departments d ON u.department_id = d.id
+       ORDER BY u.created_at DESC`
     );
-    res.status(200).json(rows);
+    res.status(200).json({
+      status: 'success',
+      data: rows
+    });
   } catch (error) {
     console.error('خطأ في جلب المستخدمين:', error);
     res.status(500).json({ status:'error', message:'حدث خطأ في السيرفر' });
@@ -34,7 +37,6 @@ const getUsers = async (req, res) => {
 };
 
 // 2) جلب مستخدم محدد
-
 const getUserById = async (req, res) => {
   const id = req.params.id;
   try {
@@ -45,18 +47,21 @@ const getUserById = async (req, res) => {
          u.email,
          u.role,
          u.department_id AS departmentId,
-         d.name       AS departmentName
+         d.name AS departmentName,
+         u.created_at,
+         u.updated_at
        FROM users u
-       LEFT JOIN departments d 
-         ON u.department_id = d.id
+       LEFT JOIN departments d ON u.department_id = d.id
        WHERE u.id = ?`,
       [id]
     );
     if (!rows.length) {
       return res.status(404).json({ status:'error', message:'المستخدم غير موجود' });
     }
-    // على سبيل المثال: { id, name, email, status, role, departmentId, departmentName }
-    res.status(200).json(rows[0]);
+    res.status(200).json({
+      status: 'success',
+      data: rows[0]
+    });
   } catch (error) {
     console.error('خطأ في جلب المستخدم:', error);
     res.status(500).json({ status:'error', message:'حدث خطأ في السيرفر' });
@@ -65,18 +70,46 @@ const getUserById = async (req, res) => {
 
 // 3) إضافة مستخدم جديد
 const addUser = async (req, res) => {
-  const { name, email, jobTitle, departmentId, password, role } = req.body;
+  const { name, email, departmentId, password, role } = req.body;
   if (!name || !email || !password || !role) {
     return res.status(400).json({ status:'error', message:'جميع الحقول مطلوبة' });
   }
+
   try {
+    // التحقق من عدم وجود البريد الإلكتروني
+    const [existingUser] = await db.execute(
+      'SELECT id FROM users WHERE email = ?',
+      [email]
+    );
+
+    if (existingUser.length > 0) {
+      return res.status(409).json({ 
+        status: 'error', 
+        message: 'البريد الإلكتروني مستخدم بالفعل' 
+      });
+    }
+
     // تشفير كلمة المرور
     const hashed = await bcrypt.hash(password, 12);
+
     const [result] = await db.execute(
-      'INSERT INTO users (username, email, job_title, department_id, password, role) VALUES (?,?,?,?,?,?)',
-      [name, email, jobTitle||null, departmentId||null, hashed, role]
+      `INSERT INTO users (
+        username, 
+        email, 
+        department_id, 
+        password, 
+        role,
+        created_at,
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+      [name, email, departmentId || null, hashed, role]
     );
-    res.status(201).json({ status:'success', userId: result.insertId });
+
+    res.status(201).json({ 
+      status: 'success', 
+      message: 'تم إضافة المستخدم بنجاح',
+      userId: result.insertId 
+    });
   } catch (error) {
     console.error('خطأ في إضافة المستخدم:', error);
     res.status(500).json({ status:'error', message:'حدث خطأ في السيرفر' });
@@ -86,17 +119,45 @@ const addUser = async (req, res) => {
 // 4) تعديل مستخدم
 const updateUser = async (req, res) => {
   const id = req.params.id;
-  const { name, email, jobTitle, departmentId, role } = req.body;
+  const { name, email, departmentId, role } = req.body;
+
   if (!name || !email || !role) {
     return res.status(400).json({ status:'error', message:'الحقول الأساسية مطلوبة' });
   }
+
   try {
-    const [result] = await db.execute(
-      'UPDATE users SET username=?, email=?, job_title=?, department_id=?, role=? WHERE id=?',
-      [name, email, jobTitle||null, departmentId||null, role, id]
+    // التحقق من عدم وجود البريد الإلكتروني مع مستخدم آخر
+    const [existingUser] = await db.execute(
+      'SELECT id FROM users WHERE email = ? AND id != ?',
+      [email, id]
     );
-    if (!result.affectedRows) return res.status(404).json({ status:'error', message:'المستخدم غير موجود' });
-    res.status(200).json({ status:'success' });
+
+    if (existingUser.length > 0) {
+      return res.status(409).json({ 
+        status: 'error', 
+        message: 'البريد الإلكتروني مستخدم بالفعل' 
+      });
+    }
+
+    const [result] = await db.execute(
+      `UPDATE users 
+       SET username = ?, 
+           email = ?, 
+           department_id = ?, 
+           role = ?,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [name, email, departmentId || null, role, id]
+    );
+
+    if (!result.affectedRows) {
+      return res.status(404).json({ status:'error', message:'المستخدم غير موجود' });
+    }
+
+    res.status(200).json({ 
+      status: 'success',
+      message: 'تم تحديث بيانات المستخدم بنجاح'
+    });
   } catch (error) {
     console.error('خطأ في تعديل المستخدم:', error);
     res.status(500).json({ status:'error', message:'حدث خطأ في السيرفر' });
@@ -107,9 +168,29 @@ const updateUser = async (req, res) => {
 const deleteUser = async (req, res) => {
   const id = req.params.id;
   try {
+    // التحقق من وجود محتويات مرتبطة بالمستخدم
+    const [relatedContents] = await db.execute(
+      'SELECT COUNT(*) as count FROM contents WHERE created_by = ? OR approved_by = ?',
+      [id, id]
+    );
+
+    if (relatedContents[0].count > 0) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: 'لا يمكن حذف المستخدم لوجود محتويات مرتبطة به' 
+      });
+    }
+
     const [result] = await db.execute('DELETE FROM users WHERE id = ?', [id]);
-    if (!result.affectedRows) return res.status(404).json({ status:'error', message:'المستخدم غير موجود' });
-    res.status(200).json({ status:'success' });
+    
+    if (!result.affectedRows) {
+      return res.status(404).json({ status:'error', message:'المستخدم غير موجود' });
+    }
+
+    res.status(200).json({ 
+      status: 'success',
+      message: 'تم حذف المستخدم بنجاح'
+    });
   } catch (error) {
     console.error('خطأ في حذف المستخدم:', error);
     res.status(500).json({ status:'error', message:'حدث خطأ في السيرفر' });
@@ -120,10 +201,25 @@ const deleteUser = async (req, res) => {
 const changeUserRole = async (req, res) => {
   const id = req.params.id;
   const { role } = req.body;
-  if (!role) return res.status(400).json({ status:'error', message:'الدور مطلوب' });
+
+  if (!role) {
+    return res.status(400).json({ status:'error', message:'الدور مطلوب' });
+  }
+
   try {
-    await db.execute('UPDATE users SET role = ? WHERE id = ?', [role, id]);
-    res.status(200).json({ status:'success' });
+    const [result] = await db.execute(
+      'UPDATE users SET role = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [role, id]
+    );
+
+    if (!result.affectedRows) {
+      return res.status(404).json({ status:'error', message:'المستخدم غير موجود' });
+    }
+
+    res.status(200).json({ 
+      status: 'success',
+      message: 'تم تغيير دور المستخدم بنجاح'
+    });
   } catch (error) {
     console.error('خطأ في تغيير الدور:', error);
     res.status(500).json({ status:'error', message:'حدث خطأ في السيرفر' });
@@ -134,11 +230,26 @@ const changeUserRole = async (req, res) => {
 const adminResetPassword = async (req, res) => {
   const id = req.params.id;
   const { newPassword } = req.body;
-  if (!newPassword) return res.status(400).json({ status:'error', message:'كلمة المرور مطلوبة' });
+
+  if (!newPassword) {
+    return res.status(400).json({ status:'error', message:'كلمة المرور مطلوبة' });
+  }
+
   try {
     const hashed = await bcrypt.hash(newPassword, 12);
-    await db.execute('UPDATE users SET password = ? WHERE id = ?', [hashed, id]);
-    res.status(200).json({ status:'success' });
+    const [result] = await db.execute(
+      'UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [hashed, id]
+    );
+
+    if (!result.affectedRows) {
+      return res.status(404).json({ status:'error', message:'المستخدم غير موجود' });
+    }
+
+    res.status(200).json({ 
+      status: 'success',
+      message: 'تم إعادة تعيين كلمة المرور بنجاح'
+    });
   } catch (error) {
     console.error('خطأ في إعادة التعيين:', error);
     res.status(500).json({ status:'error', message:'حدث خطأ في السيرفر' });
@@ -147,12 +258,12 @@ const adminResetPassword = async (req, res) => {
 
 // 8) جلب الأدوار المتاحة
 const getRoles = async (req, res) => {
-  // القيم كما حددت في الـ ENUM
-  const roles = ['admin','sub-admin','user'];
-  return res.status(200).json({ status:'success', data: roles });
+  const roles = ['admin', 'manager', 'user'];
+  return res.status(200).json({ 
+    status: 'success', 
+    data: roles 
+  });
 };
-
-
 
 module.exports = {
   getUsers,
@@ -162,5 +273,5 @@ module.exports = {
   deleteUser,
   changeUserRole,
   adminResetPassword,
-  getRoles       // صدّر الدالة
+  getRoles
 };

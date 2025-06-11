@@ -18,65 +18,127 @@ const db = mysql.createPool({
 // إعدادات تخزين multer للمحتويات
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, './uploads/content_files');
+        const uploadDir = './uploads/content_files';
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
     },
     filename: function (req, file, cb) {
-        cb(null, Date.now() + '-' + file.originalname);
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + '-' + file.originalname);
     }
 });
 
-const upload = multer({ storage: storage });
+const upload = multer({ 
+    storage: storage,
+    limits: {
+        fileSize: 10 * 1024 * 1024 // 10MB max file size
+    }
+});
 
 // جلب جميع المحتويات لمجلد معين
 const getContentsByFolderId = async (req, res) => {
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({ message: 'غير مصرح: لا يوجد توكن أو التوكن غير صالح' });
+            return res.status(401).json({ 
+                status: 'error',
+                message: 'غير مصرح: لا يوجد توكن أو التوكن غير صالح' 
+            });
         }
+
         const token = authHeader.split(' ')[1];
         let decodedToken;
         try {
             decodedToken = jwt.verify(token, process.env.JWT_SECRET);
-            console.log('Decoded Token Role in getContentsByFolderId:', decodedToken.role);
         } catch (error) {
-            return res.status(401).json({ message: 'غير مصرح: توكن غير صالح' });
+            return res.status(401).json({ 
+                status: 'error',
+                message: 'غير مصرح: توكن غير صالح' 
+            });
         }
 
         const folderId = req.params.folderId;
         const connection = await db.getConnection();
 
+        // جلب معلومات المجلد والقسم
         const [folder] = await connection.execute(
-            'SELECT name, department_id FROM folders WHERE id = ?',
+            `SELECT 
+                f.id,
+                f.name,
+                f.department_id,
+                d.name as department_name,
+                f.created_by,
+                u.username as created_by_username
+            FROM folders f 
+            JOIN departments d ON f.department_id = d.id
+            LEFT JOIN users u ON f.created_by = u.id
+            WHERE f.id = ?`,
             [folderId]
         );
 
         if (folder.length === 0) {
             connection.release();
-            return res.status(404).json({ message: 'المجلد غير موجود' });
+            return res.status(404).json({ 
+                status: 'error',
+                message: 'المجلد غير موجود' 
+            });
         }
 
-        let query = 'SELECT id, title, created_at, file_path AS fileUrl, is_approved FROM contents WHERE folder_id = ?';
+        // جلب المحتويات
+        let query = `
+            SELECT 
+                c.id, 
+                c.title, 
+                c.notes,
+                c.file_path AS fileUrl, 
+                c.approval_status,
+                c.is_approved,
+                c.approved_by,
+                c.approvals_log,
+                c.approvers_required,
+                c.created_at,
+                c.updated_at,
+                u.username as created_by_username,
+                a.username as approved_by_username
+            FROM contents c
+            LEFT JOIN users u ON c.created_by = u.id
+            LEFT JOIN users a ON c.approved_by = a.id
+            WHERE c.folder_id = ?
+        `;
         let params = [folderId];
 
-        // إذا لم يكن المستخدم admin، قم بتصفية المحتويات حسب حالة الموافقة فقط
+        // إذا لم يكن المستخدم admin، قم بتصفية المحتويات حسب حالة الموافقة
         if (decodedToken.role !== 'admin') {
-            query += ' AND is_approved = 1'; // فقط المحتويات المعتمدة للمستخدمين العاديين
+            query += ' AND (c.is_approved = 1 OR c.created_by = ?)';
+            params.push(decodedToken.id);
         }
 
-        query += ' ORDER BY created_at DESC';
+        query += ' ORDER BY c.created_at DESC';
 
         const [contents] = await connection.execute(query, params);
 
         connection.release();
         res.json({
+            status: 'success',
             message: 'تم جلب المحتويات بنجاح',
-            folderName: folder[0].name,
+            folder: {
+                id: folder[0].id,
+                name: folder[0].name,
+                department_id: folder[0].department_id,
+                department_name: folder[0].department_name,
+                created_by: folder[0].created_by,
+                created_by_username: folder[0].created_by_username
+            },
             data: contents
         });
     } catch (error) {
         console.error('خطأ في جلب المحتويات:', error);
-        res.status(500).json({ message: 'حدث خطأ في الخادم' });
+        res.status(500).json({ 
+            status: 'error',
+            message: 'حدث خطأ في الخادم' 
+        });
     }
 };
 
@@ -85,26 +147,37 @@ const addContent = async (req, res) => {
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({ message: 'غير مصرح: لا يوجد توكن أو التوكن غير صالح' });
+            return res.status(401).json({ 
+                status: 'error',
+                message: 'غير مصرح: لا يوجد توكن أو التوكن غير صالح' 
+            });
         }
+
         const token = authHeader.split(' ')[1];
         let decodedToken;
         try {
             decodedToken = jwt.verify(token, process.env.JWT_SECRET);
         } catch (error) {
-            return res.status(401).json({ message: 'غير مصرح: توكن غير صالح' });
+            return res.status(401).json({ 
+                status: 'error',
+                message: 'غير مصرح: توكن غير صالح' 
+            });
         }
 
         const folderId = req.params.folderId;
-        const { title } = req.body;
+        const { title, notes, approvers_required } = req.body;
         const filePath = req.file ? path.join('content_files', req.file.filename).replace(/\\/g, '/') : null;
         const connection = await db.getConnection();
 
         if (!folderId || !title || !filePath) {
             connection.release();
-            return res.status(400).json({ message: 'معرف المجلد والعنوان والملف مطلوبون.' });
+            return res.status(400).json({ 
+                status: 'error',
+                message: 'معرف المجلد والعنوان والملف مطلوبون.' 
+            });
         }
 
+        // التحقق من وجود المجلد
         const [folder] = await connection.execute(
             'SELECT id, department_id FROM folders WHERE id = ?',
             [folderId]
@@ -112,9 +185,13 @@ const addContent = async (req, res) => {
 
         if (folder.length === 0) {
             connection.release();
-            return res.status(404).json({ message: 'المجلد غير موجود' });
+            return res.status(404).json({ 
+                status: 'error',
+                message: 'المجلد غير موجود' 
+            });
         }
 
+        // التحقق من عدم وجود محتوى بنفس العنوان
         const [existingContent] = await connection.execute(
             'SELECT id FROM contents WHERE title = ? AND folder_id = ?',
             [title, folderId]
@@ -125,19 +202,42 @@ const addContent = async (req, res) => {
             if (req.file && fs.existsSync(req.file.path)) {
                 fs.unlinkSync(req.file.path);
             }
-            return res.status(409).json({ message: 'يوجد محتوى بنفس العنوان في هذا المجلد بالفعل.' });
+            return res.status(409).json({ 
+                status: 'error',
+                message: 'يوجد محتوى بنفس العنوان في هذا المجلد بالفعل.' 
+            });
         }
 
-        const isApproved = 0; // المحتوى يحتاج دائماً إلى موافقة، بغض النظر عن دور المستخدم
-
+        // إضافة المحتوى
         const [result] = await db.execute(
-            'INSERT INTO contents (title, file_path, folder_id, is_approved, created_by) VALUES (?, ?, ?, ?, ?)',
-            [title, filePath, folderId, isApproved, decodedToken.id]
+            `INSERT INTO contents (
+                title, 
+                file_path, 
+                notes,
+                folder_id, 
+                approval_status,
+                is_approved,
+                created_by,
+                approvers_required,
+                approvals_log,
+                created_at,
+                updated_at
+            ) VALUES (?, ?, ?, ?, 'pending', 0, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+            [
+                title, 
+                filePath, 
+                notes || null,
+                folderId, 
+                decodedToken.id,
+                approvers_required ? JSON.stringify(approvers_required) : null,
+                JSON.stringify([])
+            ]
         );
 
         connection.release();
         
         res.status(201).json({
+            status: 'success',
             message: 'تم رفع المحتوى بنجاح وهو في انتظار الاعتمادات اللازمة',
             contentId: result.insertId,
             isApproved: false,
@@ -145,7 +245,10 @@ const addContent = async (req, res) => {
         });
     } catch (error) {
         console.error('خطأ في إضافة المحتوى:', error);
-        res.status(500).json({ message: 'حدث خطأ في الخادم' });
+        res.status(500).json({ 
+            status: 'error',
+            message: 'حدث خطأ في الخادم' 
+        });
     }
 };
 
@@ -154,36 +257,67 @@ const updateContent = async (req, res) => {
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({ message: 'غير مصرح: لا يوجد توكن أو التوكن غير صالح' });
+            return res.status(401).json({ 
+                status: 'error',
+                message: 'غير مصرح: لا يوجد توكن أو التوكن غير صالح' 
+            });
         }
+
         const token = authHeader.split(' ')[1];
+        let decodedToken;
         try {
-            jwt.verify(token, process.env.JWT_SECRET);
+            decodedToken = jwt.verify(token, process.env.JWT_SECRET);
         } catch (error) {
-            return res.status(401).json({ message: 'غير مصرح: توكن غير صالح' });
+            return res.status(401).json({ 
+                status: 'error',
+                message: 'غير مصرح: توكن غير صالح' 
+            });
         }
 
         const contentId = req.params.contentId;
-        const { title, folderId } = req.body;
+        const { title, notes } = req.body;
         const filePath = req.file ? path.join('content_files', req.file.filename).replace(/\\/g, '/') : null;
         const connection = await db.getConnection();
 
-        const [currentContent] = await connection.execute(
-            'SELECT folder_id, file_path FROM contents WHERE id = ?',
+        // التحقق من صلاحيات المستخدم
+        const [content] = await connection.execute(
+            'SELECT folder_id, file_path, created_by, is_approved FROM contents WHERE id = ?',
             [contentId]
         );
 
-        if (currentContent.length === 0) {
+        if (content.length === 0) {
             connection.release();
             if (req.file && fs.existsSync(req.file.path)) {
                 fs.unlinkSync(req.file.path);
             }
-            return res.status(404).json({ message: 'المحتوى غير موجود.' });
+            return res.status(404).json({ 
+                status: 'error',
+                message: 'المحتوى غير موجود.' 
+            });
         }
 
-        const folderIdForCheck = currentContent[0].folder_id;
-        const oldFilePath = currentContent[0].file_path;
+        // فقط منشئ المحتوى أو المشرف يمكنه تعديل المحتوى
+        if (content[0].created_by !== decodedToken.id && decodedToken.role !== 'admin') {
+            connection.release();
+            return res.status(403).json({ 
+                status: 'error',
+                message: 'ليس لديك صلاحية لتعديل هذا المحتوى.' 
+            });
+        }
 
+        // لا يمكن تعديل محتوى معتمد
+        if (content[0].is_approved && decodedToken.role !== 'admin') {
+            connection.release();
+            return res.status(403).json({ 
+                status: 'error',
+                message: 'لا يمكن تعديل محتوى معتمد.' 
+            });
+        }
+
+        const folderIdForCheck = content[0].folder_id;
+        const oldFilePath = content[0].file_path;
+
+        // التحقق من عدم وجود محتوى آخر بنفس العنوان
         const [existingContent] = await connection.execute(
             'SELECT id FROM contents WHERE title = ? AND folder_id = ? AND id != ?',
             [title, folderIdForCheck, contentId]
@@ -194,16 +328,22 @@ const updateContent = async (req, res) => {
             if (req.file && fs.existsSync(req.file.path)) {
                 fs.unlinkSync(req.file.path);
             }
-            return res.status(409).json({ message: 'يوجد محتوى آخر بنفس العنوان في هذا المجلد بالفعل.' });
+            return res.status(409).json({ 
+                status: 'error',
+                message: 'يوجد محتوى آخر بنفس العنوان في هذا المجلد بالفعل.' 
+            });
         }
 
-        let query = 'UPDATE contents SET title = ?';
-        let params = [title];
+        // تحديث المحتوى
+        let query = `
+            UPDATE contents 
+            SET title = ?, 
+                notes = ?, 
+                updated_at = CURRENT_TIMESTAMP
+        `;
+        let params = [title, notes || null];
 
         if (filePath) {
-            if (oldFilePath && fs.existsSync(path.join(__dirname, '../uploads', oldFilePath))) {
-                fs.unlinkSync(path.join(__dirname, '../uploads', oldFilePath));
-            }
             query += ', file_path = ?';
             params.push(filePath);
         }
@@ -211,18 +351,27 @@ const updateContent = async (req, res) => {
         query += ' WHERE id = ?';
         params.push(contentId);
 
-        const [result] = await connection.execute(query, params);
+        await connection.execute(query, params);
 
-        connection.release();
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ message: 'المحتوى غير موجود' });
+        // حذف الملف القديم إذا تم رفع ملف جديد
+        if (filePath && oldFilePath) {
+            const oldFilePathFull = path.join('./uploads', oldFilePath);
+            if (fs.existsSync(oldFilePathFull)) {
+                fs.unlinkSync(oldFilePathFull);
+            }
         }
 
-        res.json({ message: 'تم تحديث المحتوى بنجاح' });
+        connection.release();
+        res.json({
+            status: 'success',
+            message: 'تم تحديث المحتوى بنجاح'
+        });
     } catch (error) {
         console.error('خطأ في تحديث المحتوى:', error);
-        res.status(500).json({ message: 'حدث خطأ في الخادم' });
+        res.status(500).json({ 
+            status: 'error',
+            message: 'حدث خطأ في الخادم' 
+        });
     }
 };
 
@@ -231,133 +380,157 @@ const deleteContent = async (req, res) => {
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({ message: 'غير مصرح: لا يوجد توكن أو التوكن غير صالح' });
+            return res.status(401).json({ 
+                status: 'error',
+                message: 'غير مصرح: لا يوجد توكن أو التوكن غير صالح' 
+            });
         }
+
         const token = authHeader.split(' ')[1];
+        let decodedToken;
         try {
-            jwt.verify(token, process.env.JWT_SECRET);
+            decodedToken = jwt.verify(token, process.env.JWT_SECRET);
         } catch (error) {
-            return res.status(401).json({ message: 'غير مصرح: توكن غير صالح' });
+            return res.status(401).json({ 
+                status: 'error',
+                message: 'غير مصرح: توكن غير صالح' 
+            });
         }
 
         const contentId = req.params.contentId;
         const connection = await db.getConnection();
 
+        // التحقق من صلاحيات المستخدم
         const [content] = await connection.execute(
-            'SELECT file_path FROM contents WHERE id = ?',
+            'SELECT file_path, created_by, is_approved FROM contents WHERE id = ?',
             [contentId]
         );
 
-        if (content.length > 0 && content[0].file_path) {
-            const filePathToDelete = path.join(__dirname, '../uploads', content[0].file_path);
-            if (fs.existsSync(filePathToDelete)) {
-                fs.unlinkSync(filePathToDelete);
-            }
+        if (content.length === 0) {
+            connection.release();
+            return res.status(404).json({ 
+                status: 'error',
+                message: 'المحتوى غير موجود.' 
+            });
         }
 
-        const [result] = await connection.execute(
-            'DELETE FROM contents WHERE id = ?',
-            [contentId]
-        );
+        // فقط منشئ المحتوى أو المشرف يمكنه حذف المحتوى
+        if (content[0].created_by !== decodedToken.id && decodedToken.role !== 'admin') {
+            connection.release();
+            return res.status(403).json({ 
+                status: 'error',
+                message: 'ليس لديك صلاحية لحذف هذا المحتوى.' 
+            });
+        }
+
+        // لا يمكن حذف محتوى معتمد
+        if (content[0].is_approved && decodedToken.role !== 'admin') {
+            connection.release();
+            return res.status(403).json({ 
+                status: 'error',
+                message: 'لا يمكن حذف محتوى معتمد.' 
+            });
+        }
+
+        // حذف الملف
+        const filePath = path.join('./uploads', content[0].file_path);
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
+
+        // حذف المحتوى من قاعدة البيانات
+        await connection.execute('DELETE FROM contents WHERE id = ?', [contentId]);
 
         connection.release();
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ message: 'المحتوى غير موجود' });
-        }
-
-        res.json({ message: 'تم حذف المحتوى بنجاح' });
+        res.json({
+            status: 'success',
+            message: 'تم حذف المحتوى بنجاح'
+        });
     } catch (error) {
         console.error('خطأ في حذف المحتوى:', error);
-        res.status(500).json({ message: 'حدث خطأ في الخادم' });
+        res.status(500).json({ 
+            status: 'error',
+            message: 'حدث خطأ في الخادم' 
+        });
     }
 };
 
-// تنزيل محتوى
+// تحميل محتوى
 const downloadContent = async (req, res) => {
     try {
-        const authHeader = req.headers.authorization;
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({ message: 'غير مصرح: لا يوجد توكن أو التوكن غير صالح' });
-        }
-        const token = authHeader.split(' ')[1];
-        try {
-            jwt.verify(token, process.env.JWT_SECRET);
-        } catch (error) {
-            return res.status(401).json({ message: 'غير مصرح: توكن غير صالح' });
-        }
-
         const contentId = req.params.contentId;
         const connection = await db.getConnection();
 
         const [content] = await connection.execute(
-            'SELECT file_path, title, is_approved FROM contents WHERE id = ?',
+            'SELECT file_path, title FROM contents WHERE id = ?',
             [contentId]
         );
 
-        connection.release();
-
         if (content.length === 0) {
-            return res.status(404).json({ message: 'المحتوى غير موجود' });
-        }
-
-        if (!content[0].is_approved) {
-            return res.status(403).json({ message: 'لا يمكن تنزيل المحتوى غير المعتمد.' });
-        }
-
-        const filePath = path.join(__dirname, '../uploads', content[0].file_path);
-        const fileName = content[0].title;
-
-        if (fs.existsSync(filePath)) {
-            res.download(filePath, fileName, (err) => {
-                if (err) {
-                    console.error('Error downloading file:', err);
-                    res.status(500).json({ message: 'حدث خطأ أثناء تنزيل الملف.' });
-                }
+            connection.release();
+            return res.status(404).json({ 
+                status: 'error',
+                message: 'المحتوى غير موجود.' 
             });
-        } else {
-            res.status(404).json({ message: 'الملف غير موجود على الخادم.' });
         }
 
+        const filePath = path.join('./uploads', content[0].file_path);
+        if (!fs.existsSync(filePath)) {
+            connection.release();
+            return res.status(404).json({ 
+                status: 'error',
+                message: 'الملف غير موجود.' 
+            });
+        }
+
+        connection.release();
+        res.download(filePath, content[0].title);
     } catch (error) {
-        console.error('خطأ في تنزيل المحتوى:', error);
-        res.status(500).json({ message: 'حدث خطأ في الخادم' });
+        console.error('خطأ في تحميل المحتوى:', error);
+        res.status(500).json({ 
+            status: 'error',
+            message: 'حدث خطأ في الخادم' 
+        });
     }
 };
 
-// جلب محتوى حسب المعرف
+// جلب محتوى محدد
 const getContentById = async (req, res) => {
     try {
-        const authHeader = req.headers.authorization;
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({ message: 'غير مصرح: لا يوجد توكن أو التوكن غير صالح' });
-        }
-        const token = authHeader.split(' ')[1];
-        try {
-            jwt.verify(token, process.env.JWT_SECRET);
-        } catch (error) {
-            return res.status(401).json({ message: 'غير مصرح: توكن غير صالح' });
-        }
-
         const contentId = req.params.contentId;
         const connection = await db.getConnection();
 
         const [content] = await connection.execute(
-            'SELECT id, title, file_path, folder_id, is_approved FROM contents WHERE id = ?',
+            `SELECT 
+                c.*,
+                u.username as created_by_username,
+                a.username as approved_by_username
+            FROM contents c
+            LEFT JOIN users u ON c.created_by = u.id
+            LEFT JOIN users a ON c.approved_by = a.id
+            WHERE c.id = ?`,
             [contentId]
         );
 
-        connection.release();
-
         if (content.length === 0) {
-            return res.status(404).json({ message: 'المحتوى غير موجود.' });
+            connection.release();
+            return res.status(404).json({ 
+                status: 'error',
+                message: 'المحتوى غير موجود.' 
+            });
         }
 
-        res.json({ message: 'تم جلب المحتوى بنجاح', data: content[0] });
-
+        connection.release();
+        res.json({
+            status: 'success',
+            data: content[0]
+        });
     } catch (error) {
-        console.error('خطأ في جلب المحتوى حسب المعرف:', error);
-        res.status(500).json({ message: 'حدث خطأ في الخادم' });
+        console.error('خطأ في جلب المحتوى:', error);
+        res.status(500).json({ 
+            status: 'error',
+            message: 'حدث خطأ في الخادم' 
+        });
     }
 };
 
@@ -366,64 +539,181 @@ const approveContent = async (req, res) => {
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({ message: 'غير مصرح: لا يوجد توكن أو التوكن غير صالح' });
+            return res.status(401).json({ 
+                status: 'error',
+                message: 'غير مصرح: لا يوجد توكن أو التوكن غير صالح' 
+            });
         }
+
         const token = authHeader.split(' ')[1];
         let decodedToken;
         try {
             decodedToken = jwt.verify(token, process.env.JWT_SECRET);
         } catch (error) {
-            return res.status(401).json({ message: 'غير مصرح: توكن غير صالح' });
-        }
-
-        if (decodedToken.role !== 'admin') {
-            return res.status(403).json({ message: 'غير مصرح: يجب أن تكون مدير للموافقة على المحتوى' });
+            return res.status(401).json({ 
+                status: 'error',
+                message: 'غير مصرح: توكن غير صالح' 
+            });
         }
 
         const contentId = req.params.contentId;
+        const { approved, notes } = req.body;
         const connection = await db.getConnection();
 
+        // التحقق من وجود المحتوى
         const [content] = await connection.execute(
-            `SELECT c.*, d.name as department_name
-             FROM contents c
-             JOIN users u ON c.created_by = u.id
-             JOIN folders f ON c.folder_id = f.id
-             JOIN departments d ON f.department_id = d.id
-             WHERE c.id = ?`,
+            'SELECT * FROM contents WHERE id = ?',
             [contentId]
         );
 
         if (content.length === 0) {
             connection.release();
-            return res.status(404).json({ message: 'المحتوى غير موجود' });
+            return res.status(404).json({ 
+                status: 'error',
+                message: 'المحتوى غير موجود.' 
+            });
         }
 
+        // التحقق من أن المستخدم لم يقم بالاعتماد مسبقاً
+        const approvalsLog = JSON.parse(content[0].approvals_log || '[]');
+        const hasApproved = approvalsLog.some(log => log.user_id === decodedToken.id);
+        if (hasApproved) {
+            connection.release();
+            return res.status(400).json({ 
+                status: 'error',
+                message: 'لقد قمت بالاعتماد على هذا المحتوى مسبقاً.' 
+            });
+        }
+
+        // إضافة الاعتماد الجديد
+        const newApproval = {
+            user_id: decodedToken.id,
+            username: decodedToken.username,
+            approved: approved,
+            notes: notes || null,
+            timestamp: new Date().toISOString()
+        };
+        approvalsLog.push(newApproval);
+
+        // تحديث حالة الاعتماد
+        const approversRequired = JSON.parse(content[0].approvers_required || '[]');
+        const approvedCount = approvalsLog.filter(log => log.approved).length;
+        const isApproved = approvedCount >= approversRequired.length;
+
         await connection.execute(
-            'UPDATE contents SET is_approved = 1, approved_by = ?, approved_at = NOW() WHERE id = ?',
-            [decodedToken.id, contentId]
+            `UPDATE contents 
+             SET approvals_log = ?,
+                 is_approved = ?,
+                 approval_status = ?,
+                 approved_by = ?,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?`,
+            [
+                JSON.stringify(approvalsLog),
+                isApproved ? 1 : 0,
+                isApproved ? 'approved' : 'pending',
+                isApproved ? decodedToken.id : null,
+                contentId
+            ]
         );
 
         connection.release();
         res.json({
-            message: 'تمت الموافقة على المحتوى بنجاح',
-            content: {
-                id: contentId,
-                title: content[0].title,
-                department: content[0].department_name
-            }
+            status: 'success',
+            message: isApproved ? 'تم اعتماد المحتوى بنجاح' : 'تم تسجيل اعتمادك بنجاح',
+            isApproved,
+            approvalStatus: isApproved ? 'approved' : 'pending'
         });
     } catch (error) {
-        console.error('خطأ في الموافقة على المحتوى:', error);
-        res.status(500).json({ message: 'حدث خطأ في الخادم' });
+        console.error('خطأ في اعتماد المحتوى:', error);
+        res.status(500).json({ 
+            status: 'error',
+            message: 'حدث خطأ في الخادم' 
+        });
     }
 };
 
-module.exports = {
+
+
+/**
+ * GET /api/contents/my-uploads
+ * يرجّع الملفات التي رفعها المستخدم الحالي
+ */
+const getMyUploadedContent = async (req, res) => {
+    try {
+      // 1) التحقق من التوكن
+      const authHeader = req.headers.authorization;
+      if (!authHeader?.startsWith('Bearer ')) {
+        return res.status(401).json({ status: 'error', message: 'غير مصرح: لا يوجد توكن.' });
+      }
+      const token = authHeader.split(' ')[1];
+      let decoded;
+      try {
+        decoded = jwt.verify(token, process.env.JWT_SECRET);
+      } catch {
+        return res.status(401).json({ status: 'error', message: 'غير مصرح: توكن غير صالح.' });
+      }
+      const userId = decoded.id;
+  
+      // 2) جلب الملفات المرتبطة بالمستخدم
+      const [rows] = await db.execute(
+        `SELECT 
+           c.id,
+           c.title,
+           c.file_path AS filePath,
+           c.created_at AS createdAt,
+           f.name       AS folderName,
+           d.name       AS departmentName
+         FROM contents c
+         JOIN folders    f ON c.folder_id     = f.id
+         JOIN departments d ON f.department_id = d.id
+         WHERE c.created_by = ?
+         ORDER BY c.created_at DESC`,
+        [userId]
+      );
+  
+      // 3) نجهز روابط التحميل
+      const host     = req.get('host');
+      const protocol = req.protocol;
+      const data = rows.map(r => ({
+        id:             r.id,
+        title:          r.title,
+        fileUrl:        `${protocol}://${host}/${r.filePath}`,
+        createdAt:      r.createdAt,
+        folderName:     r.folderName,
+        departmentName: r.departmentName
+      }));
+  
+      return res.json({ status: 'success', data });
+    } catch (err) {
+      console.error('Error getMyUploadedContent:', err);
+      return res.status(500).json({ status: 'error', message: 'حدث خطأ في الخادم.' });
+    }
+  };
+  
+  module.exports = {
+    getMyUploadedContent,
     getContentsByFolderId,
     addContent,
     updateContent,
     deleteContent,
     downloadContent,
     getContentById,
-    approveContent
-}; 
+    approveContent,
+    upload
+  };
+  
+
+// في أسفل contentController.js
+module.exports = {
+    getMyUploadedContent,
+    getContentsByFolderId,
+    addContent,
+    updateContent,
+    deleteContent,
+    downloadContent,
+    getContentById,
+    approveContent,
+    upload
+  };
+  

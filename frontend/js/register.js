@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             console.log('Attempting to fetch departments...');
             const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:3000/api/departments', {
+            const response = await fetch('http://localhost:3006/api/departments', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('image', imageFile);
 
         try {
-            const response = await fetch('http://localhost:3000/api/departments', {
+            const response = await fetch('http://localhost:3006/api/departments', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -192,7 +192,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             // إرسال طلب التسجيل إلى الباك اند
-            const response = await fetch('http://localhost:3000/api/auth/register', {
+            const response = await fetch('http://localhost:3006/api/auth/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
