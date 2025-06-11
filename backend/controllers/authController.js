@@ -27,7 +27,7 @@ const register = async (req, res) => {
     try {
         const { username, email, password, department_id } = req.body;
 
-        if (!username || !email || !password || !department_id) {
+        if (!username || !email || !password) {
             return res.status(400).json({
                 status: 'error',
                 message: 'جميع الحقول مطلوبة'
@@ -61,16 +61,33 @@ const register = async (req, res) => {
             });
         }
 
+        // تحديد الدور بناءً على اسم المستخدم
+        const isAdmin = username.toLowerCase() === 'admin';
+        
+        // إذا كان المستخدم ليس admin، يجب تحديد القسم
+        if (!isAdmin && !department_id) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'القسم مطلوب للمستخدمين العاديين'
+            });
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        // إدخال المستخدم في قاعدة البيانات
         const [result] = await db.execute(
-            'INSERT INTO users (username, email, password, department_id) VALUES (?, ?, ?, ?)',
-            [username, email, hashedPassword, department_id]
+            'INSERT INTO users (username, email, password, department_id, role) VALUES (?, ?, ?, ?, ?)',
+            [username, email, hashedPassword, isAdmin ? null : department_id, isAdmin ? 'admin' : 'user']
         );
 
         const userId = result.insertId;
         const token = jwt.sign(
-            { id: userId, email: email, department_id: department_id },
+            { 
+                id: userId, 
+                email: email, 
+                department_id: isAdmin ? null : department_id,
+                role: isAdmin ? 'admin' : 'user'
+            },
             process.env.JWT_SECRET,
             { expiresIn: '1h' }
         );
@@ -79,7 +96,8 @@ const register = async (req, res) => {
             status: 'success',
             message: 'تم إنشاء الحساب بنجاح وتسجيل الدخول تلقائياً',
             token: token,
-            userId: userId
+            userId: userId,
+            role: isAdmin ? 'admin' : 'user'
         });
 
     } catch (error) {

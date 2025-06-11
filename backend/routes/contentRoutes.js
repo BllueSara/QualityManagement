@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { getContentsByFolderId, addContent, updateContent, deleteContent } = require('../controllers/contentController');
+const { getContentsByFolderId, addContent, updateContent, deleteContent, downloadContent, getContentById, approveContent } = require('../controllers/contentController');
 
 // إعدادات تخزين multer للمحتويات
 const storage = multer.diskStorage({
@@ -27,5 +27,14 @@ router.put('/contents/:contentId', upload.single('file'), updateContent);
 
 // مسار لحذف محتوى
 router.delete('/contents/:contentId', deleteContent);
+
+// مسار لتنزيل محتوى
+router.get('/contents/:contentId/download', downloadContent);
+
+// مسار لجلب محتوى حسب المعرف
+router.get('/contents/:contentId', getContentById);
+
+// مسار للموافقة على محتوى
+router.post('/contents/:contentId/approve', approveContent);
 
 module.exports = router; 

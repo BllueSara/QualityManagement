@@ -2,7 +2,11 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('register.js script loaded and DOMContentLoaded event fired.');
     const registerForm = document.getElementById('registerForm');
     const departmentSelect = document.getElementById('reg-department');
+    const usernameInput = document.getElementById('reg-username');
+    const departmentGroup = departmentSelect.closest('.form-group');
     console.log('departmentSelect element:', departmentSelect);
+    console.log('usernameInput element:', usernameInput);
+    console.log('departmentGroup element:', departmentGroup);
 
     // عناصر النموذج المنبثق لإضافة قسم
     const addDepartmentModal = document.getElementById('addDepartmentModal');
@@ -23,6 +27,19 @@ document.addEventListener('DOMContentLoaded', function() {
         departmentNameInput.value = '';
         departmentImageInput.value = '';
     }
+
+    // إضافة مستمع حدث لحقل اسم المستخدم
+    usernameInput.addEventListener('input', function() {
+        const username = this.value.toLowerCase();
+        if (username === 'admin') {
+            departmentGroup.style.display = 'none'; // إخفاء مجموعة القسم
+            departmentSelect.removeAttribute('required'); // إزالة السمة المطلوبة
+            departmentSelect.value = ''; // مسح القيمة لضمان عدم إرسال department_id
+        } else {
+            departmentGroup.style.display = 'block'; // إظهار مجموعة القسم
+            departmentSelect.setAttribute('required', 'required'); // إعادة السمة المطلوبة
+        }
+    });
 
     // دالة لجلب الأقسام من الباك اند وتعبئة قائمة الاختيار
     async function fetchDepartments() {
@@ -157,9 +174,13 @@ document.addEventListener('DOMContentLoaded', function() {
         };
 
         // التحقق من أن القسم تم اختياره (وليس خيار الإضافة أو الخيار الفارغ)
-        if (formData.department_id === '' || formData.department_id === '__ADD_NEW_DEPARTMENT__') {
-            alert('الرجاء اختيار قسم أو إضافة قسم جديد.');
-            return;
+        // تخطي التحقق إذا كان المستخدم admin
+        const username = document.getElementById('reg-username').value.toLowerCase();
+        if (username !== 'admin') {
+            if (formData.department_id === '' || formData.department_id === '__ADD_NEW_DEPARTMENT__') {
+                alert('الرجاء اختيار قسم أو إضافة قسم جديد.');
+                return;
+            }
         }
 
         // التحقق من تطابق كلمتي المرور
