@@ -9,7 +9,7 @@ const db = mysql.createPool({
 
 const getDepartments = async (req, res) => {
     try {
-        const [rows] = await db.execute('SELECT id, name, image FROM departments');
+        const [rows] = await db.execute('SELECT id, name, image, created_at, updated_at FROM departments');
         res.status(200).json({
             status: 'success',
             data: rows
@@ -49,7 +49,7 @@ const addDepartment = async (req, res) => {
         }
 
         const [result] = await db.execute(
-            'INSERT INTO departments (name, image) VALUES (?, ?)',
+            'INSERT INTO departments (name, image, created_at, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
             [name, imagePath]
         );
 
@@ -81,7 +81,7 @@ const updateDepartment = async (req, res) => {
             });
         }
 
-        let query = 'UPDATE departments SET name = ?';
+        let query = 'UPDATE departments SET name = ?, updated_at = CURRENT_TIMESTAMP';
         let params = [name];
 
         if (imagePath) {
@@ -118,6 +118,19 @@ const updateDepartment = async (req, res) => {
 const deleteDepartment = async (req, res) => {
     try {
         const { id } = req.params;
+
+        // التحقق من وجود محتويات مرتبطة بالقسم
+        const [relatedContents] = await db.execute(
+            'SELECT COUNT(*) as count FROM folders f JOIN contents c ON f.id = c.folder_id WHERE f.department_id = ?',
+            [id]
+        );
+
+        if (relatedContents[0].count > 0) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'لا يمكن حذف القسم لوجود محتويات مرتبطة به'
+            });
+        }
 
         const [result] = await db.execute(
             'DELETE FROM departments WHERE id = ?',
