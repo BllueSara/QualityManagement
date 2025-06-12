@@ -44,50 +44,91 @@ exports.getDepartments = async (req, res) => {
 
 // Create a new ticket
 exports.createTicket = async (req, res) => {
-    try {
-        upload(req, res, async function (err) {
-            if (err) {
-                return res.status(400).json({ error: err.message });
-            }
+  try {
+    upload(req, res, async function (err) {
+      if (err) {
+        return res.status(400).json({ error: err.message });
+      }
 
-            const ticketData = {
-                ...req.body,
-                attachments: req.files ? req.files.map(file => ({
-                    filename: file.filename,
-                    path: file.path,
-                    mimetype: file.mimetype
-                })) : []
-            };
+      // 1) فك JSON لمصفوفة التصنيفات
+      let classification = [];
+      if (req.body.classification) {
+        try {
+          classification = JSON.parse(req.body.classification);
+        } catch (e) {
+          return res.status(400).json({ error: 'تصنيف غير صالح' });
+        }
+      }
 
-            const ticketId = await Ticket.create(ticketData, req.user.id);
-            res.status(201).json({ message: 'تم إنشاء التذكرة بنجاح', ticketId });
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+      // 2) جهّز بيانات التذكرة
+      const ticketData = {
+        ...req.body,
+        attachments: req.files
+          ? req.files.map(file => ({
+              filename: file.filename,
+              path: file.path,
+              mimetype: file.mimetype
+            }))
+          : [],
+        classification   // ← أضف هنا المصفوفة
+      };
+
+      // 3) انشئ التذكرة في الموديل
+      const ticketId = await Ticket.create(ticketData, req.user.id);
+
+      // 4) أعِد الاستجابة
+      res.status(201).json({
+        status: 'success',
+        message: 'تم إنشاء التذكرة بنجاح',
+        data: { id: ticketId }
+      });
+    });
+  } catch (error) {
+    console.error('createTicket error:', error);
+    res.status(500).json({ error: 'فشل في إنشاء التذكرة' });
+  }
 };
+
 
 // Get all tickets
 exports.getAllTickets = async (req, res) => {
-    try {
-        const tickets = await Ticket.findAll(req.user.id, req.user.role);
-        res.json(tickets);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+  try {
+    const tickets = await Ticket.findAll(req.user.id, req.user.role);
+    res.json({ status: 'success', data: tickets });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ status: 'error', message: 'حدث خطأ داخلي' });
+  }
 };
+exports.getAssignedTickets = async (req, res) => {
+  const tickets = await Ticket.findAllAndAssignments(req.user.id, req.user.role);
+  res.json({ status: 'success', data: tickets });
+};
+
 
 // Get a single ticket
 exports.getTicket = async (req, res) => {
-    try {
-        const ticket = await Ticket.findById(req.params.id, req.user.id, req.user.role);
-        if (!ticket) {
-            return res.status(404).json({ error: 'التذكرة غير موجودة' });
-        }
-        res.json(ticket);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+  try {
+    console.log('→ getTicket called with params.id =', req.params.id);
+    console.log('   req.user =', req.user);
+
+    const ticket = await Ticket.findById(
+      req.params.id,
+      req.user.id,
+      req.user.role
+    );
+    console.log('   findById result =', ticket);
+
+    if (!ticket) {
+      return res
+        .status(404)
+        .json({ error: 'التذكرة غير موجودة أو لا تملك صلاحية الوصول' });
     }
+    res.json(ticket);
+  } catch (error) {
+    console.error('‼ Error in getTicket:', error);
+    res.status(500).json({ error: error.message });
+  }
 };
 
 // Update a ticket
@@ -145,3 +186,28 @@ exports.getTicketStatusHistory = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 }; 
+exports.addReply = async (req, res) => {
+  try {
+    const ticketId = req.params.id;
+    const userId   = req.user.id;
+    const { text } = req.body;
+    if (!text || !text.trim()) {
+      return res.status(400).json({ message: 'النص لا يمكن أن يكون فارغاً' });
+    }
+
+    // ندعو الموديل ليضيف الرد
+    const newReply = await Ticket.addReply(ticketId, userId, text.trim());
+    // نعيد البيانات للمستخدم
+    res.status(201).json(newReply);
+
+  } catch (err) {
+    console.error('‼ Error in addReply:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+exports.assignToUsers = async (req, res) => {
+  const ticketId = req.params.id;
+  const { assignees } = req.body;  // مصفوفة userIds
+  await Ticket.assignUsers(ticketId, assignees, req.user.id);
+  res.json({ status: 'success' });
+};

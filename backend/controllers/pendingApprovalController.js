@@ -43,52 +43,67 @@ exports.getPendingApprovals = async (req, res) => {
   
   
 
-  exports.sendApprovalRequest = async (req, res) => {
-    const { contentId, approvers } = req.body;
-  
-    if (!contentId || !Array.isArray(approvers) || approvers.length === 0) {
-      return res.status(400).json({ status: 'error', message: 'البيانات غير صالحة' });
-    }
-  
-    const pool = mysql.createPool({
-      host: process.env.DB_HOST,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-      waitForConnections: true,
-      connectionLimit: 10
-    });
-  
-    try {
-      // حذف أي معتمدين سابقين
-      await pool.execute(`DELETE FROM content_approvers WHERE content_id = ?`, [contentId]);
-  
-      // إدخال المعتمدين الجدد
-      for (const userId of approvers) {
-        await pool.execute(
-          `INSERT INTO content_approvers (content_id, user_id) VALUES (?, ?)`,
-          [contentId, userId]
-        );
-      }
-  
-      // تحديث حالة المحتوى + حفظ المعتمدين في approvers_required
-      await pool.execute(
-        `UPDATE contents 
-         SET approval_status = 'pending', 
-             approvers_required = ?, 
-             updated_at = CURRENT_TIMESTAMP 
-         WHERE id = ?`,
-        [JSON.stringify(approvers), contentId]
+exports.sendApprovalRequest = async (req, res) => {
+  const { contentId, approvers } = req.body;
+  if (!contentId || !Array.isArray(approvers) || approvers.length === 0) {
+    return res.status(400).json({ status: 'error', message: 'البيانات غير صالحة' });
+  }
+
+  const pool = mysql.createPool({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    waitForConnections: true,
+    connectionLimit: 10
+  });
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // 1) نحذف المعتمدين السابقين
+    await conn.execute(`DELETE FROM content_approvers WHERE content_id = ?`, [contentId]);
+    // ونحذف سجلات الموافقات القديمة
+    await conn.execute(`DELETE FROM approval_logs WHERE content_id = ?`, [contentId]);
+
+    // 2) ندخل المعتمدين الجدد
+    for (const userId of approvers) {
+      await conn.execute(
+        `INSERT INTO content_approvers (content_id, user_id) VALUES (?, ?)`,
+        [contentId, userId]
       );
-  
-      res.status(200).json({ status: 'success', message: 'تم الإرسال بنجاح' });
-    } catch (err) {
-      console.error('sendApprovalRequest Error:', err);
-      res.status(500).json({ status: 'error', message: 'خطأ في إرسال الاعتماد' });
-    } finally {
-      await pool.end();
+      // ونسجّل لهم أيضاً سجلّ موافقة جديد
+      await conn.execute(
+        `INSERT INTO approval_logs
+           (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, created_at)
+         VALUES (?, ?, 'pending', NULL, 0, NULL, CURRENT_TIMESTAMP)`,
+        [contentId, userId]
+      );
     }
-  };
+
+    // 3) نحدّث حالة المحتوى
+    await conn.execute(
+      `UPDATE contents 
+         SET approval_status      = 'pending', 
+             approvers_required  = ?, 
+             updated_at          = CURRENT_TIMESTAMP 
+       WHERE id = ?`,
+      [JSON.stringify(approvers), contentId]
+    );
+
+    await conn.commit();
+    res.status(200).json({ status: 'success', message: 'تم الإرسال بنجاح' });
+  } catch (err) {
+    await conn.rollback();
+    console.error('sendApprovalRequest Error:', err);
+    res.status(500).json({ status: 'error', message: 'خطأ في إرسال الاعتماد' });
+  } finally {
+    conn.release();
+    await pool.end();
+  }
+};
+
   
   
   

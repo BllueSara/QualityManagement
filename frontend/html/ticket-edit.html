@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>تعديل التذكرة - نظام إدارة الجودة والسلامة</title>
+
+  <!-- استيراد خط Tajawal -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap"
+    rel="stylesheet"
+  />
+  <!-- Font Awesome للأيقونات -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    crossorigin="anonymous"
+  />
+  <!-- رابط تنسيقات ticket-details.css -->
+  <link rel="stylesheet" href="/frontend/css/ticket-details.css" />
+</head>
+<body>
+  <!-- الهيدر -->
+  <header class="main-header">
+    <div class="header-container">
+      <div class="system-title">
+        <img src="/frontend/images/system-title.png" alt="نظام إدارة الجودة والسلامة" />
+      </div>
+      <div class="hospital-logo">
+        <img src="/frontend/images/hospital-logo.png" alt="شعار المستشفى" />
+      </div>
+    </div>
+  </header>
+  <div class="header-actions">
+    <button class="back-btn" onclick="history.back()">
+      <i class="fas fa-arrow-left"></i><span>رجوع</span>
+    </button>
+    <button class="home-btn" onclick="window.location.href='index.html'">
+      <i class="fas fa-home"></i><span>الرئيسية</span>
+    </button>
+  </div>
+
+  <main class="content-wrapper">
+    <h1 class="page-title">تعديل التذكرة</h1>
+
+    <form id="editTicketForm" class="ticket-form" enctype="multipart/form-data">
+      <!-- تفاصيل الحدث -->
+      <section class="card-section">
+        <div class="section-header">
+          <i class="fas fa-file-lines section-icon"></i>
+          <h2 class="section-title">تفاصيل الحدث</h2>
+        </div>
+        <div class="section-content">
+          <div class="field-row">
+            <div class="field-group">
+              <label for="event_date" class="field-label">تاريخ الحدث</label>
+              <input type="date" id="event_date" name="event_date" class="field-input" required />
+            </div>
+            <div class="field-group">
+              <label for="event_time" class="field-label">وقت الحدث</label>
+              <select id="event_time" name="event_time" class="field-input" required>
+                <option value="صباحاً">صباحاً</option>
+                <option value="مساءً">مساءً</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-single">
+            <label for="event_location" class="field-label">موقع الحدث</label>
+            <input type="text" id="event_location" name="event_location" class="field-input" required />
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label for="reporting_dept_id" class="field-label">القسم المبلغ</label>
+              <select id="reporting_dept_id" name="reporting_dept_id" class="field-input" required></select>
+            </div>
+            <div class="field-group">
+              <label for="responding_dept_id" class="field-label">القسم المستجيب</label>
+              <select id="responding_dept_id" name="responding_dept_id" class="field-input" required></select>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- معلومات المريض -->
+      <section class="card-section">
+        <div class="section-header">
+          <i class="fas fa-user-injured section-icon"></i>
+          <h2 class="section-title">معلومات المريض</h2>
+        </div>
+        <div class="section-content">
+          <div class="field-row">
+            <div class="field-group">
+              <label for="patient_name" class="field-label">اسم المريض</label>
+              <input type="text" id="patient_name" name="patient_name" class="field-input" />
+            </div>
+            <div class="field-group">
+              <label for="medical_record_no" class="field-label">رقم الملف الطبي</label>
+              <input type="text" id="medical_record_no" name="medical_record_no" class="field-input" />
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label class="field-label">الجنس</label>
+              <select id="gender" name="gender" class="field-input">
+                <option value="">—</option>
+                <option value="ذكر">ذكر</option>
+                <option value="أنثى">أنثى</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label class="field-label">نوع الشخص</label>
+              <select id="patient_type" name="patient_type" class="field-input">
+                <option value="">—</option>
+                <option value="مراجع">مراجع</option>
+                <option value="مريض">مريض</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- نوع البلاغ -->
+      <section class="card-section">
+        <div class="section-header">
+          <i class="fas fa-exclamation-triangle section-icon"></i>
+          <h2 class="section-title">نوع البلاغ</h2>
+        </div>
+        <div class="section-content">
+          <select id="report_type" name="report_type" class="field-input" required>
+            <option value="حادث">حادث</option>
+            <option value="حدث قابل للتبليغ">حدث قابل للتبليغ</option>
+            <option value="حدث جسيم">حدث جسيم</option>
+            <option value="تنبيه خطأ">تنبيه خطأ</option>
+            <option value="وضع غير آمن">وضع غير آمن</option>
+          </select>
+        </div>
+      </section>
+
+      <!-- وصف الحدث -->
+      <section class="card-section">
+        <div class="section-header">
+          <i class="fas fa-file-alt section-icon"></i>
+          <h2 class="section-title">وصف الحدث</h2>
+        </div>
+        <div class="section-content">
+          <textarea
+            id="event_description"
+            name="event_description"
+            class="field-input"
+            rows="4"
+            placeholder="صف الحدث..."
+            required
+          ></textarea>
+        </div>
+      </section>
+
+      <!-- بيانات المبلغ -->
+      <section class="card-section">
+        <div class="section-header">
+          <i class="fas fa-user section-icon"></i>
+          <h2 class="section-title">بيانات المبلغ</h2>
+        </div>
+        <div class="section-content">
+          <div class="field-row">
+            <div class="field-group">
+              <label for="reporter_name" class="field-label">الاسم</label>
+              <input type="text" id="reporter_name" name="reporter_name" class="field-input" required />
+            </div>
+            <div class="field-group">
+              <label for="reporter_phone" class="field-label">رقم الجوال</label>
+              <input type="tel" id="reporter_phone" name="reporter_phone" class="field-input" required />
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label for="reporter_position" class="field-label">المسميات الوظيفي</label>
+              <input type="text" id="reporter_position" name="reporter_position" class="field-input" />
+            </div>
+            <div class="field-group">
+              <label for="reporter_email" class="field-label">البريد الإلكتروني</label>
+              <input type="email" id="reporter_email" name="reporter_email" class="field-input" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- الإجراءات المتخذة -->
+      <section class="card-section">
+        <div class="section-header">
+          <i class="fas fa-tools section-icon"></i>
+          <h2 class="section-title">الإجراءات المتخذة</h2>
+        </div>
+        <div class="section-content">
+          <textarea
+            id="actions_taken"
+            name="actions_taken"
+            class="field-input"
+            rows="3"
+            placeholder="اكتب الإجراءات المتخذة..."
+          ></textarea>
+        </div>
+      </section>
+
+      <!-- تصنيف الحدث -->
+      <section class="card-section">
+        <div class="section-header">
+          <i class="fas fa-th-large section-icon"></i>
+          <h2 class="section-title">تصنيف الحدث</h2>
+        </div>
+        <div class="section-content tags-container">
+          <input type="text" id="classification" name="classification" class="field-input" placeholder="الأجهزة الطبية, البنية, ..." />
+          <small class="hint">افصل بين التصنيفات بفواصل</small>
+        </div>
+      </section>
+
+      <!-- تفاصيل الإصابة -->
+      <section class="card-section">
+        <div class="section-header">
+          <i class="fas fa-info-circle section-icon"></i>
+          <h2 class="section-title">تفاصيل الإصابة</h2>
+        </div>
+        <div class="section-content">
+          <div class="field-row">
+            <div class="field-group">
+              <label class="field-label">هل حدثت إصابة؟</label>
+              <select id="had_injury" name="had_injury" class="field-input">
+                <option value="لا">لا</option>
+                <option value="نعم">نعم</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label class="field-label">نوع الإصابة</label>
+              <select id="injury_type" name="injury_type" class="field-input">
+                <option value="">—</option>
+                <option value="جسدية">جسدية</option>
+                <option value="نفسية">نفسية</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- مرفقات جديدة -->
+      <section class="card-section">
+        <div class="section-header">
+          <i class="fas fa-paperclip section-icon"></i>
+          <h2 class="section-title">مرفقات (اختياري)</h2>
+        </div>
+        <div class="section-content">
+          <input type="file" name="attachments" multiple />
+        </div>
+      </section>
+
+      <!-- حالة التذكرة -->
+   
+
+      <!-- أزرار الإرسال -->
+      <div class="form-actions">
+        <button type="submit" class="btn-primary">حفظ التعديلات</button>
+        <button type="button" class="btn-secondary" onclick="history.back()">إلغاء</button>
+      </div>
+    </form>
+  </main>
+<script>
+  // ——————————— 1) متغيّرات عامّة ———————————
+  const form                  = document.getElementById('editTicketForm');
+  const ticketId              = new URLSearchParams(location.search).get('id');
+  const apiBase               = 'http://localhost:3006/api';
+  const reportingDeptSelect   = document.getElementById('reporting_dept_id');
+  const respondingDeptSelect  = document.getElementById('responding_dept_id');
+
+  // ——————————— 2) تحميل الأقسام ———————————
+  async function loadDepartments() {
+    try {
+      const res = await fetch(`${apiBase}/departments`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      console.log('Departments HTTP status:', res.status);
+
+      const body = await res.json();
+      console.log('Departments response body:', body);
+
+      if (!res.ok || body.status !== 'success') {
+        throw new Error(body.message || `Response not OK (${res.status})`);
+      }
+
+      const depts = Array.isArray(body.data) ? body.data : [];
+      if (!depts.length) throw new Error('لا توجد أقسام');
+
+      // افرغ ثم أضف الخيارات
+      reportingDeptSelect.innerHTML  = '<option value="" disabled selected>اختر القسم</option>';
+      respondingDeptSelect.innerHTML = '<option value="" disabled selected>اختر القسم</option>';
+      depts.forEach(d => {
+        reportingDeptSelect.add(new Option(d.name, d.id));
+        respondingDeptSelect.add(new Option(d.name, d.id));
+      });
+    } catch (err) {
+      console.error('Error loading departments:', err);
+      alert('حدث خطأ أثناء تحميل الأقسام: ' + err.message);
+    }
+  }
+
+  // ——————————— 3) تحميل بيانات التذكرة ———————————
+async function loadTicket() {
+  if (!ticketId) return;
+
+  try {
+    const res  = await fetch(`${apiBase}/tickets/${ticketId}`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    console.log('Ticket HTTP status:', res.status);
+
+    const json = await res.json();
+    console.log('Ticket response body:', json);
+
+    // إذا API أرجع الكائن مباشرة (كما في console) فلا ننتظر json.status
+    let t;
+    if (json.status === 'success' && json.data) {
+      t = json.data;
+    } else if (json.id !== undefined) {
+      // هنا نتعامل مع الجسم المباشر
+      t = json;
+    } else {
+      throw new Error(json.message || `Unexpected response structure`);
+    }
+
+    // املأ الحقول
+    Object.entries(t).forEach(([key, val]) => {
+      const el = document.getElementById(key);
+      if (el && ['INPUT','SELECT','TEXTAREA'].includes(el.tagName)) {
+        // للتاريخ بصيغة ISO، خذ الجزء قبل T
+        el.value = key === 'event_date' && typeof val === 'string'
+          ? val.split('T')[0]
+          : val ?? '';
+      }
+    });
+
+    // بعد إضافة الأقسام:
+    reportingDeptSelect.value  = t.reporting_dept_id || '';
+    respondingDeptSelect.value = t.responding_dept_id  || '';
+       if (Array.isArray(t.classifications)) {
+      document.getElementById('classification').value =
+        t.classifications.join(', ');
+    }
+
+  } catch (err) {
+    console.error('Error loading ticket:', err);
+    alert('خطأ في جلب بيانات التذكرة: ' + err.message);
+  }
+}
+
+
+  // ——————————— 4) إرسال التعديلات ———————————
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    fd.set('status_comments', 'تم التعديل من الواجهة');
+
+    try {
+      const res  = await fetch(`${apiBase}/tickets/${ticketId}`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        body: fd
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.message || res.statusText);
+      alert('تم حفظ التعديلات بنجاح');
+      history.back();
+    } catch (err) {
+      console.error('Error updating ticket:', err);
+      alert('خطأ أثناء حفظ التعديلات: ' + err.message);
+    }
+  });
+
+  // ——————————— 5) تهيئة الصفحة ———————————
+  document.addEventListener('DOMContentLoaded', async () => {
+    await loadDepartments();
+    await loadTicket();
+  });
+</script>
+
+
+</body>
+</html>
