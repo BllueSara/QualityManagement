@@ -266,19 +266,21 @@ const getAssignedApprovals = async (req, res) => {
     const userId = decoded.id;
 
     const [rows] = await db.execute(`
-      SELECT
+      SELECT 
         c.id,
         c.title,
         c.approval_status,
         d.name AS department_name,
+        al.status,
+        al.signed_as_proxy,
         u2.username AS delegated_by_name
-      FROM contents c
-      JOIN approval_logs al ON c.id = al.content_id
-      JOIN users u ON al.approver_id = u.id
-      LEFT JOIN users u2 ON al.delegated_by = u2.id
+      FROM content_approvers ca
+      JOIN contents c ON ca.content_id = c.id
       LEFT JOIN folders f ON c.folder_id = f.id
       LEFT JOIN departments d ON f.department_id = d.id
-      WHERE al.approver_id = ? AND al.signed_as_proxy = 1 AND al.status = 'pending'
+      LEFT JOIN approval_logs al ON ca.content_id = al.content_id AND al.approver_id = ca.user_id
+      LEFT JOIN users u2 ON al.delegated_by = u2.id
+      WHERE ca.user_id = ? AND (al.status IS NULL OR al.status = 'pending')
     `, [userId]);
 
     res.json({ status: 'success', data: rows });
@@ -287,6 +289,7 @@ const getAssignedApprovals = async (req, res) => {
     res.status(500).json({ status: 'error', message: 'خطأ في جلب البيانات' });
   }
 };
+
 
 
 const delegateApproval = async (req, res) => {
