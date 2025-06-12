@@ -15,20 +15,23 @@ const db = mysql.createPool({
     queueLimit: 0
 });
 
-// إعدادات تخزين multer للمحتويات
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        const uploadDir = './uploads/content_files';
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-        }
-        cb(null, uploadDir);
+      const uploadDir = path.join(__dirname, '../../uploads/content_files'); // تأكد أنه مسار مطلق من backend
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      cb(null, uploadDir);
     },
     filename: function (req, file, cb) {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + '-' + file.originalname);
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      const ext = path.extname(file.originalname) || '.pdf';
+      cb(null, `${uniqueSuffix}${ext}`);
     }
-});
+  });
+  
+  
+  
 
 const upload = multer({ 
     storage: storage,
@@ -62,7 +65,7 @@ const getContentsByFolderId = async (req, res) => {
         const folderId = req.params.folderId;
         const connection = await db.getConnection();
 
-        // جلب معلومات المجلد والقسم
+        // جلب معلومات المجلد
         const [folder] = await connection.execute(
             `SELECT 
                 f.id,
@@ -86,7 +89,7 @@ const getContentsByFolderId = async (req, res) => {
             });
         }
 
-        // جلب المحتويات
+        // بناء استعلام المحتوى
         let query = `
             SELECT 
                 c.id, 
@@ -109,17 +112,18 @@ const getContentsByFolderId = async (req, res) => {
         `;
         let params = [folderId];
 
-        // إذا لم يكن المستخدم admin، قم بتصفية المحتويات حسب حالة الموافقة
+        // إذا لم يكن المستخدم مسؤول، أظهر فقط المعتمدة أو المرفوعة منه
         if (decodedToken.role !== 'admin') {
-            query += ' AND (c.is_approved = 1 OR c.created_by = ?)';
-            params.push(decodedToken.id);
+            query += ' AND c.is_approved = 1 AND c.approval_status = "approved"';
         }
+        
 
         query += ' ORDER BY c.created_at DESC';
 
         const [contents] = await connection.execute(query, params);
 
         connection.release();
+
         res.json({
             status: 'success',
             message: 'تم جلب المحتويات بنجاح',
@@ -142,115 +146,138 @@ const getContentsByFolderId = async (req, res) => {
     }
 };
 
+
 // إضافة محتوى جديد لمجلد معين
 const addContent = async (req, res) => {
     try {
-        const authHeader = req.headers.authorization;
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({ 
-                status: 'error',
-                message: 'غير مصرح: لا يوجد توكن أو التوكن غير صالح' 
-            });
-        }
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ 
+          status: 'error',
+          message: 'غير مصرح: لا يوجد توكن أو التوكن غير صالح' 
+        });
+      }
+  
+      const token = authHeader.split(' ')[1];
+      let decodedToken;
+      try {
+        decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+      } catch (error) {
+        return res.status(401).json({ 
+          status: 'error',
+          message: 'غير مصرح: توكن غير صالح' 
+        });
+      }
+  
+      const folderId = req.params.folderId;
+      const { title, notes, approvers_required } = req.body;
+      const filePath = req.file ? path.posix.join('content_files', req.file.filename) : null;
 
-        const token = authHeader.split(' ')[1];
-        let decodedToken;
-        try {
-            decodedToken = jwt.verify(token, process.env.JWT_SECRET);
-        } catch (error) {
-            return res.status(401).json({ 
-                status: 'error',
-                message: 'غير مصرح: توكن غير صالح' 
-            });
-        }
-
-        const folderId = req.params.folderId;
-        const { title, notes, approvers_required } = req.body;
-        const filePath = req.file ? path.join('content_files', req.file.filename).replace(/\\/g, '/') : null;
-        const connection = await db.getConnection();
-
-        if (!folderId || !title || !filePath) {
-            connection.release();
-            return res.status(400).json({ 
-                status: 'error',
-                message: 'معرف المجلد والعنوان والملف مطلوبون.' 
-            });
-        }
-
-        // التحقق من وجود المجلد
-        const [folder] = await connection.execute(
-            'SELECT id, department_id FROM folders WHERE id = ?',
-            [folderId]
-        );
-
-        if (folder.length === 0) {
-            connection.release();
-            return res.status(404).json({ 
-                status: 'error',
-                message: 'المجلد غير موجود' 
-            });
-        }
-
-        // التحقق من عدم وجود محتوى بنفس العنوان
-        const [existingContent] = await connection.execute(
-            'SELECT id FROM contents WHERE title = ? AND folder_id = ?',
-            [title, folderId]
-        );
-
-        if (existingContent.length > 0) {
-            connection.release();
-            if (req.file && fs.existsSync(req.file.path)) {
-                fs.unlinkSync(req.file.path);
-            }
-            return res.status(409).json({ 
-                status: 'error',
-                message: 'يوجد محتوى بنفس العنوان في هذا المجلد بالفعل.' 
-            });
-        }
-
-        // إضافة المحتوى
-        const [result] = await db.execute(
-            `INSERT INTO contents (
-                title, 
-                file_path, 
-                notes,
-                folder_id, 
-                approval_status,
-                is_approved,
-                created_by,
-                approvers_required,
-                approvals_log,
-                created_at,
-                updated_at
-            ) VALUES (?, ?, ?, ?, 'pending', 0, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-            [
-                title, 
-                filePath, 
-                notes || null,
-                folderId, 
-                decodedToken.id,
-                approvers_required ? JSON.stringify(approvers_required) : null,
-                JSON.stringify([])
-            ]
-        );
-
+  
+      const connection = await db.getConnection();
+  
+      if (!folderId || !title || !filePath) {
         connection.release();
-        
-        res.status(201).json({
-            status: 'success',
-            message: 'تم رفع المحتوى بنجاح وهو في انتظار الاعتمادات اللازمة',
-            contentId: result.insertId,
-            isApproved: false,
-            status: 'pending'
+        return res.status(400).json({ 
+          status: 'error',
+          message: 'معرف المجلد والعنوان والملف مطلوبون.' 
         });
+      }
+  
+      // التحقق من وجود المجلد
+      const [folder] = await connection.execute(
+        'SELECT id, department_id FROM folders WHERE id = ?',
+        [folderId]
+      );
+  
+      if (folder.length === 0) {
+        connection.release();
+        return res.status(404).json({ 
+          status: 'error',
+          message: 'المجلد غير موجود' 
+        });
+      }
+  
+      // التحقق من عدم وجود محتوى بنفس العنوان
+      const [existingContent] = await connection.execute(
+        'SELECT id FROM contents WHERE title = ? AND folder_id = ?',
+        [title, folderId]
+      );
+  
+      if (existingContent.length > 0) {
+        connection.release();
+        if (req.file && fs.existsSync(req.file.path)) {
+          fs.unlinkSync(req.file.path);
+        }
+        return res.status(409).json({ 
+          status: 'error',
+          message: 'يوجد محتوى بنفس العنوان في هذا المجلد بالفعل.' 
+        });
+      }
+  
+      // 1) إضافة المحتوى
+      const [result] = await connection.execute(
+        `INSERT INTO contents (
+          title, 
+          file_path, 
+          notes,
+          folder_id, 
+          approval_status,
+          is_approved,
+          created_by,
+          approvers_required,
+          approvals_log,
+          created_at,
+          updated_at
+        ) VALUES (?, ?, ?, ?, 'pending', 0, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+        [
+          title, 
+          filePath, 
+          notes || null,
+          folderId, 
+          decodedToken.id,
+          approvers_required ? JSON.stringify(approvers_required) : null,
+          JSON.stringify([])
+        ]
+      );
+  
+      const contentId = result.insertId;
+  
+      // 2) إضافة الـ approvers وربطهم
+      if (Array.isArray(approvers_required)) {
+        for (const userId of approvers_required) {
+          await connection.execute(
+            `INSERT INTO content_approvers (content_id, user_id, assigned_at)
+             VALUES (?, ?, NOW())`,
+            [contentId, userId]
+          );
+  
+          await connection.execute(
+            `INSERT INTO approval_logs (content_id, approver_id)
+             VALUES (?, ?)`,
+            [contentId, userId]
+          );
+        }
+      }
+  
+      connection.release();
+  
+      res.status(201).json({
+        status: 'success',
+        message: 'تم رفع المحتوى بنجاح وهو في انتظار الاعتمادات اللازمة',
+        contentId: contentId,
+        isApproved: false,
+        status: 'pending'
+      });
     } catch (error) {
-        console.error('خطأ في إضافة المحتوى:', error);
-        res.status(500).json({ 
-            status: 'error',
-            message: 'حدث خطأ في الخادم' 
-        });
+      console.error('خطأ في إضافة المحتوى:', error);
+      res.status(500).json({ 
+        status: 'error',
+        message: 'حدث خطأ في الخادم' 
+      });
     }
-};
+  };
+  
 
 // تحديث محتوى موجود
 const updateContent = async (req, res) => {
@@ -474,7 +501,8 @@ const downloadContent = async (req, res) => {
             });
         }
 
-        const filePath = path.join('./uploads', content[0].file_path);
+        const filePathFull = path.join(__dirname, '../../uploads', content[0].file_path);
+
         if (!fs.existsSync(filePath)) {
             connection.release();
             return res.status(404).json({ 
@@ -691,20 +719,6 @@ return res.json({ status: 'success', data });
   };
   
   module.exports = {
-    getMyUploadedContent,
-    getContentsByFolderId,
-    addContent,
-    updateContent,
-    deleteContent,
-    downloadContent,
-    getContentById,
-    approveContent,
-    upload
-  };
-  
-
-// في أسفل contentController.js
-module.exports = {
     getMyUploadedContent,
     getContentsByFolderId,
     addContent,

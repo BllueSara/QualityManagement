@@ -25,6 +25,7 @@ const contentRouter          = require('./routes/contentRoutes');
 const approvalRouter         = require('./routes/approvalRoutes');
 const ticketRouter           = require('./routes/ticketRoutes');
 const pendingApprovalRoutes = require('./routes/pendingApprovals.routes');
+ 
 
 
 
@@ -56,6 +57,8 @@ app.use('/api/approvals', approvalRouter);
 
 
 app.use('/api/pending-approvals', pendingApprovalRoutes);
+
+
 
 // serve static frontend
 app.use('/', express.static(path.join(__dirname, '../frontend')));

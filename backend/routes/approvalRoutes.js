@@ -3,16 +3,17 @@ const router  = express.Router();
 const {
   getUserPendingApprovals,
   handleApproval,
-  getAssignedApprovals // ✅ أضف هذا
+  getAssignedApprovals,
+  delegateApproval,
+  getProxyApprovals
 } = require('../controllers/approvalController');
 
 
 
-router.get('/', getUserPendingApprovals); // /api/approvals
-
-router.post('/:contentId/approve', handleApproval); 
+router.get('/', getUserPendingApprovals);
+router.post('/:contentId/approve', handleApproval);
 router.get('/assigned-to-me', getAssignedApprovals);
-
-
+router.post('/:id/delegate', delegateApproval);
+router.get('/proxy/delegated-to-me', getProxyApprovals);
 
 module.exports = router;
