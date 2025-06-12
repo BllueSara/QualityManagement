@@ -101,6 +101,15 @@ formData.set('responding_dept_id', formData.get('respondingDept'));
 formData.set('other_depts', formData.get('otherDepts'));
 formData.set('patient_name', formData.get('patientName'));
 formData.set('medical_record_no', formData.get('medicalRecordNo'));
+// … بعد formData.set('medical_record_no', …)
+
+
+// جمع patient types
+const patientTypeValues = Array.from(
+  form.querySelectorAll('input[name="patientType"]:checked')
+).map(cb => cb.value);
+formData.set('patient_types', JSON.stringify(patientTypeValues));
+
 formData.set('dob', formData.get('dob'));
 formData.set('gender', formData.get('gender'));
 formData.set('report_type', formData.get('reportType'));
@@ -114,7 +123,12 @@ formData.set('reporter_email', formData.get('reporterEmail'));
 formData.set('actions_taken', formData.get('actionsTaken'));
 formData.set('had_injury', formData.get('hadInjury'));
 formData.set('injury_type', formData.get('injuryType'));
+const classificationValues = Array.from(checkboxes)
+  .filter(cb => cb.checked)
+  .map(cb => cb.value);
 
+// 2. خزنهم في FormData كسلسلة JSON
+formData.set('classification', JSON.stringify(classificationValues));
         try {
 const response = await fetch(`${apiBase}/tickets`, {
                 method: 'POST',
@@ -128,6 +142,8 @@ const response = await fetch(`${apiBase}/tickets`, {
 
             if (response.ok) {
                 alert('تم إنشاء التذكرة بنجاح');
+                  window.location.reload();
+
             } else {
                 alert(result.error || 'حدث خطأ أثناء إنشاء التذكرة');
             }

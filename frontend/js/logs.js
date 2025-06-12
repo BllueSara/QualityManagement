@@ -1,89 +1,87 @@
-/**
- * script.js
- * ------------- 
- * منطق الفلترة والبحث في صفحة "سجلات النظام".
- * نفترض أن جدول السجلات محمّل مسبقًا في الذاكرة (DOM).
- */
+// js/logs.js
+// منطق جلب السجلات من الباك-أند ثم تطبيق الفلترة والبحث
 
 document.addEventListener('DOMContentLoaded', () => {
-    const applyFilterBtn = document.getElementById('apply-filter');
-    const resetFilterBtn = document.getElementById('reset-filter');
-    const fromDateInput = document.getElementById('from-date');
-    const toDateInput = document.getElementById('to-date');
-    const actionTypeSelect = document.getElementById('action-type');
-    const userNameSelect = document.getElementById('user-name');
-    const searchInput = document.getElementById('search-input');
-    const logsBody = document.getElementById('logs-body');
+  const applyFilterBtn   = document.getElementById('apply-filter');
+  const resetFilterBtn   = document.getElementById('reset-filter');
+  const fromDateInput    = document.getElementById('from-date');
+  const toDateInput      = document.getElementById('to-date');
+  const actionTypeSelect = document.getElementById('action-type');
+  const userNameSelect   = document.getElementById('user-name');
+  const searchInput      = document.getElementById('search-input');
+  const logsBody         = document.getElementById('logs-body');
 
-    // Function to apply filters (placeholder for now)
-    const applyFilters = () => {
-        const fromDate = fromDateInput.value;
-        const toDate = toDateInput.value;
-        const actionType = actionTypeSelect.value;
-        const userName = userNameSelect.value;
-        const searchTerm = searchInput.value.toLowerCase();
+  // بناء auth header
+  function authHeader() {
+    const token = localStorage.getItem('token');
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
+  }
 
-        console.log('Applying Filters:');
-        console.log('From Date:', fromDate);
-        console.log('To Date:', toDate);
-        console.log('Action Type:', actionType);
-        console.log('User Name:', userName);
-        console.log('Search Term:', searchTerm);
+  // جلب وعرض السجلات
+  async function loadLogs() {
+    const params = new URLSearchParams();
+    if (fromDateInput.value)    params.append('from', fromDateInput.value);
+    if (toDateInput.value)      params.append('to', toDateInput.value);
+    if (actionTypeSelect.value) params.append('action', actionTypeSelect.value);
+    if (userNameSelect.value)   params.append('user', userNameSelect.value);
+    if (searchInput.value)      params.append('search', searchInput.value);
 
-        // In a real application, you would filter the table rows here
-        // For now, we just log the filter values.
+    const res = await fetch('http://localhost:3006/api/users/' + getUserId() + '/logs' + params.toString(), {
+      headers: authHeader()
+    });
+    const json = await res.json();
 
-        // Example: Filtering rows (simplified)
-        const rows = logsBody.querySelectorAll('tr');
-        rows.forEach(row => {
-            const rowDate = row.dataset.date ? new Date(row.dataset.date) : null;
-            const rowUser = row.dataset.user ? row.dataset.user.toLowerCase() : '';
-            const rowAction = row.dataset.action ? row.dataset.action.toLowerCase() : '';
-            const rowText = row.textContent.toLowerCase();
+    // تفريغ الجدول
+    logsBody.innerHTML = '';
 
-            let isVisible = true;
+    // بناء الصفوف
+    json.data.forEach(log => {
+      const tr = document.createElement('tr');
+      tr.dataset.date   = log.created_at;
+      tr.dataset.user   = log.user;
+      tr.dataset.action = log.action;
 
-            // Date filter
-            if (fromDate && rowDate && rowDate < new Date(fromDate)) {
-                isVisible = false;
-            }
-            if (toDate && rowDate && rowDate > new Date(toDate)) {
-                isVisible = false;
-            }
+      tr.innerHTML = `
+        <td>${log.user || '-'}</td>
+        <td>${log.description || ''}</td>
+        <td>${new Date(log.created_at).toLocaleString('ar-SA')}</td>
+        <td><span class="action-text">${log.action}</span></td>
+      `;
+      logsBody.appendChild(tr);
+    });
+  }
 
-            // Action Type filter
-            if (actionType && rowAction !== actionType.toLowerCase()) {
-                isVisible = false;
-            }
+  // جلب قائمة المستخدمين لفلتر الاسم
+  async function fetchUsers() {
+    const res = await fetch('http://localhost:3006/api/users?roles', { headers: authHeader() });
+    const json = await res.json();
+    json.data.forEach(u => {
+      const opt = document.createElement('option');
+      opt.value = u.name;
+      opt.textContent = u.name;
+      userNameSelect.appendChild(opt);
+    });
+  }
 
-            // User Name filter
-            if (userName && rowUser !== userName.toLowerCase()) {
-                isVisible = false;
-            }
+  // دالة للحصول على userId من التوكن
+  function getUserId() {
+    const token = localStorage.getItem('token');
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.id;
+  }
 
-            // Search filter
-            if (searchTerm && !rowText.includes(searchTerm)) {
-                isVisible = false;
-            }
+  // تطبيق الفلترة يُعيد تحميل السجلات من السيرفر
+  applyFilterBtn.addEventListener('click', loadLogs);
+  resetFilterBtn.addEventListener('click', () => {
+    fromDateInput.value = '';
+    toDateInput.value   = '';
+    actionTypeSelect.value = '';
+    userNameSelect.value   = '';
+    searchInput.value      = '';
+    loadLogs();
+  });
 
-            row.style.display = isVisible ? 'table-row' : 'none';
-        });
-    };
-
-    // Function to reset filters
-    const resetFilters = () => {
-        fromDateInput.value = '';
-        toDateInput.value = '';
-        actionTypeSelect.value = '';
-        userNameSelect.value = '';
-        searchInput.value = '';
-        applyFilters(); // Apply filters after resetting to show all rows
-    };
-
-    // Event Listeners
-    applyFilterBtn.addEventListener('click', applyFilters);
-    resetFilterBtn.addEventListener('click', resetFilters);
-
-    // Initial filter application (to show all rows on page load)
-    applyFilters();
+  // التحميل الأولي
+  fetchUsers();
+  loadLogs();
 });
