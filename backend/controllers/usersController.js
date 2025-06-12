@@ -278,7 +278,111 @@ const getRoles = async (req, res) => {
     data: roles 
   });
 };
+const getLogs = async (req, res) => {
+  try {
+    const { from, to, action, user, search } = req.query;
+    const conditions = [];
+    const params = [];
 
+    if (from) {
+      conditions.push('al.created_at >= ?');
+      params.push(from);
+    }
+    if (to) {
+      conditions.push('al.created_at <= ?');
+      params.push(to);
+    }
+    if (action) {
+      conditions.push('al.action = ?');
+      params.push(action);
+    }
+    if (user) {
+      conditions.push('u.username = ?');
+      params.push(user);
+    }
+    if (search) {
+      conditions.push('(al.action LIKE ? OR al.description LIKE ? OR u.username LIKE ?)');
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    }
+
+    const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const sql = `
+      SELECT
+        al.id,
+        u.username AS user,
+        al.action,
+        al.description,
+        al.reference_type,
+        al.reference_id,
+        al.created_at
+      FROM activity_logs al
+      LEFT JOIN users u ON u.id = al.user_id
+      ${whereClause}
+      ORDER BY al.created_at DESC
+      LIMIT 500
+    `;
+
+    const [rows] = await db.execute(sql, params);
+    res.status(200).json({ status: 'success', data: rows });
+  } catch (error) {
+    console.error('Error fetching logs:', error);
+    res.status(500).json({ status: 'error', message: 'حدث خطأ أثناء جلب السجلات' });
+  }
+};
+const getNotifications = async (req, res) => {
+  const userId = req.params.id;
+  try {
+    const [rows] = await db2.execute(
+      'SELECT id, title, message, is_read, created_at FROM notifications WHERE user_id = ? ORDER BY created_at DESC',
+      [userId]
+    );
+    res.status(200).json({ status: 'success', data: rows });
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    res.status(500).json({ status: 'error', message: 'حدث خطأ أثناء جلب الإشعارات' });
+  }
+};
+
+/**
+ * Mark a notification as read
+ */
+const markAsRead = async (req, res) => {
+  const notifId = req.params.id;
+  try {
+    const [result] = await db2.execute(
+      'UPDATE notifications SET is_read = TRUE WHERE id = ?',
+      [notifId]
+    );
+    if (!result.affectedRows) {
+      return res.status(404).json({ status: 'error', message: 'الإشعار غير موجود' });
+    }
+    res.status(200).json({ status: 'success', message: 'تم وسم الإشعار كمقروء' });
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    res.status(500).json({ status: 'error', message: 'حدث خطأ أثناء تحديث الإشعار' });
+  }
+};
+
+/**
+ * Delete a notification
+ */
+const deleteNotification = async (req, res) => {
+  const notifId = req.params.id;
+  try {
+    const [result] = await db2.execute(
+      'DELETE FROM notifications WHERE id = ?',
+      [notifId]
+    );
+    if (!result.affectedRows) {
+      return res.status(404).json({ status: 'error', message: 'الإشعار غير موجود' });
+    }
+    res.status(200).json({ status: 'success', message: 'تم حذف الإشعار' });
+  } catch (error) {
+    console.error('Error deleting notification:', error);
+    res.status(500).json({ status: 'error', message: 'حدث خطأ أثناء حذف الإشعار' });
+  }
+};
 module.exports = {
   getUsers,
   getUserById,
@@ -287,5 +391,9 @@ module.exports = {
   deleteUser,
   changeUserRole,
   adminResetPassword,
-  getRoles
+  getRoles,
+  getLogs,
+  getNotifications,
+  markAsRead,
+  deleteNotification
 };

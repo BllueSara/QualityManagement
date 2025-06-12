@@ -204,3 +204,30 @@ main h2 {
     font-size: 22px;
     font-weight: 700;
 } 
+.gradient-blue-1 {
+  background: linear-gradient(135deg, #cce4f6, #99c9ed);
+}
+.gradient-blue-2 {
+  background: linear-gradient(135deg, #a0d4f7, #6abff0);
+}
+.gradient-blue-3 {
+  background: linear-gradient(135deg, #6bbff0, #2fa9e8);
+}
+.gradient-blue-4 {
+  background: linear-gradient(135deg, #3a7ffb, #045ed2);
+}
+
+/* إجبار الأيقونات على الأبيض */
+.stat-icon i {
+  color: #fff;
+}
+
+/* تنسيقات إضافية */
+.stat-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

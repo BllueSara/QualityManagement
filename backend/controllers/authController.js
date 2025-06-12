@@ -124,6 +124,7 @@ const register = async (req, res) => {
         role: userRole
       }
     });
+    
 
   } catch (error) {
     console.error('خطأ في التسجيل:', error);

@@ -10,6 +10,8 @@ router.get('/departments', authenticateToken, ticketController.getDepartments);
 router.post('/', authenticateToken, ticketController.createTicket);
 
 // Get all tickets
+router.get('/assigned', authenticateToken, ticketController.getAssignedTickets);
+
 router.get('/', authenticateToken, ticketController.getAllTickets);
 
 // Get a single ticket
@@ -22,9 +24,14 @@ router.put('/:id', authenticateToken, ticketController.updateTicket);
 router.delete('/:id', authenticateToken, checkRole(['admin']), ticketController.deleteTicket);
 
 // Assign a ticket
-router.post('/:id/assign', authenticateToken, checkRole(['admin', 'manager']), ticketController.assignTicket);
 
 // Get ticket status history
 router.get('/:id/history', authenticateToken, ticketController.getTicketStatusHistory);
+
+router.post('/:id/replies', authenticateToken, ticketController.addReply);
+
+router.post('/:id/assign', authenticateToken, ticketController.assignToUsers);
+
+// GET /api/tickets/assigned
 
 module.exports = router; 

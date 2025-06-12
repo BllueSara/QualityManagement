@@ -161,7 +161,6 @@ if (cancelContentBtn) {
           <img src="../images/folders.svg">
           <div class="folder-info">
             <div class="folder-name">${folder.name}</div>
-            <div class="folder-date">${new Date(folder.createdAt).toLocaleDateString('ar-EG', {year:'numeric',month:'long',day:'numeric'})}</div>
           </div>
         `;
         foldersList.appendChild(card);
@@ -228,7 +227,6 @@ if (cancelContentBtn) {
                             <img src="../images/pdf.svg" alt="ملف PDF">
                             <div class="file-info">
                                 <div class="file-name">${content.title}</div>
-                                <div class="file-date">${new Date(content.createdAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
                                 <div class="approval-status ${approvalClass}">${approvalStatus}</div>
                             </div>
                         `;
