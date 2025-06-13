@@ -1,3 +1,4 @@
+// routes/permissions.routes.js
 const express = require('express');
 const { authenticateToken } = require('../controllers/authController');
 const {
@@ -9,12 +10,10 @@ const {
 
 const router = express.Router();
 
-// جلب وتحديث دفعة واحدة
-router.get(  '/users/:id/permissions',      authenticateToken, getUserPermissions);
-router.put(  '/users/:id/permissions',      authenticateToken, updateUserPermissions);
-
-// إضافة/إزالة جزئية
-router.post(   '/users/:id/permissions/:key',  authenticateToken, addUserPermission);
-router.delete( '/users/:id/permissions/:key',  authenticateToken, removeUserPermission);
+// لاحظ النقطتين: مسار نسبي + mergeParams لو تحتاج params من usersRouter
+router.get('/:id/permissions',         authenticateToken, getUserPermissions);
+router.put('/:id/permissions',         authenticateToken, updateUserPermissions);
+router.post('/:id/permissions/:key',   authenticateToken, addUserPermission);
+router.delete('/:id/permissions/:key', authenticateToken, removeUserPermission);
 
 module.exports = router;

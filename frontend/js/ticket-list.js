@@ -1,4 +1,30 @@
 // scripts.js
+apiBase = 'http://localhost:3006/api';
+let permissionsKeys = [];
+
+async function fetchPermissions() {
+  const token = localStorage.getItem('token');
+  if (!token) return;
+  const payload = JSON.parse(atob(token.split('.')[1] || '{}'));
+  const userRole = payload.role;
+
+  // الإدمن دائماً يرى كل شيء
+  if (['admin','sub-admin'].includes(userRole)) {
+    permissionsKeys = ['*'];
+    return;
+  }
+
+  // خلاف ذلك جلب الصلاحيات من API
+  const userId = payload.id;
+  const res = await fetch(`${apiBase}/users/${userId}/permissions`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!res.ok) return;
+  const { data: perms } = await res.json();
+  permissionsKeys = perms.map(p =>
+    typeof p === 'string' ? p : (p.permission || p.permission_key)
+  );
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
     const searchInput = document.getElementById('searchInput');
@@ -34,9 +60,12 @@ tickets = body.data;
     }
 
     // Render tickets in the table
-    function renderTickets() {
-        ticketsBody.innerHTML = '';
-   filteredTickets.forEach(ticket => {
+function renderTickets() {
+  ticketsBody.innerHTML = '';
+  filteredTickets.forEach(ticket => {
+    const canEdit   = permissionsKeys.includes('*') || permissionsKeys.includes('edit_ticket');
+    const canDelete = permissionsKeys.includes('*') || permissionsKeys.includes('delete_ticket');
+
     const row = document.createElement('tr');
     row.innerHTML = `
       <td class="col-ticket">#${ticket.id}</td>
@@ -45,40 +74,43 @@ tickets = body.data;
           ${getStatusText(ticket.current_status)}
         </span>
       </td>
-      <!-- استخدم report_type بدلاً من type -->
-      <!-- استخدم event_location بدلاً من location -->
       <td class="col-location">${ticket.event_location || '—'}</td>
-      <!-- استخدم event_date/created_at لصياغة التاريخ -->
       <td class="col-date">${formatDate(ticket.created_at)}</td>
       <td class="col-actions">
         <i class="fas fa-eye action-icon view-icon"
            title="عرض"
            style="cursor: pointer;"
            data-ticket-id="${ticket.id}"></i>
-        <i class="fas fa-pencil-alt action-icon edit-icon" title="تعديل"></i>
-        <i class="fas fa-trash-alt action-icon delete-icon" title="حذف"></i>
+        ${canEdit   ? `<i class="fas fa-pencil-alt action-icon edit-icon"   title="تعديل"   data-ticket-id="${ticket.id}"></i>` : ''}
+        ${canDelete ? `<i class="fas fa-trash-alt action-icon delete-icon"  title="حذف"     data-ticket-id="${ticket.id}"></i>` : ''}
       </td>
     `;
     ticketsBody.appendChild(row);
   });
 
-        // Add click event listeners to view icons
-        document.querySelectorAll('.view-icon').forEach(icon => {
-            icon.addEventListener('click', (e) => {
-                const ticketId = e.target.dataset.ticketId;
-                window.location.href = `ticket-details.html?id=${ticketId}`;
-            });
-        });
-        // بعد إضافة أسطر التذاكر وإرفاق view-icon…
-document.querySelectorAll('.edit-icon').forEach(icon => {
-  icon.addEventListener('click', e => {
-    const ticketId = e.currentTarget.closest('tr')
-                          .querySelector('.view-icon')
-                          .dataset.ticketId;
-    // أو مباشرة e.currentTarget.dataset.ticketId إذا أضفتها
-    window.location.href = `ticket-edit.html?id=${ticketId}`;
+  // ربط الأحداث بعد الإنشاء:
+  document.querySelectorAll('.view-icon').forEach(icon => {
+    icon.addEventListener('click', e =>
+      window.location.href = `ticket-details.html?id=${e.target.dataset.ticketId}`
+    );
   });
-});
+  document.querySelectorAll('.edit-icon').forEach(icon => {
+    icon.addEventListener('click', e =>
+      window.location.href = `ticket-edit.html?id=${e.target.dataset.ticketId}`
+    );
+  });
+  document.querySelectorAll('.delete-icon').forEach(icon => {
+    icon.addEventListener('click', async e => {
+      const id = e.target.dataset.ticketId;
+      if (!confirm('هل أنت متأكد من حذف هذه التذكرة؟')) return;
+      const res = await fetch(`${apiBase}/tickets/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (res.ok) await fetchTickets();
+      else alert('فشل حذف التذكرة');
+    });
+  });
 
     }
 
@@ -181,5 +213,7 @@ document.querySelectorAll('.edit-icon').forEach(icon => {
     });
 
     // Initial fetch of tickets
+      await fetchPermissions();
+
     await fetchTickets();
 });

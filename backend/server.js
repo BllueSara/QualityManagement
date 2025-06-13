@@ -39,9 +39,9 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Mounting API endpoints
 app.use('/api/auth',        authRouter);
+app.use('/api/users', permsRouter);
 app.use('/api/users',       usersRouter);
 app.use('/api/permissions/definitions', permsDefRouter);
-app.use('/api/permissions', permsRouter);
 app.use('/api/departments', deptRouter);
 app.use('/api/tickets',     ticketRouter);
 
