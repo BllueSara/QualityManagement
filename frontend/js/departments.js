@@ -1,7 +1,8 @@
 // departments.js
 // Add JavaScript specific to the departments page here
+const apiBase      = 'http://localhost:3006/api';
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     // Get references to elements
     const addDepartmentBtn = document.getElementById('addDepartmentButton');
     const addDepartmentModal = document.getElementById('addDepartmentModal');
@@ -22,29 +23,73 @@ document.addEventListener('DOMContentLoaded', function() {
     const deleteModalConfirmBtn = document.getElementById('confirmDeleteDepartment');
     const deleteModalCancelBtn = document.getElementById('cancelDeleteDepartment');
 
-    // دالة لجلب التوكن من localStorage
-    function getToken() {
-        return localStorage.getItem('token');
+    // Utility to get token
+    function getToken() { return localStorage.getItem('token'); }
+
+    // Decode JWT to extract user ID
+    function getUserId() {
+        const token = getToken();
+        if (!token) return null;
+        try {
+            const payload = token.split('.')[1];
+            const decoded = JSON.parse(atob(payload));
+            return decoded.id || decoded.userId || decoded.sub || null;
+        } catch (e) {
+            console.warn('Failed to decode token for user ID:', e);
+            return null;
+        }
     }
 
-    // دالة للتأكد من وجود التوكن وإعادة التوجيه إذا لم يكن موجوداً
+    // Ensure authentication
     function checkAuth() {
         if (!getToken()) {
             alert('يرجى تسجيل الدخول أولاً.');
             window.location.href = 'login.html';
         }
     }
+    checkAuth();
 
-    checkAuth(); // التحقق من المصادقة عند تحميل الصفحة
+    // Permissions state
+    const permissions = { canAdd: false, canEdit: false, canDelete: false };
 
-    // Functions to open/close modals
-    function openModal(modal) {
-        modal.style.display = 'flex';
-    }
+    // Fetch user permissions
+async function fetchPermissions() {
+  const userId = getUserId();
+  if (!userId) return;
 
+  const headers = { 'Authorization': `Bearer ${getToken()}` };
+
+  // جلب دور المستخدم
+  const userRes      = await fetch(`${apiBase}/users/${userId}`, { headers });
+  const { data: user } = await userRes.json();
+  const role = user.role;
+  if (role === 'admin' || role === 'sub-admin') {
+    permissions.canAdd = permissions.canEdit = permissions.canDelete = true;
+  }
+
+  // جلب قائمة الصلاحيات
+  const permsRes = await fetch(`${apiBase}/users/${userId}/permissions`, { headers });
+  const { data: perms } = await permsRes.json();
+
+  console.log('raw permissions:', perms);
+
+  // تعامُل مع النصوص و objects
+  const keys = perms.map(p => 
+    (typeof p === 'string' ? p : p.permission)
+  );
+  console.log('mapped keys:', keys);
+
+  // ضبط صلاحيات العرض
+  if (keys.includes('add_section'))    permissions.canAdd    = true;
+  if (keys.includes('edit_section'))   permissions.canEdit   = true;
+  if (keys.includes('delete_section')) permissions.canDelete = true;
+}
+
+
+    // Modal handlers
+    function openModal(modal) { modal.style.display = 'flex'; }
     function closeModal(modal) {
         modal.style.display = 'none';
-        // Clear form fields when closing add/edit modals
         if (modal === addDepartmentModal) {
             addDepartmentNameInput.value = '';
             addDepartmentImageInput.value = '';
@@ -55,223 +100,120 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // دالة لجلب الأقسام وعرضها
+    // Show/hide Add button
+    function updateAddButtonVisibility() {
+        if (addDepartmentBtn) addDepartmentBtn.style.display = permissions.canAdd ? '' : 'none';
+    }
+
+    // Fetch and render departments
     async function fetchDepartments() {
         try {
-            const response = await fetch('http://localhost:3006/api/departments', {
-                headers: {
-                    'Authorization': `Bearer ${getToken()}`
-                }
+            const res = await fetch('http://localhost:3006/api/departments', {
+                headers: { 'Authorization': `Bearer ${getToken()}` }
             });
-            const data = await response.json();
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.message);
 
-            if (response.ok) {
-                cardsGrid.innerHTML = ''; // مسح البطاقات الحالية
-                data.data.forEach(department => {
-                    const departmentCard = document.createElement('div');
-                    departmentCard.className = 'card';
-                    departmentCard.dataset.id = department.id; // Store ID on card
-                    departmentCard.innerHTML = `
-                        <div class="card-icons">
-                            <a href="#" class="edit-icon" data-id="${department.id}" data-name="${department.name}" data-image="${department.image}"><img src="../images/edit.svg" alt="تعديل"></a>
-                            <a href="#" class="delete-icon" data-id="${department.id}"><img src="../images/delet.svg" alt="حذف"></a>
-                        </div>
-                        <div class="card-icon bg-blue"><img src="http://localhost:3006/${department.image}" alt="${department.name}"></div>
-                        <div class="card-title">${department.name}</div>
-                        <div class="card-subtitle"></div>
-                    `;
-                    cardsGrid.appendChild(departmentCard);
+            cardsGrid.innerHTML = '';
+            result.data.forEach(dept => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.dataset.id = dept.id;
 
-                    // إضافة event listener للنقر على بطاقة القسم
-                    departmentCard.addEventListener('click', function() {
-                        const departmentId = this.dataset.id;
-                        // يمكنك هنا إعادة التوجيه إلى صفحة محتوى القسم مع معرف القسم
-                        window.location.href = `department-content.html?departmentId=${departmentId}`;
-                    });
+                let icons = '';
+                if (permissions.canEdit || permissions.canDelete) {
+                    icons = '<div class="card-icons">';
+                    if (permissions.canEdit) icons += `<a href="#" class="edit-icon" data-id="${dept.id}" data-name="${dept.name}"><img src="../images/edit.svg" alt="تعديل"></a>`;
+                    if (permissions.canDelete) icons += `<a href="#" class="delete-icon" data-id="${dept.id}"><img src="../images/delet.svg" alt="حذف"></a>`;
+                    icons += '</div>';
+                }
+
+                card.innerHTML = icons +
+                    `<div class="card-icon bg-blue"><img src="http://localhost:3006/${dept.image}" alt="${dept.name}"></div>` +
+                    `<div class="card-title">${dept.name}</div>`;
+                cardsGrid.appendChild(card);
+
+                card.addEventListener('click', e => {
+                    if (e.target.closest('.card-icons')) return;
+                    window.location.href = `department-content.html?departmentId=${dept.id}`;
                 });
+            });
 
-                // إضافة event listeners مباشرة للأيقونات
-                document.querySelectorAll('.edit-icon').forEach(icon => {
-                    icon.addEventListener('click', function(e) {
-                        console.log('تم النقر على زر التعديل');
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const id = this.dataset.id;
-                        const name = this.dataset.name;
-                        const image = this.dataset.image;
-                        
-                        editDepartmentIdInput.value = id;
-                        editDepartmentNameInput.value = name;
-                        openModal(editDepartmentModal);
-                    });
-                });
+            if (permissions.canEdit) document.querySelectorAll('.edit-icon').forEach(el => el.addEventListener('click', handleEdit));
+            if (permissions.canDelete) document.querySelectorAll('.delete-icon').forEach(el => el.addEventListener('click', handleDeleteOpen));
 
-                document.querySelectorAll('.delete-icon').forEach(icon => {
-                    icon.addEventListener('click', function(e) {
-                        console.log('تم النقر على زر الحذف');
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const id = this.dataset.id;
-                        deleteModalConfirmBtn.dataset.departmentId = id;
-                        openModal(deleteDepartmentModal);
-                    });
-                });
-
-            } else {
-                alert(data.message || 'فشل جلب الأقسام.');
-            }
-        } catch (error) {
-            console.error('خطأ في جلب الأقسام:', error);
-            alert('حدث خطأ في الاتصال بجلب الأقسام.');
+        } catch (err) {
+            console.error('Error fetching departments:', err);
+            alert(err.message);
         }
     }
 
-    // Handle Add Department form submission
-    addModalSaveBtn.addEventListener('click', async function() {
+    // Handlers for edit/delete open
+    function handleEdit(e) {
+        e.preventDefault(); e.stopPropagation();
+        const el = e.currentTarget;
+        editDepartmentIdInput.value = el.dataset.id;
+        editDepartmentNameInput.value = el.dataset.name;
+        openModal(editDepartmentModal);
+    }
+    function handleDeleteOpen(e) {
+        e.preventDefault(); e.stopPropagation();
+        deleteDepartmentModal.dataset.departmentId = e.currentTarget.dataset.id;
+        openModal(deleteDepartmentModal);
+    }
+
+    // Add department
+    addModalSaveBtn.addEventListener('click', async () => {
+        if (!permissions.canAdd) return;
         const name = addDepartmentNameInput.value;
-        const imageFile = addDepartmentImageInput.files[0]; // الحصول على الملف
-
-        if (!name || !imageFile) {
-            alert('اسم القسم والصورة مطلوبان.');
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('name', name);
-        formData.append('image', imageFile);
-
+        const file = addDepartmentImageInput.files[0];
+        if (!name || !file) return alert('اسم القسم والصورة مطلوبان.');
+        const fd = new FormData(); fd.append('name', name); fd.append('image', file);
         try {
-            const response = await fetch('http://localhost:3006/api/departments', {
-                method: 'POST',
-                // لا نحتاج لـ 'Content-Type': 'application/json' مع FormData
-                headers: {
-                    'Authorization': `Bearer ${getToken()}`
-                },
-                body: formData
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                alert(data.message);
-                closeModal(addDepartmentModal);
-                fetchDepartments();
-            } else {
-                alert(data.message || 'حدث خطأ عند إضافة القسم.');
-            }
-        } catch (error) {
-            console.error('خطأ في إضافة القسم:', error);
-            alert('حدث خطأ في الاتصال عند إضافة القسم.');
-        }
+            const res = await fetch('http://localhost:3006/api/departments', { method: 'POST', headers: { 'Authorization': `Bearer ${getToken()}` }, body: fd });
+            const r = await res.json(); if (!res.ok) throw new Error(r.message);
+            alert(r.message); closeModal(addDepartmentModal); fetchDepartments();
+        } catch (err) { console.error(err); alert(err.message); }
     });
 
-    // Handle Edit Department form submission
-    editModalSaveBtn.addEventListener('click', async function() {
+    // Edit department
+    editModalSaveBtn.addEventListener('click', async () => {
+        if (!permissions.canEdit) return;
         const id = editDepartmentIdInput.value;
         const name = editDepartmentNameInput.value;
-        const imageFile = editDepartmentImageInput.files[0]; // الحصول على الملف (إذا تم اختيار واحد)
-
-        if (!id || !name) { // لم نعد نطلب الصورة كشرط أساسي للتعديل
-            alert('اسم القسم مطلوب للتعديل.');
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('name', name);
-        if (imageFile) { // إضافة الصورة فقط إذا تم اختيار ملف جديد
-            formData.append('image', imageFile);
-        }
-
+        if (!id || !name) return alert('اسم القسم مطلوب للتعديل.');
+        const fd = new FormData(); fd.append('name', name);
+        const file = editDepartmentImageInput.files[0]; if (file) fd.append('image', file);
         try {
-            const response = await fetch(`http://localhost:3006/api/departments/${id}`, {
-                method: 'PUT',
-                // لا نحتاج لـ 'Content-Type': 'application/json' مع FormData
-                headers: {
-                    'Authorization': `Bearer ${getToken()}`
-                },
-                body: formData
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                alert(data.message);
-                closeModal(editDepartmentModal);
-                fetchDepartments();
-            } else {
-                alert(data.message || 'حدث خطأ عند تعديل القسم.');
-            }
-        } catch (error) {
-            console.error('خطأ في تعديل القسم:', error);
-            alert('حدث خطأ في الاتصال عند تعديل القسم.');
-        }
+            const res = await fetch(`http://localhost:3006/api/departments/${id}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${getToken()}` }, body: fd });
+            const r = await res.json(); if (!res.ok) throw new Error(r.message);
+            alert(r.message); closeModal(editDepartmentModal); fetchDepartments();
+        } catch (err) { console.error(err); alert(err.message); }
     });
 
-    // Handle Delete Department confirmation
-    deleteModalConfirmBtn.addEventListener('click', async function() {
-        const id = deleteModalConfirmBtn.dataset.departmentId; // Get ID from stored data attribute
-
+    // Delete department
+    deleteModalConfirmBtn.addEventListener('click', async () => {
+        if (!permissions.canDelete) return;
+        const id = deleteDepartmentModal.dataset.departmentId;
         try {
-            const response = await fetch(`http://localhost:3006/api/departments/${id}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${getToken()}`
-                }
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                alert(data.message);
-                closeModal(deleteDepartmentModal);
-                fetchDepartments();
-            } else {
-                alert(data.message || 'فشل حذف القسم.');
-            }
-        } catch (error) {
-            console.error('خطأ في حذف القسم:', error);
-            alert('حدث خطأ في الاتصال بحذف القسم.');
-        }
+            const res = await fetch(`http://localhost:3006/api/departments/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${getToken()}` } });
+            const r = await res.json(); if (!res.ok) throw new Error(r.message);
+            alert(r.message); closeModal(deleteDepartmentModal); fetchDepartments();
+        } catch (err) { console.error(err); alert(err.message); }
     });
 
-    // Event Listeners for opening modals
-    if (addDepartmentBtn) {
-        addDepartmentBtn.addEventListener('click', () => openModal(addDepartmentModal));
-    }
+    // Cancel buttons
+    addModalCancelBtn.addEventListener('click', () => closeModal(addDepartmentModal));
+    editModalCancelBtn.addEventListener('click', () => closeModal(editDepartmentModal));
+    deleteModalCancelBtn.addEventListener('click', () => closeModal(deleteDepartmentModal));
 
-    // Add event listeners for modal close buttons
-    if (addModalCancelBtn) {
-        addModalCancelBtn.addEventListener('click', () => closeModal(addDepartmentModal));
-    }
-    if (editModalCancelBtn) {
-        editModalCancelBtn.addEventListener('click', () => closeModal(editDepartmentModal));
-    }
-    if (deleteModalCancelBtn) {
-        deleteModalCancelBtn.addEventListener('click', () => closeModal(deleteDepartmentModal));
-    }
+    // Overlay click closes
+    document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if (e.target === m) closeModal(m); }));
 
-    // Add event listeners for modal close buttons (×)
-    document.querySelectorAll('.modal-overlay .close-button').forEach(button => {
-        button.addEventListener('click', function() {
-            const modal = this.closest('.modal-overlay');
-            closeModal(modal);
-        });
-    });
+    // Init
+await fetchPermissions();
+updateAddButtonVisibility();
+await fetchDepartments();
 
-    // Add event listeners for clicking outside modal to close
-    document.querySelectorAll('.modal-overlay').forEach(modal => {
-        modal.addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeModal(this);
-            }
-        });
-    });
-
-    // Initial fetch of departments when the page loads
-    fetchDepartments();
-
-    // Global goBack function (assuming it's defined elsewhere or will be here)
-    window.goBack = function() {
-        window.history.back();
-    };
-}); 
+    window.goBack = () => window.history.back();
+});
