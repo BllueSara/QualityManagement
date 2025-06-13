@@ -81,7 +81,7 @@ async function selectUser(id) {
   document.getElementById('profile-role')      .textContent = u.role           || '—';
 
   // أدوار
-  const roles = await fetchJSON(`${apiBase}/roles`);
+const roles = await fetchJSON(`${apiBase}/users/roles`);
   roleSelect.innerHTML = roles
     .map(r => `<option value="${r}" ${u.role===r?'selected':''}>${r}</option>`)
     .join('');
@@ -90,24 +90,27 @@ roleButton.onclick = () => {
 };
   // صلاحيات
   const perms = await fetchJSON(`${apiBase}/users/${id}/permissions`);
+  console.log(perms);
+
   const permsSet = new Set(perms);
   document.querySelectorAll('.permission-item .switch').forEach(label => {
     const input = label.querySelector('input[type="checkbox"]');
 const key = label.dataset.key;
     input.checked = permsSet.has(key);
-    input.onchange = null;
-    input.addEventListener('change', async () => {
-      const method = input.checked ? 'POST' : 'DELETE';
-      try {
-        await fetchJSON(
-          `${apiBase}/users/${id}/permissions/${encodeURIComponent(key)}`,
-          { method }
-        );
-      } catch {
-        input.checked = !input.checked;
-        alert('فشل تحديث الصلاحية');
-      }
-    });
+  input.onchange = async function () {
+  const checked = this.checked;
+  try {
+    const method = checked ? 'POST' : 'DELETE';
+    await fetchJSON(
+      `${apiBase}/users/${id}/permissions/${encodeURIComponent(key)}`,
+      { method }
+    );
+  } catch {
+    // لو فشل، نرجع الحالة كما كانت
+    this.checked = !checked;
+    alert('فشل تحديث الصلاحية');
+  }
+};
   });
 }
 

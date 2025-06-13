@@ -1,4 +1,14 @@
-document.addEventListener('DOMContentLoaded', function() {
+const apiBase      = 'http://localhost:3006/api';
+const permissions = {
+  canAddFolder:    false,
+  canEditFolder:   false,
+  canDeleteFolder: false,
+  canAddContent:   false,
+  canEditContent:  false,
+  canDeleteContent:false
+};
+
+document.addEventListener('DOMContentLoaded',async function() {
     // console.log('DOMContentLoaded event fired in department-content.js');
       let isInitialFetch = true;  // ← الفلاج
 
@@ -91,7 +101,11 @@ if (cancelContentBtn) {
     let currentDepartmentId = null; // متغير لتخزين معرف القسم الحالي
     let currentFolderId = null; // متغير لتخزين معرف المجلد الحالي
 
-    
+    await fetchPermissions();
+// أخف أو أظهر الأزرار العامّة
+  if (!permissions.canAddFolder)  addFolderBtn   .style.display = 'none';
+  if (!permissions.canAddContent) addContentBtn .style.display = 'none';
+
     // دالة لجلب التوكن من localStorage (مكررة، يمكن نقلها إلى shared.js)
     function getToken() {
         const token = localStorage.getItem('token');
@@ -115,6 +129,31 @@ if (cancelContentBtn) {
             return null;
         }
     }
+async function fetchPermissions() {
+  const userId = JSON.parse(atob(getToken().split('.')[1])).id;
+  const headers = { 'Authorization': `Bearer ${getToken()}` };
+  // كالمعتاد: جلب role
+  const userRes = await fetch(`${apiBase}/users/${userId}`, { headers });
+  const { data: user } = await userRes.json();
+  if (['admin','sub-admin'].includes(user.role)) {
+    // للمسؤولين: صلاحيات كاملة
+    Object.keys(permissions).forEach(k => permissions[k]=true);
+    return;
+  }
+  // ثم جلب قائمة المفاتيح
+  const permsRes = await fetch(`${apiBase}/users/${userId}/permissions`, { headers });
+  const { data: perms } = await permsRes.json();
+ const keys = perms.map(p => 
+    (typeof p === 'string' ? p : p.permission)
+  );  // منها `add_section` و `edit_section` و `delete_section`
+  if (keys.includes('add_folder'))    permissions.canAddFolder    = true;
+  if (keys.includes('edit_folder'))   permissions.canEditFolder   = true;
+  if (keys.includes('delete_folder')) permissions.canDeleteFolder = true;
+  // وبالمثل لمحتوى الملفات:
+  if (keys.includes('add_content'))    permissions.canAddContent    = true;
+  if (keys.includes('edit_content'))   permissions.canEditContent   = true;
+  if (keys.includes('delete_content')) permissions.canDeleteContent = true;
+}
 
     // دالة لجلب مجلدات القسم بناءً على departmentId
   async function fetchFolders(departmentId) {
@@ -153,16 +192,19 @@ if (cancelContentBtn) {
         const card = document.createElement('div');
         card.className = 'folder-card';
         card.dataset.id = folder.id;
-        card.innerHTML = `
-          <div class="item-icons">
-            <a href="#" class="edit-icon" data-id="${folder.id}"><img src="../images/edit.svg"></a>
-            <a href="#" class="delete-icon" data-id="${folder.id}"><img src="../images/delet.svg"></a>
-          </div>
-          <img src="../images/folders.svg">
-          <div class="folder-info">
-            <div class="folder-name">${folder.name}</div>
-          </div>
-        `;
+  let icons = '';
+  if (permissions.canEditFolder || permissions.canDeleteFolder) {
+    icons = '<div class="item-icons">';
+    if (permissions.canEditFolder)   icons += `<a href="#" class="edit-icon"   data-id="${folder.id}"><img src="../images/edit.svg"></a>`;
+    if (permissions.canDeleteFolder) icons += `<a href="#" class="delete-icon" data-id="${folder.id}"><img src="../images/delet.svg"></a>`;
+    icons += '</div>';
+  }
+
+  card.innerHTML = icons +
+    `<img src="../images/folders.svg">
+     <div class="folder-info">
+       <div class="folder-name">${folder.name}</div>
+     </div>`;
         foldersList.appendChild(card);
 
         card.addEventListener('click', e => {
@@ -217,33 +259,47 @@ if (cancelContentBtn) {
                         const approvalStatus = content.is_approved ? 'معتمد' : 'في انتظار الاعتماد';
                         const approvalClass = content.is_approved ? 'approved' : 'pending';
                         
-                        const fileItem = document.createElement('div');
-                        fileItem.className = 'file-item';
-                        fileItem.innerHTML = `
-                            <div class="item-icons">
-                                <a href="#" class="edit-icon" data-id="${content.id}"><img src="../images/edit.svg" alt="تعديل"></a>
-                                <a href="#" class="delete-icon" data-id="${content.id}"><img src="../images/delet.svg" alt="حذف"></a>
-                            </div>
-                            <img src="../images/pdf.svg" alt="ملف PDF">
-                            <div class="file-info">
-                                <div class="file-name">${content.title}</div>
-                                <div class="approval-status ${approvalClass}">${approvalStatus}</div>
-                            </div>
-                        `;
-                        filesList.appendChild(fileItem);
+                        // 1) بنية الأيقونات حسب الصلاحيات
+        let icons = '';
+        if (permissions.canEditContent || permissions.canDeleteContent) {
+          icons = '<div class="item-icons">';
+          if (permissions.canEditContent) {
+            icons += `<a href="#" class="edit-icon"   data-id="${content.id}"><img src="../images/edit.svg" alt="تعديل"></a>`;
+          }
+          if (permissions.canDeleteContent) {
+            icons += `<a href="#" class="delete-icon" data-id="${content.id}"><img src="../images/delet.svg" alt="حذف"></a>`;
+          }
+          icons += '</div>';
+        }
 
-                        // إضافة event listeners لأيقونات التعديل والحذف
-                        fileItem.querySelector('.edit-icon').addEventListener('click', function(e) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            openEditContentModal(content.id);
-                        });
+        // 2) أنشئ العنصر
+        const fileItem = document.createElement('div');
+        fileItem.className = 'file-item';
+        fileItem.innerHTML = `
+          ${icons}
+          <img src="../images/pdf.svg" alt="ملف PDF">
+          <div class="file-info">
+            <div class="file-name">${content.title}</div>
+            <div class="approval-status ${approvalClass}">${approvalStatus}</div>
+          </div>
+        `;
+        filesList.appendChild(fileItem);
 
-                        fileItem.querySelector('.delete-icon').addEventListener('click', function(e) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            openDeleteContentModal(content.id);
-                        });
+        // 3) اربط الـ listeners فقط إذا الأيقونات موجودة
+        if (permissions.canEditContent) {
+          const btn = fileItem.querySelector('.edit-icon');
+          btn && btn.addEventListener('click', e => {
+            e.preventDefault(); e.stopPropagation();
+            openEditContentModal(content.id);
+          });
+        }
+        if (permissions.canDeleteContent) {
+          const btn = fileItem.querySelector('.delete-icon');
+          btn && btn.addEventListener('click', e => {
+            e.preventDefault(); e.stopPropagation();
+            openDeleteContentModal(content.id);
+          });
+        }
 
                         // عند النقر على الملف، افتح المحتوى مباشرة
                         fileItem.addEventListener('click', function(e) {
@@ -697,8 +753,8 @@ if (cancelContentBtn) {
     // عند الضغط على زر الرجوع من تفاصيل الملف إلى قائمة الملفات
     if (backToFilesBtn) {
         backToFilesBtn.addEventListener('click', function() {
-            foldersSection.style.display = 'none';
             folderContentsSection.style.display = 'block';
+            foldersSection.style.display = 'none';
             backToFilesContainer.style.display = 'none';
         });
     }

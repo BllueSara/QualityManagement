@@ -10,28 +10,31 @@ const {
   adminResetPassword,
   getRoles,
   getLogs,
-    getNotifications,
+  getNotifications,
   markAsRead,
   deleteNotification
 } = require('../controllers/usersController');
 
 const router = express.Router();
 
-// Users endpoints
-router.get('/',                   authenticateToken, getUsers);     
-router.get('/logs', authenticateToken, getLogs);                          // GET /api/users/logs
-// Notifications endpoints
-router.get('/:id/notifications',          authenticateToken, getNotifications);     // GET /api/users/:id/notifications
-router.put('/:id/notifications/:id/read', authenticateToken, markAsRead);          // PUT /api/users/:id/notifications/:id/read
-router.delete('/:id/notifications/:id',   authenticateToken, deleteNotification);  // DELETE /api/users/:id/notifications/:id          // GET /api/users
-router.get('/:id',                authenticateToken, getUserById);            // GET /api/users/:id
-router.post('/',                  authenticateToken, addUser);               // POST /api/users
-router.put('/:id',                authenticateToken, updateUser);            // PUT /api/users/:id
-router.delete('/:id',             authenticateToken, deleteUser);            // DELETE /api/users/:id
-router.put('/:id/role',           authenticateToken, changeUserRole);       // PUT /api/users/:id/role
-router.put('/:id/reset-password', authenticateToken, adminResetPassword); // PUT /api/users/:id/reset-password
-router.get('/roles',              authenticateToken, getRoles);               // GET /api/users/roles
+// 1) أولاً الراوت العام
+router.get('/',                   authenticateToken, getUsers);
+router.get('/logs',               authenticateToken, getLogs);
 
-// Logs endpoint
+// 2) الراوت الخاص بجلب الأدوار — لازم يكون قبل('/:id')
+router.get('/roles',              authenticateToken, getRoles);
+
+// 3) الراوتس المرتبطة بالـ notifications
+router.get('/:id/notifications',          authenticateToken, getNotifications);
+router.put('/:id/notifications/:nid/read',authenticateToken, markAsRead);
+router.delete('/:id/notifications/:nid',  authenticateToken, deleteNotification);
+
+// 4) الباقي اللي يستخدم الـ :id
+router.get('/:id',                authenticateToken, getUserById);
+router.post('/',                  authenticateToken, addUser);
+router.put('/:id',                authenticateToken, updateUser);
+router.delete('/:id',             authenticateToken, deleteUser);
+router.put('/:id/role',           authenticateToken, changeUserRole);
+router.put('/:id/reset-password', authenticateToken, adminResetPassword);
 
 module.exports = router;
