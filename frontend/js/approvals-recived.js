@@ -4,6 +4,10 @@ let permissionsKeys = [];
 let selectedContentId = null;
 let canvas, ctx;
 
+
+const urlParams = new URLSearchParams(window.location.search);
+const passedId = urlParams.get('id');
+
 // جلب صلاحيات المستخدم
 async function fetchPermissions() {
   if (!token) return;
@@ -50,6 +54,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     allItems = items; // 🔄 حفظ كل العناصر
     await setupFilters(allItems); // ✅ تجهيز الفلاتر قبل العرض
     renderApprovals(allItems); // عرض بناءً على كل البيانات
+    if (passedId) highlightAndScrollToRow(passedId);
+
   } catch (err) {
     console.error("خطأ في جلب الاعتمادات:", err);
     alert("حدث خطأ أثناء تحميل البيانات");
@@ -482,4 +488,13 @@ function disableActionsFor(contentId) {
   if (!row) return;
   const actionsCell = row.querySelector('.col-actions');
   if (actionsCell) actionsCell.innerHTML = ''; // إخفاء جميع الأزرار
+}
+
+
+function highlightAndScrollToRow(contentId) {
+  const row = document.querySelector(`tr[data-id="${contentId}"]`);
+  if (row) {
+    row.style.backgroundColor = '#d1fae5'; // لون أخضر فاتح مثلاً
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 }
