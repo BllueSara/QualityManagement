@@ -8,21 +8,32 @@ const db = mysql.createPool({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME
 });
+const path = require('path');
+const fs = require('fs');
 
 const { getMyUploadedContent, addContent } = require('../controllers/contentController');
+const { getContentById } = require('../controllers/contentController');
+const { updateContent } = require('../controllers/contentController');
+
 
 const router = express.Router();
 
 
 // وسطح التخزين في مجلّد uploads (أو عدّل على كيفما تحب)
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/'),
-  filename:    (req, file, cb) => {
-    // اسم الملف مع timestamp لتفادي التكرار
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + '-' + file.originalname);
-  }
-});
+    destination: function (req, file, cb) {
+      const uploadDir = path.join(__dirname, '../../uploads/content_files'); // تأكد أنه مسار مطلق من backend
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      cb(null, uploadDir);
+    },
+    filename: function (req, file, cb) {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      const ext = path.extname(file.originalname) || '.pdf';
+      cb(null, `${uniqueSuffix}${ext}`);
+    }
+  });
 const upload = multer({ storage });
 
 // GET /api/contents/my-uploads
@@ -84,6 +95,7 @@ router.get('/track/:id', async (req, res) => {
   }
 });
 
+router.get('/:contentId', getContentById);
 
 
 // POST /api/contents
@@ -96,6 +108,7 @@ router.post(
 );
 
 
+router.put('/:contentId', upload.single('file'), updateContent);
 
 
 module.exports = router;
