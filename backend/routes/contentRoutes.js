@@ -48,7 +48,6 @@ router.get('/track/:id', async (req, res) => {
   const contentId = req.params.id;
 
   try {
-    // جلب معلومات المحتوى نفسه
     const [contentRows] = await db.execute(`
       SELECT c.title, c.approval_status, c.created_at, d.name AS department, f.name AS folder
       FROM contents c
@@ -57,46 +56,53 @@ router.get('/track/:id', async (req, res) => {
       WHERE c.id = ?
     `, [contentId]);
 
-    // جلب سجل التواقيع حسب القسم
+    // جلب كل المعتمدين مع آخر حالة لهم إن وجدت
     const [logs] = await db.execute(`
-      SELECT d.name AS department_name, al.status, al.created_at, al.comments
-      FROM approval_logs al
-      JOIN users u ON al.approver_id = u.id
-      LEFT JOIN departments d ON u.department_id = d.id
-      WHERE al.content_id = ?
-      ORDER BY al.created_at ASC
-    `, [contentId]);
-
-    // جلب الأقسام التي لم توقع بعد
-    const [pendingApprovers] = await db.execute(`
-      SELECT DISTINCT d.name AS department_name
+      SELECT 
+        d.name AS department_name,
+        u.username AS approver_name,
+        al.status,
+        al.comments,
+        al.created_at
       FROM content_approvers ca
       JOIN users u ON ca.user_id = u.id
       LEFT JOIN departments d ON u.department_id = d.id
-      WHERE ca.content_id = ?
-        AND NOT EXISTS (
-          SELECT 1 FROM approval_logs al
-          WHERE al.content_id = ca.content_id AND al.approver_id = ca.user_id
+      LEFT JOIN approval_logs al 
+        ON al.content_id = ca.content_id 
+        AND al.approver_id = ca.user_id
+        AND al.created_at = (
+          SELECT MAX(created_at) 
+          FROM approval_logs 
+          WHERE content_id = ca.content_id AND approver_id = ca.user_id
         )
+      WHERE ca.content_id = ?
+      ORDER BY al.created_at IS NULL DESC, al.created_at ASC
     `, [contentId]);
 
-    // إرسال الرد النهائي
+    const timeline = logs.map(log => ({
+      department: log.department_name || 'غير معروف',
+      approver: log.approver_name,
+      status: log.status || 'pending',
+      comments: log.comments,
+      created_at: log.created_at
+    }));
+
+    const pending = timeline.filter(t => t.status === 'pending');
+
     res.json({
       status: 'success',
       content: contentRows[0],
-      timeline: logs.map(log => ({
-        department: log.department_name || 'غير معروف',
-        status: log.status,
-        created_at: log.created_at,
-        comments: log.comments
-      })),
-      pending: pendingApprovers.map(p => p.department_name || 'غير معروف')
+      timeline,
+      pending
     });
+
   } catch (err) {
     console.error('Error fetching track info:', err);
     res.status(500).json({ status: 'error', message: 'فشل جلب بيانات التتبع' });
   }
 });
+
+
 
 router.get('/:contentId', getContentById);
 
