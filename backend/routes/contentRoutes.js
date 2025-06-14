@@ -14,6 +14,7 @@ const fs = require('fs');
 const { getMyUploadedContent, addContent } = require('../controllers/contentController');
 const { getContentById } = require('../controllers/contentController');
 const { updateContent } = require('../controllers/contentController');
+const { deleteContent } = require('../controllers/contentController');
 
 
 const router = express.Router();
@@ -38,6 +39,8 @@ const upload = multer({ storage });
 
 // GET /api/contents/my-uploads
 router.get('/my-uploads', getMyUploadedContent);
+
+router.delete('/:contentId', deleteContent);
 
 
 // جلب تفاصيل تتبع الطلب
