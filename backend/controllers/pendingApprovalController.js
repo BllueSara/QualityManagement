@@ -1,46 +1,87 @@
+// controllers/pendingApprovalsController.js
 const mysql = require('mysql2/promise');
+const jwt   = require('jsonwebtoken');
 
+async function getUserPerms(pool, userId) {
+  const [rows] = await pool.execute(`
+    SELECT p.permission_key
+    FROM permissions p
+    JOIN user_permissions up ON up.permission_id = p.id
+    WHERE up.user_id = ?
+  `, [userId]);
+  return new Set(rows.map(r => r.permission_key));
+}
 
 exports.getPendingApprovals = async (req, res) => {
-    const pool = mysql.createPool({
-      host: process.env.DB_HOST,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0
-    });
-  
-    try {
-      const [rows] = await pool.execute(`
-        SELECT 
-          c.id,
-          c.title,
-          c.approval_status,
-          GROUP_CONCAT(u2.username SEPARATOR ', ') AS approvers,
-          d.name AS department_name,
-          u.username AS created_by
-        FROM contents c
-        JOIN folders f ON c.folder_id = f.id
-        JOIN departments d ON f.department_id = d.id
-        JOIN users u ON c.created_by = u.id
-        LEFT JOIN content_approvers ca ON ca.content_id = c.id
-        LEFT JOIN users u2 ON ca.user_id = u2.id
-        WHERE c.approval_status = 'pending'
-        GROUP BY c.id
-      `);
-  
-      res.json({ status: 'success', data: rows });
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ status: 'error', message: 'Internal Server Error' });
-    } finally {
-      await pool.end();
+  // 1) فكّ JWT
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith('Bearer ')) {
+    return res.status(401).json({ status:'error', message:'Unauthorized' });
+  }
+  let payload;
+  try {
+    payload = jwt.verify(auth.slice(7), process.env.JWT_SECRET);
+  } catch (err) {
+    return res.status(401).json({ status:'error', message:'Invalid token' });
+  }
+  const userId   = payload.id;
+  const userRole = payload.role;
+
+  // 2) افتح الاتصال
+  const pool = mysql.createPool({
+    host:            process.env.DB_HOST,
+    user:            process.env.DB_USER,
+    password:        process.env.DB_PASSWORD,
+    database:        process.env.DB_NAME,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit:       0
+  });
+
+  try {
+    // 3) جلب صلاحيات المستخدم
+    const permsSet = await getUserPerms(pool, userId);
+    const canViewAll = userRole === 'admin' || permsSet.has('transfer_credits');
+
+    let sql = `
+      SELECT 
+        c.id,
+        c.title,
+        c.approval_status,
+        GROUP_CONCAT(u2.username SEPARATOR ', ') AS approvers,
+        d.name AS department_name,
+        u.username AS created_by
+      FROM contents c
+      JOIN folders f ON c.folder_id = f.id
+      JOIN departments d ON f.department_id = d.id
+      JOIN users u ON c.created_by = u.id
+      LEFT JOIN content_approvers ca ON ca.content_id = c.id
+      LEFT JOIN users u2 ON ca.user_id = u2.id
+      WHERE c.approval_status = 'pending'
+    `;
+    const params = [];
+
+    if (!canViewAll) {
+      // لمشتركي transfer_credits فقط محتوياتهم
+      sql += ` AND c.created_by = ?`;
+      params.push(userId);
     }
-  };
-  
-  
+
+    sql += `
+      GROUP BY c.id
+    `;
+
+    const [rows] = await pool.execute(sql, params);
+    return res.json({ status: 'success', data: rows });
+
+  } catch (err) {
+    console.error('Error in getPendingApprovals:', err);
+    return res.status(500).json({ status:'error', message:'Internal Server Error' });
+  } finally {
+    await pool.end();
+  }
+};
+
   
 
 exports.sendApprovalRequest = async (req, res) => {

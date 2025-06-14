@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>تتبع التذكرة - نظام إدارة الجودة والسلامة</title>
+
+  <!-- ===== استيراد خط Tajawal ===== -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- ===== Font Awesome للأيقونات ===== -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    crossorigin="anonymous"
+  />
+
+  <!-- ===== ربط ملف التنسيقات ===== -->
+  <link rel="stylesheet" href="/frontend/css/track-request.css" />
+</head>
+<body>
+  <!-- ===== الهيدر العلوي ===== -->
+  <header class="main-header">
+    <div class="header-container">
+      <div class="system-title">
+          <img src="/frontend/images/system-title.png" alt="نظام إدارة الجودة والسلامة">
+  </div>
+       <div class="hospital-logo">
+                <img src="/frontend/images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز">
+            </div>
+    </div>
+  </header>
+  <div class="header-actions">
+    <button class="back-btn" onclick="history.back()">
+        <i class="fas fa-arrow-left"></i>
+        <span>رجوع</span>
+  </button>
+  <button class="home-btn" onclick="window.location.href='index.html'">
+    <i class="fas fa-home"></i>
+    <span>الرئيسية</span>
+  </button>
+</div>
+  <!-- ===== خط أفقي أسفل الهيدر ===== -->
+  <div class="header-divider"></div>
+
+  <!-- ===== المحتوى الرئيسي ===== -->
+  <main class="content-wrapper">
+    <!-- ===== عنوان الصفحة والوصف ===== -->
+    <div class="page-header">
+      <h1 class="page-title">تتبع الطلب</h1>
+    </div>
+
+    <!-- ===== بطاقة تتبع الطلب ===== -->
+    <div class="track-card">
+      <!-- ===== القسم التالي في أعلى اليمين ===== -->
+      <div class="next-dept">
+        <span class="label-text">القسم التالي:</span>
+        <span class="dept-name"> </span>
+      </div>
+
+      <!-- ===== رأس البطاقة: الحالة الحالية وأخر تحديث ===== -->
+      <div class="track-top">
+        <div class="track-header">
+          <h2 class="track-status-title">   </h2>
+          <span class="last-update">   </span>
+        </div>
+
+        <!-- ===== قسم التقدم (Progress) ===== -->
+        <div class="track-progress-container">
+          <!-- نص التقدم -->
+          <div class="progress-info">
+            <span class="progress-label"> </span>
+            <span class="progress-steps">    </span>
+          </div>
+          <!-- دائرة النسبة -->
+          <div class="progress-circle">
+            <svg viewBox="0 0 36 36" class="circular-chart blue">
+                              <text x="18" y="21" class="percentage-text"></text>
+
+              <path
+                class="circle-bg"
+                d="M18 2.0845
+                   a 15.9155 15.9155 0 0 1 0 31.831
+                   a 15.9155 15.9155 0 0 1 0 -31.831"
+              />
+              <path
+                class="circle"
+                stroke-dasharray="75,100"
+                d="M18 2.0845
+                   a 15.9155 15.9155 0 0 1 0 31.831
+                   a 15.9155 15.9155 0 0 1 0 -31.831"
+              />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== خط تقسيم أفقي ===== -->
+      <div class="divider"></div>
+
+      <!-- ===== قائمة Timeline ===== -->
+      <div class="timeline">
+        <!-- مرحلة مكتملة -->
+        <div class="timeline-item completed">
+          <div class="icon-wrapper">
+            <div class="icon-bg completed-bg">
+              <i class="fas fa-check"></i>
+            </div>
+          </div>
+          <div class="timeline-content">
+            <h3 class="timeline-dept"> </h3>
+            <div class="timeline-details">
+              <span class="timeline-date">  </span>
+              <span class="status-badge approved-badge"></span>
+            </div>
+            <p class="timeline-note">   >
+          </div>
+        </div>
+
+        <!-- مرحلة قيد المراجعة -->
+        <div class="timeline-item pending">
+          <div class="icon-wrapper">
+            <div class="icon-bg pending-bg">
+              <i class="fas fa-clock"></i>
+            </div>
+          </div>
+          <div class="timeline-content">
+            <h3 class="timeline-dept"> </h3>
+            <div class="timeline-details">
+              <span class="timeline-date">  </span>
+              <span class="status-badge pending-badge"> </span>
+            </div>
+            <p class="timeline-note">   </p>
+          </div>
+        </div>
+
+        <!-- مرحلة في الانتظار -->
+        <div class="timeline-item waiting">
+          <div class="icon-wrapper">
+            <div class="icon-bg waiting-bg">
+              <i class="fas fa-circle"></i>
+            </div>
+          </div>
+          <div class="timeline-content">
+            <h3 class="timeline-dept"> </h3>
+            <div class="timeline-details">
+              <span class="timeline-date">  </span>
+              <span class="status-badge waiting-badge"> </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- نهاية التايملاين -->
+
+    </div>
+    <!-- نهاية بطاقة التتبع -->
+
+  </main>
+</body>
+<script src="/frontend/js/track-request-ticket.js"></script>
+
+</html>

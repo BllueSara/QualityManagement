@@ -211,3 +211,27 @@ exports.assignToUsers = async (req, res) => {
   await Ticket.assignUsers(ticketId, assignees, req.user.id);
   res.json({ status: 'success' });
 };
+// GET /api/tickets/:id/track
+exports.trackTicket = async (req, res) => {
+  const ticketId = req.params.id;
+  try {
+    const data = await Ticket.track(ticketId);
+    if (!data) return res.status(404).json({ status:'error', message:'التذكرة غير موجودة' });
+
+    // شطب المراحل المكتملة
+    const done = data.timeline.filter(i => ['مغلق','معتمد'].includes(i.status)).length;
+    const total = data.timeline.length + data.assignees.length;
+    const progress = total ? Math.round(done/total*100) : 0;
+
+    return res.json({
+      status: 'success',
+      content:     data.ticket,
+      timeline:    data.timeline,
+      pending:     data.assignees,
+      progress     // إضافي — النسبة المئوية
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ status:'error', message:'فشل جلب بيانات التتبع' });
+  }
+};

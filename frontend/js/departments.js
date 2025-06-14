@@ -63,7 +63,7 @@ async function fetchPermissions() {
   const userRes      = await fetch(`${apiBase}/users/${userId}`, { headers });
   const { data: user } = await userRes.json();
   const role = user.role;
-  if (role === 'admin' || role === 'sub-admin') {
+  if (role === 'admin') {
     permissions.canAdd = permissions.canEdit = permissions.canDelete = true;
   }
 

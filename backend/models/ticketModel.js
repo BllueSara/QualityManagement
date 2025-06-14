@@ -102,10 +102,23 @@ static async create(ticketData, userId) {
 static async findAllAndAssignments(userId, userRole) {
   const conn = await db.getConnection();
   try {
+    // 1) جلب صلاحيات المستخدم من جدول user_permissions
+    const [permRows] = await conn.query(
+      `SELECT p.permission_key 
+       FROM permissions p
+       JOIN user_permissions up ON up.permission_id = p.id
+       WHERE up.user_id = ?`,
+      [userId]
+    );
+    const userPerms = new Set(permRows.map(r => r.permission_key));
+
+    // إذا ادمن أو لديه صلاحية view_tickets => يرى كل التذاكر
+    const canViewAll = (userRole === 'admin') || userPerms.has('view_tickets');
+
     let sql, params = [];
 
-    if (userRole === 'admin') {
-      // للمشرف: كل التذاكر مع آخر حالة
+    if (canViewAll) {
+      // للمشرف أو من يملك view_tickets: كل التذاكر مع آخر حالة
       sql = `
         SELECT
           t.id,
@@ -122,7 +135,6 @@ static async findAllAndAssignments(userId, userRole) {
         LEFT JOIN departments sd ON t.responding_dept_id = sd.id
         LEFT JOIN users u      ON t.created_by = u.id
 
-        -- نضم أحدث سجل حالة لكل تذكرة
         LEFT JOIN (
           SELECT h1.ticket_id, h1.status
           FROM ticket_status_history h1
@@ -136,7 +148,7 @@ static async findAllAndAssignments(userId, userRole) {
         ORDER BY t.created_at DESC
       `;
     } else {
-      // للمستخدم العادي: فقط التذاكر المحوَّلة إليه والحالة الأخيرة 'تم الإرسال'
+      // للمستخدم العادي بدون صلاحية عرض الكل: فقط التذاكر المحوَّلة إليه والحالة 'تم الإرسال'
       sql = `
         SELECT
           t.id,
@@ -178,11 +190,11 @@ static async findAllAndAssignments(userId, userRole) {
 
     const [rows] = await conn.query(sql, params);
     return rows;
+
   } finally {
     conn.release();
   }
 }
-
 
 
 
@@ -221,11 +233,11 @@ static async findAll(userId, userRole) {
 }
 
 
-static async findById(id, userId, userRole) {
+static async findById(id) {
   const conn = await db.getConnection();
   try {
-    // 1) جلب التذكرة
-    let sql = `
+    // 1) جلب بيانات التذكرة الأساسية (بدون أي شروط إضافية على الدور)
+    const [tickets] = await conn.query(`
       SELECT 
         t.*, 
         rd.name AS reporting_dept_name, 
@@ -235,37 +247,30 @@ static async findById(id, userId, userRole) {
       FROM tickets t
       LEFT JOIN departments rd ON t.reporting_dept_id = rd.id
       LEFT JOIN departments sd ON t.responding_dept_id = sd.id
-      LEFT JOIN users u1 ON t.created_by = u1.id
-      LEFT JOIN users u2 ON t.assigned_to = u2.id
+      LEFT JOIN users u1 ON t.created_by   = u1.id
+      LEFT JOIN users u2 ON t.assigned_to  = u2.id
       WHERE t.id = ?
-    `;
-    const params = [id];
+    `, [id]);
 
-    // 2) لو مش أدمن: خفّف التصفية لمبتعّد الارتباط بـ user_departments
-    if (userRole !== 'admin') {
-      sql += `
-        AND (
-          t.created_by = ?
-          OR t.assigned_to = ?
-        )
-      `;
-      params.push(userId, userId);
+    if (tickets.length === 0) {
+      return null;
     }
-
-    const [tickets] = await conn.query(sql, params);
-    if (tickets.length === 0) return null;
     const ticket = tickets[0];
 
-    // 3) المرفقات
+    // 2) المرفقات
     const [attachments] = await conn.query(
-      'SELECT id, filename, path, mimetype, created_at FROM ticket_attachments WHERE ticket_id = ?',
+      `SELECT id, filename, path, mimetype, created_at
+       FROM ticket_attachments
+       WHERE ticket_id = ?`,
       [id]
     );
     ticket.attachments = attachments;
 
-    // 4) سجل الحالة
+    // 3) سجل الحالات
     const [history] = await conn.query(
-      `SELECT h.id, h.status, h.comments, h.created_at, u.username AS changed_by_name
+      `SELECT
+         h.id, h.status, h.comments, h.created_at,
+         u.username AS changed_by_name
        FROM ticket_status_history h
        LEFT JOIN users u ON h.changed_by = u.id
        WHERE h.ticket_id = ?
@@ -274,23 +279,29 @@ static async findById(id, userId, userRole) {
     );
     ticket.status_history = history;
 
-    // 5) التصنيفات
+    // 4) التصنيفات
     const [classifications] = await conn.query(
-      'SELECT classification FROM ticket_classifications WHERE ticket_id = ?',
+      `SELECT classification
+       FROM ticket_classifications
+       WHERE ticket_id = ?`,
       [id]
     );
     ticket.classifications = classifications.map(r => r.classification);
 
-    // 6) أنواع المرضى
+    // 5) أنواع المرضى
     const [patientTypes] = await conn.query(
-      'SELECT patient_type FROM ticket_patient_types WHERE ticket_id = ?',
+      `SELECT patient_type
+       FROM ticket_patient_types
+       WHERE ticket_id = ?`,
       [id]
     );
     ticket.patient_types = patientTypes.map(r => r.patient_type);
 
-    // 7) الردود
+    // 6) الردود
     const [replies] = await conn.query(
-      `SELECT r.id, r.text, r.created_at, u.username AS author
+      `SELECT
+         r.id, r.text, r.created_at,
+         u.username AS author
        FROM ticket_replies r
        LEFT JOIN users u ON r.author_id = u.id
        WHERE r.ticket_id = ?
@@ -300,10 +311,12 @@ static async findById(id, userId, userRole) {
     ticket.replies = replies;
 
     return ticket;
+
   } finally {
     conn.release();
   }
 }
+
 
 
 // في ملف backend/models/ticketModel.js
@@ -589,12 +602,20 @@ static async addReply(ticketId, authorId, text) {
     const isAssignee = assignees.some(a => a.assigned_to === authorId);
 
     if (isAssignee) {
-      // 4) أدخل حالة "مغلق" مع changed_by
+      // 4a) أدخل حالة "مغلق" مع changed_by
       await conn.query(
         `INSERT INTO ticket_status_history
            (ticket_id, status, changed_by)
          VALUES (?, ?, ?)`,
         [ticketId, 'مغلق', authorId]
+      );
+
+      // 4b) حدّث حقل status في جدول tickets ليعكس "مغلق"
+      await conn.query(
+        `UPDATE tickets
+           SET status = ?
+         WHERE id = ?`,
+        ['مغلق', ticketId]
       );
     }
 
@@ -650,10 +671,54 @@ static async assignUsers(ticketId, assignees = [], changedBy, comments) {
   }
 }
 
+  static async track(ticketId) {
+    const conn = await db.getConnection();
+    try {
+      // 1) بيانات التذكرة الأساسية
+      const [[ticket]] = await conn.query(
+        `SELECT 
+           t.id, t.report_short_desc   AS title, t.status AS current_status, t.created_at,
+           u1.username AS created_by,
+           rd.name AS reporting_dept_name,
+           sd.name AS responding_dept_name
+         FROM tickets t
+         LEFT JOIN users u1 ON t.created_by = u1.id
+         LEFT JOIN departments rd ON t.reporting_dept_id = rd.id
+         LEFT JOIN departments sd ON t.responding_dept_id = sd.id
+         WHERE t.id = ?`,
+        [ticketId]
+      );
+      if (!ticket) return null;
 
+      // 2) سجل الحالات
+      const [timeline] = await conn.query(
+        `SELECT h.status, h.comments, h.created_at,
+                u.username AS changed_by
+         FROM ticket_status_history h
+         LEFT JOIN users u ON h.changed_by = u.id
+         WHERE h.ticket_id = ?
+         ORDER BY h.created_at ASC`,
+        [ticketId]
+      );
+
+      // 3) المكلفون (القسم التالي)
+      const [assignees] = await conn.query(
+        `SELECT u.username, d.name AS department
+         FROM ticket_assignments ta
+         JOIN users u ON ta.assigned_to = u.id
+         LEFT JOIN departments d ON u.department_id = d.id
+         WHERE ta.ticket_id = ?`,
+        [ticketId]
+      );
+
+      return { ticket, timeline, assignees };
+    } finally {
+      conn.release();
+    }
+  }
 
 }
 
 
 
-module.exports = Ticket; 
+module.exports = Ticket;  
