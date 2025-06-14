@@ -129,9 +129,122 @@ const createFolder = async (req, res) => {
 };
 
 // الدوال التالية تبقى كما هي:
-const updateFolder  = async (req, res) => { /* ... */ };
-const getFolderById = async (req, res) => { /* ... */ };
-const deleteFolder  = async (req, res) => { /* ... */ };
+const updateFolder = async (req, res) => {
+  try {
+    const h = req.headers.authorization;
+    if (!h?.startsWith('Bearer ')) 
+      return res.status(401).json({ message: 'غير مصرح.' });
+    let decoded;
+    try {
+      decoded = jwt.verify(h.split(' ')[1], process.env.JWT_SECRET);
+    } catch {
+      return res.status(401).json({ message: 'توكن غير صالح.' });
+    }
+
+    const folderId = req.params.folderId;
+    const { name } = req.body;
+
+    if (!folderId || !name)
+      return res.status(400).json({ message: 'معرف المجلد والاسم مطلوبان.' });
+
+    const conn = await pool.getConnection();
+
+    const [rows] = await conn.execute('SELECT * FROM folders WHERE id = ?', [folderId]);
+    if (!rows.length) {
+      conn.release();
+      return res.status(404).json({ message: 'المجلد غير موجود.' });
+    }
+
+    await conn.execute(
+      `UPDATE folders 
+       SET name = ?, updated_at = CURRENT_TIMESTAMP 
+       WHERE id = ?`,
+      [name, folderId]
+    );
+
+    conn.release();
+    await logAction(decoded.id, 'update_folder', `تعديل اسم المجلد إلى: ${name}`, 'folder', folderId);
+
+    res.json({ message: 'تم تحديث اسم المجلد بنجاح.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'خطأ أثناء تعديل المجلد.' });
+  }
+};
+
+const getFolderById = async (req, res) => {
+  try {
+    const folderId = req.params.folderId;
+    if (!folderId)
+      return res.status(400).json({ message: 'معرف المجلد مطلوب.' });
+
+    const conn = await pool.getConnection();
+
+    const [rows] = await conn.execute(
+      `SELECT 
+         f.id, f.name AS title, f.department_id, f.created_at, f.updated_at,
+         u.username AS created_by_username,
+         d.name AS department_name
+       FROM folders f
+       LEFT JOIN users u ON f.created_by = u.id
+       LEFT JOIN departments d ON f.department_id = d.id
+       WHERE f.id = ?`,
+      [folderId]
+    );
+
+    conn.release();
+
+    if (!rows.length)
+      return res.status(404).json({ message: 'المجلد غير موجود.' });
+
+    res.json({ status: 'success', data: rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'حدث خطأ في الخادم أثناء جلب المجلد.' });
+  }
+};
+
+
+const deleteFolder = async (req, res) => {
+  try {
+    const h = req.headers.authorization;
+    if (!h?.startsWith('Bearer ')) 
+      return res.status(401).json({ message: 'غير مصرح.' });
+    let decoded;
+    try {
+      decoded = jwt.verify(h.split(' ')[1], process.env.JWT_SECRET);
+    } catch {
+      return res.status(401).json({ message: 'توكن غير صالح.' });
+    }
+
+    const folderId = req.params.folderId;
+    if (!folderId) 
+      return res.status(400).json({ message: 'معرف المجلد مطلوب.' });
+
+    const conn = await pool.getConnection();
+
+    // تحقق من وجود المجلد
+    const [folder] = await conn.execute('SELECT * FROM folders WHERE id = ?', [folderId]);
+    if (!folder.length) {
+      conn.release();
+      return res.status(404).json({ message: 'المجلد غير موجود.' });
+    }
+
+    // حذف كل المحتويات المرتبطة أولاً
+    await conn.execute('DELETE FROM contents WHERE folder_id = ?', [folderId]);
+
+    // ثم حذف المجلد
+    await conn.execute('DELETE FROM folders WHERE id = ?', [folderId]);
+
+    conn.release();
+    await logAction(decoded.id, 'delete_folder', `تم حذف مجلد: ${folder[0].name}`, 'folder', folderId);
+
+    return res.json({ message: 'تم حذف المجلد بنجاح.' });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'حدث خطأ في الخادم أثناء حذف المجلد.' });
+  }
+};
 
 module.exports = {
   getFolders,

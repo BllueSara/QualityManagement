@@ -285,10 +285,7 @@ const updateContent = async (req, res) => {
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({ 
-                status: 'error',
-                message: 'غير مصرح: لا يوجد توكن أو التوكن غير صالح' 
-            });
+            return res.status(401).json({ status: 'error', message: 'غير مصرح: لا يوجد توكن أو التوكن غير صالح' });
         }
 
         const token = authHeader.split(' ')[1];
@@ -296,107 +293,79 @@ const updateContent = async (req, res) => {
         try {
             decodedToken = jwt.verify(token, process.env.JWT_SECRET);
         } catch (error) {
-            return res.status(401).json({ 
-                status: 'error',
-                message: 'غير مصرح: توكن غير صالح' 
-            });
+            return res.status(401).json({ status: 'error', message: 'غير مصرح: توكن غير صالح' });
         }
 
         const contentId = req.params.contentId;
         const { title, notes } = req.body;
-        const filePath = req.file ? path.join('content_files', req.file.filename).replace(/\\/g, '/') : null;
+        const newFilePath = req.file ? path.join('content_files', req.file.filename).replace(/\\/g, '/') : null;
+
         const connection = await db.getConnection();
 
-        // التحقق من صلاحيات المستخدم
         const [content] = await connection.execute(
-            'SELECT folder_id, file_path, created_by, is_approved FROM contents WHERE id = ?',
+            'SELECT folder_id, file_path, pending_file_path, created_by, is_approved FROM contents WHERE id = ?',
             [contentId]
         );
 
         if (content.length === 0) {
             connection.release();
-            if (req.file && fs.existsSync(req.file.path)) {
-                fs.unlinkSync(req.file.path);
-            }
-            return res.status(404).json({ 
-                status: 'error',
-                message: 'المحتوى غير موجود.' 
-            });
+            if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+            return res.status(404).json({ status: 'error', message: 'المحتوى غير موجود.' });
         }
 
-        // فقط منشئ المحتوى أو المشرف يمكنه تعديل المحتوى
         if (content[0].created_by !== decodedToken.id && decodedToken.role !== 'admin') {
             connection.release();
-            return res.status(403).json({ 
-                status: 'error',
-                message: 'ليس لديك صلاحية لتعديل هذا المحتوى.' 
-            });
+            return res.status(403).json({ status: 'error', message: 'ليس لديك صلاحية لتعديل هذا المحتوى.' });
         }
 
-        // لا يمكن تعديل محتوى معتمد
         if (content[0].is_approved && decodedToken.role !== 'admin') {
             connection.release();
-            return res.status(403).json({ 
-                status: 'error',
-                message: 'لا يمكن تعديل محتوى معتمد.' 
-            });
+            return res.status(403).json({ status: 'error', message: 'لا يمكن تعديل محتوى معتمد.' });
         }
 
-        const folderIdForCheck = content[0].folder_id;
-        const oldFilePath = content[0].file_path;
-
-        // التحقق من عدم وجود محتوى آخر بنفس العنوان
-        const [existingContent] = await connection.execute(
+        const folderId = content[0].folder_id;
+        const [duplicateCheck] = await connection.execute(
             'SELECT id FROM contents WHERE title = ? AND folder_id = ? AND id != ?',
-            [title, folderIdForCheck, contentId]
+            [title, folderId, contentId]
         );
 
-        if (existingContent.length > 0) {
+        if (duplicateCheck.length > 0) {
             connection.release();
-            if (req.file && fs.existsSync(req.file.path)) {
-                fs.unlinkSync(req.file.path);
-            }
-            return res.status(409).json({ 
-                status: 'error',
-                message: 'يوجد محتوى آخر بنفس العنوان في هذا المجلد بالفعل.' 
-            });
+            if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+            return res.status(409).json({ status: 'error', message: 'يوجد محتوى آخر بنفس العنوان في هذا المجلد.' });
         }
 
-        // تحديث المحتوى
+        // بناء الاستعلام مع الاحتفاظ بالملف الأصلي
         let query = `
             UPDATE contents 
             SET title = ?, 
                 notes = ?, 
                 updated_at = CURRENT_TIMESTAMP
         `;
-        let params = [title, notes || null];
+        const params = [title, notes || null];
 
-        if (filePath) {
-            query += ', file_path = ?';
-            params.push(filePath);
+        if (newFilePath) {
+            query += `, pending_file_path = ?`;
+            params.push(newFilePath);
         }
 
-        query += ' WHERE id = ?';
+        query += ` WHERE id = ?`;
         params.push(contentId);
 
         await connection.execute(query, params);
-
-        // حذف الملف القديم إذا تم رفع ملف جديد
-     
-
         connection.release();
+
         res.json({
             status: 'success',
-            message: 'تم تحديث المحتوى بنجاح'
+            message: 'تم تحديث المحتوى. الملف الجديد في انتظار الاعتماد.'
         });
+
     } catch (error) {
         console.error('خطأ في تحديث المحتوى:', error);
-        res.status(500).json({ 
-            status: 'error',
-            message: 'حدث خطأ في الخادم' 
-        });
+        res.status(500).json({ status: 'error', message: 'حدث خطأ في الخادم' });
     }
 };
+
 
 // حذف محتوى
 const deleteContent = async (req, res) => {
@@ -598,7 +567,7 @@ const approveContent = async (req, res) => {
             });
         }
 
-        // التحقق من أن المستخدم لم يقم بالاعتماد مسبقاً
+        // التحقق من أن المستخدم لم يعتمد مسبقاً
         const approvalsLog = JSON.parse(content[0].approvals_log || '[]');
         const hasApproved = approvalsLog.some(log => log.user_id === decodedToken.id);
         if (hasApproved) {
@@ -609,7 +578,7 @@ const approveContent = async (req, res) => {
             });
         }
 
-        // إضافة الاعتماد الجديد
+        // إضافة اعتماد جديد إلى سجل التواقيع
         const newApproval = {
             user_id: decodedToken.id,
             username: decodedToken.username,
@@ -619,10 +588,23 @@ const approveContent = async (req, res) => {
         };
         approvalsLog.push(newApproval);
 
-        // تحديث حالة الاعتماد
+        // عدد الموافقين المطلوبين
         const approversRequired = JSON.parse(content[0].approvers_required || '[]');
         const approvedCount = approvalsLog.filter(log => log.approved).length;
         const isApproved = approvedCount >= approversRequired.length;
+
+        // في حالة الاعتماد النهائي، استخدم pending_file_path كـ file_path إن وجد
+        let filePathToSet = content[0].file_path;
+        if (isApproved && content[0].pending_file_path) {
+            // حذف الملف القديم
+            const oldFilePath = path.join('./uploads', content[0].file_path);
+            if (fs.existsSync(oldFilePath)) {
+                fs.unlinkSync(oldFilePath);
+            }
+
+            // تعيين الملف الجديد
+            filePathToSet = content[0].pending_file_path;
+        }
 
         await connection.execute(
             `UPDATE contents 
@@ -630,6 +612,8 @@ const approveContent = async (req, res) => {
                  is_approved = ?,
                  approval_status = ?,
                  approved_by = ?,
+                 file_path = ?,
+                 pending_file_path = NULL,
                  updated_at = CURRENT_TIMESTAMP
              WHERE id = ?`,
             [
@@ -637,17 +621,22 @@ const approveContent = async (req, res) => {
                 isApproved ? 1 : 0,
                 isApproved ? 'approved' : 'pending',
                 isApproved ? decodedToken.id : null,
+                filePathToSet,
                 contentId
             ]
         );
 
         connection.release();
+
         res.json({
             status: 'success',
-            message: isApproved ? 'تم اعتماد المحتوى بنجاح' : 'تم تسجيل اعتمادك بنجاح',
+            message: isApproved 
+                ? 'تم اعتماد المحتوى بنجاح وتم تفعيل التحديث الجديد.'
+                : 'تم تسجيل اعتمادك بنجاح. في انتظار باقي المعتمدين.',
             isApproved,
             approvalStatus: isApproved ? 'approved' : 'pending'
         });
+
     } catch (error) {
         console.error('خطأ في اعتماد المحتوى:', error);
         res.status(500).json({ 
@@ -656,6 +645,7 @@ const approveContent = async (req, res) => {
         });
     }
 };
+
 
 
 
