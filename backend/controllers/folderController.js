@@ -12,6 +12,7 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0
 });
+const { logAction } = require('../models/logger');
 
 /**
  * GET /api/departments/:departmentId/folders
@@ -115,6 +116,8 @@ const createFolder = async (req, res) => {
     );
 
     conn.release();
+    await logAction(decoded.id, 'create_folder', `تم إنشاء مجلد باسم: ${name}`, 'folder', result.insertId);
+
     return res.status(201).json({
       message: 'تم إضافة المجلد بنجاح',
       folderId: result.insertId

@@ -6,6 +6,7 @@ const db = mysql.createPool({
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'Quality'
 });
+const { logAction } = require('../models/logger');
 
 const getDepartments = async (req, res) => {
     try {
