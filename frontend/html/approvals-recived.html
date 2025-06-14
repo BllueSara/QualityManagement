@@ -67,11 +67,7 @@
             <!-- فلتر الأقسام -->
             <select id="deptFilter" class="filter-select">
                 <option value="all">جميع الأقسام</option>
-                <option value="sales">المبيعات</option>
-                <option value="hr">الموارد البشرية</option>
-                <option value="procurement">المشتريات</option>
-                <option value="finance">المالية</option>
-                <option value="marketing">التسويق</option>
+            
             </select>
         </div>
 
@@ -87,127 +83,7 @@
                     </tr>
                 </thead>
                 <tbody id="approvalsBody">
-                    <!-- مثال صف 1 -->
-                    <tr data-status="pending" data-dept="sales">
-                        <td class="col-file">تقرير المبيعات الشهري</td>
-                        <td class="col-dept">المبيعات</td>
-                        <td class="col-response">قيد الانتظار</td>
-                        <td class="col-actions">
-                            <button class="btn-sign">
-                                <i class="fas fa-user-check"></i>
-                                توقيع
-                            </button>
-                            <button class="btn-delegate">
-                                <i class="fas fa-user-friends"></i>
-                                توقيع بالنيابة
-                            </button>
-                            <button class="btn-qr">
-                                <i class="fas fa-qrcode"></i>
-                                QR Code
-                            </button>
-                            <button class="btn-reject">
-                                <i class="fas fa-times"></i>
-                                رفض
-                            </button>
-                        </td>
-                    </tr>
-                    <!-- مثال صف 2 -->
-                    <tr data-status="pending" data-dept="hr">
-                        <td class="col-file">طلب إجازة سنوية</td>
-                        <td class="col-dept">الموارد البشرية</td>
-                        <td class="col-response">قيد الانتظار</td>
-                        <td class="col-actions">
-                            <button class="btn-sign">
-                                <i class="fas fa-user-check"></i>
-                                توقيع
-                            </button>
-                            <button class="btn-delegate">
-                                <i class="fas fa-user-friends"></i>
-                                توقيع بالنيابة
-                            </button>
-                            <button class="btn-qr">
-                                <i class="fas fa-qrcode"></i>
-                                QR Code
-                            </button>
-                            <button class="btn-reject">
-                                <i class="fas fa-times"></i>
-                                رفض
-                            </button>
-                        </td>
-                    </tr>
-                    <!-- مثال صف 3 -->
-                    <tr data-status="pending" data-dept="procurement">
-                        <td class="col-file">عقد توريد معدات</td>
-                        <td class="col-dept">المشتريات</td>
-                        <td class="col-response">قيد الانتظار</td>
-                        <td class="col-actions">
-                            <button class="btn-sign">
-                                <i class="fas fa-user-check"></i>
-                                توقيع
-                            </button>
-                            <button class="btn-delegate">
-                                <i class="fas fa-user-friends"></i>
-                                توقيع بالنيابة
-                            </button>
-                            <button class="btn-qr">
-                                <i class="fas fa-qrcode"></i>
-                                QR Code
-                            </button>
-                            <button class="btn-reject">
-                                <i class="fas fa-times"></i>
-                                رفض
-                            </button>
-                        </td>
-                    </tr>
-                    <!-- مثال صف 4 -->
-                    <tr data-status="pending" data-dept="finance">
-                        <td class="col-file">ميزانية الربع الثالث</td>
-                        <td class="col-dept">المالية</td>
-                        <td class="col-response">قيد الانتظار</td>
-                        <td class="col-actions">
-                            <button class="btn-sign">
-                                <i class="fas fa-user-check"></i>
-                                توقيع
-                            </button>
-                            <button class="btn-delegate">
-                                <i class="fas fa-user-friends"></i>
-                                توقيع بالنيابة
-                            </button>
-                            <button class="btn-qr">
-                                <i class="fas fa-qrcode"></i>
-                                QR Code
-                            </button>
-                            <button class="btn-reject">
-                                <i class="fas fa-times"></i>
-                                رفض
-                            </button>
-                        </td>
-                    </tr>
-                    <!-- مثال صف 5 -->
-                    <tr data-status="pending" data-dept="marketing">
-                        <td class="col-file">خطة التسويق السنوية</td>
-                        <td class="col-dept">التسويق</td>
-                        <td class="col-response">قيد الانتظار</td>
-                        <td class="col-actions">
-                            <button class="btn-sign">
-                                <i class="fas fa-user-check"></i>
-                                توقيع
-                            </button>
-                            <button class="btn-delegate">
-                                <i class="fas fa-user-friends"></i>
-                                توقيع بالنيابة
-                            </button>
-                            <button class="btn-qr">
-                                <i class="fas fa-qrcode"></i>
-                                QR Code
-                            </button>
-                            <button class="btn-reject">
-                                <i class="fas fa-times"></i>
-                                رفض
-                            </button>
-                        </td>
-                    </tr>
-                    <!-- يمكن إضافة المزيد من الصفوف هنا بنفس الشكل -->
+               
                 </tbody>
             </table>
         </div>
@@ -257,36 +133,32 @@
   </div>
 </div>
 <!-- ===== مودال QR Code ===== -->
+<!-- ===== مودال QR Code ===== -->
 <div id="qrModal" class="modal-overlay" style="display:none;">
   <div class="modal">
     <!-- رأس المودال -->
     <div class="modal-header">
-      <h2 class="modal-title">رمز الاستجابة السريعة (QR Code)</h2>
+      <h2 class="modal-title">الاعتماد الإلكتروني</h2>
       <button class="modal-close" data-modal="qrModal">&times;</button>
     </div>
+
     <!-- جسم المودال -->
     <div class="modal-body">
-      <div class="qr-wrapper">
-        <canvas id="qrCanvas"></canvas>
-      </div>
-      <p class="qr-instruction">امسح الكود للمصادقة أو المعاينة</p>
-      <p id="qrSuccessMsg" class="qr-success" style="display:none;">
-    تم الاعتماد الإلكتروني
-  </p>
+      <p style="font-size: 16px; color: #333; margin-bottom: 20px;">
+        سيتم اعتماد هذا الملف بشكل إلكتروني ولن تكون هناك حاجة للتوقيع اليدوي.
+      </p>
+      <!-- يمكنك لاحقًا توليد QR Code هنا -->
+      <div id="qrCodePreview"></div>
     </div>
-    <!-- تذييل المودال -->
-<div class="modal-footer">
-  <button id="btnElectronicApprove" class="btn-confirm">
-    اعتماد إلكتروني
-  </button>
-  <button id="btnDownloadQR" class="btn-confirm">
-    <i class="fas fa-download"></i> تحميل الكود
-  </button>
-  <button class="btn-cancel" data-modal="qrModal">إغلاق</button>
-</div>
 
+    <!-- تذييل المودال -->
+    <div class="modal-footer">
+      <button id="btnElectronicApprove" class="btn-confirm">اعتماد إلكتروني</button>
+
+    </div>
   </div>
 </div>
+
 <!-- ===== توقيع بالنيابة عن Modal ===== -->
 <div id="delegateModal" class="modal-overlay" style="display:none;">
   <div class="modal">
@@ -298,21 +170,23 @@
     <!-- جسم المودال -->
     <div class="modal-body">
       <form id="delegateForm" novalidate>
-        <div class="form-group">
-          <label for="delegateUser">اسم المستخدم</label>
-          <input type="text" id="delegateUser" name="delegateUser" placeholder="" required />
-        </div>
+     
         <div class="form-group">
           <label for="delegateDept">القسم</label>
           <select id="delegateDept" name="delegateDept" required>
             <option value="" disabled selected>اختر القسم</option>
-            <option value="sales">المبيعات</option>
-            <option value="hr">الموارد البشرية</option>
-            <option value="procurement">المشتريات</option>
-            <option value="finance">المالية</option>
-            <option value="marketing">التسويق</option>
+           
           </select>
         </div>
+
+        <div class="form-group">
+          <label for="delegateUser">اسم المستخدم</label>
+
+          <select id="delegateUser" name="delegateUser" required>
+            <option value="" disabled selected>اختر المستخدم</option>
+          </select>
+        </div>
+
         <div class="form-group">
           <label for="delegateNotes">ملاحظات</label>
           <textarea id="delegateNotes" name="delegateNotes" rows="4" placeholder=""></textarea>
@@ -328,7 +202,7 @@
 </div>
 
 <!-- QRCode.js من CDN لتوليد QR -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+
 
     <script src="../js/approvals-recived.js"></script>
 
