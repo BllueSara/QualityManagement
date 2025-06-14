@@ -1,5 +1,32 @@
 const apiBase = 'http://localhost:3006/api';
 const token = localStorage.getItem('token');
+let permissionsKeys = [];
+let selectedContentId = null;
+let canvas, ctx;
+
+// جلب صلاحيات المستخدم
+async function fetchPermissions() {
+  if (!token) return;
+  const payload = JSON.parse(atob(token.split('.')[1] || '{}'));
+  const userId = payload.id;
+  const role = payload.role;
+
+  if (role === 'admin') {
+    permissionsKeys = ['*'];
+    return;
+  }
+
+  try {
+    const res = await fetch(`${apiBase}/users/${userId}/permissions`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return;
+    const { data: perms } = await res.json();
+    permissionsKeys = perms.map(p => typeof p === 'string' ? p : (p.permission || p.permission_key));
+  } catch (e) {
+    console.error('Failed to fetch permissions', e);
+  }
+}
 
 async function fetchJSON(url, opts = {}) {
   opts.headers = {
@@ -9,26 +36,54 @@ async function fetchJSON(url, opts = {}) {
   };
   const res = await fetch(url, opts);
   if (!res.ok) throw new Error(await res.text());
-  return await res.json();
+  return res.json();
 }
 
+// عند تحميل الصفحة
 document.addEventListener("DOMContentLoaded", async () => {
-  if (!token) return alert("لا يوجد توكن. الرجاء تسجيل الدخول.");
+  if (!token) return alert("غير مصرح: الرجاء تسجيل الدخول.");
+
+  await fetchPermissions();
 
   try {
-    const res = await fetchJSON(`${apiBase}/approvals/assigned-to-me`);
-    renderApprovals(res.data);
+    const { data: items } = await fetchJSON(`${apiBase}/approvals/assigned-to-me`);
+    renderApprovals(items);
   } catch (err) {
     console.error("خطأ في جلب الاعتمادات:", err);
     alert("حدث خطأ أثناء تحميل البيانات");
   }
 
   setupSignatureModal();
+  setupCloseButtons(); // زر الإغلاق العام لكل مودال
 });
 
+// فتح مودال عام
+function openModal(modalId) {
+  document.getElementById(modalId).style.display = 'flex';
+}
+
+// إغلاق مودال عام
+function closeModal(modalId) {
+  document.getElementById(modalId).style.display = 'none';
+}
+
+// ربط أزرار الإغلاق بالمودالات
+function setupCloseButtons() {
+  document.querySelectorAll('.modal-close').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const modalId = btn.dataset.modal || btn.closest('.modal-overlay').id;
+      closeModal(modalId);
+    });
+  });
+}
+
+// عرض الاعتمادات
 function renderApprovals(items) {
   const tbody = document.getElementById("approvalsBody");
   tbody.innerHTML = "";
+
+  const canSign = permissionsKeys.includes('*') || permissionsKeys.includes('sign');
+  const canDelegate = permissionsKeys.includes('*') || permissionsKeys.includes('sign_on_behalf');
 
   items.forEach(item => {
     const tr = document.createElement("tr");
@@ -41,8 +96,8 @@ function renderApprovals(items) {
       <td>${item.department_name || '-'}</td>
       <td class="col-response">${statusLabel(item.approval_status)}</td>
       <td class="col-actions">
-        <button class="btn-sign"><i class="fas fa-user-check"></i> توقيع</button>
-        <button class="btn-delegate"><i class="fas fa-user-friends"></i> توقيع بالنيابة</button>
+        ${canSign     ? `<button class="btn-sign"><i class="fas fa-user-check"></i> توقيع</button>` : ''}
+        ${canDelegate ? `<button class="btn-delegate"><i class="fas fa-user-friends"></i> توقيع بالنيابة</button>` : ''}
         <button class="btn-qr"><i class="fas fa-qrcode"></i> QR Code</button>
         <button class="btn-reject"><i class="fas fa-times"></i> رفض</button>
       </td>
@@ -53,51 +108,75 @@ function renderApprovals(items) {
   initActions();
 }
 
+// تصنيف الحالة
 function statusLabel(status) {
   switch (status) {
     case 'approved': return '✅ معتمد';
     case 'rejected': return '❌ مرفوض';
-    default: return '🕓 قيد الانتظار';
+    default:         return '🕓 قيد الانتظار';
   }
 }
 
-// ------------------------------
-// الأحداث الأساسية
-// ------------------------------
-
+// ربط الأزرار بالمودالات
 function initActions() {
   document.querySelectorAll('.btn-sign').forEach(btn => {
     btn.addEventListener('click', e => {
-      const tr = e.target.closest('tr');
-      const contentId = tr.dataset.id;
-      openSignatureModal(contentId);
+      const id = e.target.closest('tr').dataset.id;
+      openSignatureModal(id);
     });
   });
 
-  document.querySelectorAll('.btn-reject').forEach(btn => {
-    btn.addEventListener('click', () => alert('فتح نافذة الرفض هنا'));
-  });
-
   document.querySelectorAll('.btn-delegate').forEach(btn => {
-    btn.addEventListener('click', () => alert('فتح نافذة التوقيع بالنيابة'));
+    btn.addEventListener('click', () => openModal('delegateModal'));
   });
 
-  document.querySelectorAll('.btn-qr').forEach(btn => {
-    btn.addEventListener('click', () => alert('فتح QR Code'));
+document.querySelectorAll('.btn-qr').forEach(btn => {
+  btn.addEventListener('click', e => {
+    selectedContentId = e.target.closest('tr').dataset.id;
+    openModal('qrModal');
+  });
+});
+
+
+  document.querySelectorAll('.btn-reject').forEach(btn => {
+    btn.addEventListener('click', () => openModal('rejectModal'));
   });
 }
+document.getElementById('btnElectronicApprove')?.addEventListener('click', async () => {
+  if (!selectedContentId) return alert('⚠️ لا يوجد عنصر محدد لاعتماده.');
 
-// ------------------------------
+  try {
+    await fetchJSON(`${apiBase}/approvals/${selectedContentId}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({
+        approved: true,
+        signature: null, // لأنه اعتماد إلكتروني بدون توقيع
+            electronic_signature: true,  // ← هذا الإضافة المهمة
+
+        notes: ''
+      })
+    });
+    alert('✅ تم الاعتماد الإلكتروني بنجاح');
+    closeModal('qrModal');
+    location.reload();
+  } catch (err) {
+    console.error('فشل الاعتماد الإلكتروني:', err);
+    alert('حدث خطأ أثناء الاعتماد الإلكتروني');
+  }
+});
+
+// =====================
 // التوقيع
-// ------------------------------
-
-let selectedContentId = null;
-
+// =====================
 function openSignatureModal(contentId) {
   selectedContentId = contentId;
-  document.getElementById('signatureModal').style.display = 'flex';
- 
-  clearCanvas();
+  const modal = document.getElementById('signatureModal');
+  modal.style.display = 'flex';
+
+  setTimeout(() => {
+    resizeCanvas();
+    clearCanvas();
+  }, 50);
 }
 
 function closeSignatureModal() {
@@ -106,31 +185,29 @@ function closeSignatureModal() {
 }
 
 function clearCanvas() {
-  const canvas = document.getElementById('signatureCanvas');
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (ctx && canvas) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+}
+
+function resizeCanvas() {
+  const wrapper = canvas.parentElement;
+  const rect = wrapper.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = rect.height;
+
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#000';
 }
 
 function setupSignatureModal() {
-  const canvas = document.getElementById('signatureCanvas');
+  canvas = document.getElementById('signatureCanvas');
   if (!canvas) return;
 
-  const ctx = canvas.getContext('2d');
+  ctx = canvas.getContext('2d');
   let drawing = false;
 
-  function resizeCanvas() {
-    const wrapper = canvas.parentElement;
-    const rect = wrapper.getBoundingClientRect();
-    canvas.width = rect.width;
-    canvas.height = rect.height;
-
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = '#000';
-  }
-
-  // إعادة تحجيم عند الفتح
-  resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
 
   function getPos(e) {
@@ -143,6 +220,7 @@ function setupSignatureModal() {
     };
   }
 
+  // Mouse events
   canvas.addEventListener('mousedown', e => {
     drawing = true;
     const pos = getPos(e);
@@ -160,6 +238,7 @@ function setupSignatureModal() {
   canvas.addEventListener('mouseup', () => drawing = false);
   canvas.addEventListener('mouseleave', () => drawing = false);
 
+  // Touch events
   canvas.addEventListener('touchstart', e => {
     drawing = true;
     const pos = getPos(e);
@@ -176,10 +255,12 @@ function setupSignatureModal() {
 
   canvas.addEventListener('touchend', () => drawing = false);
 
+  // مسح التوقيع
   document.getElementById('btnClear').addEventListener('click', () => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    clearCanvas();
   });
 
+  // تأكيد التوقيع
   document.getElementById('btnConfirmSignature').addEventListener('click', async () => {
     const base64Signature = canvas.toDataURL('image/png');
     try {
@@ -199,7 +280,4 @@ function setupSignatureModal() {
       alert('خطأ أثناء إرسال التوقيع');
     }
   });
-
-  document.querySelector('#signatureModal .modal-close').addEventListener('click', closeSignatureModal);
 }
-
