@@ -56,17 +56,14 @@ const handleApproval = async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const currentUserId = decoded.id;
 
-    // تحديد الموقّع الفعلي
     const approverId = on_behalf_of || currentUserId;
     const delegatedBy = on_behalf_of ? currentUserId : null;
     const isProxy = !!on_behalf_of;
 
-    // ✅ السماح بالرفض بدون توقيع
     if (approved === true && !signature && !electronic_signature) {
       return res.status(400).json({ status: 'error', message: 'التوقيع مفقود' });
     }
 
-    // تسجيل التوقيع أو الرفض في جدول approval_logs
     await db.execute(`
       INSERT INTO approval_logs (
         content_id,
@@ -99,7 +96,14 @@ const handleApproval = async (req, res) => {
       notes || ''
     ]);
 
-    // التحقق من اكتمال التواقيع المطلوبة
+    // ✅ إذا وافق على التفويض، أضفه كموقّع رسمي للملف
+    if (approved === true && isProxy) {
+      await db.execute(`
+        INSERT IGNORE INTO content_approvers (content_id, user_id)
+        VALUES (?, ?)
+      `, [contentId, approverId]);
+    }
+
     const [remaining] = await db.execute(`
       SELECT COUNT(*) AS count
       FROM content_approvers ca
@@ -126,6 +130,7 @@ const handleApproval = async (req, res) => {
     res.status(500).json({ status: 'error', message: 'فشل التوقيع' });
   }
 };
+
 
 
 
@@ -306,24 +311,22 @@ const getAssignedApprovals = async (req, res) => {
     const userId = decoded.id;
 
     const [rows] = await db.execute(`
-      SELECT 
+      SELECT DISTINCT
         c.id,
         c.title,
         c.approval_status,
+        c.updated_at, -- ✅ ضروري لحل خطأ ORDER BY
         d.name AS department_name,
         al.status,
         al.signed_as_proxy,
         u2.username AS delegated_by_name
-      FROM content_approvers ca
-      JOIN contents c ON ca.content_id = c.id
+      FROM contents c
       LEFT JOIN folders f ON c.folder_id = f.id
       LEFT JOIN departments d ON f.department_id = d.id
-      LEFT JOIN approval_logs al ON ca.content_id = al.content_id AND al.approver_id = ca.user_id
+      JOIN approval_logs al ON al.content_id = c.id AND al.approver_id = ?
       LEFT JOIN users u2 ON al.delegated_by = u2.id
-      WHERE ca.user_id = ?
       ORDER BY c.updated_at DESC
     `, [userId]);
-    
 
     res.json({ status: 'success', data: rows });
   } catch (err) {
@@ -331,6 +334,7 @@ const getAssignedApprovals = async (req, res) => {
     res.status(500).json({ status: 'error', message: 'خطأ في جلب البيانات' });
   }
 };
+
 
 
 

@@ -62,10 +62,28 @@
               <th class="col-signer">من وكلك</th>
               <th class="col-action">الإجراءات</th>
             </tr>
-        
+          </thead>
+          <tbody>
+            <!-- الصفوف يتم إدراجها هنا من الجافاسكربت -->
+          </tbody>
         </table>
+        
+        
       </div>
     </div>
   </main>
+
+  <div id="popupOverlay" class="popup-overlay" style="display: none;">
+    <div class="popup">
+      <p>✅ سيتم تحويلك إلى صفحة الاعتمادات لتوقيع الملف بالطريقة المناسبة لك.</p>
+      <div class="popup-actions">
+        <button id="popupConfirm">متابعة</button>
+        <button id="popupCancel">إلغاء</button>
+      </div>
+    </div>
+  </div>
+  
+
 </body>
+<script src="/frontend/js/sign.js"></script>
 </html>
