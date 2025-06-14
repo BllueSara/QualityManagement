@@ -381,12 +381,7 @@ const updateContent = async (req, res) => {
         await connection.execute(query, params);
 
         // حذف الملف القديم إذا تم رفع ملف جديد
-        if (filePath && oldFilePath) {
-            const oldFilePathFull = path.join('./uploads', oldFilePath);
-            if (fs.existsSync(oldFilePathFull)) {
-                fs.unlinkSync(oldFilePathFull);
-            }
-        }
+     
 
         connection.release();
         res.json({

@@ -684,45 +684,52 @@ async function fetchPermissions() {
          }
     }
 
-     async function handleUpdateContent() {
-         const contentId = editContentIdInput.value;
-         const contentTitle = editContentTitleInput.value;
-         const contentFile = document.getElementById('editContentFile').files[0];
-
-         console.log('handleUpdateContent: Attempting to update content with ID:', contentId);
-         console.log('handleUpdateContent: New Title:', contentTitle);
-         console.log('handleUpdateContent: New File:', contentFile);
-
-         const formData = new FormData();
-         formData.append('title', contentTitle);
-         if (contentFile) {
-             formData.append('file', contentFile);
-         }
-
-         try {
-             const response = await fetch(`http://localhost:3006/api/contents/${contentId}`, {
-                 method: 'PUT',
-                 headers: {
-                     'Authorization': `Bearer ${getToken()}`,
-                 },
-                 body: formData
-             });
-
-             const data = await response.json();
-
-             if (response.ok) {
-                 showToast(data.message || 'تم تحديث المحتوى بنجاح!', 'success');
-                 closeEditContentModal();
-                 await fetchFolderContents(currentFolderId);
-             } else {
-                 showToast(data.message || 'فشل تحديث المحتوى.', 'error');
-                 console.error('Failed to update content. Status:', response.status, 'Message:', data.message);
-             }
-         } catch (error) {
-             console.error('Error updating content:', error);
-             showToast('حدث خطأ في الاتصال بتحديث المحتوى.', 'error');
-         }
-     }
+    async function handleUpdateContent() {
+        let contentId = editContentIdInput.value.trim();
+        const contentTitle = editContentTitleInput.value.trim();
+        const contentFile = document.getElementById('editContentFile').files[0];
+      
+        // تنظيف معرف المحتوى (إزالة رموز غير رقمية مثل ⁃)
+        contentId = contentId.replace(/[^\d]/g, '');
+      
+        console.log('🔄 handleUpdateContent: contentId =', contentId);
+        console.log('📄 New Title =', contentTitle);
+        console.log('📎 New File =', contentFile ? contentFile.name : 'No file selected');
+      
+        if (!contentId || !contentTitle) {
+          showToast('يجب إدخال عنوان المحتوى.', 'error');
+          return;
+        }
+      
+        const formData = new FormData();
+        formData.append('title', contentTitle);
+        if (contentFile) formData.append('file', contentFile);
+      
+        try {
+          const response = await fetch(`${apiBase}/contents/${contentId}`, {
+            method: 'PUT',
+            headers: {
+              'Authorization': `Bearer ${getToken()}`
+            },
+            body: formData
+          });
+      
+          const data = await response.json();
+      
+          if (response.ok) {
+            showToast(data.message || '✅ تم التحديث بنجاح', 'success');
+            closeEditContentModal();
+            await fetchFolderContents(currentFolderId);
+          } else {
+            showToast(data.message || 'فشل التحديث.', 'error');
+            console.error('❌ Failed to update content:', data.message);
+          }
+        } catch (error) {
+          console.error('❌ Error in handleUpdateContent:', error);
+          showToast('حدث خطأ أثناء الاتصال بالخادم.', 'error');
+        }
+      }
+      
 
     // Function to open the delete content modal
     function openDeleteContentModal(contentId) {
