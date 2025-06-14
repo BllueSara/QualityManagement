@@ -1,7 +1,30 @@
 // approvals.js
+let permissionsKeys = [];
 
-document.addEventListener("DOMContentLoaded", () => {
+async function fetchPermissions() {
+  const token = localStorage.getItem('token');
+  if (!token) return;
+  const payload = JSON.parse(atob(token.split('.')[1] || '{}'));
+  const role = payload.role;
+  if (role === 'admin') {
+    permissionsKeys = ['*'];
+    return;
+  }
+  const userId = payload.id;
+  const res = await fetch(`http://localhost:3006/api/users/${userId}/permissions`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!res.ok) return;
+  const { data: perms } = await res.json();
+  permissionsKeys = perms.map(p =>
+    typeof p === 'string' ? p : (p.permission || p.permission_key)
+  );
+}
+
+document.addEventListener("DOMContentLoaded",async  () => {
     // Helper function to get the token from localStorage
+      await fetchPermissions();
+
     function getToken() {
         return localStorage.getItem('token');
     }
@@ -152,72 +175,61 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Render table rows based on `filteredContents` for the current page
-    function renderTable() {
-        approvalsBody.innerHTML = '';
+ function renderTable() {
+    approvalsBody.innerHTML = '';
 
-        if (filteredContents.length === 0) {
-            noContentMessage.style.display = 'block';
-            updateRecordInfo(0, 0, 0);
-            updateTotalCount(0);
-            updatePaginationButtons(0);
-            return;
-        }
-        noContentMessage.style.display = 'none';
+    // حدد من يقدر يشوف زر التتبع
+    const canTrack = permissionsKeys.includes('*') || permissionsKeys.includes('track_credits');
 
-        const startIdx = (currentPage - 1) * rowsPerPage;
-        const endIdx = startIdx + rowsPerPage;
-        const contentsToDisplay = filteredContents.slice(startIdx, endIdx);
-
-        contentsToDisplay.forEach(content => {
-            console.log('DEBUG content object:', content);
-            console.log('DEBUG content.fileUrl:', content.fileUrl);
-
-            const approvalStatusText = content.is_approved ? 'معتمد' : 'قيد المراجعة';
-            const approvalStatusClass = content.is_approved ? 'badge-approved' : 'badge-pending';
-            const fileIcon = '<i class="fas fa-file-alt file-icon"></i>';
-
-            const row = document.createElement('tr');
-            row.innerHTML = `
-      <td class="col-file">
-        ${fileIcon}
-        ${content.title}
-      </td>
-      <td class="col-folder">${content.folderName || '-'}</td>
-      <td class="col-dept">${content.departmentName || '-'}</td>
-      <td class="col-status">
-        <span class="badge ${approvalStatusClass}">${approvalStatusText}</span>
-      </td>
-      <td class="col-date">${new Date(content.createdAt)
-                    .toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}
-      </td>
-     <td class="col-actions">
-  <button class="btn-track" data-id="${content.id}" style="cursor: pointer;">
-    تتبع
-  </button>
-</td>
-
-    `;
-            approvalsBody.appendChild(row);
-        });
-
-        // بعد بناء الصفوف، ضف الـ listeners
-        approvalsBody.querySelectorAll('.btn-track').forEach(button => {
-            button.addEventListener('click', function () {
-              const contentId = this.dataset.id;
-              if (!contentId) {
-                showToast('رقم الملف غير متوفر.', 'error');
-                return;
-              }
-              // الانتقال إلى صفحة تتبع الطلب
-              window.location.href = `/frontend/html/track-request.html?id=${contentId}`;
-            });
-          });
-          
-
-        updateRecordInfo(startIdx + 1, startIdx + contentsToDisplay.length, filteredContents.length);
-        updateTotalCount(filteredContents.length);
-        updatePaginationButtons(filteredContents.length);
+    if (filteredContents.length === 0) {
+      noContentMessage.style.display = 'block';
+      updateRecordInfo(0,0,0);
+      updateTotalCount(0);
+      updatePaginationButtons(0);
+      return;
     }
+    noContentMessage.style.display = 'none';
+
+    const startIdx = (currentPage - 1) * rowsPerPage;
+    const endIdx   = startIdx + rowsPerPage;
+    const pageData = filteredContents.slice(startIdx, endIdx);
+
+    pageData.forEach(content => {
+      const approvalStatusText  = content.is_approved ? 'معتمد' : 'قيد المراجعة';
+      const approvalStatusClass = content.is_approved ? 'badge-approved' : 'badge-pending';
+      const dateText            = new Date(content.createdAt)
+                                  .toLocaleDateString('ar-EG', { year:'numeric', month:'long', day:'numeric' });
+
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td class="col-file">${content.title}</td>
+        <td class="col-folder">${content.folderName || '-'}</td>
+        <td class="col-dept">${content.departmentName || '-'}</td>
+        <td class="col-status"><span class="badge ${approvalStatusClass}">${approvalStatusText}</span></td>
+        <td class="col-date">${dateText}</td>
+        <td class="col-actions">
+          ${canTrack 
+            ? `<button class="btn-track" data-id="${content.id}">تتبع</button>` 
+            : ''}
+        </td>
+      `;
+      approvalsBody.appendChild(row);
+    });
+
+    // ربط حدث التتبع فقط إذا مُنح
+    if (permissionsKeys.includes('*') || permissionsKeys.includes('track_credits')) {
+      approvalsBody.querySelectorAll('.btn-track').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.dataset.id;
+          window.location.href = `/frontend/html/track-request.html?id=${id}`;
+        });
+      });
+    }
+
+    updateRecordInfo(startIdx+1, startIdx+pageData.length, filteredContents.length);
+    updateTotalCount(filteredContents.length);
+    updatePaginationButtons(filteredContents.length);
+  }
 
 
     // Update pagination buttons

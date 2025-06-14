@@ -33,5 +33,6 @@ router.post('/:id/replies', authenticateToken, ticketController.addReply);
 router.post('/:id/assign', authenticateToken, ticketController.assignToUsers);
 
 // GET /api/tickets/assigned
+router.get('/:id/track', authenticateToken, ticketController.trackTicket);
 
 module.exports = router; 

@@ -238,13 +238,175 @@ nav ul li a:hover {
     overflow: hidden;
 }
 
-@media (max-width: 768px) {
-    nav ul {
-        flex-direction: column;
-        align-items: center;
-        gap: 10px;
-    }
+@media (max-width: 768px  ) {
+  header .container {
+    padding: 8px var(--spacing-2);
+    gap: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+  }
+
+  .hospital-logo,
+  .system-title {
+    flex: -1 1 25%;
+    min-width: 80px;
+  }
+
+  nav {
+    flex: 1 1 50%;
+    min-width: 140px;
+    overflow: hidden;
+  }
+
+  .hospital-logo img,
+  .system-title img {
+    max-height: 26px;
+    height: auto;
+    width: auto;
+    object-fit: contain;
+  }
+
+  nav ul {
+    flex-wrap: nowrap;
+    gap: 10px;
+    justify-content: center;
+    padding: 0;
+    margin: 0;
+  }
+
+  nav ul li a {
+    font-size: 0.85em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .back-btn,
+  .home-btn {
+    font-size: 13px;
+    padding: 0 6px;
+  }
+
+  main h1 {
+    font-size: 1.2em;
+    padding: 0 10px;
+  }
 }
+@media (max-width: 1000px  ) {
+  header .container {
+    padding: 8px var(--spacing-2);
+    gap: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+  }
+
+  .hospital-logo,
+  .system-title {
+    flex: -1 1 25%;
+    min-width: 80px;
+  }
+
+  nav {
+    flex: 1 1 50%;
+    min-width: 140px;
+    overflow: hidden;
+  }
+
+  .hospital-logo img,
+  .system-title img {
+    max-height: 26px;
+    height: auto;
+    width: auto;
+    object-fit: contain;
+  }
+
+  nav ul {
+    flex-wrap: nowrap;
+    gap: 10px;
+    justify-content: center;
+    padding: 0;
+    margin: 0;
+  }
+
+  nav ul li a {
+    font-size: 0.85em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .back-btn,
+  .home-btn {
+    font-size: 13px;
+    padding: 0 6px;
+  }
+
+  main h1 {
+    font-size: 1.2em;
+    padding: 0 10px;
+  }
+}
+@media (max-width: 500px  ) {
+  header .container {
+    padding: 8px var(--spacing-2);
+    gap: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+  }
+
+  .hospital-logo,
+  .system-title {
+    flex: -1 1 25%;
+    min-width: 80px;
+  }
+
+  nav {
+    flex: 1 1 50%;
+    min-width: 140px;
+    overflow: hidden;
+  }
+
+  .hospital-logo img,
+  .system-title img {
+    max-height: 26px;
+    height: auto;
+    width: auto;
+    object-fit: contain;
+  }
+
+  nav ul {
+    flex-wrap: nowrap;
+    gap: 10px;
+    justify-content: center;
+    padding: 0;
+    margin: 0;
+  }
+
+  nav ul li a {
+    font-size: 0.85em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .back-btn,
+  .home-btn {
+    font-size: 13px;
+    padding: 0 6px;
+  }
+
+  main h1 {
+    font-size: 1.2em;
+    padding: 0 10px;
+  }
+}
+
 
 /* Page Controls and Back Button (Moved from dashboard.css and logs.css for consistency) */
 .page-controls {

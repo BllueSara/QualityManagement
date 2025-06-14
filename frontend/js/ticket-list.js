@@ -9,7 +9,7 @@ async function fetchPermissions() {
   const userRole = payload.role;
 
   // الإدمن دائماً يرى كل شيء
-  if (['admin','sub-admin'].includes(userRole)) {
+  if (['admin'].includes(userRole)) {
     permissionsKeys = ['*'];
     return;
   }
@@ -63,8 +63,9 @@ tickets = body.data;
 function renderTickets() {
   ticketsBody.innerHTML = '';
   filteredTickets.forEach(ticket => {
-    const canEdit   = permissionsKeys.includes('*') || permissionsKeys.includes('edit_ticket');
-    const canDelete = permissionsKeys.includes('*') || permissionsKeys.includes('delete_ticket');
+    const canEdit    = permissionsKeys.includes('*') || permissionsKeys.includes('edit_ticket');
+    const canDelete  = permissionsKeys.includes('*') || permissionsKeys.includes('delete_ticket');
+    const canTrack   = permissionsKeys.includes('*') || permissionsKeys.includes('track_tickets');
 
     const row = document.createElement('tr');
     row.innerHTML = `
@@ -77,28 +78,52 @@ function renderTickets() {
       <td class="col-location">${ticket.event_location || '—'}</td>
       <td class="col-date">${formatDate(ticket.created_at)}</td>
       <td class="col-actions">
+        <!-- عرض -->
         <i class="fas fa-eye action-icon view-icon"
            title="عرض"
-           style="cursor: pointer;"
            data-ticket-id="${ticket.id}"></i>
-        ${canEdit   ? `<i class="fas fa-pencil-alt action-icon edit-icon"   title="تعديل"   data-ticket-id="${ticket.id}"></i>` : ''}
-        ${canDelete ? `<i class="fas fa-trash-alt action-icon delete-icon"  title="حذف"     data-ticket-id="${ticket.id}"></i>` : ''}
+        <!-- تتبع -->
+        ${canTrack
+          ? `<i class="fas fa-map-signs action-icon track-icon"
+                title="تتبع"
+                data-ticket-id="${ticket.id}"></i>`
+          : ''}
+        <!-- تعديل -->
+        ${canEdit
+          ? `<i class="fas fa-pencil-alt action-icon edit-icon"
+                title="تعديل"
+                data-ticket-id="${ticket.id}"></i>`
+          : ''}
+        <!-- حذف -->
+        ${canDelete
+          ? `<i class="fas fa-trash-alt action-icon delete-icon"
+                title="حذف"
+                data-ticket-id="${ticket.id}"></i>`
+          : ''}
       </td>
     `;
     ticketsBody.appendChild(row);
   });
 
-  // ربط الأحداث بعد الإنشاء:
+  // ربط الأحداث بعد الإنشاء
   document.querySelectorAll('.view-icon').forEach(icon => {
     icon.addEventListener('click', e =>
       window.location.href = `ticket-details.html?id=${e.target.dataset.ticketId}`
     );
   });
+
+  document.querySelectorAll('.track-icon').forEach(icon => {
+    icon.addEventListener('click', e =>
+      window.location.href = `track-request-ticket.html?id=${e.target.dataset.ticketId}`
+    );
+  });
+
   document.querySelectorAll('.edit-icon').forEach(icon => {
     icon.addEventListener('click', e =>
       window.location.href = `ticket-edit.html?id=${e.target.dataset.ticketId}`
     );
   });
+
   document.querySelectorAll('.delete-icon').forEach(icon => {
     icon.addEventListener('click', async e => {
       const id = e.target.dataset.ticketId;
@@ -111,8 +136,8 @@ function renderTickets() {
       else alert('فشل حذف التذكرة');
     });
   });
+}
 
-    }
 
     // Helper function to get status class
     function getStatusClass(status) {

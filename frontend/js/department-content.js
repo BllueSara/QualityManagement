@@ -135,7 +135,7 @@ async function fetchPermissions() {
   // كالمعتاد: جلب role
   const userRes = await fetch(`${apiBase}/users/${userId}`, { headers });
   const { data: user } = await userRes.json();
-  if (['admin','sub-admin'].includes(user.role)) {
+  if (['admin'].includes(user.role)) {
     // للمسؤولين: صلاحيات كاملة
     Object.keys(permissions).forEach(k => permissions[k]=true);
     return;

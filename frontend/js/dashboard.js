@@ -1,21 +1,40 @@
 async function fetchStats() {
-  const res = await fetch('http://localhost:3006/api/dashboard/stats');
+  const token = localStorage.getItem('token');
+  const res = await fetch('http://localhost:3006/api/dashboard/stats', {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (res.status === 401) {
+    // يمكنك هنا إعادة توجيه المستخدم لتسجيل الدخول أو إظهار رسالة
+    alert('يُرجى تسجيل الدخول أولاً');
+    return {};
+  }
   const json = await res.json();
-  return json.data;    // والـ renderStats(stats) ينتظر حقل stats.rejected, الخ…
+  return json.data;
 }
-
 
 async function fetchClosedWeek() {
-  const res = await fetch('http://localhost:3006/api/dashboard/closed-week');
+  const token = localStorage.getItem('token');
+  const res = await fetch('http://localhost:3006/api/dashboard/closed-week', {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (res.status === 401) {
+    alert('يُرجى تسجيل الدخول أولاً');
+    return [];
+  }
   const json = await res.json();
-  return json.data;    // بدل إرجاع الكائن كامل
+  return json.data;
 }
 
-function renderStats({ rejected, closed, current, new_tickets }) {
-  document.querySelector('.stat-card:nth-child(1) .stat-value').textContent = rejected;
+
+
+
+function renderStats({  closed, new_tickets }) {
   document.querySelector('.stat-card:nth-child(2) .stat-value').textContent = closed;
-  document.querySelector('.stat-card:nth-child(3) .stat-value').textContent = current;
-  document.querySelector('.stat-card:nth-child(4) .stat-value').textContent = new_tickets;
+  document.querySelector('.stat-card:nth-child(3) .stat-value').textContent = new_tickets;
 }
 
 function renderChart(data) {
