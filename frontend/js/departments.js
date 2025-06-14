@@ -52,6 +52,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Permissions state
     const permissions = { canAdd: false, canEdit: false, canDelete: false };
 
+    // فتح بوب اب اضافه القسم 
+    addDepartmentBtn.addEventListener('click', () => openModal(addDepartmentModal));
+
     // Fetch user permissions
 async function fetchPermissions() {
   const userId = getUserId();

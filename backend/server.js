@@ -27,6 +27,7 @@ const ticketRouter           = require('./routes/ticketRoutes');
 const pendingApprovalRoutes = require('./routes/pendingApprovals.routes');
  const dashboardRouter = require('./routes/dashboardRoutes');
 
+ 
 
 
 
@@ -47,9 +48,15 @@ app.use('/api/tickets',     ticketRouter);
 
 // folders nested under departments
 app.use('/api/departments/:departmentId/folders', folderRouter);
+// ✅ هذا الصحيح
+app.use('/api/folders', folderRouter);
+
 
 // contents nested under folders
 app.use('/api/folders', folderContentRouter);
+
+
+
 
 // global content endpoints (my-uploads)
 app.use('/api/contents', contentRouter);

@@ -156,71 +156,102 @@ async function fetchPermissions() {
 }
 
     // دالة لجلب مجلدات القسم بناءً على departmentId
-  async function fetchFolders(departmentId) {
-  // إذا كنا فعلاً داخل مجلد (currentFolderId != null)، نتجاهل أي استدعاء لاحق
-  if (currentFolderId !== null) {
-    console.log('⛔️ Skipping fetchFolders because currentFolderId =', currentFolderId);
-    return;
-  }
-
-  console.log('🔥 fetchFolders() fired for departmentId:', departmentId);
-  currentDepartmentId = departmentId;
-  foldersSection.style.display = 'block';
-  folderContentsSection.style.display = 'none';
-  backToFilesContainer.style.display = 'none';
-
-  try {
-    const response = await fetch(
-      `http://localhost:3006/api/departments/${departmentId}/folders`, {
-        headers: { 'Authorization': `Bearer ${getToken()}` }
-      }
-    );
-    const data = await response.json();
-
-    if (!response.ok) {
-      showToast(data.message || 'فشل جلب مجلدات القسم.', 'error');
-      console.error('Failed to fetch folders:', data);
+ // دالة لجلب مجلدات القسم بناءً على departmentId
+async function fetchFolders(departmentId) {
+    if (currentFolderId !== null) {
+      console.log('⛔️ Skipping fetchFolders because currentFolderId =', currentFolderId);
       return;
     }
 
-    const foldersList = document.querySelector('.folders-list');
-    foldersList.innerHTML = '';
-    folderContentTitle.textContent = data.departmentName || 'مجلدات القسم';
+    console.log('🔥 fetchFolders() fired for departmentId:', departmentId);
+    currentDepartmentId = departmentId;
+    foldersSection.style.display = 'block';
+    folderContentsSection.style.display = 'none';
+    backToFilesContainer.style.display = 'none';
 
-    if (data.data.length) {
-      data.data.forEach(folder => {
-        const card = document.createElement('div');
-        card.className = 'folder-card';
-        card.dataset.id = folder.id;
-  let icons = '';
-  if (permissions.canEditFolder || permissions.canDeleteFolder) {
-    icons = '<div class="item-icons">';
-    if (permissions.canEditFolder)   icons += `<a href="#" class="edit-icon"   data-id="${folder.id}"><img src="../images/edit.svg"></a>`;
-    if (permissions.canDeleteFolder) icons += `<a href="#" class="delete-icon" data-id="${folder.id}"><img src="../images/delet.svg"></a>`;
-    icons += '</div>';
-  }
+    try {
+      const response = await fetch(
+        `http://localhost:3006/api/departments/${departmentId}/folders`, {
+          headers: { 'Authorization': `Bearer ${getToken()}` }
+        }
+      );
+      const data = await response.json();
 
-  card.innerHTML = icons +
-    `<img src="../images/folders.svg">
-     <div class="folder-info">
-       <div class="folder-name">${folder.name}</div>
-     </div>`;
-        foldersList.appendChild(card);
+      if (!response.ok) {
+        showToast(data.message || 'فشل جلب مجلدات القسم.', 'error');
+        console.error('Failed to fetch folders:', data);
+        return;
+      }
 
-        card.addEventListener('click', e => {
-          if (!e.target.closest('.edit-icon') && !e.target.closest('.delete-icon')) {
-            fetchFolderContents(folder.id);
+      const foldersList = document.querySelector('.folders-list');
+      foldersList.innerHTML = '';
+      folderContentTitle.textContent = data.departmentName || 'مجلدات القسم';
+
+      if (data.data.length) {
+        data.data.forEach(folder => {
+          const card = document.createElement('div');
+          card.className = 'folder-card';
+          card.dataset.id = folder.id;
+
+          let icons = '';
+          if (permissions.canEditFolder || permissions.canDeleteFolder) {
+            icons = '<div class="item-icons">';
+            if (permissions.canEditFolder)
+              icons += `<a href="#" class="edit-icon"><img src="../images/edit.svg" alt="تعديل"></a>`;
+            if (permissions.canDeleteFolder)
+              icons += `<a href="#" class="delete-icon"><img src="../images/delet.svg" alt="حذف"></a>`;
+            icons += '</div>';
+          }
+
+          card.innerHTML = icons +
+            `<img src="../images/folders.svg">
+             <div class="folder-info">
+               <div class="folder-name">${folder.name}</div>
+             </div>`;
+
+          foldersList.appendChild(card);
+
+          // فتح محتويات المجلد عند الضغط على البطاقة
+          card.addEventListener('click', e => {
+            if (!e.target.closest('.edit-icon') && !e.target.closest('.delete-icon')) {
+              fetchFolderContents(folder.id);
+            }
+          });
+
+          // ربط أيقونة التعديل
+          if (permissions.canEditFolder) {
+            const editIcon = card.querySelector('.edit-icon');
+            if (editIcon) {
+              editIcon.addEventListener('click', e => {
+                e.preventDefault();
+                e.stopPropagation();
+                openEditFolderModal(folder.id); // ✅ استخدم معرف المجلد مباشرة
+              });
+            }
+          }
+
+          // ربط أيقونة الحذف
+          if (permissions.canDeleteFolder) {
+            const deleteIcon = card.querySelector('.delete-icon');
+            if (deleteIcon) {
+              deleteIcon.addEventListener('click', e => {
+                e.preventDefault();
+                e.stopPropagation();
+                openDeleteFolderModal(folder.id); // ✅ استخدم معرف المجلد مباشرة
+              });
+            }
           }
         });
-      });
-    } else {
-      foldersList.innerHTML = '<div class="no-content">لا يوجد مجلدات في هذا القسم.</div>';
+      } else {
+        foldersList.innerHTML = '<div class="no-content">لا يوجد مجلدات في هذا القسم.</div>';
+      }
+    } catch (err) {
+      console.error('Error fetching folders:', err);
+      showToast('حدث خطأ في الاتصال بجلب مجلدات القسم.', 'error');
     }
-  } catch (err) {
-    console.error('Error fetching folders:', err);
-    showToast('حدث خطأ في الاتصال بجلب مجلدات القسم.', 'error');
-  }
 }
+
+      
 
 
     // دالة لجلب محتويات المجلد بناءً على folderId
@@ -516,29 +547,35 @@ async function fetchPermissions() {
 
     async function openEditFolderModal(folderId) {
         console.log('Opening edit modal for folder:', folderId);
-         if (editFolderModal) {
-             try {
-                 const response = await fetch(`http://localhost:3006/api/folders/${folderId}`, {
-                     headers: {
-                         'Authorization': `Bearer ${getToken()}`
-                     }
-                 });
-                 const data = await response.json();
+        if (editFolderModal) {
+            try {
+                const response = await fetch(`http://localhost:3006/api/folders/${folderId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${getToken()}`
+                    }
+                });
+    
+                const data = await response.json();
+                console.log("🧪 Response from /api/folders/:id:", data); // ← أضف هذا السطر للتأكد
+    
+                if (response.ok && data && data.data) {
+                    editFolderIdInput.value = folderId;
+                    editFolderNameInput.value = data.data.title;
 
-                 if (response.ok && data.data) {
-                     editFolderIdInput.value = folderId;
-                     editFolderNameInput.value = data.data.name; // Fill with current folder name
-                     editFolderModal.style.display = 'flex';
-                 } else {
-                     showToast(data.message || 'فشل جلب بيانات المجلد.', 'error');
-                     console.error('Failed to fetch folder data:', data.message);
-                 }
-             } catch (error) {
-                 console.error('Error fetching folder data:', error);
-                 showToast('حدث خطأ في الاتصال بجلب بيانات المجلد.', 'error');
-             }
-         }
+
+
+                    editFolderModal.style.display = 'flex';
+                } else {
+                    showToast(data.message || 'فشل جلب بيانات المجلد.', 'error');
+                    console.error('⛔️ Failed to fetch folder data:', data);
+                }
+            } catch (error) {
+                console.error('❌ Error fetching folder data:', error);
+                showToast('حدث خطأ في الاتصال بجلب بيانات المجلد.', 'error');
+            }
+        }
     }
+    
 
     function closeEditFolderModal() {
          if (editFolderModal) {
@@ -575,9 +612,12 @@ async function fetchPermissions() {
              const data = await response.json();
 
              if (response.ok) {
-                 showToast(data.message || 'تم تحديث المجلد بنجاح!', 'success');
-                 closeEditFolderModal();
-                 fetchFolders(currentDepartmentId); // Refresh the folder list
+                showToast(data.message || 'تم تحديث المجلد بنجاح!', 'success');
+                closeEditFolderModal();
+                currentFolderId = null; // ⬅️ أضف هذا
+                fetchFolders(currentDepartmentId);
+                        
+          
              } else {
                  showToast(data.message || 'فشل تحديث المجلد.', 'error');
                  console.error('Failed to update folder:', data.message);
@@ -633,7 +673,10 @@ async function fetchPermissions() {
             if (response.ok) {
                 showToast(data.message || 'تم حذف المجلد بنجاح!', 'success');
                 closeDeleteFolderModal();
-                fetchFolders(currentDepartmentId); // Refresh the folder list
+                currentFolderId = null; // ⬅️ أضف هذا
+                fetchFolders(currentDepartmentId);
+                        
+              
             } else {
                 showToast(data.message || 'فشل حذف المجلد.', 'error');
                 console.error('Failed to delete folder:', data.message);
@@ -822,29 +865,6 @@ async function fetchPermissions() {
 
     // --- Event Listeners for Edit/Delete Icons --- (Assuming icons are added in HTML)
 
-    // Event listeners for folder edit icons (يجب أن يتم إعادة إضافة هذه بعد جلب المجلدات)
-    document.querySelectorAll('.folder-card .edit-icon').forEach(icon => {
-        icon.addEventListener('click', function(event) {
-            event.preventDefault(); // Prevent default link behavior
-            event.stopPropagation(); // Prevent click from bubbling to folder card
-            const folderId = this.getAttribute('data-id');
-            if (folderId) {
-                openEditFolderModal(folderId);
-            }
-        });
-    });
-
-    // Event listeners for folder delete icons (يجب أن يتم إعادة إضافة هذه بعد جلب المجلدات)
-    document.querySelectorAll('.folder-card .delete-icon').forEach(icon => {
-        icon.addEventListener('click', function(event) {
-             event.preventDefault(); // Prevent default link behavior
-             event.stopPropagation(); // Prevent click from bubbling to folder card
-            const folderId = this.getAttribute('data-id');
-            if (folderId) {
-                openDeleteFolderModal(folderId);
-            }
-        });
-    });
 
      // Event listeners for file edit icons (يجب أن يتم إعادة إضافة هذه بعد جلب المحتويات)
     document.querySelectorAll('.file-item .edit-icon').forEach(icon => {
@@ -911,12 +931,8 @@ async function fetchPermissions() {
     document.getElementById('cancelDeleteContentBtn').addEventListener('click', closeDeleteContentModal);
 
     // Event listener for confirm delete button in delete modal
-    document.getElementById('confirmDeleteContentBtn').addEventListener('click', function() {
-        const contentId = document.getElementById('deleteContentId').value;
-        // Placeholder for delete logic
-        console.log('Deleting content with ID:', contentId);
-        closeDeleteContentModal();
-    });
+    document.getElementById('confirmDeleteContentBtn').addEventListener('click', handleDeleteContent);
+
 
     // Event listeners for Delete Folder Modal buttons
     if (deleteFolderCloseBtn) {
@@ -980,15 +996,17 @@ if (departmentIdFromUrl && isInitialFetch) {
 
     // Function to handle content deletion
     async function handleDeleteContent() {
-        const contentId = document.getElementById('deleteContentId').value;
+        let contentId = document.getElementById('deleteContentId').value.trim();
+        contentId = contentId.replace(/[^\d]/g, ''); // 🔥 إزالة الرموز غير الرقمية
+    
         console.log('handleDeleteContent: Deleting content with ID:', contentId);
-
+    
         if (!contentId) {
             showToast('معرف المحتوى مفقود للحذف.', 'error');
             console.warn('handleDeleteContent: Missing content ID for deletion.');
             return;
         }
-
+    
         try {
             const response = await fetch(`http://localhost:3006/api/contents/${contentId}`, {
                 method: 'DELETE',
@@ -996,9 +1014,9 @@ if (departmentIdFromUrl && isInitialFetch) {
                     'Authorization': `Bearer ${getToken()}`
                 }
             });
-
+    
             const data = await response.json();
-
+    
             if (response.ok) {
                 showToast(data.message || 'تم حذف المحتوى بنجاح!', 'success');
                 closeDeleteContentModal();
@@ -1012,9 +1030,9 @@ if (departmentIdFromUrl && isInitialFetch) {
             showToast('حدث خطأ في الاتصال بحذف المحتوى.', 'error');
         }
     }
+    
 
-    // Event listener for confirm delete button in delete modal
-    document.getElementById('confirmDeleteContentBtn').addEventListener('click', handleDeleteContent);
+
 
 }); // End of DOMContentLoaded 
 
