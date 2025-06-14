@@ -2,6 +2,7 @@
 // controllers/permissionsDefController.js
 const mysql = require('mysql2/promise');
 require('dotenv').config();
+const { logAction } = require('../models/logger');
 
 const db = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',

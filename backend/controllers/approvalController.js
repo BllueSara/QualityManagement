@@ -5,6 +5,7 @@ const path = require('path');
 
 const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
 
+const { logAction } = require('../models/logger');
 
 require('dotenv').config();
 

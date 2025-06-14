@@ -1,6 +1,7 @@
 // controllers/pendingApprovalsController.js
 const mysql = require('mysql2/promise');
 const jwt   = require('jsonwebtoken');
+const { logAction } = require('../models/logger');
 
 async function getUserPerms(pool, userId) {
   const [rows] = await pool.execute(`

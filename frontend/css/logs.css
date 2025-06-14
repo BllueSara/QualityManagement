@@ -433,3 +433,22 @@ main {
     }
 }
 
+.filter-btn {
+  padding: 8px 14px;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-inline-end: 10px;
+}
+
+.filter-btn.reset {
+  background-color: #6c757d;
+}
+
+.buttons-group {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}

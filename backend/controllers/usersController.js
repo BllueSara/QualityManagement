@@ -8,6 +8,7 @@ const db = mysql.createPool({
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'Quality'
 });
+const { logAction } = require('../models/logger');
 
 // 1) جلب كل المستخدمين
 const getUsers = async (req, res) => {
@@ -364,6 +365,7 @@ const markAsRead = async (req, res) => {
   }
 };
 
+
 /**
  * Delete a notification
  */
@@ -383,6 +385,7 @@ const deleteNotification = async (req, res) => {
     res.status(500).json({ status: 'error', message: 'حدث خطأ أثناء حذف الإشعار' });
   }
 };
+
 module.exports = {
   getUsers,
   getUserById,

@@ -2,6 +2,7 @@ const Ticket = require('../models/ticketModel');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { logAction } = require('../models/logger');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
