@@ -670,31 +670,37 @@ const getMyUploadedContent = async (req, res) => {
       const userId = decoded.id;
   
       // 2) جلب الملفات المرتبطة بالمستخدم
-const [rows] = await db.execute(
-  `SELECT 
-     c.id,
-     c.title,
-     c.file_path AS filePath,      -- هنا alias هو filePath
-     c.created_at AS createdAt,
-     f.name       AS folderName,
-     d.name       AS departmentName
-   FROM contents c
-   JOIN folders    f ON c.folder_id     = f.id
-   JOIN departments d ON f.department_id = d.id
-   WHERE c.created_by = ?
-   ORDER BY c.created_at DESC`,
-  [userId]
-);
+      const [rows] = await db.execute(
+        `SELECT 
+           c.id,
+           c.title,
+           c.file_path AS filePath,
+           c.created_at AS createdAt,
+           c.is_approved,
+           c.approval_status,
+           f.name AS folderName,
+           d.name AS departmentName
+         FROM contents c
+         JOIN folders f ON c.folder_id = f.id
+         JOIN departments d ON f.department_id = d.id
+         WHERE c.created_by = ?
+         ORDER BY c.created_at DESC`,
+        [userId]
+      );
+      
 
 // هُنا استخدم r.filePath لا r.file_path
 const data = rows.map(r => ({
-  id:             r.id,
-  title:          r.title,
-  fileUrl:        r.filePath,        // ← alias صحيح
-  createdAt:      r.createdAt,
-  folderName:     r.folderName,
-  departmentName: r.departmentName
-}));
+    id:             r.id,
+    title:          r.title,
+    fileUrl:        r.filePath,
+    createdAt:      r.createdAt,
+    is_approved:    r.is_approved,
+    approval_status: r.approval_status,
+    folderName:     r.folderName,
+    departmentName: r.departmentName
+  }));
+  
 
 return res.json({ status: 'success', data });
 
