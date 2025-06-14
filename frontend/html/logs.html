@@ -41,40 +41,55 @@
 
         <div class="container">
             <!-- قسم الفلترة -->
-            <section class="filter-section">
-                <h2 class="section-title">سجلات النظام</h2>
-                <div class="filter-row">
-                    <div class="input-group search-input">
-                        <!-- <label for="search-input">البحث في السجلات</label> -->
-                        <input type="text" id="search-input" placeholder="البحث في السجلات...">
-                    </div>
-                    <!-- من تاريخ -->
-                    <div class="input-group">
-                        <label for="from-date">من تاريخ</label>
-                        <input type="date" id="from-date" name="from-date">
-                    </div>
-                    <!-- إلى تاريخ -->
-                    <div class="input-group">
-                        <label for="to-date">إلى تاريخ</label>
-                        <input type="date" id="to-date" name="to-date">
-                    </div>
-                    <!-- نوع الإجراء -->
-                    <div class="input-group">
-                        <label for="action-type">نوع الإجراء</label>
-                        <select id="action-type" name="action-type">
-                            <option value="">جميع الإجراءات</option>
-                            <option value="تسجيل دخول">تسجيل دخول</option>
-                            <option value="إنشاء تذكرة">إنشاء تذكرة</option>
-                            <option value="إضافة مجلد">إضافة مجلد</option>
-                            <option value="توقيع">توقيع</option>
-                            <option value="رفع طلب اعتماد">رفع طلب اعتماد</option>
-                            <option value="إضافة قسم">إضافة قسم</option>
-                            <option value="إضافة محتوى">إضافة محتوى</option>
-                        </select>
-                    </div>
-                   
-                </div>
-            </section>
+<section class="filter-section">
+  <h2 class="section-title">سجلات النظام</h2>
+  <div class="filter-row">
+
+    <div class="input-group search-input">
+      <input type="text" id="search-input" placeholder="البحث في السجلات...">
+    </div>
+
+    <div class="input-group">
+      <label for="from-date">من تاريخ</label>
+      <input type="date" id="from-date" name="from-date">
+    </div>
+
+    <div class="input-group">
+      <label for="to-date">إلى تاريخ</label>
+      <input type="date" id="to-date" name="to-date">
+    </div>
+
+    <div class="input-group">
+      <label for="action-type">نوع الإجراء</label>
+      <select id="action-type" name="action-type">
+        <option value="">جميع الإجراءات</option>
+        <option value="تسجيل دخول">تسجيل دخول</option>
+        <option value="إنشاء تذكرة">إنشاء تذكرة</option>
+        <option value="إضافة مجلد">إضافة مجلد</option>
+        <option value="توقيع">توقيع</option>
+        <option value="رفع طلب اعتماد">رفع طلب اعتماد</option>
+        <option value="إضافة قسم">إضافة قسم</option>
+        <option value="إضافة محتوى">إضافة محتوى</option>
+      </select>
+    </div>
+
+    <!-- ✅ إضافة عنصر اسم المستخدم -->
+    <div class="input-group">
+      <label for="user-name">اسم المستخدم</label>
+      <select id="user-name" name="user-name">
+        <option value="">جميع المستخدمين</option>
+      </select>
+    </div>
+
+    <!-- ✅ أزرار الفلترة -->
+    <div class="input-group buttons-group">
+      <button id="apply-filter" class="filter-btn">تطبيق الفلتر</button>
+      <button id="reset-filter" class="filter-btn reset">إعادة تعيين</button>
+    </div>
+  </div>
+</section>
+
+
 
             <!-- جدول السجلات -->
             <section class="logs-table-container">

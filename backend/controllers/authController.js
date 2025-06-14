@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const { promisify } = require('util');
 const mysql = require('mysql2/promise');
+const { logAction } = require('../models/logger');
 
 const router = express.Router();
 

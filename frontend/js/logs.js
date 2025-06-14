@@ -1,5 +1,6 @@
 // js/logs.js
 // منطق جلب السجلات من الباك-أند ثم تطبيق الفلترة والبحث
+console.log(document.getElementById('apply-filter'));  // يجب ألا يكون null
 
 document.addEventListener('DOMContentLoaded', () => {
   const applyFilterBtn   = document.getElementById('apply-filter');
@@ -26,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (userNameSelect.value)   params.append('user', userNameSelect.value);
     if (searchInput.value)      params.append('search', searchInput.value);
 
-    const res = await fetch('http://localhost:3006/api/users/' + getUserId() + '/logs' + params.toString(), {
+const res = await fetch('http://localhost:3006/api/users/logs?' + params.toString(), {
       headers: authHeader()
     });
     const json = await res.json();

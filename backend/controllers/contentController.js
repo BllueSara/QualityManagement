@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
+const { logAction } = require('../models/logger');
 
 const db = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
