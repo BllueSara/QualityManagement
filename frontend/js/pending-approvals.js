@@ -37,7 +37,6 @@ async function loadPendingApprovals() {
 
   approvals.forEach(item => {
     const approverNames = item.approvers ? item.approvers.split(',').map(a => a.trim()) : [];
-    const isSent = approverNames.length > 0;
 
     const approverBadges = approverNames.map(name => {
       return `<span class="badge">${name}</span>`;
@@ -66,25 +65,21 @@ async function loadPendingApprovals() {
       </td>
       <td class="selected-cell">${approverBadges}</td>
       <td>
-        <span class="${isSent ? 'badge-sent' : 'badge-pending'}">
-          ${isSent ? 'تم الإرسال' : 'بانتظار الإرسال'}
+        <span class="${approverNames.length > 0 ? 'badge-sent' : 'badge-pending'}">
+          ${approverNames.length > 0 ? 'تم الإرسال' : 'بانتظار الإرسال'}
         </span>
       </td>
       <td>
-        ${isSent
-          ? `<button class="btn-send btn-disabled" disabled style="padding:6px 12px;">
-               <i class="bi bi-check-circle"></i> تم الإرسال
-             </button>`
-          : `<button class="btn-send" style="padding:6px 12px;">
-               <i class="bi bi-send"></i> إرسال
-             </button>`
-        }
+        <button class="btn-send" style="padding:6px 12px;">
+          <i class="bi bi-send"></i> إرسال
+        </button>
       </td>
     `;
 
     tbody.appendChild(tr);
   });
 }
+
 
 async function initDropdowns() {
   const departments = await fetchJSON(`${apiBase}/departments`);
