@@ -43,7 +43,7 @@ const getUserPendingApprovals = async (req, res) => {
 // اعتماد/رفض ملف
 const handleApproval = async (req, res) => {
   const { contentId } = req.params;
-  const { approved, signature, notes, electronic_signature } = req.body;
+  const { approved, signature, notes, electronic_signature, on_behalf_of } = req.body;
 
   if (typeof approved !== 'boolean') {
     return res.status(400).json({ status: 'error', message: 'البيانات ناقصة' });
@@ -54,19 +54,35 @@ const handleApproval = async (req, res) => {
     if (!token) return res.status(401).json({ status: 'error', message: 'لا يوجد توكن' });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const userId = decoded.id;
+    const currentUserId = decoded.id;
 
-    // التحقق أن أحد التوقيعين موجود
-    if (!signature && !electronic_signature) {
+    // تحديد الموقّع الفعلي
+    const approverId = on_behalf_of || currentUserId;
+    const delegatedBy = on_behalf_of ? currentUserId : null;
+    const isProxy = !!on_behalf_of;
+
+    // ✅ السماح بالرفض بدون توقيع
+    if (approved === true && !signature && !electronic_signature) {
       return res.status(400).json({ status: 'error', message: 'التوقيع مفقود' });
     }
 
-    // حفظ التوقيع أو التوقيع الإلكتروني
+    // تسجيل التوقيع أو الرفض في جدول approval_logs
     await db.execute(`
-      INSERT INTO approval_logs 
-        (content_id, approver_id, status, signature, electronic_signature, comments, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, NOW())
+      INSERT INTO approval_logs (
+        content_id,
+        approver_id,
+        delegated_by,
+        signed_as_proxy,
+        status,
+        signature,
+        electronic_signature,
+        comments,
+        created_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
       ON DUPLICATE KEY UPDATE
+        delegated_by = VALUES(delegated_by),
+        signed_as_proxy = VALUES(signed_as_proxy),
         status = VALUES(status),
         signature = VALUES(signature),
         electronic_signature = VALUES(electronic_signature),
@@ -74,14 +90,16 @@ const handleApproval = async (req, res) => {
         created_at = NOW()
     `, [
       contentId,
-      userId,
+      approverId,
+      delegatedBy,
+      isProxy ? 1 : 0,
       approved ? 'approved' : 'rejected',
       signature || null,
       electronic_signature || null,
       notes || ''
     ]);
 
-    // التحقق إذا الكل وافق
+    // التحقق من اكتمال التواقيع المطلوبة
     const [remaining] = await db.execute(`
       SELECT COUNT(*) AS count
       FROM content_approvers ca
@@ -99,15 +117,17 @@ const handleApproval = async (req, res) => {
             approved_by = ?,
             updated_at = NOW()
         WHERE id = ?
-      `, [userId, contentId]);
+      `, [approverId, contentId]);
     }
 
-    res.status(200).json({ status: 'success', message: 'تم التوقيع' });
+    res.status(200).json({ status: 'success', message: 'تم التوقيع بنجاح' });
   } catch (err) {
-    console.error('handleApproval Error:', err);
+    console.error('❌ handleApproval Error:', err);
     res.status(500).json({ status: 'error', message: 'فشل التوقيع' });
   }
 };
+
+
 
 
 // توليد نسخة نهائية موقعة من PDF
@@ -300,8 +320,10 @@ const getAssignedApprovals = async (req, res) => {
       LEFT JOIN departments d ON f.department_id = d.id
       LEFT JOIN approval_logs al ON ca.content_id = al.content_id AND al.approver_id = ca.user_id
       LEFT JOIN users u2 ON al.delegated_by = u2.id
-      WHERE ca.user_id = ? AND (al.status IS NULL OR al.status = 'pending')
+      WHERE ca.user_id = ?
+      ORDER BY c.updated_at DESC
     `, [userId]);
+    
 
     res.json({ status: 'success', data: rows });
   } catch (err) {
