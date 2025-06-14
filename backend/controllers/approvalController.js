@@ -394,7 +394,7 @@ module.exports = {
   handleApproval,
   delegateApproval,
   getAssignedApprovals,
-  getProxyApprovals // ✅ أضف هذه
+  getProxyApprovals
 };
 
 
