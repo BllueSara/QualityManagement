@@ -283,88 +283,77 @@ const addContent = async (req, res) => {
 // تحديث محتوى موجود
 const updateContent = async (req, res) => {
     try {
-        const authHeader = req.headers.authorization;
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({ status: 'error', message: 'غير مصرح: لا يوجد توكن أو التوكن غير صالح' });
-        }
-
-        const token = authHeader.split(' ')[1];
-        let decodedToken;
-        try {
-            decodedToken = jwt.verify(token, process.env.JWT_SECRET);
-        } catch (error) {
-            return res.status(401).json({ status: 'error', message: 'غير مصرح: توكن غير صالح' });
-        }
-
-        const contentId = req.params.contentId;
-        const { title, notes } = req.body;
-        const newFilePath = req.file ? path.join('content_files', req.file.filename).replace(/\\/g, '/') : null;
-
-        const connection = await db.getConnection();
-
-        const [content] = await connection.execute(
-            'SELECT folder_id, file_path, pending_file_path, created_by, is_approved FROM contents WHERE id = ?',
-            [contentId]
-        );
-
-        if (content.length === 0) {
-            connection.release();
-            if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-            return res.status(404).json({ status: 'error', message: 'المحتوى غير موجود.' });
-        }
-
-        if (content[0].created_by !== decodedToken.id && decodedToken.role !== 'admin') {
-            connection.release();
-            return res.status(403).json({ status: 'error', message: 'ليس لديك صلاحية لتعديل هذا المحتوى.' });
-        }
-
-        if (content[0].is_approved && decodedToken.role !== 'admin') {
-            connection.release();
-            return res.status(403).json({ status: 'error', message: 'لا يمكن تعديل محتوى معتمد.' });
-        }
-
-        const folderId = content[0].folder_id;
-        const [duplicateCheck] = await connection.execute(
-            'SELECT id FROM contents WHERE title = ? AND folder_id = ? AND id != ?',
-            [title, folderId, contentId]
-        );
-
-        if (duplicateCheck.length > 0) {
-            connection.release();
-            if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-            return res.status(409).json({ status: 'error', message: 'يوجد محتوى آخر بنفس العنوان في هذا المجلد.' });
-        }
-
-        // بناء الاستعلام مع الاحتفاظ بالملف الأصلي
-        let query = `
-            UPDATE contents 
-            SET title = ?, 
-                notes = ?, 
-                updated_at = CURRENT_TIMESTAMP
-        `;
-        const params = [title, notes || null];
-
-        if (newFilePath) {
-            query += `, pending_file_path = ?`;
-            params.push(newFilePath);
-        }
-
-        query += ` WHERE id = ?`;
-        params.push(contentId);
-
-        await connection.execute(query, params);
-        connection.release();
-
-        res.json({
-            status: 'success',
-            message: 'تم تحديث المحتوى. الملف الجديد في انتظار الاعتماد.'
-        });
-
-    } catch (error) {
-        console.error('خطأ في تحديث المحتوى:', error);
-        res.status(500).json({ status: 'error', message: 'حدث خطأ في الخادم' });
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ status: 'error', message: 'غير مصرح: لا يوجد توكن' });
+      }
+  
+      const token = authHeader.split(' ')[1];
+      const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+      const userId = decodedToken.id;
+  
+      const originalId = req.params.contentId;
+      const { title, notes } = req.body;
+      const filePath = req.file ? path.join('content_files', req.file.filename).replace(/\\/g, '/') : null;
+  
+      const connection = await db.getConnection();
+  
+      // جلب المحتوى القديم
+      const [oldContent] = await connection.execute(
+        'SELECT folder_id FROM contents WHERE id = ?',
+        [originalId]
+      );
+      if (!oldContent.length) {
+        return res.status(404).json({ status: 'error', message: 'المحتوى الأصلي غير موجود' });
+      }
+  
+      const folderId = oldContent[0].folder_id;
+  
+      // ✅ تجاهل التحقق من التكرار إذا كان التعديل على نفس العنوان
+      const [duplicateCheck] = await connection.execute(
+        'SELECT id FROM contents WHERE title = ? AND folder_id = ? AND id != ?',
+        [title, folderId, originalId]
+      );
+      if (duplicateCheck.length > 0) {
+        return res.status(409).json({ status: 'error', message: 'يوجد محتوى آخر بنفس العنوان في هذا المجلد.' });
+      }
+  
+      // إنشاء النسخة الجديدة
+      const [insertResult] = await connection.execute(
+        `INSERT INTO contents (
+          title, file_path, notes, folder_id,
+          approval_status, is_approved,
+          created_by, approvers_required, approvals_log,
+          created_at, updated_at
+        ) VALUES (?, ?, ?, ?, 'pending', 0, ?, NULL, ?, NOW(), NOW())`,
+        [
+          title,
+          filePath,
+          notes || null,
+          folderId,
+          userId,
+          JSON.stringify([])
+        ]
+      );
+  
+      const newContentId = insertResult.insertId;
+  
+      connection.release();
+  
+      return res.status(201).json({
+        status: 'success',
+        message: '✅ تم إنشاء نسخة جديدة من المحتوى وهي بانتظار الاعتماد',
+        contentId: newContentId
+      });
+  
+    } catch (err) {
+      console.error('❌ خطأ في إنشاء نسخة محدثة:', err);
+      return res.status(500).json({ status: 'error', message: 'حدث خطأ في الخادم' });
     }
-};
+  };
+  
+  
+  
 
 
 // حذف محتوى
