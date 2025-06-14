@@ -300,3 +300,84 @@ body {
     font-size: 0. eight five rem;
   }
 }
+
+
+.btn-accept,
+.btn-reject {
+  padding: 4px 12px;
+  margin: 2px;
+  font-size: 13px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.btn-accept {
+  background-color: #10b981;
+  color: white;
+}
+
+.btn-reject {
+  background-color: #ef4444;
+  color: white;
+}
+
+.btn-accept:hover {
+  background-color: #059669;
+}
+
+.btn-reject:hover {
+  background-color: #dc2626;
+}
+
+
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.popup {
+  background: #fff;
+  padding: 20px 25px;
+  border-radius: 8px;
+  text-align: center;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.2);
+}
+.popup-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 12px; /* المسافة بين الأزرار */
+}
+
+.popup-actions button {
+  padding: 6px 16px;
+  min-width: 90px;
+  font-size: 14px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+#popupConfirm {
+  background-color: #10b981;
+  color: white;
+}
+
+#popupCancel {
+  background-color: #ef4444;
+  color: white;
+}
+
