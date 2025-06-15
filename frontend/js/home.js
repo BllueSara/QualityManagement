@@ -5,13 +5,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   const token = localStorage.getItem('token');
   if (!token) return;
 
-  // 1) فك التوكن
   const payload = JSON.parse(atob(token.split('.')[1] || '{}'));
   const userId  = payload.id;
   const role    = payload.role;
   const isAdmin = role === 'admin';
 
-  // 2) جلب صلاحيات المستخدم
+  // 1) جلب الصلاحيات
   let permissionsKeys = [];
   if (isAdmin) {
     permissionsKeys = ['*'];
@@ -31,10 +30,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // 3) أخفِ/أظهر العناصر حسب data-permission و data-role
+  // 2) إظهار أو إخفاء حسب الصلاحيات
   document.querySelectorAll('[data-permission], [data-role]').forEach(el => {
-    const permReq = el.dataset.permission;  // مثال: 'view_logs'
-    const roleReq = el.dataset.role;        // مثال: 'admin'
+    const permReq = el.dataset.permission;
+    const roleReq = el.dataset.role;
 
     const hasPerm = permReq && (permissionsKeys.includes('*') || permissionsKeys.includes(permReq));
     const hasRole = roleReq === 'admin' && isAdmin;
@@ -42,12 +41,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     el.style.display = (hasPerm || hasRole) ? '' : 'none';
   });
 
-  // 4) ربط النقر على البطاقات
-  const cards = document.querySelectorAll('.cards-grid .card');
-  cards.forEach(card => {
+  // 3) ربط البطاقات
+  document.querySelectorAll('.cards-grid .card').forEach(card => {
     card.addEventListener('click', () => {
       const url = card.getAttribute('data-url');
       if (url) window.location.href = url;
     });
   });
+
+// بدّل البلوك رقم 4 في home.js بهذا:
+try {
+  const res = await fetch(`${apiBase}/users/${userId}/notifications/unread-count`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  const { count } = await res.json();
+
+  const notifEl = document.querySelector('li a[href$="notfiction.html"]');
+  if (notifEl && count > 0) {
+    const badge = document.createElement('span');
+    badge.className = 'notif-badge';
+    badge.textContent = count;
+    notifEl.appendChild(badge);
+  }
+} catch (err) {
+  console.warn('فشل جلب عدد الإشعارات:', err);
+}
+
 });

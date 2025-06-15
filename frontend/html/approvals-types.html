@@ -75,5 +75,48 @@
 
   <!-- Font Awesome -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous"></script>
+  <script>
+  (async () => {
+    const apiBase = 'http://localhost:3006/api';
+    const token   = localStorage.getItem('token');
+    if (!token) return;
+
+    // استخرج الدور و الـ userId
+    let payload = {};
+    try {
+      payload = JSON.parse(atob(token.split('.')[1] || '{}'));
+    } catch {
+      return;
+    }
+    const { role, id: userId } = payload;
+
+    // إذا أدمن، نعطي كل الصلاحيات
+    let perms = [];
+    if (role !== 'admin') {
+      try {
+        const res = await fetch(`${apiBase}/users/${userId}/permissions`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const json = await res.json();
+          perms = json.data.map(p => (typeof p === 'string' ? p : (p.permission || p.permission_key)));
+        }
+      } catch (e) {
+        console.error('Failed to load permissions', e);
+      }
+    } else {
+      perms = ['*'];
+    }
+
+    // صلاحية عرض الاعتمادات
+    const canViewCredits = perms.includes('*') || perms.includes('transfer_credits');
+
+    // أخفِ أو أظهر البطاقات
+    document.querySelectorAll('.admin-only').forEach(el => {
+      el.style.display = canViewCredits ? '' : 'none';
+    });
+  })();
+</script>
+
 </body>
 </html>

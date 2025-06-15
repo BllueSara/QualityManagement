@@ -3,14 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>  تسجيل الدخول- نظام إدارة الجودة والسلامة</title>
+    <title data-translate="login">تسجيل الدخول- نظام إدارة الجودة والسلامة</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../css/shared.css">
-
     <link rel="stylesheet" href="../css/login.css">
-    <script src="../js/login.js" defer></script>
 </head>
 <body>
     <header>
@@ -21,50 +19,59 @@
             <div class="hospital-logo">
                 <img src="../images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز">
             </div>
-         
+            <!-- <div class="language">
+                <a href="#"><img src="../images/langauage.svg" alt=""> <span data-translate="language">عربي</span></a>
+                <ul class="dropdown">
+                    <li><a href="#">عربي</a></li>
+                    <li><a href="#">English</a></li>
+                </ul>
+            </div> -->
         </div>
     </header>
 
     <main>
         <div class="auth-container">
             <form class="auth-form" id="loginForm">
-                <h2>تسجيل الدخول</h2>
-                <p>يرجى إدخال بيانات الدخول الخاصة بك</p>
+                <h2 data-translate="login">تسجيل الدخول</h2>
+                <p data-translate="login-description">يرجى إدخال بيانات الدخول الخاصة بك</p>
 
                 <div class="form-group">
-                    <label for="username">اسم المستخدم</label>
+                    <label for="username" data-translate="username">اسم المستخدم</label>
                     <div class="input-icon-wrapper">
-                        <input type="text" id="username" name="username" placeholder="أدخل اسم المستخدم" required>
+                        <input type="text" id="username" name="username" data-placeholder="enter-username" placeholder="أدخل اسم المستخدم" required>
                         <img src="../images/person.png" alt="أيقونة شخص" class="icon">
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label for="email">البريد الإلكتروني الوزاري</label>
+                    <label for="email" data-translate="email">البريد الإلكتروني الوزاري</label>
                     <div class="input-icon-wrapper">
-                        <input type="email" id="email" name="email" placeholder="name@moh.gov.sa" required>
+                        <input type="email" id="email" name="email" data-placeholder="enter-email" placeholder="name@moh.gov.sa" required>
                         <img src="../images/email.png" alt="أيقونة بريد إلكتروني" class="icon">
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label for="password">كلمة المرور</label>
+                    <label for="password" data-translate="password">كلمة المرور</label>
                     <div class="input-icon-wrapper">
-                        <input type="password" id="password" name="password" placeholder="أدخل كلمة المرور" required>
+                        <input type="password" id="password" name="password" data-placeholder="enter-password" placeholder="أدخل كلمة المرور" required>
                         <img src="../images/password.png" alt="أيقونة قفل" class="icon">
                     </div>
                     <div class="auth-links forgot-password-link">
-                         <a href="forgot-password.html">نسيت كلمة المرور؟</a>
+                         <a href="forgot-password.html" data-translate="forgot-password">نسيت كلمة المرور؟</a>
                     </div>
                 </div>
 
-                <button type="submit" class="btn-primary">تسجيل الدخول</button>
+                <button type="submit" class="btn-primary" data-translate="login">تسجيل الدخول</button>
 
                 <div class="auth-links">
-                    ليس لديك حساب؟ <a href="register.html">سجل الآن</a>
+                    <span data-translate="no-account">ليس لديك حساب؟</span> <a href="register.html" data-translate="register">سجل الآن</a>
                 </div>
             </form>
         </div>
     </main>
+
+    <script src="../js/login.js" defer></script>
+    <script src="../js/language.js"></script>
 </body>
 </html> 

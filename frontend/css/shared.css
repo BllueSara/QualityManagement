@@ -558,3 +558,22 @@ nav ul li a:hover {
         transform: translateY(-20px);
     }
 } 
+input,
+select {
+  font-family: 'Tajawal', sans-serif;
+  font-size: 14px;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+::placeholder {
+  font-family: 'Tajawal', sans-serif;
+  font-size: 14px;
+  color: #aaa;
+}
+.language img {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    background-color: yellow; /* Debugging */
+}
