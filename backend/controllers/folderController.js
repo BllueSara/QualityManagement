@@ -13,6 +13,7 @@ const pool = mysql.createPool({
   queueLimit: 0
 });
 const { logAction } = require('../models/logger');
+const { insertNotification } = require('../models/notfications-utils');
 
 /**
  * GET /api/departments/:departmentId/folders
@@ -117,7 +118,12 @@ const createFolder = async (req, res) => {
 
     conn.release();
     await logAction(decoded.id, 'create_folder', `تم إنشاء مجلد باسم: ${name}`, 'folder', result.insertId);
-
+await insertNotification(
+      decoded.id,
+      'مجلد جديد',
+      `تم إنشاء مجلد جديد باسم "${name}" في القسم`,
+      'add'
+    );
     return res.status(201).json({
       message: 'تم إضافة المجلد بنجاح',
       folderId: result.insertId

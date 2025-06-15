@@ -21,9 +21,18 @@
                     <li><a href="#" class="active"><img src="/frontend/images/home.svg" alt=""> <span data-translate="home">الرئيسية</span></a></li>
                     <li><a href="profile.html"><img src="/frontend/images/profile.svg" alt=""> <span data-translate="account">الحساب</span></a></li>
                     <li data-role="admin" data-permission="view_logs"><a href="logs.html"><img src="/frontend/images/track 1.svg" alt=""> <span data-translate="logs">السجلات</span></a></li>
-                    <li><a href="/frontend/html/notfiction.html"><img src="/frontend/images/notfiction.svg" alt=""> <span data-translate="notifications">الإشعارات</span></a></li>
+<li>
+  <a href="/frontend/html/notfiction.html" class="notif-link" style="position: relative;">
+    <img src="/frontend/images/notfiction.svg" alt="" class="notif-icon">
+    <span class="notif-badge" style="display: none;">0</span>
+    <span data-translate="notifications">الإشعارات</span>
+  </a>
+</li>
+
                     <li class="language">
-                        <a href="#"><img src="/frontend/images/langauage.svg" alt=""> <span data-translate="language">عربي</span></a>
+                        <a href="#">
+                            <img src="/frontend/images/langauage.svg" alt=""> 
+                            <span data-translate="language">عربي</span></a>
                         <ul class="dropdown">
                             <li><a href="#">عربي</a></li>
                             <li><a href="#">English</a></li>
@@ -54,7 +63,7 @@
                 </div>
                 <a href="dashboard.html" class="card">
                     <div class="card-icon bg-red"><img src="/frontend/images/dashboard.svg" alt=""></div>
-                    <div class="card-title" data-translate="statistics">الإحصائيات</div>
+                    <div class="card-title" data-translate="dashboard">لوحة التحكم</div>
                     <div class="card-subtitle" data-translate="click-to-enter">اضغط للدخول</div>
                 </a>
                 <div class="card" data-url="/frontend/html/approvals-types.html">

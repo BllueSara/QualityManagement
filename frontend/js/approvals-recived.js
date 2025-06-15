@@ -4,10 +4,6 @@ let permissionsKeys = [];
 let selectedContentId = null;
 let canvas, ctx;
 
-
-const urlParams = new URLSearchParams(window.location.search);
-const passedId = urlParams.get('id');
-
 // جلب صلاحيات المستخدم
 async function fetchPermissions() {
   if (!token) return;
@@ -54,8 +50,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     allItems = items; // 🔄 حفظ كل العناصر
     await setupFilters(allItems); // ✅ تجهيز الفلاتر قبل العرض
     renderApprovals(allItems); // عرض بناءً على كل البيانات
-    if (passedId) highlightAndScrollToRow(passedId);
-
   } catch (err) {
     console.error("خطأ في جلب الاعتمادات:", err);
     alert("حدث خطأ أثناء تحميل البيانات");
@@ -157,7 +151,7 @@ function renderApprovals(items) {
   const tbody = document.getElementById("approvalsBody");
   tbody.innerHTML = "";
 
-  const canSign = permissionsKeys.includes('*') || permissionsKeys.includes('sign');
+  const canSign     = permissionsKeys.includes('*') || permissionsKeys.includes('sign');
   const canDelegate = permissionsKeys.includes('*') || permissionsKeys.includes('sign_on_behalf');
 
   // ترتيب: pending → rejected → approved
@@ -168,17 +162,19 @@ function renderApprovals(items) {
 
   items.forEach(item => {
     const tr = document.createElement("tr");
-    tr.dataset.id = item.id;
+    tr.dataset.id     = item.id;
     tr.dataset.status = item.approval_status;
-    tr.dataset.dept = item.department_name;
+    tr.dataset.dept   = item.department_name;
 
+    // أنشئ جميع الأزرار دائماً
     let actionsHTML = '';
     if (item.approval_status === 'pending') {
-      if (canSign) actionsHTML += `<button class="btn-sign"><i class="fas fa-user-check"></i> توقيع</button>`;
-      if (canDelegate) actionsHTML += `<button class="btn-delegate"><i class="fas fa-user-friends"></i> توقيع بالنيابة</button>`;
+      actionsHTML += `<button class="btn-sign"><i class="fas fa-user-check"></i> توقيع</button>`;
+      actionsHTML += `<button class="btn-delegate"><i class="fas fa-user-friends"></i> توقيع بالنيابة</button>`;
       actionsHTML += `<button class="btn-qr"><i class="fas fa-qrcode"></i> اعتماد إلكتروني</button>`;
-
       actionsHTML += `<button class="btn-reject"><i class="fas fa-times"></i> رفض</button>`;
+      actionsHTML += `<button class="btn-preview"><i class="fas fa-eye"></i> عرض</button>`;
+
     }
 
     tr.innerHTML = `
@@ -188,6 +184,16 @@ function renderApprovals(items) {
       <td class="col-actions">${actionsHTML}</td>
     `;
     tbody.appendChild(tr);
+
+    // والآن أخف أو عطّل تفويض وتوقيع إلكتروني إذا لم تكن للصلاحية
+    if (!canDelegate) {
+      const btn = tr.querySelector('.btn-delegate');
+      if (btn) btn.style.display = 'none';
+    }
+    if (!canSign) {
+      const btn = tr.querySelector('.btn-qr');
+      if (btn) btn.style.display = 'none';
+    }
   });
 
   initActions();
@@ -246,6 +252,23 @@ document.querySelectorAll('.btn-reject').forEach(btn => {
     openModal('rejectModal');
   });
 });
+document.querySelectorAll('.btn-preview').forEach(btn => {
+  btn.addEventListener('click', e => {
+    const tr = e.target.closest('tr');
+    const itemId = tr.dataset.id;
+    const item = allItems.find(i => i.id == itemId);
+
+    // ✅ تحقّق من وجود المسار الفعلي للملف
+    if (!item || !item.file_path) {
+      alert('❌ لا يوجد محتوى مرتبط');
+      return;
+    }
+
+    const url = `http://localhost:3006/uploads/${item.file_path}`;
+    window.open(url, '_blank');
+  });
+});
+
 
 }
 
@@ -488,13 +511,4 @@ function disableActionsFor(contentId) {
   if (!row) return;
   const actionsCell = row.querySelector('.col-actions');
   if (actionsCell) actionsCell.innerHTML = ''; // إخفاء جميع الأزرار
-}
-
-
-function highlightAndScrollToRow(contentId) {
-  const row = document.querySelector(`tr[data-id="${contentId}"]`);
-  if (row) {
-    row.style.backgroundColor = '#d1fae5'; // لون أخضر فاتح مثلاً
-    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
 }

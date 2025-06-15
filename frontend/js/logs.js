@@ -1,10 +1,4 @@
-// js/logs.js
-// منطق جلب السجلات من الباك-أند ثم تطبيق الفلترة والبحث
-console.log(document.getElementById('apply-filter'));  // يجب ألا يكون null
-
 document.addEventListener('DOMContentLoaded', () => {
-  const applyFilterBtn   = document.getElementById('apply-filter');
-  const resetFilterBtn   = document.getElementById('reset-filter');
   const fromDateInput    = document.getElementById('from-date');
   const toDateInput      = document.getElementById('to-date');
   const actionTypeSelect = document.getElementById('action-type');
@@ -12,13 +6,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const searchInput      = document.getElementById('search-input');
   const logsBody         = document.getElementById('logs-body');
 
-  // بناء auth header
   function authHeader() {
     const token = localStorage.getItem('token');
     return token ? { 'Authorization': `Bearer ${token}` } : {};
   }
 
-  // جلب وعرض السجلات
   async function loadLogs() {
     const params = new URLSearchParams();
     if (fromDateInput.value)    params.append('from', fromDateInput.value);
@@ -27,15 +19,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (userNameSelect.value)   params.append('user', userNameSelect.value);
     if (searchInput.value)      params.append('search', searchInput.value);
 
-const res = await fetch('http://localhost:3006/api/users/logs?' + params.toString(), {
+    const res = await fetch('http://localhost:3006/api/users/logs?' + params.toString(), {
       headers: authHeader()
     });
     const json = await res.json();
 
-    // تفريغ الجدول
     logsBody.innerHTML = '';
 
-    // بناء الصفوف
     json.data.forEach(log => {
       const tr = document.createElement('tr');
       tr.dataset.date   = log.created_at;
@@ -52,7 +42,6 @@ const res = await fetch('http://localhost:3006/api/users/logs?' + params.toStrin
     });
   }
 
-  // جلب قائمة المستخدمين لفلتر الاسم
   async function fetchUsers() {
     const res = await fetch('http://localhost:3006/api/users?roles', { headers: authHeader() });
     const json = await res.json();
@@ -64,25 +53,16 @@ const res = await fetch('http://localhost:3006/api/users/logs?' + params.toStrin
     });
   }
 
-  // دالة للحصول على userId من التوكن
-  function getUserId() {
-    const token = localStorage.getItem('token');
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    return payload.id;
-  }
-
-  // تطبيق الفلترة يُعيد تحميل السجلات من السيرفر
-  applyFilterBtn.addEventListener('click', loadLogs);
-  resetFilterBtn.addEventListener('click', () => {
-    fromDateInput.value = '';
-    toDateInput.value   = '';
-    actionTypeSelect.value = '';
-    userNameSelect.value   = '';
-    searchInput.value      = '';
-    loadLogs();
+  // ✅ فلترة مباشرة عند التغيير
+  [fromDateInput, toDateInput, actionTypeSelect, userNameSelect].forEach(el => {
+    el.addEventListener('change', loadLogs);
   });
 
-  // التحميل الأولي
+  searchInput.addEventListener('input', () => {
+    setTimeout(loadLogs, 300); // قليل من التأخير لتحسين التجربة
+  });
+
+  // أول تحميل
   fetchUsers();
   loadLogs();
 });

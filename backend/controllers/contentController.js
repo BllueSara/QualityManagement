@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
 const { logAction } = require('../models/logger');
+const { insertNotification } = require('../models/notfications-utils');
 
 const db = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',

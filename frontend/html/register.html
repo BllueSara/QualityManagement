@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوده - إنشاء حساب جديد</title>
+    <title data-translate="register">إنشاء حساب جديد</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../css/shared.css">
     <link rel="stylesheet" href="../css/register.css">
-   
 </head>
 <body>
     <header>
@@ -20,95 +19,97 @@
             <div class="hospital-logo">
                 <img src="../images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز">
             </div>
-           
+            <!-- <div class="language">
+                <a href="#"><img src="../images/langauage.svg" alt=""> <span data-translate="language">عربي</span></a>
+                <ul class="dropdown">
+                    <li><a href="#">عربي</a></li>
+                    <li><a href="#">English</a></li>
+                </ul>
+            </div> -->
         </div>
     </header>
 
     <main>
         <div class="auth-container">
             <form class="auth-form" id="registerForm">
-                <h2>إنشاء حساب جديد</h2>
-                <p>أدخل بياناتك لإنشاء حساب جديد</p>
+                <h2 data-translate="register">إنشاء حساب جديد</h2>
+                <p data-translate="register-description">أدخل بياناتك لإنشاء حساب جديد</p>
 
                 <div class="form-group">
-                    <label for="reg-username">اسم المستخدم</label>
+                    <label for="reg-username" data-translate="username">اسم المستخدم</label>
                     <div class="input-icon-wrapper">
-                        <input type="text" id="reg-username" name="username" placeholder="أدخل اسم المستخدم" required>
+                        <input type="text" id="reg-username" name="username" data-placeholder="enter-username" placeholder="أدخل اسم المستخدم" required>
                         <img src="../images/person.png" alt="أيقونة شخص" class="icon">
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label for="reg-email">البريد الإلكتروني الوزاري</label>
+                    <label for="reg-email" data-translate="email">البريد الإلكتروني الوزاري</label>
                     <div class="input-icon-wrapper">
-                        <input type="email" id="reg-email" name="email" placeholder="name@moh.gov.sa" required>
+                        <input type="email" id="reg-email" name="email" data-placeholder="enter-email" placeholder="name@moh.gov.sa" required>
                         <img src="../images/email.png" alt="أيقونة بريد إلكتروني" class="icon">
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label for="reg-password">كلمة المرور</label>
+                    <label for="reg-password" data-translate="password">كلمة المرور</label>
                     <div class="input-icon-wrapper">
-                        <input type="password" id="reg-password" name="password" placeholder="أدخل كلمة المرور" required>
+                        <input type="password" id="reg-password" name="password" data-placeholder="enter-password" placeholder="أدخل كلمة المرور" required>
                         <img src="../images/password.png" alt="أيقونة قفل" class="icon">
-                         <!-- Eye icon placeholder -->
                     </div>
                 </div>
 
-                 <div class="form-group">
-                    <label for="reg-confirm-password">تأكيد كلمة المرور</label>
+                <div class="form-group">
+                    <label for="reg-confirm-password" data-translate="confirm-password">تأكيد كلمة المرور</label>
                     <div class="input-icon-wrapper">
-                        <input type="password" id="reg-confirm-password" name="confirm_password" placeholder="تأكيد كلمة المرور" required>
+                        <input type="password" id="reg-confirm-password" name="confirm_password" data-placeholder="confirm-password-placeholder" placeholder="تأكيد كلمة المرور" required>
                         <img src="../images/password.png" alt="أيقونة قفل" class="icon">
-                         <!-- Eye icon placeholder -->
                     </div>
                 </div>
 
-                 <div class="form-group">
-                    <label for="reg-department">القسم</label>
+                <div class="form-group">
+                    <label for="reg-department" data-translate="department">القسم</label>
                     <div class="input-icon-wrapper">
                         <select id="reg-department" name="department" required>
-                            <option value="">اختر القسم</option>
-                            <!-- الأقسام سيتم جلبها ديناميكياً بواسطة JavaScript -->
-                            <option value="__ADD_NEW_DEPARTMENT__">إضافة قسم جديد</option>
+                            <option value="" data-translate="select-department">اختر القسم</option>
+                            <option value="__ADD_NEW_DEPARTMENT__" data-translate="add-new-department">إضافة قسم جديد</option>
                         </select>
-                         <!-- Department icon placeholder (if needed, might style select with CSS) -->
-                         <img src="../images/arrwo.png" alt="أيقونة سهم" class="icon select-arrow-icon">
+                        <img src="../images/arrwo.png" alt="أيقونة سهم" class="icon select-arrow-icon">
                     </div>
                 </div>
 
-                <button type="submit" class="btn-primary">إنشاء حساب</button>
+                <button type="submit" class="btn-primary" data-translate="register">إنشاء حساب</button>
 
                 <div class="auth-links">
-                    لديك حساب بالفعل؟ <a href="login.html">تسجيل الدخول</a>
+                    <span data-translate="have-account">لديك حساب بالفعل؟</span> <a href="login.html" data-translate="login">تسجيل الدخول</a>
                 </div>
             </form>
         </div>
     </main>
 
-    <!-- Add New Department Modal (copied from departments.html) -->
+    <!-- Add New Department Modal -->
     <div id="addDepartmentModal" class="modal-overlay">
         <div class="modal-content">
-            <h3>إضافة قسم</h3>
+            <h3 data-translate="add-department">إضافة قسم</h3>
             <hr>
             <div class="modal-body">
                 <div class="form-group">
-                    <label for="departmentName">اسم القسم</label>
-                    <input type="text" id="departmentName" placeholder="أدخل اسم القسم">
+                    <label for="departmentName" data-translate="department-name">اسم القسم</label>
+                    <input type="text" id="departmentName" data-placeholder="enter-department-name" placeholder="أدخل اسم القسم">
                 </div>
-                 <div class="form-group">
-                    <label for="departmentImage">مسار الصورة</label>
+                <div class="form-group">
+                    <label for="departmentImage" data-translate="department-image">مسار الصورة</label>
                     <input type="file" id="departmentImage" accept="image/*">
                 </div>
             </div>
             <div class="modal-buttons">
-                <button class="btn-primary" id="saveAddDepartment">حفظ</button>
-                <button class="btn-secondary" id="cancelAddDepartment">إلغاء</button>
+                <button class="btn-primary" id="saveAddDepartment" data-translate="save">حفظ</button>
+                <button class="btn-secondary" id="cancelAddDepartment" data-translate="cancel">إلغاء</button>
             </div>
         </div>
     </div>
 
+    <script src="../js/register.js"></script>
+    <script src="../js/language.js"></script>
 </body>
-
-<script src="../js/register.js"></script>
 </html> 

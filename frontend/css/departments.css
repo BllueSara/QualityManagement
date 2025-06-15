@@ -193,8 +193,8 @@ main {
 }
 
 .card-icon img {
-    width: 35px;
-    height: 35px;
+    width: 150px;
+    height: 108px;
 }
 
 .card-title {
@@ -241,7 +241,6 @@ main {
 
 /* Colors */
 .bg-purple { background-color: #e0eaff; }
-.bg-blue { background-color: #e0f2f7; }
 .bg-red { background-color: #ffebee; }
 .bg-lightblue { background-color: #e3f2fd; }
 .bg-green { background-color: #e8f5e9; }

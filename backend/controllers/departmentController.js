@@ -7,6 +7,7 @@ const db = mysql.createPool({
     database: process.env.DB_NAME || 'Quality'
 });
 const { logAction } = require('../models/logger');
+const { insertNotification } = require('../models/notfications-utils');
 
 const getDepartments = async (req, res) => {
     try {
