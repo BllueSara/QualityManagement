@@ -529,3 +529,11 @@ body {
   }
 }
 
+.reply-bg {
+  background-color: #ff9800; /* برتقالي */
+}
+
+.reply-badge {
+  background-color: #ff9800;
+  color: white;
+}

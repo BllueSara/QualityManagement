@@ -423,3 +423,24 @@ input:checked + .slider:before {
         right: auto;
     }
 } 
+.bg-teal { background-color: #20c997; }
+.bg-yellow { background-color: #ffc107; }
+.bg-red { background-color: #dc3545; }
+.bg-gray { background-color: #6c757d; }
+.notification-card {
+  position: relative;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+.delete-btn {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 4px;
+  margin-right: 8px;
+}
+
+.delete-btn:hover {
+  color: #c00;
+}

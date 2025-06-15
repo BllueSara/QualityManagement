@@ -181,7 +181,6 @@ static async findAllAndAssignments(userId, userRole) {
           WHERE ta.ticket_id   = t.id
             AND ta.assigned_to = ?
         )
-        AND latest.status = 'تم الإرسال'
 
         ORDER BY t.created_at DESC
       `;
@@ -599,25 +598,45 @@ static async addReply(ticketId, authorId, text) {
       'SELECT assigned_to FROM ticket_assignments WHERE ticket_id = ?',
       [ticketId]
     );
-    const isAssignee = assignees.some(a => a.assigned_to === authorId);
+const isAssignee = assignees.some(a => a.assigned_to === authorId);
 
-    if (isAssignee) {
-      // 4a) أدخل حالة "مغلق" مع changed_by
-      await conn.query(
-        `INSERT INTO ticket_status_history
-           (ticket_id, status, changed_by)
-         VALUES (?, ?, ?)`,
-        [ticketId, 'مغلق', authorId]
-      );
+if (isAssignee) {
+  // تحقق من عدد المكلفين الكلي
+  const totalAssignees = assignees.map(a => a.assigned_to);
 
-      // 4b) حدّث حقل status في جدول tickets ليعكس "مغلق"
-      await conn.query(
-        `UPDATE tickets
-           SET status = ?
-         WHERE id = ?`,
-        ['مغلق', ticketId]
-      );
-    }
+  // تحقق من من ردوا من المكلفين
+  const [replyAuthors] = await conn.query(
+    `SELECT DISTINCT author_id
+     FROM ticket_replies
+     WHERE ticket_id = ?
+       AND author_id IN (?)`,
+    [ticketId, totalAssignees]
+  );
+
+  const repliedUserIds = replyAuthors.map(r => r.author_id);
+
+  const allResponded = totalAssignees.every(assigneeId =>
+    repliedUserIds.includes(assigneeId)
+  );
+
+  if (allResponded) {
+    // أغلق التذكرة
+    await conn.query(
+      `INSERT INTO ticket_status_history
+         (ticket_id, status, changed_by)
+       VALUES (?, ?, ?)`,
+      [ticketId, 'مغلق', authorId]
+    );
+
+    await conn.query(
+      `UPDATE tickets
+         SET status = ?
+       WHERE id = ?`,
+      ['مغلق', ticketId]
+    );
+  }
+}
+
 
     await conn.commit();
     return newReply;
@@ -636,14 +655,12 @@ static async assignUsers(ticketId, assignees = [], changedBy, comments) {
   try {
     await conn.beginTransaction();
 
-
-
-    // 2) أضف كل معرّف مستخدم في assignees
+    // 1) إضافة التعيينات
     if (Array.isArray(assignees) && assignees.length) {
       const vals = assignees.map(userId => [
         ticketId,
         userId,
-        changedBy,         // who قام بالتحويل
+        changedBy,
         comments || null
       ]);
       await conn.query(
@@ -654,13 +671,21 @@ static async assignUsers(ticketId, assignees = [], changedBy, comments) {
       );
     }
 
-    // 3) سجّل في سجل الحالة (مرة واحدة)
-    await conn.query(
-      `INSERT INTO ticket_status_history
-         (ticket_id, status, changed_by, comments)
-       VALUES (?, 'تم الإرسال', ?, ?)`,
-      [ticketId, changedBy, comments || 'تم الإرسال']
-    );
+    // 2) تسجيل حالة "تم الإرسال" لكل مستخدم مكلّف
+    for (const userId of assignees) {
+      const [rows] = await conn.query(
+        'SELECT username FROM users WHERE id = ?',
+        [userId]
+      );
+      const username = rows[0]?.username || `ID:${userId}`;
+
+      await conn.query(
+        `INSERT INTO ticket_status_history
+           (ticket_id, status, changed_by, comments)
+         VALUES (?, 'تم الإرسال', ?, ?)`,
+        [ticketId, changedBy, `تم الإرسال إلى ${username}`]
+      );
+    }
 
     await conn.commit();
   } catch (err) {
@@ -671,51 +696,79 @@ static async assignUsers(ticketId, assignees = [], changedBy, comments) {
   }
 }
 
-  static async track(ticketId) {
-    const conn = await db.getConnection();
-    try {
-      // 1) بيانات التذكرة الأساسية
-      const [[ticket]] = await conn.query(
-        `SELECT 
-           t.id, t.report_short_desc   AS title, t.status AS current_status, t.created_at,
-           u1.username AS created_by,
-           rd.name AS reporting_dept_name,
-           sd.name AS responding_dept_name
-         FROM tickets t
-         LEFT JOIN users u1 ON t.created_by = u1.id
-         LEFT JOIN departments rd ON t.reporting_dept_id = rd.id
-         LEFT JOIN departments sd ON t.responding_dept_id = sd.id
-         WHERE t.id = ?`,
-        [ticketId]
-      );
-      if (!ticket) return null;
 
-      // 2) سجل الحالات
-      const [timeline] = await conn.query(
-        `SELECT h.status, h.comments, h.created_at,
-                u.username AS changed_by
-         FROM ticket_status_history h
-         LEFT JOIN users u ON h.changed_by = u.id
-         WHERE h.ticket_id = ?
-         ORDER BY h.created_at ASC`,
-        [ticketId]
-      );
+static async track(ticketId) {
+  const conn = await db.getConnection();
+  try {
+    // 1) بيانات التذكرة الأساسية
+    const [[ticket]] = await conn.query(
+      `SELECT 
+         t.id, t.report_short_desc AS title, t.status AS current_status, t.created_at,
+         u1.username AS created_by,
+         rd.name AS reporting_dept_name,
+         sd.name AS responding_dept_name
+       FROM tickets t
+       LEFT JOIN users u1 ON t.created_by = u1.id
+       LEFT JOIN departments rd ON t.reporting_dept_id = rd.id
+       LEFT JOIN departments sd ON t.responding_dept_id = sd.id
+       WHERE t.id = ?`,
+      [ticketId]
+    );
+    if (!ticket) return null;
 
-      // 3) المكلفون (القسم التالي)
-      const [assignees] = await conn.query(
-        `SELECT u.username, d.name AS department
-         FROM ticket_assignments ta
-         JOIN users u ON ta.assigned_to = u.id
-         LEFT JOIN departments d ON u.department_id = d.id
-         WHERE ta.ticket_id = ?`,
-        [ticketId]
-      );
+    // 2) سجل الحالات (مع اسم المستخدم والقسم)
+    const [history] = await conn.query(
+      `SELECT 
+         h.status,
+         h.comments,
+         h.created_at,
+         u.username AS changed_by,
+         d.name     AS department_name
+       FROM ticket_status_history h
+       LEFT JOIN users u ON h.changed_by = u.id
+       LEFT JOIN departments d ON u.department_id = d.id
+       WHERE h.ticket_id = ?
+       ORDER BY h.created_at ASC`,
+      [ticketId]
+    );
 
-      return { ticket, timeline, assignees };
-    } finally {
-      conn.release();
-    }
+    // 3) الردود (نفس التنسيق – ونحدد status = 'رد')
+    const [replies] = await conn.query(
+      `SELECT 
+         r.text AS comments,
+         r.created_at,
+         u.username AS changed_by,
+         d.name     AS department_name,
+         'رد'      AS status
+       FROM ticket_replies r
+       LEFT JOIN users u ON r.author_id = u.id
+       LEFT JOIN departments d ON u.department_id = d.id
+       WHERE r.ticket_id = ?
+       ORDER BY r.created_at ASC`,
+      [ticketId]
+    );
+
+    // 4) دمج السجل مع الردود وترتيبهم حسب الزمن
+    const timeline = [...history, ...replies].sort(
+      (a, b) => new Date(a.created_at) - new Date(b.created_at)
+    );
+
+    // 5) المكلفين
+    const [assignees] = await conn.query(
+      `SELECT u.id, u.username, d.name AS department
+       FROM ticket_assignments ta
+       JOIN users u ON ta.assigned_to = u.id
+       LEFT JOIN departments d ON u.department_id = d.id
+       WHERE ta.ticket_id = ?`,
+      [ticketId]
+    );
+
+    return { ticket, timeline, assignees };
+  } finally {
+    conn.release();
   }
+}
+
 
 }
 

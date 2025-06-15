@@ -3,6 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { logAction } = require('../models/logger');
+const { insertNotification } = require('../models/notfications-utils');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({

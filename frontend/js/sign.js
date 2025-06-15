@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', loadDelegations);
 
-const apiBase = window.location.origin + '/api/approvals/proxy';  // ✔ استخدم endpoint الصحيح
+const apiBase = 'http://localhost:3006' + '/api/approvals/proxy';  // ✔ استخدم endpoint الصحيح
 const token = localStorage.getItem('token');
 
 let selectedContentId = null;
@@ -40,41 +40,16 @@ async function loadDelegations() {
       tbody.appendChild(tr);
     });
 
-    document.querySelectorAll('.btn-accept').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const contentId = btn.dataset.id;
-        showPopup(async () => {
-          try {
-            const res = await fetch(`${window.location.origin}/api/approvals/${contentId}/approve`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({
-                approved: true,
-                electronic_signature: true,
-                notes: '',
-                // on_behalf_of   // حسب حاجتك لو تفويض بالنيابة
-              })
-            });
-        
-            const json = await res.json();
-            if (json.status === 'success') {
-              alert('✅ تم قبول التفويض وسيتم تحويلك إلى الاعتمادات المستلمة');
-              window.location.href = `/frontend/html/approvals-recived.html?id=${contentId}`;
-            } else {
-              throw new Error(json.message);
-            }
-          } catch (err) {
-            console.error('فشل قبول التفويض:', err);
-            alert('❌ حدث خطأ أثناء قبول التفويض');
-          }
-        });
-        
-      });
-      
-    });
+document.querySelectorAll('.btn-accept').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const contentId = btn.dataset.id;
+    // ✅ بدل الاعتماد، نحول المستخدم لصفحة اختيار الاعتماد
+     alert('✅ تم قبول التفويض وسيتم تحويلك إلى الاعتمادات المستلمة');
+
+              window.location.href = `/frontend/html/approvals-recived.html?id=${contentId}`;  });
+});
+
+             
 
     document.querySelectorAll('.btn-reject').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -102,7 +77,7 @@ async function submitReject() {
   if (!reason) return alert('⚠️ يرجى كتابة سبب الرفض');
 
   try {
-    const res = await fetch(`${window.location.origin}/api/approvals/${selectedContentId}/approve`, {
+    const res = await fetch(`http://localhost:3006/api/approvals/${selectedContentId}/approve`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -135,7 +110,7 @@ async function signDelegation(contentId) {
   if (!confirm('هل تريد توقيع هذا المستند بالنيابة؟')) return;
 
   try {
-    const res = await fetch(`${window.location.origin}/api/approvals/${contentId}/approve`, {
+    const res = await fetch(`http://localhost:3006/api/approvals/${contentId}/approve`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

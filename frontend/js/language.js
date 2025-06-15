@@ -22,6 +22,7 @@ const translations = {
 
         // Login & Register
         'login': 'تسجيل الدخول',
+        'login-description': 'يرجى إدخال بيانات الدخول الخاصة بك',
         'register': 'إنشاء حساب',
         'forgot-password': 'نسيت كلمة المرور؟',
         'reset-password': 'إعادة تعيين كلمة المرور',
@@ -29,8 +30,11 @@ const translations = {
         'password': 'كلمة المرور',
         'confirm-password': 'تأكيد كلمة المرور',
         'name': 'الاسم',
+        'username': 'اسم المستخدم',
         'submit': 'إرسال',
         'back-to-login': 'العودة لتسجيل الدخول',
+        'no-account': 'ليس لديك حساب؟',
+        'have-account': 'لديك حساب بالفعل؟',
 
         // Dashboard
         'dashboard': 'لوحة التحكم',
@@ -119,7 +123,20 @@ const translations = {
         'permission-name': 'اسم الصلاحية',
         'permission-description': 'وصف الصلاحية',
         'assign-permission': 'تعيين صلاحية',
-        'remove-permission': 'إزالة صلاحية'
+        'remove-permission': 'إزالة صلاحية',
+
+        // Register specific
+        'register-description': 'أدخل بياناتك لإنشاء حساب جديد',
+        'select-department': 'اختر القسم',
+        'add-new-department': 'إضافة قسم جديد',
+        'department-image': 'مسار الصورة',
+
+        // Placeholders
+        'enter-username': 'أدخل اسم المستخدم',
+        'enter-email': 'name@moh.gov.sa',
+        'enter-password': 'أدخل كلمة المرور',
+        'confirm-password-placeholder': 'تأكيد كلمة المرور',
+        'enter-department-name': 'أدخل اسم القسم',
     },
     en: {
         // Navigation
@@ -143,6 +160,7 @@ const translations = {
 
         // Login & Register
         'login': 'Login',
+        'login-description': 'Please enter your login details',
         'register': 'Register',
         'forgot-password': 'Forgot Password?',
         'reset-password': 'Reset Password',
@@ -150,8 +168,11 @@ const translations = {
         'password': 'Password',
         'confirm-password': 'Confirm Password',
         'name': 'Name',
+        'username': 'Username',
         'submit': 'Submit',
         'back-to-login': 'Back to Login',
+        'no-account': 'Don\'t have an account?',
+        'have-account': 'Already have an account?',
 
         // Dashboard
         'dashboard': 'Dashboard',
@@ -240,7 +261,20 @@ const translations = {
         'permission-name': 'Permission Name',
         'permission-description': 'Permission Description',
         'assign-permission': 'Assign Permission',
-        'remove-permission': 'Remove Permission'
+        'remove-permission': 'Remove Permission',
+
+        // Register specific
+        'register-description': 'Enter your details to create a new account',
+        'select-department': 'Select Department',
+        'add-new-department': 'Add New Department',
+        'department-image': 'Image Path',
+
+        // Placeholders
+        'enter-username': 'Enter username',
+        'enter-email': 'name@moh.gov.sa',
+        'enter-password': 'Enter password',
+        'confirm-password-placeholder': 'Confirm password',
+        'enter-department-name': 'Enter department name',
     }
 };
 
@@ -255,10 +289,14 @@ document.addEventListener('DOMContentLoaded', () => {
     setLanguage(currentLang);
     
     // Toggle dropdown on language button click
-    languageButton.addEventListener('click', (e) => {
-        e.preventDefault();
-        languageDropdown.classList.toggle('show');
-    });
+    if (languageButton) {
+        languageButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (languageDropdown) {
+                languageDropdown.classList.toggle('show');
+            }
+        });
+    }
     
     // Handle language selection
     document.querySelectorAll('.language .dropdown a').forEach(link => {
@@ -266,13 +304,15 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const lang = e.target.textContent.toLowerCase() === 'english' ? 'en' : 'ar';
             setLanguage(lang);
-            languageDropdown.classList.remove('show');
+            if (languageDropdown) {
+                languageDropdown.classList.remove('show');
+            }
         });
     });
     
     // Close dropdown when clicking outside
     document.addEventListener('click', (e) => {
-        if (!e.target.closest('.language')) {
+        if (!e.target.closest('.language') && languageDropdown) {
             languageDropdown.classList.remove('show');
         }
     });
@@ -295,10 +335,20 @@ function setLanguage(lang) {
             element.textContent = translations[lang][key];
         }
     });
+
+    // Update placeholders
+    document.querySelectorAll('[data-placeholder]').forEach(element => {
+        const key = element.getAttribute('data-placeholder');
+        if (translations[lang][key]) {
+            element.placeholder = translations[lang][key];
+        }
+    });
     
     // Update language button text
     const languageButton = document.querySelector('.language a');
-    languageButton.textContent = lang === 'ar' ? 'عربي' : 'English';
+    if (languageButton) {
+        languageButton.textContent = lang === 'ar' ? 'عربي' : 'English';
+    }
     
     // Save language preference
     localStorage.setItem('language', lang);

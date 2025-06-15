@@ -9,6 +9,7 @@ const db = mysql.createPool({
   database: process.env.DB_NAME || 'Quality'
 });
 const { logAction } = require('../models/logger');
+const { insertNotification } = require('../models/notfications-utils');
 
 // 1) جلب كل المستخدمين
 const getUsers = async (req, res) => {
@@ -333,37 +334,39 @@ const getLogs = async (req, res) => {
 };
 const getNotifications = async (req, res) => {
   const userId = req.params.id;
+
   try {
-    const [rows] = await db2.execute(
-      'SELECT id, title, message, is_read, created_at FROM notifications WHERE user_id = ? ORDER BY created_at DESC',
-      [userId]
-    );
-    res.status(200).json({ status: 'success', data: rows });
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ status: 'error', message: 'Missing token' });
+
+    let payload;
+    try {
+      payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+    } catch {
+      return res.status(400).json({ status: 'error', message: 'توكن غير صالح' });
+    }
+
+    const isAdmin = payload.role === 'admin';
+
+    const query = isAdmin
+      ? 'SELECT id, user_id, title, message, is_read, created_at, type FROM notifications ORDER BY created_at DESC'
+      : 'SELECT id, user_id, title, message, is_read, created_at, type FROM notifications WHERE user_id = ? ORDER BY created_at DESC';
+
+    const [rows] = await db.execute(query, isAdmin ? [] : [userId]);
+
+    return res.status(200).json({ status: 'success', data: rows });
   } catch (error) {
     console.error('Error fetching notifications:', error);
-    res.status(500).json({ status: 'error', message: 'حدث خطأ أثناء جلب الإشعارات' });
+    return res.status(500).json({ status: 'error', message: 'فشل تحميل الإشعارات' });
   }
 };
+
+
 
 /**
  * Mark a notification as read
  */
-const markAsRead = async (req, res) => {
-  const notifId = req.params.id;
-  try {
-    const [result] = await db2.execute(
-      'UPDATE notifications SET is_read = TRUE WHERE id = ?',
-      [notifId]
-    );
-    if (!result.affectedRows) {
-      return res.status(404).json({ status: 'error', message: 'الإشعار غير موجود' });
-    }
-    res.status(200).json({ status: 'success', message: 'تم وسم الإشعار كمقروء' });
-  } catch (error) {
-    console.error('Error marking notification as read:', error);
-    res.status(500).json({ status: 'error', message: 'حدث خطأ أثناء تحديث الإشعار' });
-  }
-};
+
 
 
 /**
@@ -372,7 +375,7 @@ const markAsRead = async (req, res) => {
 const deleteNotification = async (req, res) => {
   const notifId = req.params.id;
   try {
-    const [result] = await db2.execute(
+    const [result] = await db.execute(
       'DELETE FROM notifications WHERE id = ?',
       [notifId]
     );
@@ -385,6 +388,72 @@ const deleteNotification = async (req, res) => {
     res.status(500).json({ status: 'error', message: 'حدث خطأ أثناء حذف الإشعار' });
   }
 };
+// controllers/usersController.js
+const markAllAsRead = async (req, res) => {
+  const userId = req.params.id;
+
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'غير مصرح' });
+  }
+
+  let decoded;
+  try {
+    decoded = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
+  } catch {
+    return res.status(401).json({ message: 'توكن غير صالح' });
+  }
+
+  const isAdmin = decoded.role === 'admin';
+
+  try {
+    await db.execute(
+      isAdmin
+        ? `UPDATE notifications SET is_read = 1 WHERE is_read = 0`
+        : `UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0`,
+      isAdmin ? [] : [userId]
+    );
+
+    res.status(200).json({ status: 'success', message: 'تم تحديث الإشعارات كمقروءة.' });
+  } catch (err) {
+    console.error('Mark read error:', err);
+    res.status(500).json({ status: 'error', message: 'خطأ في السيرفر' });
+  }
+};
+// GET /api/users/:id/notifications/unread-count
+const getUnreadCount = async (req, res) => {
+  const userId = req.params.id;
+
+  // استخرج الدور من التوكن
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'غير مصرح' });
+  }
+
+  let decoded;
+  try {
+    decoded = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
+  } catch {
+    return res.status(401).json({ message: 'توكن غير صالح' });
+  }
+
+  const isAdmin = decoded.role === 'admin';
+
+  try {
+    const [rows] = await db.execute(
+      isAdmin
+        ? 'SELECT COUNT(*) AS count FROM notifications WHERE is_read = 0'
+        : 'SELECT COUNT(*) AS count FROM notifications WHERE user_id = ? AND is_read = 0',
+      isAdmin ? [] : [userId]
+    );
+    res.status(200).json({ count: rows[0].count });
+  } catch (err) {
+    console.error('Error getting unread count:', err);
+    res.status(500).json({ count: 0 });
+  }
+};
+
+
 
 module.exports = {
   getUsers,
@@ -397,6 +466,7 @@ module.exports = {
   getRoles,
   getLogs,
   getNotifications,
-  markAsRead,
-  deleteNotification
+  deleteNotification,
+  markAllAsRead,
+  getUnreadCount
 };

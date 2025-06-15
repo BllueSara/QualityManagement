@@ -23,6 +23,7 @@ const rolePopup     = document.getElementById('role-popup');
 const roleSelect    = document.getElementById('role-select');
 const btnSaveRole   = document.getElementById('btn-save-role');
 const btnCancelRole = document.getElementById('btn-cancel-role');
+const departmentSelect = document.getElementById('department');
 
 // في البداية أخفِ قسم الصلاحيات
 permissionsSection.style.display = 'none';
@@ -57,6 +58,33 @@ async function loadMyPermissions() {
     myPermsSet = new Set(perms);
   } catch (e) {
     console.error('فشل جلب صلاحياتي أنا:', e);
+  }
+}
+async function fetchDepartments() {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${apiBase}/departments`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || 'فشل في جلب الأقسام');
+    }
+
+    // تحديث القائمة المنسدلة
+    departmentSelect.innerHTML = '<option value="">اختر القسم</option>';
+    result.data.forEach(dept => {
+      const option = document.createElement('option');
+      option.value = dept.id;
+      option.textContent = dept.name;
+      departmentSelect.appendChild(option);
+    });
+  } catch (error) {
+    console.error('خطأ في جلب الأقسام:', error);
+    alert('حدث خطأ أثناء جلب الأقسام. تأكد من تشغيل الخادم.');
   }
 }
 
@@ -98,6 +126,7 @@ async function selectUser(id) {
   profileStatus.classList.toggle('active', u.status==='active');
   profileDept.textContent   = u.departmentName || '—';
   profileRoleEl.textContent = u.role           || '—';
+document.querySelector('.user-profile-header')?.classList.add('active');
 
   // دور المستخدم الحالي
   const payload = JSON.parse(atob(authToken.split('.')[1] || '{}'));
@@ -211,9 +240,77 @@ userSearch?.addEventListener('input', e => {
   });
 });
 
+
+
+// =====================
+// 8) Open Add/Edit Modal
+// =====================
+const btnAdd = document.getElementById('add-user-btn');
+if (btnAdd) {
+  btnAdd.addEventListener('click', () => {
+    selectedUserId = null;
+    document.getElementById('addUserModal').style.display = 'flex';
+    document.querySelector('.modal-title').textContent = 'إضافة مستخدم جديد';
+    ['userName','jobTitle','email','password'].forEach(id => {
+      document.getElementById(id).value = '';
+        fetchDepartments(); // ✅ هنا تستدعي الأقسام وتعبئها
+
+    });
+  });
+}
+const btnCancel = document.getElementById('cancelAddUser');
+if (btnCancel) {
+  btnCancel.addEventListener('click', () => {
+    document.getElementById('addUserModal').style.display = 'none';
+  });
+}
+
+// =====================
+// 9) Save or Update User
+// =====================
+const btnSaveUser = document.getElementById('saveUser');
+if (btnSaveUser) {
+  btnSaveUser.addEventListener('click', async () => {
+    const data = {
+      name:         document.getElementById('userName').value,
+      jobTitle:     document.getElementById('jobTitle').value,
+      departmentId: document.getElementById('department').value,
+      email:        document.getElementById('email').value,
+      password:     document.getElementById('password').value,
+      role:         document.getElementById('role')?.value || 'user'
+    };
+    const method = selectedUserId ? 'PUT' : 'POST';
+    const url    = selectedUserId
+      ? `${apiBase}/users/${selectedUserId}`
+      : `${apiBase}/users`;
+    await fetchJSON(url, { method, body: JSON.stringify(data) });
+    document.getElementById('addUserModal').style.display = 'none';
+    await loadUsers();
+  });
+}
+
+// =====================
+// 10) Export Excel/PDF
+// =====================
+const btnExcel = document.getElementById('btn-export-excel');
+if (btnExcel) {
+  btnExcel.addEventListener('click', () => {
+    if (!selectedUserId) return alert('اختر مستخدماً أولاً');
+    window.location = `${apiBase}/users/${selectedUserId}/export/excel`;
+  });
+}
+const btnPdf = document.getElementById('btn-export-pdf');
+if (btnPdf) {
+  btnPdf.addEventListener('click', () => {
+    if (!selectedUserId) return alert('اختر مستخدماً أولاً');
+    window.location = `${apiBase}/users/${selectedUserId}/export/pdf`;
+  });
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
   if (!authToken) return console.log('لا يوجد توكن؛ الرجاء تسجيل الدخول');
   await loadMyPermissions();
+
   loadUsers();
 });

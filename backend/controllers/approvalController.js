@@ -6,6 +6,7 @@ const path = require('path');
 const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
 
 const { logAction } = require('../models/logger');
+const { insertNotification } = require('../models/notfications-utils');
 
 require('dotenv').config();
 
@@ -56,14 +57,17 @@ const handleApproval = async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const currentUserId = decoded.id;
 
+    // تحديد الموقّع الفعلي
     const approverId = on_behalf_of || currentUserId;
     const delegatedBy = on_behalf_of ? currentUserId : null;
     const isProxy = !!on_behalf_of;
 
+    // ✅ السماح بالرفض بدون توقيع
     if (approved === true && !signature && !electronic_signature) {
       return res.status(400).json({ status: 'error', message: 'التوقيع مفقود' });
     }
 
+    // تسجيل التوقيع أو الرفض في جدول approval_logs
     await db.execute(`
       INSERT INTO approval_logs (
         content_id,
@@ -95,15 +99,14 @@ const handleApproval = async (req, res) => {
       electronic_signature || null,
       notes || ''
     ]);
-
-    // ✅ إذا وافق على التفويض، أضفه كموقّع رسمي للملف
+   // ✅ إذا وافق على التفويض، أضفه كموقّع رسمي للملف
     if (approved === true && isProxy) {
       await db.execute(`
         INSERT IGNORE INTO content_approvers (content_id, user_id)
         VALUES (?, ?)
       `, [contentId, approverId]);
     }
-
+    // التحقق من اكتمال التواقيع المطلوبة
     const [remaining] = await db.execute(`
       SELECT COUNT(*) AS count
       FROM content_approvers ca
@@ -130,7 +133,6 @@ const handleApproval = async (req, res) => {
     res.status(500).json({ status: 'error', message: 'فشل التوقيع' });
   }
 };
-
 
 
 
@@ -300,35 +302,60 @@ async function generateFinalSignedPDF(contentId) {
 
 module.exports = { generateFinalSignedPDF };
 
-
+async function getUserPermissions(userId) {
+  const [permRows] = await db.execute(`
+    SELECT p.permission_key
+    FROM permissions p
+    JOIN user_permissions up ON up.permission_id = p.id
+    WHERE up.user_id = ?
+  `, [userId]);
+  return new Set(permRows.map(r => r.permission_key));
+}
 // جلب الملفات المكلف بها المستخدم
 const getAssignedApprovals = async (req, res) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ status: 'error', message: 'لا يوجد توكن' });
+    const raw = req.headers.authorization?.split(' ')[1];
+    if (!raw) return res.status(401).json({ status: 'error', message: 'لا يوجد توكن' });
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const userId = decoded.id;
+    const decoded = jwt.verify(raw, process.env.JWT_SECRET);
+    const userId  = decoded.id;
+    const role    = decoded.role;
 
-    const [rows] = await db.execute(`
-      SELECT DISTINCT
+    const perms = await getUserPermissions(userId);
+    const canViewAll = role === 'admin' || perms.has('view_credits');
+
+    let sql = `
+      SELECT 
         c.id,
         c.title,
+        c.file_path,                      -- ✅ رجّع رابط الملف
         c.approval_status,
-        c.updated_at, -- ✅ ضروري لحل خطأ ORDER BY
-        d.name AS department_name,
-        al.status,
+        d.name            AS department_name,
+        al.status         AS your_log_status,
         al.signed_as_proxy,
-        u2.username AS delegated_by_name
+        u2.username       AS delegated_by_name
       FROM contents c
-      LEFT JOIN folders f ON c.folder_id = f.id
-      LEFT JOIN departments d ON f.department_id = d.id
-      JOIN approval_logs al ON al.content_id = c.id AND al.approver_id = ?
-      LEFT JOIN users u2 ON al.delegated_by = u2.id
-      ORDER BY c.updated_at DESC
-    `, [userId]);
+      JOIN content_approvers ca ON ca.content_id = c.id
+      LEFT JOIN folders f       ON c.folder_id = f.id
+      LEFT JOIN departments d   ON f.department_id = d.id
+      LEFT JOIN approval_logs al
+        ON al.content_id = c.id
+       AND al.approver_id = ca.user_id
+      LEFT JOIN users u2
+        ON al.delegated_by = u2.id
+    `;
 
+    const params = [];
+    if (!canViewAll) {
+      sql += ` WHERE ca.user_id = ?`;
+      params.push(userId);
+    }
+
+    sql += ` ORDER BY c.updated_at DESC`;
+
+    const [rows] = await db.execute(sql, params);
     res.json({ status: 'success', data: rows });
+
   } catch (err) {
     console.error('getAssignedApprovals error:', err);
     res.status(500).json({ status: 'error', message: 'خطأ في جلب البيانات' });
