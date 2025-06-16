@@ -383,3 +383,169 @@ exports.trackCommitteeContent = async (req, res) => {
         res.status(500).json({ status: 'error', message: 'خطأ في تتبع محتوى اللجنة.' });
     }
 }; 
+// 1) جلب الأسماء
+exports.getFolderNames = async (req, res) => {
+  try {
+    const [rows] = await db.execute(
+      'SELECT id, name FROM committee_folder_names ORDER BY name ASC'
+    );
+    res.status(200).json({ data: rows });
+  } catch (err) {
+    res.status(500).json({ message: 'فشل في جلب أسماء المجلدات', error: err });
+  }
+};
+
+// 2) إضافة اسم جديد
+exports.addFolderName = async (req, res) => {
+  try {
+    const { name } = req.body;
+    const [result] = await db.execute(
+      'INSERT INTO committee_folder_names (name) VALUES (?)',
+      [name]
+    );
+    res.status(201).json({ id: result.insertId, name });
+  } catch (err) {
+    res.status(500).json({ message: 'فشل في إضافة اسم المجلد', error: err });
+  }
+};
+
+// 3) تحديث اسم
+exports.updateFolderName = async (req, res) => {
+const { id }   = req.params;
+  const { name } = req.body;
+
+  if (!name) return res.status(400).json({ message: '❌ الاسم الجديد مطلوب.' });
+
+  const conn = await pool.getConnection();
+  try {
+    // 1) جلب الاسم القديم من جدول committee_folder_names
+    const [rows] = await conn.execute(
+      'SELECT name FROM committee_folder_names WHERE id = ?',
+      [id]
+    );
+    if (!rows.length) {
+      conn.release();
+      return res.status(404).json({ message: '❌ لم يتم العثور على اسم المجلد.' });
+    }
+    const oldName = rows[0].name;
+
+    // 2) تحديث الاسم في جدول committee_folder_names
+    const [result] = await conn.execute(
+      'UPDATE committee_folder_names SET name = ? WHERE id = ?',
+      [name, id]
+    );
+    if (result.affectedRows === 0) {
+      conn.release();
+      return res.status(404).json({ message: '❌ لم يتم تحديث اسم المجلد.' });
+    }
+
+    // 3) تحديث الاسم في جدول committee_folders المرتبط بالاسم القديم
+    await conn.execute(
+      'UPDATE committee_folders SET name = ? WHERE name = ?',
+      [name, oldName]
+    );
+
+    conn.release();
+    return res.json({
+      status: 'success',
+      message: '✅ تم تعديل الاسم في الجداول المرتبطة بنجاح'
+    });
+  } catch (err) {
+    conn.release();
+    console.error(err);
+    return res.status(500).json({ message: '❌ فشل في تعديل الاسم.' });
+  }
+};
+
+// 4) حذف اسم
+exports.deleteFolderName = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.execute('DELETE FROM committee_folder_names WHERE id = ?', [id]);
+    res.status(200).json({ message: 'تم الحذف بنجاح' });
+  } catch (err) {
+    res.status(500).json({ message: 'فشل في حذف الاسم', error: err });
+  }
+};
+
+
+// 🟢 جلب كل عناوين المحتوى
+exports.getContentTitles = async (req, res) => {
+  try {
+    const [rows] = await db.execute('SELECT id, name FROM committee_content_titles ORDER BY id DESC');
+    res.json({ status: 'success', data: rows });
+  } catch (err) {
+    console.error('❌ getContentTitles error:', err);
+    res.status(500).json({ status: 'error', message: 'فشل في جلب العناوين' });
+  }
+};
+
+// 🟢 إضافة عنوان جديد
+exports.addContentTitle = async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ message: 'الاسم مطلوب' });
+
+    const [result] = await db.execute('INSERT INTO committee_content_titles (name) VALUES (?)', [name]);
+    res.status(201).json({ id: result.insertId, name });
+  } catch (err) {
+    console.error('❌ addContentTitle error:', err);
+    res.status(500).json({ message: 'فشل في إضافة العنوان' });
+  }
+};
+
+// 🟢 تعديل عنوان
+exports.updateContentTitle = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+
+    if (!name) return res.status(400).json({ message: 'الاسم الجديد مطلوب' });
+
+    // 1) جلب الاسم القديم
+    const [rows] = await db.execute('SELECT name FROM committee_content_titles WHERE id = ?', [id]);
+    if (!rows.length) return res.status(404).json({ message: 'العنوان غير موجود' });
+
+    const oldName = rows[0].name;
+
+    // 2) تحديث الاسم في جدول العناوين
+    const [updateTitle] = await db.execute(
+      'UPDATE committee_content_titles SET name = ? WHERE id = ?',
+      [name, id]
+    );
+    if (updateTitle.affectedRows === 0)
+      return res.status(404).json({ message: 'فشل في تحديث العنوان' });
+
+    // 3) تحديث الاسم في جدول المحتويات المرتبط بنفس الاسم
+    await db.execute(
+      'UPDATE committee_contents SET title = ? WHERE title = ?',
+      [name, oldName]
+    );
+
+    res.json({
+      status: 'success',
+      message: '✅ تم تحديث العنوان وكل المحتويات المرتبطة به',
+      id,
+      name
+    });
+  } catch (err) {
+    console.error('❌ updateContentTitle error:', err);
+    res.status(500).json({ message: 'فشل في تحديث العنوان', error: err });
+  }
+};
+
+
+// 🟢 حذف عنوان
+exports.deleteContentTitle = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [result] = await db.execute('DELETE FROM committee_content_titles WHERE id = ?', [id]);
+    if (result.affectedRows === 0) return res.status(404).json({ message: 'العنوان غير موجود' });
+
+    res.json({ message: 'تم الحذف بنجاح' });
+  } catch (err) {
+    console.error('❌ deleteContentTitle error:', err);
+    res.status(500).json({ message: 'فشل في حذف العنوان' });
+  }
+};

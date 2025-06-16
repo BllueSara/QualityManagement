@@ -78,10 +78,21 @@
             </div>
             <hr>
             <div class="modal-body">
-                <div class="form-group">
-                    <label for="folderName">اسم المجلد</label>
-                    <input type="text" id="folderName" placeholder="أدخل اسم المجلد" required>
-                </div>
+<div class="form-group">
+  <label for="selectedFolderName">اسم المجلد</label>
+  <div class="custom-dropdown" id="folderNameDropdown">
+    <button type="button" id="folderNameToggle" class="dropdown-toggle">
+      اختر اسم المجلد <span class="arrow">▾</span>
+    </button>
+    <div id="folderNameMenu" class="dropdown-menu hidden">
+      <input type="text" id="folderNameSearch" class="dropdown-search" placeholder="ابحث…">
+      <div id="addNewFolderNameLink" class="add-folder-new">+ إضافة اسم جديد</div>
+      <div id="folderNamesContainer" class="dropdown-list"></div>
+    </div>
+    <input type="hidden" id="selectedFolderName" required>
+  </div>
+</div>
+
             </div>
             <div class="modal-buttons">
                 <button class="btn-primary" id="createFolderBtn">إنشاء</button>
@@ -100,10 +111,21 @@
             <div  id="addContentFormElement">
                 <div class="modal-body">
                     <input type="hidden" id="addContentFolderId">
-                    <div class="form-group">
-                        <label for="contentTitle">عنوان المحتوى</label>
-                        <input type="text" id="contentTitle" placeholder="أدخل عنوان المحتوى" required>
-                    </div>
+<div class="form-group">
+  <label for="selectedContentTitle">عنوان المحتوى</label>
+  <div class="custom-dropdown" id="contentTitleDropdown">
+    <button type="button" id="contentTitleToggle" class="dropdown-toggle">
+      اختر عنوان المحتوى <span class="arrow">▾</span>
+    </button>
+    <div id="contentTitleMenu" class="dropdown-menu hidden">
+      <input type="text" id="contentTitleSearch" class="dropdown-search" placeholder="ابحث…">
+      <div id="addNewContentTitleLink" class="add-folder-new">+ إضافة عنوان جديد</div>
+      <div id="contentTitleOptionsContainer" class="dropdown-list"></div>
+    </div>
+    <input type="hidden" id="selectedContentTitle" required>
+  </div>
+</div>
+
                     <div class="form-group">
                         <label for="contentFile">اختر ملف لإرفاقه</label>
                         <div class="file-drop-area">
@@ -123,26 +145,42 @@
         </div>
     </div>
     <!-- Edit Folder Modal -->
-    <div id="editFolderModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3><img src="../images/folders.svg" alt="أيقونة مجلد" style="width: 24px; height: 24px; vertical-align: middle; margin-left: 10px;"> تعديل مجلد</h3>
-                <span class="close-button">&times;</span>
-            </div>
-            <hr>
-            <div class="modal-body">
-                <input type="hidden" id="editFolderId">
-                <div class="form-group">
-                    <label for="editFolderName">اسم المجلد</label>
-                    <input type="text" id="editFolderName" placeholder="أدخل اسم المجلد" required>
-                </div>
-            </div>
-            <div class="modal-buttons">
-                <button class="btn-primary" id="updateFolderBtn">تحديث</button>
-                <button class="btn-secondary" id="cancelEditFolderBtn">إلغاء</button>
-            </div>
-        </div>
+<div id="editFolderModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>
+        <img src="../images/folders.svg" alt="أيقونة مجلد"
+          style="width: 24px; height: 24px; vertical-align: middle; margin-left: 10px;"> تعديل مجلد
+      </h3>
+      <span class="close-button">&times;</span>
     </div>
+    <hr>
+    <div class="modal-body">
+      <input type="hidden" id="editFolderId">
+<div class="form-group">
+  <label for="editSelectedFolderName">اسم المجلد</label>
+  <div class="custom-dropdown" id="editFolderNameDropdown">
+    <button type="button" id="editFolderNameToggle" class="dropdown-toggle">
+      اختر اسم المجلد <span class="arrow">▾</span>
+    </button>
+    <div id="editFolderNameMenu" class="dropdown-menu hidden">
+      <input type="text" id="editFolderNameSearch" class="dropdown-search" placeholder="ابحث…">
+      <div id="editAddNewFolderNameLink" class="add-folder-new">+ إضافة اسم جديد</div>
+      <div id="editFolderNamesContainer" class="dropdown-list"></div>
+    </div>
+    <input type="hidden" id="editSelectedFolderName" required>
+  </div>
+</div>
+
+
+    </div>
+    <div class="modal-buttons">
+      <button class="btn-primary" id="updateFolderBtn">تحديث</button>
+      <button class="btn-secondary" id="cancelEditFolderBtn">إلغاء</button>
+    </div>
+  </div>
+</div>
+
     <!-- Edit Content Modal -->
     <div id="editContentModal" class="modal-overlay">
         <div class="modal-content">
@@ -157,16 +195,21 @@
                     <label for="editContentTitle">عنوان المحتوى <span class="required">*</span></label>
                     <input type="text" id="editContentTitle" placeholder="أدخل عنوان المحتوى" required>
                 </div>
-                <div class="form-group">
-                    <label for="editContentFile">اختر ملف جديد لإرفاقه <span class="required">*</span></label>
-                    <div class="file-drop-area">
-                        <img src="../images/attach.svg" alt="أيقونة رفع" class="attach-icon">
-                        <input type="file" id="editContentFile" accept="application/pdf" required>
-                        <div class="file-upload-text">
-                            <span class="supported-files">ملفات PDF فقط</span>
-                        </div>
-                    </div>
-                </div>
+<div class="form-group">
+  <label for="editSelectedContentTitle">عنوان المحتوى <span class="required">*</span></label>
+  <div class="custom-dropdown" id="editContentTitleDropdown">
+    <button type="button" id="editContentTitleToggle" class="dropdown-toggle">
+      اختر عنوان المحتوى <span class="arrow">▾</span>
+    </button>
+    <div id="editContentTitleMenu" class="dropdown-menu hidden">
+      <input type="text" id="editContentTitleSearch" class="dropdown-search" placeholder="ابحث…">
+      <div id="editAddNewContentTitleLink" class="add-folder-new">+ إضافة عنوان جديد</div>
+      <div id="editContentTitlesContainer" class="dropdown-list"></div>
+    </div>
+    <input type="hidden" id="editSelectedContentTitle" required>
+  </div>
+</div>
+
             </div>
             <div class="modal-buttons">
                 <button class="btn-primary" id="updateContentBtn">تحديث</button>
