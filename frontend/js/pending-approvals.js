@@ -21,6 +21,23 @@ async function fetchJSON(url, opts = {}) {
   }
 }
 
+// Show Toast Function
+function showToast(message, type = 'info', duration = 3000) {
+  const toastContainer = document.getElementById('toast-container') || document.createElement('div');
+  toastContainer.id = 'toast-container';
+  document.body.appendChild(toastContainer);
+
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+
+  toastContainer.appendChild(toast);
+
+  setTimeout(() => {
+    toast.remove();
+  }, duration);
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   try {
     await loadPendingApprovals();
@@ -36,20 +53,41 @@ async function loadPendingApprovals() {
     fetchJSON(`${apiBase}/pending-committee-approvals`)
   ]);
 
-  const rawApprovals = [...departmentApprovals, ...committeeApprovals];
+  // DEBUG: Log raw data from backend
+  console.log('DEBUG: Raw Department Pending Approvals Data:', JSON.parse(JSON.stringify(departmentApprovals)));
+  console.log('DEBUG: Raw Committee Pending Approvals Data:', JSON.parse(JSON.stringify(committeeApprovals)));
+
+  const uniqueApprovalsMap = new Map();
+  
+  // إضافة محتويات الأقسام أولاً
+  (departmentApprovals || []).forEach(item => {
+    uniqueApprovalsMap.set(item.id, { ...item, type: 'department' });
+  });
+  
+  // إضافة محتويات اللجان (ستحل محل أي تكرارات بنفس الـ ID)
+  (committeeApprovals || []).forEach(item => {
+    uniqueApprovalsMap.set(item.id, { ...item, type: 'committee' });
+  });
+
+  const rawApprovals = Array.from(uniqueApprovalsMap.values());
+
+  // DEBUG: Log rawApprovals after initial mapping and de-duplication
+  console.log('DEBUG: Raw Approvals after initial mapping and de-duplication:', JSON.parse(JSON.stringify(rawApprovals)));
 
   const tbody = document.querySelector('.approvals-table tbody');
   tbody.innerHTML = '';
 
-  // Get current user ID for prioritization
   const token = localStorage.getItem('token');
   const decodedToken = token ? JSON.parse(atob(token.split('.')[1])) : null;
   const currentUserId = decodedToken ? decodedToken.id : null;
 
-  // Sort approvals: items where current user is required approver first, then by created_at
   const approvals = rawApprovals.sort((a, b) => {
-    const aIsAssigned = currentUserId && a.approvers_required && a.approvers_required.includes(currentUserId);
-    const bIsAssigned = currentUserId && b.approvers_required && b.approvers_required.includes(currentUserId);
+    // Ensure approvers_required is an array before checking includes
+    const aApprovers = Array.isArray(a.approvers_required) ? a.approvers_required : (a.approvers_required ? JSON.parse(a.approvers_required) : []);
+    const bApprovers = Array.isArray(b.approvers_required) ? b.approvers_required : (b.approvers_required ? JSON.parse(b.approvers_required) : []);
+
+    const aIsAssigned = currentUserId && aApprovers.includes(currentUserId);
+    const bIsAssigned = currentUserId && bApprovers.includes(currentUserId);
 
     if (aIsAssigned && !bIsAssigned) return -1;
     if (!aIsAssigned && bIsAssigned) return 1;
@@ -57,9 +95,11 @@ async function loadPendingApprovals() {
     return new Date(b.created_at) - new Date(a.created_at);
   });
 
-  const baseUrl = apiBase.replace('/api', ''); // For constructing file URLs
+  const baseUrl = apiBase.replace('/api', '') + '/uploads';
 
   approvals.forEach(item => {
+    // DEBUG: Log each item before rendering
+    console.log('DEBUG: Rendering item:', JSON.parse(JSON.stringify(item)));
     const assignedApproverNames = item.assigned_approvers ? item.assigned_approvers.split(',').map(a => a.trim()) : [];
     const hasApprovers = assignedApproverNames.length > 0;
 
@@ -67,21 +107,16 @@ async function loadPendingApprovals() {
       return `<span class="badge">${name}</span>`;
     }).join('');
 
-    // Determine content type display
-    let contentTypeText = '';
-    if (item.content_type === 'department_content') {
-      contentTypeText = `تقرير قسم`;
-    } else if (item.content_type === 'committee_content') {
-      contentTypeText = `ملف لجنة`;
-    }
+    const contentType = item.type === 'committee' ? 'ملف لجنة' : 'تقرير قسم';
 
     const tr = document.createElement('tr');
     tr.dataset.id = item.id;
+    tr.dataset.type = item.type;
 
     tr.innerHTML = `
       <td>
         ${item.title}
-        <div class="content-meta">(${contentTypeText} - ${item.source_name})</div>
+        <div class="content-meta">(${contentType} - ${item.source_name})</div>
       </td>
       <td>
         <div class="dropdown-custom" data-type="dept">
@@ -117,12 +152,13 @@ async function loadPendingApprovals() {
 
     tbody.appendChild(tr);
 
-    // Add event listener for the view button
     const viewButton = tr.querySelector('.btn-view');
     if (viewButton) {
       viewButton.addEventListener('click', (e) => {
-        e.stopPropagation(); // Prevent row click from interfering
+        e.stopPropagation();
         const filePath = e.currentTarget.dataset.filePath;
+        console.log('DEBUG: filePath from data-file-path:', filePath);
+        console.log('DEBUG: baseUrl:', baseUrl);
         if (filePath) {
           window.open(`${baseUrl}/${filePath}`, '_blank');
         } else {
@@ -282,8 +318,8 @@ async function initDropdowns() {
       }
 
       const contentId = row.dataset.id;
+      const contentType = row.dataset.type;
       const approvers = selectedUsers.map(u => parseInt(u.id));
-      const contentType = row.querySelector('.content-meta').textContent.includes('لجنة') ? 'committee' : 'department';
       const endpoint = contentType === 'committee' ? 'pending-committee-approvals/send' : 'pending-approvals/send';
 
       try {
@@ -293,7 +329,6 @@ async function initDropdowns() {
         });
 
         if (response.status === 'success') {
-          // تحديث واجهة المستخدم
           const statusSpan = row.querySelector('.badge-pending') || row.querySelector('.badge-sent');
           if (statusSpan) {
             statusSpan.classList.remove('badge-pending');
@@ -310,7 +345,6 @@ async function initDropdowns() {
             selectedCell.appendChild(badge);
           });
 
-          // تحديث قائمة الموافقات المعلقة
           await loadPendingApprovals();
         } else {
           showToast('فشل إرسال المعتمدين', 'error');

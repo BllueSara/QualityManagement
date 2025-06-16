@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         );
       }
     } catch (err) {
-      console.error('Failed to fetch permissions:', err);
+      // console.error('Failed to fetch permissions:', err);
     }
   }
 
@@ -49,22 +49,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-// بدّل البلوك رقم 4 في home.js بهذا:
-try {
-  const res = await fetch(`${apiBase}/users/${userId}/notifications/unread-count`, {
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-  const { count } = await res.json();
-
-  const notifEl = document.querySelector('li a[href$="notfiction.html"]');
-  if (notifEl && count > 0) {
-    const badge = document.createElement('span');
-    badge.className = 'notif-badge';
-    badge.textContent = count;
-    notifEl.appendChild(badge);
+  // Fetch unread notifications count
+  try {
+    const notifRes = await fetch(`${apiBase}/users/${userId}/notifications/unread-count`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const { count } = await notifRes.json();
+    const notifBadge = document.getElementById('notificationCount');
+    if (notifBadge) {
+      notifBadge.textContent = count;
+      notifBadge.style.display = count > 0 ? 'block' : 'none';
+    }
+  } catch (err) {
+    // console.warn('فشل جلب عدد الإشعارات:', err);
   }
-} catch (err) {
-  console.warn('فشل جلب عدد الإشعارات:', err);
-}
-
 });

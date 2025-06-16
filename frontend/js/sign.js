@@ -40,16 +40,15 @@ async function loadDelegations() {
       tbody.appendChild(tr);
     });
 
-document.querySelectorAll('.btn-accept').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const contentId = btn.dataset.id;
-    // ✅ بدل الاعتماد، نحول المستخدم لصفحة اختيار الاعتماد
-     alert('✅ تم قبول التفويض وسيتم تحويلك إلى الاعتمادات المستلمة');
+    document.querySelectorAll('.btn-accept').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const contentId = btn.dataset.id;
+        // ✅ بدل الاعتماد، نحول المستخدم لصفحة اختيار الاعتماد
+        alert('✅ تم قبول التفويض وسيتم تحويلك إلى الاعتمادات المستلمة');
 
-              window.location.href = `/frontend/html/approvals-recived.html?id=${contentId}`;  });
-});
-
-             
+        window.location.href = `/frontend/html/approvals-recived.html?id=${contentId}`;
+      });
+    });
 
     document.querySelectorAll('.btn-reject').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -60,13 +59,9 @@ document.querySelectorAll('.btn-accept').forEach(btn => {
     });
 
   } catch (err) {
-    console.error(err);
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td colspan="3" style="text-align:center; color:red;">حدث خطأ أثناء جلب البيانات</td>`;
-    tbody.appendChild(tr);
+    alert('حدث خطأ أثناء جلب البيانات');
   }
 }
-
 
 function closeRejectModal() {
   document.getElementById('rejectModal').style.display = 'none';
@@ -100,11 +95,9 @@ async function submitReject() {
       throw new Error(json.message);
     }
   } catch (err) {
-    console.error(err);
     alert('حدث خطأ أثناء الرفض');
   }
 }
-
 
 async function signDelegation(contentId) {
   if (!confirm('هل تريد توقيع هذا المستند بالنيابة؟')) return;
@@ -131,7 +124,6 @@ async function signDelegation(contentId) {
       throw new Error(result.message);
     }
   } catch (err) {
-    console.error(err);
     alert('فشل في التوقيع، حاول مرة أخرى');
   }
 }
@@ -145,7 +137,6 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
-
 function showPopup(onConfirm) {
   const overlay = document.getElementById('popupOverlay');
   overlay.style.display = 'flex';
@@ -158,4 +149,42 @@ function showPopup(onConfirm) {
   document.getElementById('popupCancel').onclick = () => {
     overlay.style.display = 'none';
   };
+}
+
+function setupSignatureCanvas() {
+  canvas = document.getElementById('signatureCanvas');
+  if (!canvas) return;
+  ctx = canvas.getContext('2d');
+
+  document.getElementById('btnClear').addEventListener('click', () => {
+    clearCanvas();
+  });
+
+  document.getElementById('btnConfirm').addEventListener('click', async () => {
+    try {
+      const signatureDataUrl = canvas.toDataURL('image/png');
+      // ... existing code ...
+    } catch (err) {
+      // console.error(err);
+      alert('خطأ أثناء إرسال التوقيع.');
+    }
+  });
+}
+
+async function fetchContentAndApprovals(contentId) {
+  try {
+    // ... existing code ...
+  } catch (err) {
+    // console.error(err);
+    alert('خطأ في جلب بيانات المحتوى والاعتمادات.');
+  }
+}
+
+async function sendApproval(contentId, approvalData) {
+  try {
+    // ... existing code ...
+  } catch (err) {
+    // console.error(err);
+    alert('خطأ أثناء إرسال الاعتماد.');
+  }
 }

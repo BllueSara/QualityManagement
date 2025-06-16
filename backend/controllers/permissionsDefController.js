@@ -1,4 +1,3 @@
-
 // controllers/permissionsDefController.js
 const mysql = require('mysql2/promise');
 require('dotenv').config();
@@ -26,8 +25,7 @@ const getPermissionsList = async (req, res) => {
 
     return res.status(200).json({ status: 'success', data: rows });
   } catch (error) {
-    console.error('خطأ في جلب التعريفات:', error);
-    return res.status(500).json({ status: 'error', message: 'حدث خطأ في السيرفر' });
+    res.status(500).json({ message: 'خطأ في جلب التعريفات' });
   }
 };
 
@@ -55,8 +53,7 @@ const addPermissionDef = async (req, res) => {
 
     return res.status(201).json({ status: 'success', message: 'تم إضافة الصلاحية بنجاح', id: result.insertId });
   } catch (error) {
-    console.error('خطأ في إضافة تعريف الصلاحية:', error);
-    return res.status(500).json({ status: 'error', message: 'حدث خطأ في السيرفر' });
+    res.status(500).json({ message: 'خطأ في إضافة تعريف الصلاحية' });
   }
 };
 
@@ -89,8 +86,7 @@ const updatePermissionDef = async (req, res) => {
 
     return res.status(200).json({ status: 'success', message: 'تم تحديث الصلاحية بنجاح' });
   } catch (error) {
-    console.error('خطأ في تعديل تعريف الصلاحية:', error);
-    return res.status(500).json({ status: 'error', message: 'حدث خطأ في السيرفر' });
+    res.status(500).json({ message: 'خطأ في تعديل تعريف الصلاحية' });
   }
 };
 
@@ -119,8 +115,7 @@ const deletePermissionDef = async (req, res) => {
 
     return res.status(200).json({ status: 'success', message: 'تم حذف الصلاحية بنجاح' });
   } catch (error) {
-    console.error('خطأ في حذف تعريف الصلاحية:', error);
-    return res.status(500).json({ status: 'error', message: 'حدث خطأ في السيرفر' });
+    res.status(500).json({ message: 'خطأ في حذف تعريف الصلاحية' });
   }
 };
 

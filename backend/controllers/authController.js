@@ -128,11 +128,7 @@ const register = async (req, res) => {
     
 
   } catch (error) {
-    console.error('خطأ في التسجيل:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'حدث خطأ أثناء التسجيل'
-    });
+    res.status(500).json({ message: 'خطأ في التسجيل' });
   }
 };
 
@@ -208,11 +204,7 @@ const login = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('خطأ في تسجيل الدخول:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'حدث خطأ أثناء تسجيل الدخول'
-    });
+    res.status(500).json({ message: 'خطأ في تسجيل الدخول' });
   }
 };
 
@@ -266,11 +258,7 @@ const forgotPassword = async (req, res) => {
       message: 'تم إرسال رابط إعادة الضبط إلى بريدك الإلكتروني.' 
     });
   } catch (err) {
-    console.error('❌ forgot-password error:', err);
-    res.status(500).json({ 
-      status: 'error', 
-      message: 'حدث خطأ أثناء إرسال الرابط' 
-    });
+    res.status(500).json({ status: 'error', message: 'Failed to send reset link.' });
   }
 };
 
@@ -317,11 +305,7 @@ const resetPassword = async (req, res) => {
       message: 'تم إعادة ضبط كلمة المرور بنجاح.' 
     });
   } catch (err) {
-    console.error('❌ reset-password error:', err);
-    res.status(500).json({ 
-      status: 'error', 
-      message: 'حدث خطأ أثناء إعادة الضبط' 
-    });
+    res.status(500).json({ status: 'error', message: 'Failed to reset password.' });
   }
 };
 
@@ -386,11 +370,7 @@ const adminResetPassword = async (req, res) => {
       message: 'تم إعادة تعيين كلمة المرور بنجاح'
     });
   } catch (error) {
-    console.error('خطأ في إعادة تعيين كلمة المرور:', error);
-    res.status(500).json({ 
-      status: 'error',
-      message: 'حدث خطأ أثناء إعادة تعيين كلمة المرور'
-    });
+    res.status(500).json({ message: 'خطأ في إعادة تعيين كلمة المرور' });
   }
 };
 function checkRole(allowedRoles = []) {

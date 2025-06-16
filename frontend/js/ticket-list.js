@@ -54,8 +54,8 @@ tickets = body.data;
             renderTickets();
             showPage(1);
         } catch (error) {
-            console.error('Error fetching tickets:', error);
-            alert('حدث خطأ أثناء جلب التذاكر');
+            // console.error('Error fetching tickets:', error);
+            alert('حدث خطأ أثناء جلب التذاكر.');
         }
     }
 

@@ -31,8 +31,10 @@ router.put('/folders/:id', committeesController.updateFolder);
 router.delete('/folders/:id', committeesController.deleteFolder);
 
 // Content routes
-router.get('/folders/:folderId/contents', committeesController.getContents);
+router.get('/contents/my-uploads', committeesController.getMyUploadedCommitteeContents);
+router.get('/contents/track/:contentId', committeesController.trackCommitteeContent);
 router.get('/contents/:id', committeesController.getContent);
+router.get('/folders/:folderId/contents', committeesController.getContents);
 router.post('/folders/:folderId/contents', upload.single('file'), committeesController.addContent);
 router.put('/contents/:id', upload.single('file'), committeesController.updateContent);
 router.delete('/contents/:id', committeesController.deleteContent);

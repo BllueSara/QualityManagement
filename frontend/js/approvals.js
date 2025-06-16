@@ -84,25 +84,43 @@ document.addEventListener("DOMContentLoaded", async () => {
     async function populateFilters() {
         try {
             const token = getToken();
-            if (!token) return; // Cannot populate without token
+            if (!token) return;
 
-            // Fetch departments (assuming you have a backend endpoint for this)
+            // Fetch departments
             const deptResponse = await fetch('http://localhost:3006/api/departments', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (deptResponse.ok) {
-                const deptData = await deptResponse.json();
-                if (deptData.data) {
-                    deptData.data.forEach(dept => {
-                        const option = document.createElement('option');
-                        option.value = dept.name; // Use department name for filtering
-                        option.textContent = dept.name;
-                        filterDept.appendChild(option);
-                    });
-                }
+            const deptData = await deptResponse.json();
+
+            // Fetch committees
+            const committeeResponse = await fetch('http://localhost:3006/api/committees', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const committeeData = await committeeResponse.json();
+
+            // Clear existing options, keep "All"
+            filterDept.innerHTML = '<option value="all">جميع الأقسام/اللجان</option>';
+
+            // Add departments
+            if (deptData.data) {
+                deptData.data.forEach(dept => {
+                    const option = document.createElement('option');
+                    option.value = dept.name; // Value is just the name
+                    option.textContent = `قسم: ${dept.name}`;
+                    filterDept.appendChild(option);
+                });
             }
-            // Note: Populating folders dynamically will be more complex as they are nested under departments.
-            // For now, we will assume folders are filtered based on the fetched content data.
+
+            // Add committees
+            if (committeeData) {
+                const committeesArray = committeeData.data || committeeData;
+                committeesArray.forEach(committee => {
+                    const option = document.createElement('option');
+                    option.value = committee.name; // Value is just the name
+                    option.textContent = `لجنة: ${committee.name}`;
+                    filterDept.appendChild(option);
+                });
+            }
 
         } catch (error) {
             console.error('Error populating filters:', error);
@@ -112,46 +130,42 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Function to fetch content uploaded by the current user
     async function fetchMyUploadedContent() {
         try {
-            const token = getToken();
-            if (!token) {
-                showToast('غير مصرح: لا يوجد توكن.', 'error');
-                console.error('No token found.');
-                approvalsBody.innerHTML = '';
-                noContentMessage.style.display = 'block';
-                updateRecordInfo(0, 0, 0);
-                updatePaginationButtons(0);
-                return;
-            }
-
-            const response = await fetch('http://localhost:3006/api/contents/my-uploads', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+            // جلب محتوى الأقسام
+            const deptResponse = await fetchJSON('/api/departments/contents/my-uploads', {
+                headers: { 'Authorization': `Bearer ${getToken()}` }
             });
+            const deptItems = deptResponse.data || [];
 
-            const data = await response.json();
+            // جلب محتوى اللجان
+            const committeeResponse = await fetchJSON('/api/committees/contents/my-uploads', {
+                headers: { 'Authorization': `Bearer ${getToken()}` }
+            });
+            const committeeItems = (committeeResponse.data || []).map(item => ({ ...item, type: 'committee' }));
 
-            if (response.ok) {
-                allContents = data.data || [];
-                // فرز بحيث تكون غير المعتمدة أولاً ثم المعتمدة
-                allContents.sort((a, b) => {
-                    if (a.is_approved === b.is_approved) {
-                        return new Date(b.createdAt) - new Date(a.createdAt); // الأحدث أولاً
-                    }
-                    return a.is_approved - b.is_approved; // غير المعتمدة (false) تطلع فوق
+            if (deptResponse.success || committeeResponse.success) {
+                // دمج المصفوفات مع التأكد من عدم تكرار الملفات
+                const uniqueContents = new Map();
+                
+                // إضافة محتويات الأقسام
+                deptItems.forEach(item => {
+                    uniqueContents.set(item.id, { ...item, type: 'department' });
                 });
-
-                applyFilters(); // Apply filters and display data
-                populateFolderFilter(); // Populate folder filter based on fetched content
+                
+                // إضافة محتويات اللجان (ستستبدل أي تكرارات)
+                committeeItems.forEach(item => {
+                    uniqueContents.set(item.id, item);
+                });
+                
+                allContents = Array.from(uniqueContents.values());
+                applyFilters();
+                populateFolderFilter();
             } else {
-                showToast(data.message || 'فشل جلب ملفاتك المرفوعة.', 'error');
-                console.error('Failed to fetch my uploads:', data.message);
+                showToast('فشل جلب الملفات المرفوعة.', 'error');
                 allContents = [];
                 applyFilters();
             }
         } catch (error) {
-            console.error('Error fetching my uploads:', error);
-            showToast('حدث خطأ في الاتصال بجلب ملفاتك المرفوعة.', 'error');
+            showToast('حدث خطأ في الاتصال بجلب الملفات المرفوعة.', 'error');
             allContents = [];
             applyFilters();
         }
@@ -198,28 +212,41 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
         noContentMessage.style.display = 'none';
     
-        // ✅ ترتيب العناصر: قيد المراجعة أولاً ثم المعتمدة
-        filteredContents.sort((a, b) => a.is_approved - b.is_approved);
+        // ✅ ترتيب العناصر: قيد المراجعة أولاً ثم المعتمدة (مع الأخذ في الاعتبار أن is_approved الآن Boolean)
+        filteredContents.sort((a, b) => {
+            // false (pending) comes before true (approved)
+            return (a.is_approved === b.is_approved) ? 
+                   (new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt)) : 
+                   (a.is_approved ? 1 : -1);
+        });
     
         const startIdx = (currentPage - 1) * rowsPerPage;
         const endIdx = startIdx + rowsPerPage;
         const pageData = filteredContents.slice(startIdx, endIdx);
     
         pageData.forEach(content => {
-            const approvalStatusText  = content.is_approved ? 'معتمد' : 'قيد المراجعة';
+            console.log('Rendering content item (in renderTable - after sort):', content); // DEBUG: Inspect each content item after sort
+
+            const approvalStatusText = content.is_approved ? 'معتمد' : 'قيد المراجعة';
             const approvalStatusClass = content.is_approved ? 'badge-approved' : 'badge-pending';
-            const dateText = new Date(content.createdAt)
+            const dateText = new Date(content.created_at || content.createdAt)
                 .toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
-    
+            
+            const contentType = (content.type === 'committee' ? 'ملف لجنة' : 'تقرير قسم') || 'غير معروف';
+            const displaySourceName = content.source_name || '-';
+
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td class="col-file">${content.title}</td>
+                <td class="col-file">
+                    ${content.title}
+                    <div class="content-meta">(${contentType} - ${displaySourceName})</div>
+                </td>
                 <td class="col-folder">${content.folderName || '-'}</td>
-                <td class="col-dept">${content.departmentName || '-'}</td>
+                <td class="col-dept">${displaySourceName}</td>
                 <td class="col-status"><span class="badge ${approvalStatusClass}">${approvalStatusText}</span></td>
                 <td class="col-date">${dateText}</td>
                 <td class="col-actions">
-                    ${canTrack ? `<button class="btn-track" data-id="${content.id}">تتبع</button>` : ''}
+                    ${canTrack ? `<button class="btn-track" data-id="${content.id}" data-type="${content.type}">تتبع</button>` : ''}
                 </td>
             `;
             approvalsBody.appendChild(row);
@@ -230,7 +257,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             approvalsBody.querySelectorAll('.btn-track').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const id = btn.dataset.id;
-                    window.location.href = `/frontend/html/track-request.html?id=${id}`;
+                    const type = btn.dataset.type;
+                    window.location.href = `/frontend/html/track-request.html?id=${id}&type=${type}`;
                 });
             });
         }
@@ -275,22 +303,22 @@ document.addEventListener("DOMContentLoaded", async () => {
         const searchQuery = searchInput.value.trim().toLowerCase();
         const selectedStatus = filterStatus.value;
         const selectedDept = filterDept.value;
-        const selectedFolder = filterFolder.value; // Get selected folder
+        const selectedFolder = filterFolder.value;
 
         filteredContents = allContents.filter(content => {
             const contentTitle = content.title.toLowerCase();
-            const departmentName = (content.departmentName || '').toLowerCase();
+            const sourceName = (content.source_name || '').toLowerCase(); // Should now be clean name
             const folderName = (content.folderName || '').toLowerCase();
             const isApproved = content.is_approved ? 'approved' : 'pending';
 
             const matchesSearch =
                 contentTitle.includes(searchQuery) ||
-                departmentName.includes(searchQuery) ||
-                folderName.includes(searchQuery); // Search in folder name
+                sourceName.includes(searchQuery) ||
+                folderName.includes(searchQuery);
 
             const matchesStatus = selectedStatus === 'all' || isApproved === selectedStatus;
-            const matchesDept = selectedDept === 'all' || departmentName === selectedDept.toLowerCase();
-            const matchesFolder = selectedFolder === 'all' || folderName === selectedFolder.toLowerCase(); // Filter by folder name
+            const matchesDept = selectedDept === 'all' || sourceName === selectedDept.toLowerCase(); // Direct comparison now
+            const matchesFolder = selectedFolder === 'all' || folderName === selectedFolder.toLowerCase();
 
             return matchesSearch && matchesStatus && matchesDept && matchesFolder;
         });

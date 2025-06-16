@@ -11,17 +11,10 @@ const { insertNotification } = require('../models/notfications-utils');
 
 const getDepartments = async (req, res) => {
     try {
-        const [rows] = await db.execute('SELECT id, name, image, created_at, updated_at FROM departments');
-        res.status(200).json({
-            status: 'success',
-            data: rows
-        });
+        const [rows] = await db.execute('SELECT * FROM departments');
+        res.status(200).json(rows);
     } catch (error) {
-        console.error('خطأ في جلب الأقسام:', error);
-        res.status(500).json({
-            status: 'error',
-            message: 'حدث خطأ أثناء جلب الأقسام'
-        });
+        res.status(500).json({ message: 'خطأ في جلب الأقسام' });
     }
 };
 
@@ -62,11 +55,7 @@ const addDepartment = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('خطأ في إضافة القسم:', error);
-        res.status(500).json({
-            status: 'error',
-            message: 'حدث خطأ أثناء إضافة القسم'
-        });
+        res.status(500).json({ message: 'خطأ في إضافة القسم' });
     }
 };
 
@@ -109,11 +98,7 @@ const updateDepartment = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('خطأ في تعديل القسم:', error);
-        res.status(500).json({
-            status: 'error',
-            message: 'حدث خطأ أثناء تعديل القسم'
-        });
+        res.status(500).json({ message: 'خطأ في تعديل القسم' });
     }
 };
 
@@ -152,11 +137,7 @@ const deleteDepartment = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('خطأ في حذف القسم:', error);
-        res.status(500).json({
-            status: 'error',
-            message: 'حدث خطأ أثناء حذف القسم'
-        });
+        res.status(500).json({ message: 'خطأ في حذف القسم' });
     }
 };
 

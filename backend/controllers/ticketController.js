@@ -4,6 +4,8 @@ const path = require('path');
 const fs = require('fs');
 const { logAction } = require('../models/logger');
 const { insertNotification } = require('../models/notfications-utils');
+const jwt = require('jsonwebtoken');
+const Reply = require('../models/replyModel');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -86,8 +88,8 @@ exports.createTicket = async (req, res) => {
       });
     });
   } catch (error) {
-    console.error('createTicket error:', error);
-    res.status(500).json({ error: 'فشل في إنشاء التذكرة' });
+    // console.error('createTicket error:', error);
+    res.status(500).json({ message: 'Error creating ticket.' });
   }
 };
 
@@ -110,27 +112,22 @@ exports.getAssignedTickets = async (req, res) => {
 
 // Get a single ticket
 exports.getTicket = async (req, res) => {
-  try {
-    console.log('→ getTicket called with params.id =', req.params.id);
-    console.log('   req.user =', req.user);
+    try {
+        const ticket = await Ticket.findById(
+            req.params.id,
+            req.user.id,
+            req.user.role
+        );
 
-    const ticket = await Ticket.findById(
-      req.params.id,
-      req.user.id,
-      req.user.role
-    );
-    console.log('   findById result =', ticket);
+        if (!ticket) {
+            return res.status(404).json({ message: 'Ticket not found.' });
+        }
 
-    if (!ticket) {
-      return res
-        .status(404)
-        .json({ error: 'التذكرة غير موجودة أو لا تملك صلاحية الوصول' });
+        res.json(ticket);
+    } catch (error) {
+        // console.error(error);
+        res.status(500).json({ message: 'Error fetching ticket.' });
     }
-    res.json(ticket);
-  } catch (error) {
-    console.error('‼ Error in getTicket:', error);
-    res.status(500).json({ error: error.message });
-  }
 };
 
 // Update a ticket
@@ -189,23 +186,20 @@ exports.getTicketStatusHistory = async (req, res) => {
     }
 }; 
 exports.addReply = async (req, res) => {
-  try {
-    const ticketId = req.params.id;
-    const userId   = req.user.id;
-    const { text } = req.body;
-    if (!text || !text.trim()) {
-      return res.status(400).json({ message: 'النص لا يمكن أن يكون فارغاً' });
+    try {
+        const { ticketId } = req.params;
+        const { text } = req.body;
+        const token = req.headers.authorization.split(' ')[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = decoded.id;
+        const username = decoded.username;
+
+        await Reply.create({ ticketId, text, authorId: userId, authorName: username });
+        res.status(201).json({ message: 'Reply added successfully.' });
+    } catch (err) {
+        // console.error(err);
+        res.status(500).json({ message: 'Error adding reply.' });
     }
-
-    // ندعو الموديل ليضيف الرد
-    const newReply = await Ticket.addReply(ticketId, userId, text.trim());
-    // نعيد البيانات للمستخدم
-    res.status(201).json(newReply);
-
-  } catch (err) {
-    console.error('‼ Error in addReply:', err);
-    res.status(500).json({ message: err.message });
-  }
 };
 exports.assignToUsers = async (req, res) => {
   const ticketId = req.params.id;
@@ -236,4 +230,15 @@ exports.trackTicket = async (req, res) => {
     console.error(err);
     res.status(500).json({ status:'error', message:'فشل جلب بيانات التتبع' });
   }
+};
+
+exports.closeTicket = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await Ticket.updateStatus(id, 'closed');
+        res.status(200).json({ message: 'Ticket closed successfully.' });
+    } catch (err) {
+        // console.error(err);
+        res.status(500).json({ message: 'Error closing ticket.' });
+    }
 };

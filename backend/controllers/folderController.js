@@ -62,8 +62,7 @@ const getFolders = async (req, res) => {
       data: folders
     });
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: 'خطأ في الخادم.' });
+    res.status(500).json({ message: 'Error getting folders.' });
   }
 };
 
@@ -129,8 +128,7 @@ await insertNotification(
       folderId: result.insertId
     });
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: 'خطأ في الخادم.' });
+    res.status(500).json({ message: 'Error adding folder.' });
   }
 };
 
@@ -173,8 +171,7 @@ const updateFolder = async (req, res) => {
 
     res.json({ message: 'تم تحديث اسم المجلد بنجاح.' });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'خطأ أثناء تعديل المجلد.' });
+    res.status(500).json({ message: 'Error updating folder.' });
   }
 };
 
@@ -205,8 +202,7 @@ const getFolderById = async (req, res) => {
 
     res.json({ status: 'success', data: rows[0] });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'حدث خطأ في الخادم أثناء جلب المجلد.' });
+    res.status(500).json({ message: 'Error getting folder.' });
   }
 };
 
@@ -247,8 +243,7 @@ const deleteFolder = async (req, res) => {
 
     return res.json({ message: 'تم حذف المجلد بنجاح.' });
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: 'حدث خطأ في الخادم أثناء حذف المجلد.' });
+    res.status(500).json({ message: 'Error deleting folder.' });
   }
 };
 

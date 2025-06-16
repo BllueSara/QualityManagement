@@ -92,57 +92,74 @@ document.querySelector('[data-field="event-time"]').textContent =
       });
     })
     
-    .catch(error => console.error('حدث خطأ أثناء جلب بيانات التذكرة:', error));
-// بعد بناء الـ timeline…
-const replyTextarea = document.getElementById('replyTextarea');
-const submitReply   = document.getElementById('submitReply');
-
-submitReply.addEventListener('click', async () => {
-  const text = replyTextarea.value.trim();
-  if (!text) {
-    alert('اكتب ردّك أولاً');
-    return;
-  }
-
-  submitReply.disabled = true;
-  submitReply.textContent = 'جاري الإرسال…';
-
-  try {
-    const res = await fetch(`http://localhost:3006/api/tickets/${ticketId}/replies`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ text })
+    .catch(error => {
+      // console.error('حدث خطأ أثناء جلب بيانات التذكرة:', error);
+      alert('حدث خطأ أثناء جلب بيانات التذكرة.');
     });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.message || res.statusText);
-    }
-    const newReply = await res.json();
-    // أضف الرد جديداً في الـ timeline
-    const timeline = document.querySelector('.timeline-content');
-    const item = document.createElement('div');
-    item.className = 'timeline-item';
-    item.innerHTML = `
-      <div class="timeline-dot"></div>
-      <div class="timeline-body">
-        <div class="timeline-date">${new Date(newReply.created_at)
-          .toLocaleString('ar-EG',{day:'numeric',month:'long',year:'numeric',hour:'numeric',minute:'numeric'})}</div>
-        <div class="timeline-text">${newReply.text}</div>
-        <div class="timeline-author">${newReply.author}</div>
-      </div>
-    `;
-    timeline.prepend(item);
-    replyTextarea.value = '';
-  } catch (err) {
-    console.error(err);
-    alert('خطأ أثناء إرسال الرد: ' + err.message);
-  } finally {
-    submitReply.disabled = false;
-    submitReply.textContent = 'إرسال الرد';
-  }
-});
 
+  // بعد بناء الـ timeline…
+  const replyTextarea = document.getElementById('replyTextarea');
+  const submitReply   = document.getElementById('submitReply');
+
+  submitReply.addEventListener('click', async () => {
+    const text = replyTextarea.value.trim();
+    if (!text) {
+      alert('اكتب ردّك أولاً');
+      return;
+    }
+
+    submitReply.disabled = true;
+    submitReply.textContent = 'جاري الإرسال…';
+
+    try {
+      const res = await fetch(`http://localhost:3006/api/tickets/${ticketId}/replies`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ text })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || res.statusText);
+      }
+      const newReply = await res.json();
+      // أضف الرد جديداً في الـ timeline
+      const timeline = document.querySelector('.timeline-content');
+      const item = document.createElement('div');
+      item.className = 'timeline-item';
+      item.innerHTML = `
+        <div class="timeline-dot"></div>
+        <div class="timeline-body">
+          <div class="timeline-date">${new Date(newReply.created_at)
+            .toLocaleString('ar-EG',{day:'numeric',month:'long',year:'numeric',hour:'numeric',minute:'numeric'})}</div>
+          <div class="timeline-text">${newReply.text}</div>
+          <div class="timeline-author">${newReply.author}</div>
+        </div>
+      `;
+      timeline.prepend(item);
+      replyTextarea.value = '';
+    } catch (err) {
+      // console.error(err);
+      alert('خطأ أثناء إرسال الرد: ' + err.message);
+    } finally {
+      submitReply.disabled = false;
+      submitReply.textContent = 'إرسال الرد';
+    }
+  });
+
+  // Handle reply form submission
+  document.getElementById('replyForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const replyText = document.getElementById('replyText').value;
+    if (!replyText) return;
+
+    try {
+      // ...
+    } catch (err) {
+      // console.error(err);
+      alert('حدث خطأ أثناء إضافة الرد.');
+    }
+  });
 });

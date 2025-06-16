@@ -57,7 +57,7 @@ async function loadMyPermissions() {
     const perms = await fetchJSON(`${apiBase}/users/${myId}/permissions`);
     myPermsSet = new Set(perms);
   } catch (e) {
-    console.error('فشل جلب صلاحياتي أنا:', e);
+    alert('فشل جلب صلاحياتي.');
   }
 }
 async function fetchDepartments() {
@@ -83,8 +83,7 @@ async function fetchDepartments() {
       departmentSelect.appendChild(option);
     });
   } catch (error) {
-    console.error('خطأ في جلب الأقسام:', error);
-    alert('حدث خطأ أثناء جلب الأقسام. تأكد من تشغيل الخادم.');
+    alert('خطأ في جلب الأقسام.');
   }
 }
 
@@ -225,7 +224,6 @@ btnResetPwd.addEventListener('click', async () => {
     await fetchJSON(`${apiBase}/users/${selectedUserId}/reset-password`, { method: 'POST', body: JSON.stringify({ newPassword }) });
     alert('تم تحديث كلمة المرور بنجاح');
   } catch (err) {
-    console.error(err);
     alert('فشل إعادة التعيين: ' + err.message);
   }
 });
