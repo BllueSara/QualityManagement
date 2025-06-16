@@ -1,4 +1,4 @@
-body {
+bhtml, body {
     font-family: 'Tajawal', Arial, sans-serif;
     direction: rtl;
     margin: 0;
@@ -367,4 +367,9 @@ main {
 @keyframes animatetop {
     from {top: -300px; opacity: 0}
     to {top: 0; opacity: 1}
-} 
+} .btn-primary,
+.btn-secondary,
+.custom-dropdown button,
+.add-folder-new {
+  font-family: inherit;
+}
