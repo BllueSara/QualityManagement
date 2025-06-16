@@ -89,8 +89,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
 async function setupFilters(items) {
-  const deptSet = new Set(items.map(i => i.department_name).filter(Boolean));
+  const deptSet = new Set(items.map(i => i.source_name).filter(Boolean));
   const deptFilter = document.getElementById('deptFilter');
+  deptFilter.innerHTML = '<option value="all">الكل</option>'; // Ensure 'الكل' option is always present
   deptSet.forEach(name => {
     const opt = document.createElement('option');
     opt.value = name;
@@ -116,7 +117,7 @@ function applyFilters() {
   const searchText = document.getElementById('searchInput').value.trim().toLowerCase();
 
   const filtered = allItems.filter(i => {
-    const matchesDept = dept === 'all' || i.department_name === dept;
+    const matchesDept = dept === 'all' || i.source_name === dept;
     const matchesStatus = status === 'all' || i.approval_status === status;
     const matchesSearch = i.title.toLowerCase().includes(searchText);
     return matchesDept && matchesStatus && matchesSearch;
@@ -164,7 +165,7 @@ function renderApprovals(items) {
     const tr = document.createElement("tr");
     tr.dataset.id     = item.id;
     tr.dataset.status = item.approval_status;
-    tr.dataset.dept   = item.department_name;
+    tr.dataset.source   = item.source_name;
 
     // أنشئ جميع الأزرار دائماً
     let actionsHTML = '';
@@ -179,7 +180,7 @@ function renderApprovals(items) {
 
     tr.innerHTML = `
       <td>${item.title}</td>
-      <td>${item.department_name || '-'}</td>
+      <td>${item.source_name || '-'}</td>
       <td class="col-response">${statusLabel(item.approval_status)}</td>
       <td class="col-actions">${actionsHTML}</td>
     `;

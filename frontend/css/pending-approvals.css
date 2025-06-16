@@ -114,7 +114,7 @@ body {
   margin-bottom: 20px;
 }
 
-/* زر “إرسال للجميع” */
+/* زر "إرسال للجميع" */
 .btn-send-all {
   display: inline-flex;
   align-items: center;
@@ -232,17 +232,31 @@ body {
 
 .approvals-table th,
 .approvals-table td {
-  padding: 12px 100px;
-  text-align: center;
+  padding: 12px 15px; /* Increased padding for better spacing */
+  text-align: right; /* Default to right for RTL */
   font-size: 0.95rem;
   color: #374151; /* نفس لون نص الجدول */
   vertical-align: middle;
+  border-bottom: 1px solid #e5e7eb;
 }
-
-
 
 .approvals-table tbody tr:nth-child(even) {
   background-color: #f9fafb; /* خلفية فاتحة للصفوط الزوجية */
+}
+
+.approvals-table tbody tr:hover {
+  background-color: #f6f6f6; /* Subtle hover effect for rows */
+}
+
+.approvals-table td:last-child {
+  text-align: left; /* Align action buttons to the left */
+  display: flex; /* Enable flexbox for alignment */
+  align-items: center; /* Vertically center items */
+  gap: 8px; /* Space between buttons */
+}
+
+.approvals-table td .btn-send, .approvals-table td .btn-view {
+  margin-right: 0; /* Reset margin-right as gap handles spacing */
 }
 
 /* ===== أعمدة الجدول ===== */
@@ -268,7 +282,7 @@ body {
 }
 
 /* ===== أزرار الإرسال والحالة ===== */
-/* زر “إرسال” */
+/* زر "إرسال" */
 .btn-send {
   display: inline-flex;
   align-items: center;
@@ -291,7 +305,7 @@ body {
   background-color: #1e40af;
 }
 
-/* زر معطّل “تم الإرسال” */
+/* زر معطّل "تم الإرسال" */
 .btn-sent {
   display: inline-flex;
   align-items: center;
@@ -428,4 +442,36 @@ body {
     font-size: 0. eight five rem;
     margin-bottom: 6px;
   }
+}
+
+/* New styles for content meta information */
+.content-meta {
+    font-size: 0.85rem;
+    color: #6b7280; /* A darker grey for better readability */
+    margin-top: 5px; /* Small space above it */
+    direction: rtl; /* Ensure RTL for Arabic text */
+}
+
+/* New styles for the View button */
+.btn-view {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background-color: #4CAF50; /* Green color for view */
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-view i {
+    font-size: 1rem;
+}
+
+.btn-view:hover {
+    background-color: #45a049; /* Darker green on hover */
 }

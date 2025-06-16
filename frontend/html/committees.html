@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اللجان والواجهات</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/shared.css">
+    <link rel="stylesheet" href="../css/departments.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <header>
+        <div class="container">
+            <div class="hospital-logo">
+                <img src="../images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز">
+            </div>
+            <div class="system-title">
+                <img src="../images/system-title.png" alt="نظام إدارة الجودة والسلامة">
+            </div>
+        </div>
+    </header>
+    <div class="header-actions">
+        <button class="home-btn" onclick="window.location.href='index.html'">
+            <i class="fas fa-home"></i>
+            <span>الرئيسية</span>
+        </button>
+    </div>
+    <main>
+        <div class="container">
+            <h1>اللجان والواجهات</h1>
+            <div class="controls-bar">
+                <button class="btn-primary" id="addCommitteeButton">إضافة لجنة جديدة</button>
+                <div class="search-bar">
+                    <input type="text" placeholder="ابحث عن لجنة">
+                    <img src="../images/serach.svg" alt="بحث" class="search-icon">
+                </div>
+            </div>
+            <div class="cards-grid" id="committeesGrid">
+                <!-- Committee cards will be added dynamically -->
+            </div>
+        </div>
+    </main>
+    <!-- Modals (إضافة/تعديل/حذف لجنة) -->
+    <div id="addCommitteeModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>إضافة لجنة</h3>
+            <hr>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="committeeName">اسم اللجنة</label>
+                    <input type="text" id="committeeName" placeholder="أدخل اسم اللجنة">
+                </div>
+                <div class="form-group">
+                    <label for="committeeImage">صورة اللجنة</label>
+                    <input type="file" id="committeeImage" accept="image/*">
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-primary" id="saveAddCommittee">حفظ</button>
+                <button class="btn-secondary" id="cancelAddCommittee">إلغاء</button>
+            </div>
+        </div>
+    </div>
+    <div id="editCommitteeModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>تعديل اللجنة</h3>
+            <hr>
+            <div class="modal-body">
+                <input type="hidden" id="editCommitteeId">
+                <div class="form-group">
+                    <label for="editCommitteeName">اسم اللجنة الجديد</label>
+                    <input type="text" id="editCommitteeName" placeholder="أدخل اسم اللجنة الجديد">
+                </div>
+                <div class="form-group">
+                    <label for="editCommitteeImage">تغيير صورة اللجنة</label>
+                    <input type="file" id="editCommitteeImage" accept="image/*">
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-primary" id="saveEditCommittee">تحديث</button>
+                <button class="btn-secondary" id="cancelEditCommittee">إلغاء</button>
+            </div>
+        </div>
+    </div>
+    <div id="deleteCommitteeModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>تأكيد حذف اللجنة <img src="../images/warning.svg" alt="تحذير" style="width: 24px; height: 24px; vertical-align: middle; margin-right: 10px;"></h3>
+            <hr>
+            <div class="modal-body" style="text-align: center;">
+                <p>هل أنت متأكد من حذف هذه اللجنة؟</p>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-danger" id="confirmDeleteCommittee">حذف نهائي</button>
+                <button class="btn-secondary" id="cancelDeleteCommittee">إلغاء</button>
+            </div>
+        </div>
+    </div>
+    <div id="toast-container"></div>
+    <script src="../js/committees.js"></script>
+</body>
+
+</html> 

@@ -31,22 +31,58 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function loadPendingApprovals() {
-  const approvals = await fetchJSON(`${apiBase}/pending-approvals`);
+  const [departmentApprovals, committeeApprovals] = await Promise.all([
+    fetchJSON(`${apiBase}/pending-approvals`),
+    fetchJSON(`${apiBase}/pending-committee-approvals`)
+  ]);
+
+  const rawApprovals = [...departmentApprovals, ...committeeApprovals];
+
   const tbody = document.querySelector('.approvals-table tbody');
   tbody.innerHTML = '';
 
-  approvals.forEach(item => {
-    const approverNames = item.approvers ? item.approvers.split(',').map(a => a.trim()) : [];
+  // Get current user ID for prioritization
+  const token = localStorage.getItem('token');
+  const decodedToken = token ? JSON.parse(atob(token.split('.')[1])) : null;
+  const currentUserId = decodedToken ? decodedToken.id : null;
 
-    const approverBadges = approverNames.map(name => {
+  // Sort approvals: items where current user is required approver first, then by created_at
+  const approvals = rawApprovals.sort((a, b) => {
+    const aIsAssigned = currentUserId && a.approvers_required && a.approvers_required.includes(currentUserId);
+    const bIsAssigned = currentUserId && b.approvers_required && b.approvers_required.includes(currentUserId);
+
+    if (aIsAssigned && !bIsAssigned) return -1;
+    if (!aIsAssigned && bIsAssigned) return 1;
+
+    return new Date(b.created_at) - new Date(a.created_at);
+  });
+
+  const baseUrl = apiBase.replace('/api', ''); // For constructing file URLs
+
+  approvals.forEach(item => {
+    const assignedApproverNames = item.assigned_approvers ? item.assigned_approvers.split(',').map(a => a.trim()) : [];
+    const hasApprovers = assignedApproverNames.length > 0;
+
+    const approverBadges = assignedApproverNames.map(name => {
       return `<span class="badge">${name}</span>`;
     }).join('');
+
+    // Determine content type display
+    let contentTypeText = '';
+    if (item.content_type === 'department_content') {
+      contentTypeText = `تقرير قسم`;
+    } else if (item.content_type === 'committee_content') {
+      contentTypeText = `ملف لجنة`;
+    }
 
     const tr = document.createElement('tr');
     tr.dataset.id = item.id;
 
     tr.innerHTML = `
-      <td>${item.title}</td>
+      <td>
+        ${item.title}
+        <div class="content-meta">(${contentTypeText} - ${item.source_name})</div>
+      </td>
       <td>
         <div class="dropdown-custom" data-type="dept">
           <button class="dropdown-btn">اختر القسم</button>
@@ -65,21 +101,37 @@ async function loadPendingApprovals() {
       </td>
       <td class="selected-cell">${approverBadges}</td>
       <td>
-        <span class="${approverNames.length > 0 ? 'badge-sent' : 'badge-pending'}">
-          ${approverNames.length > 0 ? 'تم الإرسال' : 'بانتظار الإرسال'}
+        <span class="${hasApprovers ? 'badge-sent' : 'badge-pending'}">
+          ${hasApprovers ? 'تم الإرسال' : 'بانتظار الإرسال'}
         </span>
       </td>
       <td>
-        <button class="btn-send" style="padding:6px 12px;">
-          <i class="bi bi-send"></i> إرسال
+        <button class="btn-send" ${hasApprovers ? 'disabled' : ''} style="padding:6px 12px;">
+          ${hasApprovers ? '<i class="bi bi-check-circle"></i> تم الإرسال' : '<i class="bi bi-send"></i> إرسال'}
         </button>
+        ${item.file_path ? `<button class="btn-view" data-file-path="${item.file_path}" style="margin-right: 5px; padding: 6px 12px;">
+          <i class="bi bi-eye"></i> عرض
+        </button>` : ''}
       </td>
     `;
 
     tbody.appendChild(tr);
+
+    // Add event listener for the view button
+    const viewButton = tr.querySelector('.btn-view');
+    if (viewButton) {
+      viewButton.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent row click from interfering
+        const filePath = e.currentTarget.dataset.filePath;
+        if (filePath) {
+          window.open(`${baseUrl}/${filePath}`, '_blank');
+        } else {
+          showToast('رابط الملف غير متوفر.', 'error');
+        }
+      });
+    }
   });
 }
-
 
 async function initDropdowns() {
   const departments = await fetchJSON(`${apiBase}/departments`);
@@ -231,35 +283,41 @@ async function initDropdowns() {
 
       const contentId = row.dataset.id;
       const approvers = selectedUsers.map(u => parseInt(u.id));
+      const contentType = row.querySelector('.content-meta').textContent.includes('لجنة') ? 'committee' : 'department';
+      const endpoint = contentType === 'committee' ? 'pending-committee-approvals/send' : 'pending-approvals/send';
 
       try {
-        await fetchJSON(`${apiBase}/pending-approvals/send`, {
+        const response = await fetchJSON(`${apiBase}/${endpoint}`, {
           method: 'POST',
           body: JSON.stringify({ contentId, approvers })
         });
 
-        sendBtn.disabled = true;
-        sendBtn.innerHTML = `<i class="bi bi-check-circle"></i> تم الإرسال`;
-        sendBtn.classList.add('btn-disabled');
+        if (response.status === 'success') {
+          // تحديث واجهة المستخدم
+          const statusSpan = row.querySelector('.badge-pending') || row.querySelector('.badge-sent');
+          if (statusSpan) {
+            statusSpan.classList.remove('badge-pending');
+            statusSpan.classList.add('badge-sent');
+            statusSpan.textContent = 'تم الإرسال';
+          }
 
-        const statusSpan = row.querySelector('.badge-pending') || row.querySelector('.badge-sent');
-        if (statusSpan) {
-          statusSpan.classList.remove('badge-pending');
-          statusSpan.classList.add('badge-sent');
-          statusSpan.textContent = 'تم الإرسال';
+          const selectedCell = row.querySelector('.selected-cell');
+          selectedCell.innerHTML = '';
+          selectedUsers.forEach(u => {
+            const badge = document.createElement('span');
+            badge.className = 'badge';
+            badge.textContent = u.name;
+            selectedCell.appendChild(badge);
+          });
+
+          // تحديث قائمة الموافقات المعلقة
+          await loadPendingApprovals();
+        } else {
+          showToast('فشل إرسال المعتمدين', 'error');
         }
-
-        const selectedCell = row.querySelector('.selected-cell');
-        selectedCell.innerHTML = '';
-        selectedUsers.forEach(u => {
-          const badge = document.createElement('span');
-          badge.className = 'badge';
-          badge.textContent = u.name;
-          selectedCell.appendChild(badge);
-        });
       } catch (err) {
         console.error('فشل الإرسال:', err);
-        alert('فشل إرسال المعتمدين');
+        showToast('فشل إرسال المعتمدين', 'error');
       }
     });
   });
