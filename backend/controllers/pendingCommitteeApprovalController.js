@@ -1,4 +1,3 @@
-// controllers/pendingApprovalsController.js
 const mysql = require('mysql2/promise');
 const jwt   = require('jsonwebtoken');
 const { logAction } = require('../models/logger');
@@ -47,41 +46,46 @@ exports.getPendingApprovals = async (req, res) => {
 
     let params = [];
 
-    // Query for department contents only
-    const departmentContentQuery = `
+    // Query for committee contents only
+    const committeeContentQuery = `
         SELECT
-            c.id,
-            c.title,
-            c.file_path,
-            c.approval_status,
+            cc.id,
+            cc.title,
+            cc.file_path,
+            cc.approval_status,
             GROUP_CONCAT(DISTINCT u2.username) AS assigned_approvers,
-            d.name AS source_name,
+            com.name AS source_name,
             u.username AS created_by_username,
-            'department_content' AS content_type,
-            CAST(c.approvers_required AS CHAR) AS approvers_required,
-            c.created_at
-        FROM contents c
-        JOIN folders f ON c.folder_id = f.id
-        JOIN departments d ON f.department_id = d.id
-        JOIN users u ON c.created_by = u.id
-        LEFT JOIN content_approvers ca ON ca.content_id = c.id
-        LEFT JOIN users u2 ON ca.user_id = u2.id
-        WHERE c.approval_status = 'pending'
-        ${!canViewAll ? `AND (EXISTS (SELECT 1 FROM content_approvers WHERE content_id = c.id AND user_id = ?) OR c.created_by = ?)` : ''}
-        GROUP BY c.id
+            'committee_content' AS content_type,
+            CAST(cc.approvers_required AS CHAR) AS approvers_required,
+            cc.created_at
+        FROM committee_contents cc
+        JOIN committee_folders cf ON cc.folder_id = cf.id
+        JOIN committees com ON cf.committee_id = com.id
+        JOIN users u ON cc.created_by = u.id
+        LEFT JOIN committee_content_approvers cca ON cca.content_id = cc.id
+        LEFT JOIN users u2 ON cca.user_id = u2.id
+        WHERE cc.approval_status = 'pending'
+        ${!canViewAll ? `AND (EXISTS (SELECT 1 FROM committee_content_approvers WHERE content_id = cc.id AND user_id = ?) OR cc.created_by = ?)` : ''}
+        GROUP BY cc.id
     `;
 
     if (!canViewAll) {
         params.push(userId, userId);
     }
 
-    const [rows] = await pool.execute(departmentContentQuery, params);
+    const [rows] = await pool.execute(committeeContentQuery, params);
 
     // Parse approvers_required JSON string into an array for easier frontend use
     rows.forEach(row => {
-        // The mysql2 driver should already parse JSON columns. 
-        // We just need to ensure it's an array for frontend logic, handling potential non-array values gracefully.
-        if (!Array.isArray(row.approvers_required)) {
+        if (typeof row.approvers_required === 'string') {
+            try {
+                row.approvers_required = JSON.parse(row.approvers_required);
+            } catch (e) {
+                console.error('Failed to parse approvers_required JSON string for item ID:', row.id, 'Raw string:', row.approvers_required, 'Error:', e);
+                row.approvers_required = [];
+            }
+        } else if (row.approvers_required === null || !Array.isArray(row.approvers_required)) {
             row.approvers_required = [];
         }
     });
@@ -89,13 +93,12 @@ exports.getPendingApprovals = async (req, res) => {
     return res.json({ status: 'success', data: rows });
 
   } catch (err) {
-    console.error('Error in getPendingApprovals (department content):', err);
+    console.error('Error in getPendingApprovals (committee content):', err);
     return res.status(500).json({ status:'error', message:'Internal Server Error' });
   } finally {
     await pool.end();
   }
 };
-
 
 exports.sendApprovalRequest = async (req, res) => {
   const { contentId, approvers } = req.body;
@@ -117,19 +120,19 @@ exports.sendApprovalRequest = async (req, res) => {
     await conn.beginTransaction();
 
     // 1) نحذف المعتمدين السابقين
-    await conn.execute(`DELETE FROM content_approvers WHERE content_id = ?`, [contentId]);
+    await conn.execute(`DELETE FROM committee_content_approvers WHERE content_id = ?`, [contentId]);
     // ونحذف سجلات الموافقات القديمة
-    await conn.execute(`DELETE FROM approval_logs WHERE content_id = ?`, [contentId]);
+    await conn.execute(`DELETE FROM committee_approval_logs WHERE content_id = ?`, [contentId]);
 
     // 2) ندخل المعتمدين الجدد
     for (const userId of approvers) {
       await conn.execute(
-        `INSERT INTO content_approvers (content_id, user_id) VALUES (?, ?)`,
+        `INSERT INTO committee_content_approvers (content_id, user_id, assigned_at) VALUES (?, ?, NOW())`,
         [contentId, userId]
       );
       // ونسجّل لهم أيضاً سجلّ موافقة جديد
       await conn.execute(
-        `INSERT INTO approval_logs
+        `INSERT INTO committee_approval_logs
            (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, created_at)
          VALUES (?, ?, 'pending', NULL, 0, NULL, CURRENT_TIMESTAMP)`,
         [contentId, userId]
@@ -138,10 +141,10 @@ exports.sendApprovalRequest = async (req, res) => {
 
     // 3) نحدّث حالة المحتوى
     await conn.execute(
-      `UPDATE contents 
-         SET approval_status      = 'pending', 
-             approvers_required  = ?, 
-             updated_at          = CURRENT_TIMESTAMP 
+      `UPDATE committee_contents 
+         SET approval_status = 'pending', 
+             approvers_required = ?, 
+             updated_at = CURRENT_TIMESTAMP 
        WHERE id = ?`,
       [JSON.stringify(approvers), contentId]
     );
@@ -150,14 +153,9 @@ exports.sendApprovalRequest = async (req, res) => {
     res.status(200).json({ status: 'success', message: 'تم الإرسال بنجاح' });
   } catch (err) {
     await conn.rollback();
-    console.error('sendApprovalRequest Error:', err);
-    res.status(500).json({ status: 'error', message: 'خطأ في إرسال الاعتماد' });
+    console.error('Error in sendApprovalRequest:', err);
+    res.status(500).json({ status: 'error', message: 'فشل الإرسال' });
   } finally {
     conn.release();
-    await pool.end();
   }
-};
-
-  
-  
-  
+}; 
