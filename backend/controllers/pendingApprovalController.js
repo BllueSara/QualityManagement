@@ -89,8 +89,8 @@ exports.getPendingApprovals = async (req, res) => {
     return res.json({ status: 'success', data: rows });
 
   } catch (err) {
-    console.error('Error in getPendingApprovals (department content):', err);
-    return res.status(500).json({ status:'error', message:'Internal Server Error' });
+    // console.error('Error in getPendingApprovals (department content):', err);
+    res.status(500).json({ status: 'error', message: 'خطأ في جلب الموافقات المعلقة (محتوى القسم)' });
   } finally {
     await pool.end();
   }
@@ -149,9 +149,9 @@ exports.sendApprovalRequest = async (req, res) => {
     await conn.commit();
     res.status(200).json({ status: 'success', message: 'تم الإرسال بنجاح' });
   } catch (err) {
+    // console.error('sendApprovalRequest Error:', err);
     await conn.rollback();
-    console.error('sendApprovalRequest Error:', err);
-    res.status(500).json({ status: 'error', message: 'خطأ في إرسال الاعتماد' });
+    res.status(500).json({ status: 'error', message: 'فشل إرسال طلب الاعتماد' });
   } finally {
     conn.release();
     await pool.end();

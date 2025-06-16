@@ -24,7 +24,7 @@ async function fetchPermissions() {
     const { data: perms } = await res.json();
     permissionsKeys = perms.map(p => typeof p === 'string' ? p : (p.permission || p.permission_key));
   } catch (e) {
-    console.error('Failed to fetch permissions', e);
+    // console.error('Failed to fetch permissions', e);
   }
 }
 
@@ -46,12 +46,46 @@ document.addEventListener('DOMContentLoaded', async () => {
   await fetchPermissions();
 
   try {
-    const { data: items } = await fetchJSON(`${apiBase}/approvals/assigned-to-me`);
-    allItems = items; // 🔄 حفظ كل العناصر
-    await setupFilters(allItems); // ✅ تجهيز الفلاتر قبل العرض
-    renderApprovals(allItems); // عرض بناءً على كل البيانات
+    const deptResponse = await fetchJSON(`${apiBase}/approvals/assigned-to-me`);
+    const committeeResponse = await fetchJSON(`${apiBase}/committee-approvals/assigned-to-me`);
+
+    // DEBUG: Log raw data from backend
+    console.log('DEBUG: Raw Department Approvals Data:', deptResponse.data);
+    console.log('DEBUG: Raw Committee Approvals Data:', committeeResponse.data);
+
+    // Detailed logging for department items
+    if (deptResponse.data) {
+      deptResponse.data.forEach(item => {
+        console.log('DEBUG: Raw Dept Item ID:', item.id, 'Type:', item.type);
+      });
+    }
+    // Detailed logging for committee items
+    if (committeeResponse.data) {
+      committeeResponse.data.forEach(item => {
+        console.log('DEBUG: Raw Comm Item ID:', item.id, 'Type:', item.type);
+      });
+    }
+
+    // Combine all items, department items first, then committee items.
+    // The backend should already be providing the correct 'type' and prefixed 'id'.
+    let allCombinedItems = [
+      ...(deptResponse.data || []),
+      ...(committeeResponse.data || []),
+    ];
+
+    const uniqueItemsMap = new Map();
+    allCombinedItems.forEach(item => {
+      uniqueItemsMap.set(item.id, item); // Store the item as is, with its type from backend
+    });
+
+    allItems = Array.from(uniqueItemsMap.values());
+    // DEBUG: Log allItems after de-duplication
+    console.log('DEBUG: Merged and De-duplicated All Items:', allItems);
+
+    await setupFilters(allItems);
+    renderApprovals(allItems);
   } catch (err) {
-    console.error("خطأ في جلب الاعتمادات:", err);
+    // console.error("خطأ في جلب الاعتمادات:", err);
     alert("حدث خطأ أثناء تحميل البيانات");
   }
 
@@ -64,8 +98,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       const reason = document.getElementById('rejectReason').value.trim();
       if (!reason) return alert('⚠️ يرجى كتابة سبب الرفض');
 
+      const contentType = document.querySelector(`tr[data-id="${selectedContentId}"]`).dataset.type;
+      const endpoint = contentType === 'committee' ? 'committee-approvals' : 'approvals';
+
       try {
-        await fetchJSON(`${apiBase}/approvals/${selectedContentId}/approve`, {
+        await fetchJSON(`${apiBase}/${endpoint}/${selectedContentId}/approve`, {
           method: 'POST',
           body: JSON.stringify({
             approved: false,
@@ -79,14 +116,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         updateApprovalStatusInUI(selectedContentId, 'rejected');
       } catch (err) {
-        console.error('فشل إرسال الرفض:', err);
+        // console.error('فشل إرسال الرفض:', err);
         alert('❌ حدث خطأ أثناء إرسال سبب الرفض');
       }
     });
   }
 });
-
-
 
 async function setupFilters(items) {
   const deptSet = new Set(items.map(i => i.source_name).filter(Boolean));
@@ -106,7 +141,6 @@ async function setupFilters(items) {
   deptFilter.addEventListener('change', applyFilters);
   document.getElementById('statusFilter').addEventListener('change', applyFilters);
   document.getElementById('searchInput').addEventListener('input', applyFilters);
-
 }
 
 let allItems = [];
@@ -125,7 +159,6 @@ function applyFilters() {
 
   renderApprovals(filtered);
 }
-
 
 // فتح مودال عام
 function openModal(modalId) {
@@ -152,22 +185,24 @@ function renderApprovals(items) {
   const tbody = document.getElementById("approvalsBody");
   tbody.innerHTML = "";
 
-  const canSign     = permissionsKeys.includes('*') || permissionsKeys.includes('sign');
+  const canSign = permissionsKeys.includes('*') || permissionsKeys.includes('sign');
   const canDelegate = permissionsKeys.includes('*') || permissionsKeys.includes('sign_on_behalf');
 
-  // ترتيب: pending → rejected → approved
   items.sort((a, b) => {
     const order = { pending: 0, rejected: 1, approved: 2 };
     return order[a.approval_status] - order[b.approval_status];
   });
 
   items.forEach(item => {
+    // DEBUG: Log each item before rendering
+    console.log('DEBUG: Rendering item:', JSON.parse(JSON.stringify(item)));
+    console.log('DEBUG: Item ID:', item.id, 'Item Type:', item.type);
     const tr = document.createElement("tr");
-    tr.dataset.id     = item.id;
+    tr.dataset.id = item.id;
     tr.dataset.status = item.approval_status;
-    tr.dataset.source   = item.source_name;
+    tr.dataset.source = item.source_name;
+    tr.dataset.type = item.type;
 
-    // أنشئ جميع الأزرار دائماً
     let actionsHTML = '';
     if (item.approval_status === 'pending') {
       actionsHTML += `<button class="btn-sign"><i class="fas fa-user-check"></i> توقيع</button>`;
@@ -175,18 +210,21 @@ function renderApprovals(items) {
       actionsHTML += `<button class="btn-qr"><i class="fas fa-qrcode"></i> اعتماد إلكتروني</button>`;
       actionsHTML += `<button class="btn-reject"><i class="fas fa-times"></i> رفض</button>`;
       actionsHTML += `<button class="btn-preview"><i class="fas fa-eye"></i> عرض</button>`;
-
     }
 
+    const contentType = item.type === 'committee' ? 'ملف لجنة' : 'تقرير قسم';
+
     tr.innerHTML = `
-      <td>${item.title}</td>
+      <td>
+        ${item.title}
+        <div class="content-meta">(${contentType} - ${item.source_name})</div>
+      </td>
       <td>${item.source_name || '-'}</td>
       <td class="col-response">${statusLabel(item.approval_status)}</td>
       <td class="col-actions">${actionsHTML}</td>
     `;
     tbody.appendChild(tr);
 
-    // والآن أخف أو عطّل تفويض وتوقيع إلكتروني إذا لم تكن للصلاحية
     if (!canDelegate) {
       const btn = tr.querySelector('.btn-delegate');
       if (btn) btn.style.display = 'none';
@@ -208,9 +246,6 @@ function updateApprovalStatusInUI(id, newStatus) {
   // إعادة تصفية العناصر حسب الفلاتر الحالية وإعادة العرض والفرز
   applyFilters();
 }
-
-
-
 
 // تصنيف الحالة
 function statusLabel(status) {
@@ -238,49 +273,46 @@ function initActions() {
     });
   });
   
-
-document.querySelectorAll('.btn-qr').forEach(btn => {
-  btn.addEventListener('click', e => {
-    selectedContentId = e.target.closest('tr').dataset.id;
-    openModal('qrModal');
+  document.querySelectorAll('.btn-qr').forEach(btn => {
+    btn.addEventListener('click', e => {
+      selectedContentId = e.target.closest('tr').dataset.id;
+      openModal('qrModal');
+    });
   });
-});
 
-
-document.querySelectorAll('.btn-reject').forEach(btn => {
-  btn.addEventListener('click', e => {
-    selectedContentId = e.target.closest('tr').dataset.id;
-    openModal('rejectModal');
+  document.querySelectorAll('.btn-reject').forEach(btn => {
+    btn.addEventListener('click', e => {
+      selectedContentId = e.target.closest('tr').dataset.id;
+      openModal('rejectModal');
+    });
   });
-});
-document.querySelectorAll('.btn-preview').forEach(btn => {
-  btn.addEventListener('click', e => {
-    const tr = e.target.closest('tr');
-    const itemId = tr.dataset.id;
-    const item = allItems.find(i => i.id == itemId);
 
-    // ✅ تحقّق من وجود المسار الفعلي للملف
-    if (!item || !item.file_path) {
-      alert('❌ لا يوجد محتوى مرتبط');
-      return;
-    }
+  document.querySelectorAll('.btn-preview').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const tr = e.target.closest('tr');
+      const itemId = tr.dataset.id;
+      const item = allItems.find(i => i.id == itemId);
 
-    const url = `http://localhost:3006/uploads/${item.file_path}`;
-    window.open(url, '_blank');
+      // ✅ تحقّق من وجود المسار الفعلي للملف
+      if (!item || !item.file_path) {
+        alert('❌ لا يوجد محتوى مرتبط');
+        return;
+      }
+
+      const url = `http://localhost:3006/uploads/${item.file_path}`;
+      window.open(url, '_blank');
+    });
   });
-});
-
-
 }
-
-
-
 
 document.getElementById('btnElectronicApprove')?.addEventListener('click', async () => {
   if (!selectedContentId) return alert('⚠️ لا يوجد عنصر محدد لاعتماده.');
 
+  const contentType = document.querySelector(`tr[data-id="${selectedContentId}"]`).dataset.type;
+  const endpoint = contentType === 'committee' ? 'committee-approvals' : 'approvals';
+
   try {
-    await fetchJSON(`${apiBase}/approvals/${selectedContentId}/approve`, {
+    await fetchJSON(`${apiBase}/${endpoint}/${selectedContentId}/approve`, {
       method: 'POST',
       body: JSON.stringify({
         approved: true,
@@ -291,16 +323,13 @@ document.getElementById('btnElectronicApprove')?.addEventListener('click', async
     });
     alert('✅ تم الاعتماد الإلكتروني بنجاح');
     closeModal('qrModal');
-
-    // ✅ تحديث واجهة المستخدم بدلاً من إعادة تحميل
     updateApprovalStatusInUI(selectedContentId, 'approved');
     disableActionsFor(selectedContentId);
   } catch (err) {
-    console.error('فشل الاعتماد الإلكتروني:', err);
+    // console.error('فشل الاعتماد الإلكتروني:', err);
     alert('حدث خطأ أثناء الاعتماد الإلكتروني');
   }
 });
-
 
 // =====================
 // التوقيع
@@ -400,8 +429,11 @@ function setupSignatureModal() {
   // تأكيد التوقيع
   document.getElementById('btnConfirmSignature').addEventListener('click', async () => {
     const base64Signature = canvas.toDataURL('image/png');
+    const contentType = document.querySelector(`tr[data-id="${selectedContentId}"]`).dataset.type;
+    const endpoint = contentType === 'committee' ? 'committee-approvals' : 'approvals';
+
     try {
-      await fetchJSON(`${apiBase}/approvals/${selectedContentId}/approve`, {
+      await fetchJSON(`${apiBase}/${endpoint}/${selectedContentId}/approve`, {
         method: 'POST',
         body: JSON.stringify({
           approved: true,
@@ -412,24 +444,21 @@ function setupSignatureModal() {
       alert('✅ تم إرسال التوقيع');
       closeSignatureModal();
       updateApprovalStatusInUI(selectedContentId, 'approved');
-      disableActionsFor(selectedContentId); // ✅ إضافة هنا
+      disableActionsFor(selectedContentId);
     } catch (err) {
-      console.error('فشل الإرسال:', err);
+      // console.error('فشل الإرسال:', err);
       alert('خطأ أثناء إرسال التوقيع');
     }
   });
-  
-  
 }
 
 // فتح مودال التوقيع بالنيابة وتحميل الأقسام
 
-
 // تحميل الأقسام
 async function loadDepartments() {
-  console.log("🔄 تحميل الأقسام...");
+  // console.log("🔄 تحميل الأقسام...");
   const deptSelect = document.getElementById('delegateDept');
-  if (!deptSelect) return console.warn('❌ لم يتم العثور على select#delegateDept');
+  if (!deptSelect) return;
 
   try {
     const res = await fetch(`${apiBase}/departments`, {
@@ -437,7 +466,7 @@ async function loadDepartments() {
     });
 
     const { data: departments } = await res.json();
-    console.log("✅ الأقسام:", departments);
+    // console.log("✅ الأقسام:", departments);
 
     deptSelect.innerHTML = `<option value="" disabled selected>اختر القسم</option>`;
     departments.forEach(dept => {
@@ -448,22 +477,22 @@ async function loadDepartments() {
     });
 
   } catch (err) {
-    console.error('❌ فشل تحميل الأقسام:', err);
+    // console.error('❌ فشل تحميل الأقسام:', err);
+    alert('فشل تحميل الأقسام.');
   }
 }
-
 
 // تحميل المستخدمين عند اختيار قسم
 document.getElementById('delegateDept').addEventListener('change', async (e) => {
   const deptId = e.target.value;
-  console.log("🔄 تحميل المستخدمين للقسم:", deptId);
+  // console.log("🔄 تحميل المستخدمين للقسم:", deptId);
   try {
     const res = await fetch(`${apiBase}/users?departmentId=${deptId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
 
     const json = await res.json();
-    console.log("✅ المستخدمين المستلمين:", json);
+    // console.log("✅ المستخدمين المستلمين:", json);
 
     const users = json.data || [];
     const userSelect = document.getElementById('delegateUser');
@@ -477,7 +506,8 @@ document.getElementById('delegateDept').addEventListener('change', async (e) => 
     });
 
   } catch (err) {
-    console.error('❌ فشل تحميل المستخدمين:', err);
+    // console.error('❌ فشل تحميل المستخدمين:', err);
+    alert('فشل تحميل المستخدمين.');
   }
 });
 
@@ -488,24 +518,25 @@ document.getElementById('btnDelegateConfirm').addEventListener('click', async ()
 
   if (!userId) return alert('⚠️ يرجى اختيار المستخدم.');
 
+  const contentType = document.querySelector(`tr[data-id="${selectedContentId}"]`).dataset.type;
+  const endpoint = contentType === 'committee' ? 'committee-approvals' : 'approvals';
+
   try {
-    await fetchJSON(`${apiBase}/approvals/${selectedContentId}/delegate`, {
+    await fetchJSON(`${apiBase}/${endpoint}/${selectedContentId}/delegate`, {
       method: 'POST',
       body: JSON.stringify({
         delegateTo: userId,
-        notes
+        notes: notes
       })
     });
     alert('✅ تم تفويض المستخدم بنجاح');
     closeModal('delegateModal');
-    disableActionsFor(selectedContentId); // ✅ إضافة هنا
+    disableActionsFor(selectedContentId);
   } catch (err) {
-    console.error('❌ خطأ أثناء التفويض بالنيابة:', err);
+    // console.error('❌ خطأ أثناء التفويض بالنيابة:', err);
     alert('❌ حدث خطأ أثناء إرسال التفويض');
   }
 });
-
-
 
 function disableActionsFor(contentId) {
   const row = document.querySelector(`tr[data-id="${contentId}"]`);

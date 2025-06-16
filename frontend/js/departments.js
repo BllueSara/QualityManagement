@@ -118,7 +118,7 @@ async function fetchPermissions() {
             if (!res.ok) throw new Error(result.message);
 
             cardsGrid.innerHTML = '';
-            result.data.forEach(dept => {
+            result.forEach(dept => {
                 const card = document.createElement('div');
                 card.className = 'card';
                 card.dataset.id = dept.id;

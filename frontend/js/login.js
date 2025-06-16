@@ -28,8 +28,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert(data.message);
             }
         } catch (error) {
-            console.error('خطأ في تسجيل الدخول:', error);
-            alert('حدث خطأ أثناء تسجيل الدخول. يرجى المحاولة مرة أخرى.');
+            // console.error('خطأ في تسجيل الدخول:', error);
+            alert('خطأ في تسجيل الدخول.');
         }
     });
 }); 

@@ -244,6 +244,42 @@ exports.deleteContent = async (req, res) => {
     }
 };
 
+// New function to get content uploaded by the current user
+exports.getMyUploadedCommitteeContents = async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader) return res.status(401).json({ message: 'مطلوب تسجيل الدخول' });
+        const token = authHeader.split(' ')[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = decoded.id;
+
+        // console.log('Fetching committee contents for userId:', userId); // Debug log: Check which userId is being used
+
+        const [rows] = await db.execute(`
+            SELECT
+                CONCAT('comm-', cc.id) AS id,
+                cc.title,
+                cc.file_path,
+                cc.approval_status AS is_approved,
+                cc.created_at,
+                cf.name AS folderName,
+                com.name AS source_name
+            FROM committee_contents cc
+            JOIN committee_folders cf ON cc.folder_id = cf.id
+            JOIN committees com ON cf.committee_id = com.id
+            WHERE cc.created_by = ?
+            ORDER BY cc.created_at DESC
+        `, [userId]);
+
+        // console.log('Fetched committee content rows:', rows); // Debug log: See what data is returned from the query
+
+        res.status(200).json({ status: 'success', data: rows });
+    } catch (error) {
+        // console.error('Error fetching my uploaded committee contents:', error);
+        res.status(500).json({ status: 'error', message: 'خطأ في جلب المحتويات المرفوعة للجان' });
+    }
+};
+
 // ========== Approvals & Signatures ==========
 exports.getApprovals = async (req, res) => {
     try {
@@ -273,5 +309,77 @@ exports.approveContent = async (req, res) => {
         res.status(200).json({ message: 'تم تحديث الاعتماد بنجاح' });
     } catch (error) {
         res.status(500).json({ message: 'خطأ في تحديث الاعتماد', error });
+    }
+};
+
+// New function to track committee content
+exports.trackCommitteeContent = async (req, res) => {
+    try {
+        const { contentId } = req.params;
+
+        // 1. Get content details
+        const [contentRows] = await db.execute(`
+            SELECT 
+                cc.id,
+                cc.title,
+                cc.file_path,
+                cc.approval_status,
+                cc.created_at,
+                cf.name AS folderName,
+                com.name AS source_name
+            FROM committee_contents cc
+            JOIN committee_folders cf ON cc.folder_id = cf.id
+            JOIN committees com ON cf.committee_id = com.id
+            WHERE cc.id = ?
+        `, [contentId]);
+
+        if (contentRows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'المحتوى غير موجود.' });
+        }
+        const content = contentRows[0];
+
+        // 2. Get approval timeline (logs)
+        const [timelineRows] = await db.execute(`
+            SELECT 
+                cal.status,
+                cal.comments,
+                cal.created_at,
+                u.username AS approver,
+                com.name AS department -- This will be committee name
+            FROM committee_approval_logs cal
+            JOIN users u ON cal.approver_id = u.id
+            JOIN committee_contents cc ON cal.content_id = cc.id
+            JOIN committee_folders cf ON cc.folder_id = cf.id
+            JOIN committees com ON cf.committee_id = com.id
+            WHERE cal.content_id = ?
+            ORDER BY cal.created_at ASC
+        `, [contentId]);
+
+        // 3. Get pending approvers
+        const [pendingApproversRows] = await db.execute(`
+            SELECT
+                u.username AS approver,
+                com.name AS department
+            FROM committee_content_approvers cca
+            JOIN users u ON cca.user_id = u.id
+            JOIN committee_contents cc ON cca.content_id = cc.id
+            JOIN committee_folders cf ON cc.folder_id = cf.id
+            JOIN committees com ON cf.committee_id = com.id
+            WHERE cca.content_id = ? AND NOT EXISTS (
+                SELECT 1 FROM committee_approval_logs cal
+                WHERE cal.content_id = cca.content_id AND cal.approver_id = cca.user_id AND cal.status = 'approved'
+            )
+        `, [contentId]);
+
+        res.json({
+            status: 'success',
+            content,
+            timeline: timelineRows,
+            pending: pendingApproversRows
+        });
+
+    } catch (error) {
+        // console.error('Error tracking committee content:', error);
+        res.status(500).json({ status: 'error', message: 'خطأ في تتبع محتوى اللجنة.' });
     }
 }; 

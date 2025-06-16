@@ -46,8 +46,7 @@ const getUsers = async (req, res) => {
       data: rows
     });
   } catch (error) {
-    console.error('خطأ في جلب المستخدمين:', error);
-    res.status(500).json({ status:'error', message:'حدث خطأ في السيرفر' });
+    res.status(500).json({ message: 'خطأ في جلب المستخدمين' });
   }
 };
 
@@ -79,8 +78,7 @@ const getUserById = async (req, res) => {
       data: rows[0]
     });
   } catch (error) {
-    console.error('خطأ في جلب المستخدم:', error);
-    res.status(500).json({ status:'error', message:'حدث خطأ في السيرفر' });
+    res.status(500).json({ message: 'خطأ في جلب المستخدم' });
   }
 };
 
@@ -127,8 +125,7 @@ const addUser = async (req, res) => {
       userId: result.insertId 
     });
   } catch (error) {
-    console.error('خطأ في إضافة المستخدم:', error);
-    res.status(500).json({ status:'error', message:'حدث خطأ في السيرفر' });
+    res.status(500).json({ message: 'خطأ في إضافة المستخدم' });
   }
 };
 
@@ -175,8 +172,7 @@ const updateUser = async (req, res) => {
       message: 'تم تحديث بيانات المستخدم بنجاح'
     });
   } catch (error) {
-    console.error('خطأ في تعديل المستخدم:', error);
-    res.status(500).json({ status:'error', message:'حدث خطأ في السيرفر' });
+    res.status(500).json({ message: 'خطأ في تعديل المستخدم' });
   }
 };
 
@@ -208,8 +204,7 @@ const deleteUser = async (req, res) => {
       message: 'تم حذف المستخدم بنجاح'
     });
   } catch (error) {
-    console.error('خطأ في حذف المستخدم:', error);
-    res.status(500).json({ status:'error', message:'حدث خطأ في السيرفر' });
+    res.status(500).json({ message: 'خطأ في حذف المستخدم' });
   }
 };
 
@@ -237,8 +232,7 @@ const changeUserRole = async (req, res) => {
       message: 'تم تغيير دور المستخدم بنجاح'
     });
   } catch (error) {
-    console.error('خطأ في تغيير الدور:', error);
-    res.status(500).json({ status:'error', message:'حدث خطأ في السيرفر' });
+    res.status(500).json({ message: 'خطأ في تغيير الدور' });
   }
 };
 
@@ -267,8 +261,7 @@ const adminResetPassword = async (req, res) => {
       message: 'تم إعادة تعيين كلمة المرور بنجاح'
     });
   } catch (error) {
-    console.error('خطأ في إعادة التعيين:', error);
-    res.status(500).json({ status:'error', message:'حدث خطأ في السيرفر' });
+    res.status(500).json({ message: 'خطأ في إعادة التعيين' });
   }
 };
 
@@ -328,8 +321,7 @@ const getLogs = async (req, res) => {
     const [rows] = await db.execute(sql, params);
     res.status(200).json({ status: 'success', data: rows });
   } catch (error) {
-    console.error('Error fetching logs:', error);
-    res.status(500).json({ status: 'error', message: 'حدث خطأ أثناء جلب السجلات' });
+    res.status(500).json({ message: 'Error fetching logs' });
   }
 };
 const getNotifications = async (req, res) => {
@@ -356,8 +348,7 @@ const getNotifications = async (req, res) => {
 
     return res.status(200).json({ status: 'success', data: rows });
   } catch (error) {
-    console.error('Error fetching notifications:', error);
-    return res.status(500).json({ status: 'error', message: 'فشل تحميل الإشعارات' });
+    res.status(500).json({ message: 'Error fetching notifications' });
   }
 };
 
@@ -384,8 +375,7 @@ const deleteNotification = async (req, res) => {
     }
     res.status(200).json({ status: 'success', message: 'تم حذف الإشعار' });
   } catch (error) {
-    console.error('Error deleting notification:', error);
-    res.status(500).json({ status: 'error', message: 'حدث خطأ أثناء حذف الإشعار' });
+    res.status(500).json({ message: 'Error deleting notification' });
   }
 };
 // controllers/usersController.js
@@ -416,8 +406,7 @@ const markAllAsRead = async (req, res) => {
 
     res.status(200).json({ status: 'success', message: 'تم تحديث الإشعارات كمقروءة.' });
   } catch (err) {
-    console.error('Mark read error:', err);
-    res.status(500).json({ status: 'error', message: 'خطأ في السيرفر' });
+    res.status(500).json({ message: 'Error marking as read' });
   }
 };
 // GET /api/users/:id/notifications/unread-count
@@ -448,8 +437,7 @@ const getUnreadCount = async (req, res) => {
     );
     res.status(200).json({ count: rows[0].count });
   } catch (err) {
-    console.error('Error getting unread count:', err);
-    res.status(500).json({ count: 0 });
+    res.status(500).json({ message: 'Error getting unread count' });
   }
 };
 

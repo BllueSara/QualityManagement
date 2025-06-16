@@ -140,11 +140,7 @@ const getContentsByFolderId = async (req, res) => {
             data: contents
         });
     } catch (error) {
-        console.error('خطأ في جلب المحتويات:', error);
-        res.status(500).json({ 
-            status: 'error',
-            message: 'حدث خطأ في الخادم' 
-        });
+        res.status(500).json({ message: 'خطأ في جلب المحتويات' });
     }
 };
 
@@ -272,11 +268,7 @@ const addContent = async (req, res) => {
         status: 'pending'
       });
     } catch (error) {
-      console.error('خطأ في إضافة المحتوى:', error);
-      res.status(500).json({ 
-        status: 'error',
-        message: 'حدث خطأ في الخادم' 
-      });
+      res.status(500).json({ message: 'خطأ في إضافة المحتوى' });
     }
   };
   
@@ -299,9 +291,9 @@ const updateContent = async (req, res) => {
   
       const connection = await db.getConnection();
   
-      // جلب المحتوى القديم
+      // جلب المحتوى القديم (بما في ذلك approvers_required)
       const [oldContent] = await connection.execute(
-        'SELECT folder_id FROM contents WHERE id = ?',
+        'SELECT folder_id, approvers_required FROM contents WHERE id = ?',
         [originalId]
       );
       if (!oldContent.length) {
@@ -309,6 +301,7 @@ const updateContent = async (req, res) => {
       }
   
       const folderId = oldContent[0].folder_id;
+      const originalApproversRequired = oldContent[0].approvers_required; // جلب الموافقين المطلوبين من المحتوى القديم
   
       // ✅ تجاهل التحقق من التكرار إذا كان التعديل على نفس العنوان
       const [duplicateCheck] = await connection.execute(
@@ -326,13 +319,14 @@ const updateContent = async (req, res) => {
           approval_status, is_approved,
           created_by, approvers_required, approvals_log,
           created_at, updated_at
-        ) VALUES (?, ?, ?, ?, 'pending', 0, ?, NULL, ?, NOW(), NOW())`,
+        ) VALUES (?, ?, ?, ?, 'pending', 0, ?, ?, ?, NOW(), NOW())`,
         [
           title,
           filePath,
           notes || null,
           folderId,
           userId,
+          originalApproversRequired, // استخدم الموافقين المطلوبين من المحتوى الأصلي
           JSON.stringify([])
         ]
       );
@@ -348,8 +342,7 @@ const updateContent = async (req, res) => {
       });
   
     } catch (err) {
-      console.error('❌ خطأ في إنشاء نسخة محدثة:', err);
-      return res.status(500).json({ status: 'error', message: 'حدث خطأ في الخادم' });
+      res.status(500).json({ message: 'خطأ في إنشاء نسخة محدثة' });
     }
   };
   
@@ -429,11 +422,7 @@ const deleteContent = async (req, res) => {
             message: 'تم حذف المحتوى بنجاح'
         });
     } catch (error) {
-        console.error('خطأ في حذف المحتوى:', error);
-        res.status(500).json({ 
-            status: 'error',
-            message: 'حدث خطأ في الخادم' 
-        });
+        res.status(500).json({ message: 'خطأ في حذف المحتوى' });
     }
 };
 
@@ -469,11 +458,7 @@ const downloadContent = async (req, res) => {
         connection.release();
         res.download(filePath, content[0].title);
     } catch (error) {
-        console.error('خطأ في تحميل المحتوى:', error);
-        res.status(500).json({ 
-            status: 'error',
-            message: 'حدث خطأ في الخادم' 
-        });
+        res.status(500).json({ message: 'خطأ في تحميل المحتوى' });
     }
 };
 
@@ -509,11 +494,7 @@ const getContentById = async (req, res) => {
             data: content[0]
         });
     } catch (error) {
-        console.error('خطأ في جلب المحتوى:', error);
-        res.status(500).json({ 
-            status: 'error',
-            message: 'حدث خطأ في الخادم' 
-        });
+        res.status(500).json({ message: 'خطأ في جلب المحتوى' });
     }
 };
 
@@ -628,11 +609,7 @@ const approveContent = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('خطأ في اعتماد المحتوى:', error);
-        res.status(500).json({ 
-            status: 'error',
-            message: 'حدث خطأ في الخادم' 
-        });
+        res.status(500).json({ message: 'خطأ في اعتماد المحتوى' });
     }
 };
 
@@ -662,41 +639,38 @@ const getMyUploadedContent = async (req, res) => {
       // 2) جلب الملفات المرتبطة بالمستخدم
       const [rows] = await db.execute(
         `SELECT 
-           c.id,
+           CONCAT('dept-', c.id) AS id,
            c.title,
            c.file_path AS filePath,
            c.created_at AS createdAt,
            c.is_approved,
            c.approval_status,
            f.name AS folderName,
-           d.name AS departmentName
+           COALESCE(d.name, '-') AS source_name
          FROM contents c
          JOIN folders f ON c.folder_id = f.id
-         JOIN departments d ON f.department_id = d.id
+         LEFT JOIN departments d ON f.department_id = d.id
          WHERE c.created_by = ?
          ORDER BY c.created_at DESC`,
         [userId]
       );
       
-
-// هُنا استخدم r.filePath لا r.file_path
-const data = rows.map(r => ({
-    id:             r.id,
-    title:          r.title,
-    fileUrl:        r.filePath,
-    createdAt:      r.createdAt,
-    is_approved:    r.is_approved,
-    approval_status: r.approval_status,
-    folderName:     r.folderName,
-    departmentName: r.departmentName
-  }));
+      const data = rows.map(r => ({
+        id:             r.id,
+        title:          r.title,
+        fileUrl:        r.filePath,
+        createdAt:      r.createdAt,
+        is_approved:    r.is_approved,
+        approval_status: r.approval_status,
+        folderName:     r.folderName,
+        source_name:    r.source_name,
+        type:           'department'
+      }));
   
-
-return res.json({ status: 'success', data });
+      return res.json({ status: 'success', data });
 
     } catch (err) {
-      console.error('Error getMyUploadedContent:', err);
-      return res.status(500).json({ status: 'error', message: 'حدث خطأ في الخادم.' });
+      res.status(500).json({ status: 'error', message: 'خطأ في جلب المحتويات التي رفعتها' });
     }
   };
 

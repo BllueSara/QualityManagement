@@ -44,61 +44,40 @@ router.delete('/:contentId', deleteContent);
 
 
 // جلب تفاصيل تتبع الطلب
-router.get('/track/:id', async (req, res) => {
-  const contentId = req.params.id;
-
+router.get('/track/:contentId', async (req, res) => {
   try {
-    const [contentRows] = await db.execute(`
-      SELECT c.title, c.approval_status, c.created_at, d.name AS department, f.name AS folder
-      FROM contents c
-      LEFT JOIN folders f ON c.folder_id = f.id
-      LEFT JOIN departments d ON f.department_id = d.id
-      WHERE c.id = ?
+    const { contentId } = req.params;
+    const [contentRows] = await db.execute('SELECT * FROM contents WHERE id = ?', [contentId]);
+    if (contentRows.length === 0) {
+      return res.status(404).json({ status: 'error', message: 'Content not found.' });
+    }
+    const content = contentRows[0];
+
+    const [timelineRows] = await db.execute(`
+      SELECT al.status, al.comments, al.created_at, u.username AS approver, d.name AS department
+      FROM approval_logs al
+      JOIN users u ON al.approver_id = u.id
+      JOIN contents c ON al.content_id = c.id
+      JOIN departments d ON c.department_id = d.id
+      WHERE al.content_id = ?
+      ORDER BY al.created_at ASC
     `, [contentId]);
 
-    // جلب كل المعتمدين مع آخر حالة لهم إن وجدت
-    const [logs] = await db.execute(`
-      SELECT 
-        d.name AS department_name,
-        u.username AS approver_name,
-        al.status,
-        al.comments,
-        al.created_at
+    const [pendingApproversRows] = await db.execute(`
+      SELECT u.username AS approver, d.name AS department
       FROM content_approvers ca
       JOIN users u ON ca.user_id = u.id
-      LEFT JOIN departments d ON u.department_id = d.id
-      LEFT JOIN approval_logs al 
-        ON al.content_id = ca.content_id 
-        AND al.approver_id = ca.user_id
-        AND al.created_at = (
-          SELECT MAX(created_at) 
-          FROM approval_logs 
-          WHERE content_id = ca.content_id AND approver_id = ca.user_id
-        )
-      WHERE ca.content_id = ?
-      ORDER BY al.created_at IS NULL DESC, al.created_at ASC
+      JOIN contents c ON ca.content_id = c.id
+      JOIN departments d ON c.department_id = d.id
+      WHERE ca.content_id = ? AND NOT EXISTS (
+          SELECT 1 FROM approval_logs al WHERE al.content_id = ca.content_id AND al.approver_id = ca.user_id AND al.status = 'approved'
+      )
     `, [contentId]);
 
-    const timeline = logs.map(log => ({
-      department: log.department_name || 'غير معروف',
-      approver: log.approver_name,
-      status: log.status || 'pending',
-      comments: log.comments,
-      created_at: log.created_at
-    }));
-
-    const pending = timeline.filter(t => t.status === 'pending');
-
-    res.json({
-      status: 'success',
-      content: contentRows[0],
-      timeline,
-      pending
-    });
-
+    res.json({ status: 'success', content, timeline: timelineRows, pending: pendingApproversRows });
   } catch (err) {
-    console.error('Error fetching track info:', err);
-    res.status(500).json({ status: 'error', message: 'فشل جلب بيانات التتبع' });
+    // console.error('Error fetching track info:', err);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch track info.' });
   }
 });
 

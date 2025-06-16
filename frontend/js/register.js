@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // مسح الخيارات الحالية باستثناء الخيار الأول (اختر القسم)
                 departmentSelect.innerHTML = '<option value="">اختر القسم</option>';
                 // تعبئة قائمة الاختيار بالأقسام المسترجعة
-                data.data.forEach(department => {
+                data.forEach(department => {
                     const option = document.createElement('option');
                     option.value = department.id; // قيمة الخيار ستكون رقم ID القسم
                     option.textContent = department.name; // النص الظاهر سيكون اسم القسم
