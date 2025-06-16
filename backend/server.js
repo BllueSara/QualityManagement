@@ -25,7 +25,9 @@ const contentRouter          = require('./routes/contentRoutes');
 const approvalRouter         = require('./routes/approvalRoutes');
 const ticketRouter           = require('./routes/ticketRoutes');
 const pendingApprovalRoutes = require('./routes/pendingApprovals.routes');
- const dashboardRouter = require('./routes/dashboardRoutes');
+const pendingCommitteeApprovalRoutes = require('./routes/pendingCommitteeApprovals.routes');
+const dashboardRouter = require('./routes/dashboardRoutes');
+const committeesRoutes = require('./routes/committees');
 
  
 
@@ -36,7 +38,7 @@ const pendingApprovalRoutes = require('./routes/pendingApprovals.routes');
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', require('express').static('uploads'));
 
 // Mounting API endpoints
 app.use('/api/auth',        authRouter);
@@ -45,6 +47,7 @@ app.use('/api/users',       usersRouter);
 app.use('/api/permissions/definitions', permsDefRouter);
 app.use('/api/departments', deptRouter);
 app.use('/api/tickets',     ticketRouter);
+app.use('/api/committees',  committeesRoutes);
 
 // folders nested under departments
 app.use('/api/departments/:departmentId/folders', folderRouter);
@@ -65,6 +68,7 @@ app.use('/api/approvals', approvalRouter);
 
 
 app.use('/api/pending-approvals', pendingApprovalRoutes);
+app.use('/api/pending-committee-approvals', pendingCommitteeApprovalRoutes);
 
 app.use('/api/dashboard', dashboardRouter);
 

@@ -314,51 +314,94 @@ async function getUserPermissions(userId) {
 // جلب الملفات المكلف بها المستخدم
 const getAssignedApprovals = async (req, res) => {
   try {
-    const raw = req.headers.authorization?.split(' ')[1];
-    if (!raw) return res.status(401).json({ status: 'error', message: 'لا يوجد توكن' });
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ status: 'error', message: 'لا يوجد توكن' });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id;
+    const userRole = decoded.role;
 
-    const decoded = jwt.verify(raw, process.env.JWT_SECRET);
-    const userId  = decoded.id;
-    const role    = decoded.role;
+    const permsSet = await getUserPermissions(userId);
+    const canViewAll = userRole === 'admin' || permsSet.has('transfer_credits');
 
-    const perms = await getUserPermissions(userId);
-    const canViewAll = role === 'admin' || perms.has('view_credits');
-
-    let sql = `
-      SELECT 
+    let departmentContentQuery = `
+      SELECT
         c.id,
         c.title,
-        c.file_path,                      -- ✅ رجّع رابط الملف
+        c.file_path,
         c.approval_status,
-        d.name            AS department_name,
-        al.status         AS your_log_status,
-        al.signed_as_proxy,
-        u2.username       AS delegated_by_name
+        GROUP_CONCAT(DISTINCT u2.username) AS assigned_approvers,
+        d.name AS source_name, -- Alias to source_name for consistency
+        u.username AS created_by_username,
+        'department_content' AS content_type,
+        CAST(c.approvers_required AS CHAR) AS approvers_required,
+        c.created_at
       FROM contents c
-      JOIN content_approvers ca ON ca.content_id = c.id
-      LEFT JOIN folders f       ON c.folder_id = f.id
-      LEFT JOIN departments d   ON f.department_id = d.id
-      LEFT JOIN approval_logs al
-        ON al.content_id = c.id
-       AND al.approver_id = ca.user_id
-      LEFT JOIN users u2
-        ON al.delegated_by = u2.id
+      JOIN folders f ON c.folder_id = f.id
+      JOIN departments d ON f.department_id = d.id
+      JOIN users u ON c.created_by = u.id
+      LEFT JOIN content_approvers ca ON ca.content_id = c.id
+      LEFT JOIN users u2 ON ca.user_id = u2.id
+      WHERE c.approval_status = 'pending'
     `;
 
-    const params = [];
+    let committeeContentQuery = `
+      SELECT
+        cc.id,
+        cc.title,
+        cc.file_path,
+        cc.approval_status,
+        GROUP_CONCAT(DISTINCT u2.username) AS assigned_approvers,
+        com.name AS source_name, -- Alias to source_name for consistency
+        u.username AS created_by_username,
+        'committee_content' AS content_type,
+        CAST(cc.approvers_required AS CHAR) AS approvers_required,
+        cc.created_at
+      FROM committee_contents cc
+      JOIN committee_folders cf ON cc.folder_id = cf.id
+      JOIN committees com ON cf.committee_id = com.id
+      JOIN users u ON cc.created_by = u.id
+      LEFT JOIN committee_content_approvers cca ON cca.content_id = cc.id
+      LEFT JOIN users u2 ON cca.user_id = u2.id
+      WHERE cc.approval_status = 'pending'
+    `;
+
+    let params = [];
+
     if (!canViewAll) {
-      sql += ` WHERE ca.user_id = ?`;
-      params.push(userId);
+      departmentContentQuery += ` AND (EXISTS (SELECT 1 FROM content_approvers WHERE content_id = c.id AND user_id = ?) OR c.created_by = ?)`;
+      committeeContentQuery += ` AND (EXISTS (SELECT 1 FROM committee_content_approvers WHERE content_id = cc.id AND user_id = ?) OR cc.created_by = ?)`;
+      params.push(userId, userId, userId, userId);
     }
 
-    sql += ` ORDER BY c.updated_at DESC`;
+    departmentContentQuery += ` GROUP BY c.id`;
+    committeeContentQuery += ` GROUP BY cc.id`;
 
-    const [rows] = await db.execute(sql, params);
+    const finalQuery = `
+      ${departmentContentQuery}
+      UNION ALL
+      ${committeeContentQuery}
+      ORDER BY created_at DESC
+    `;
+
+    const [rows] = await db.execute(finalQuery, params);
+
+    rows.forEach(row => {
+      if (typeof row.approvers_required === 'string') {
+        try {
+          row.approvers_required = JSON.parse(row.approvers_required);
+        } catch (e) {
+          console.error('Failed to parse approvers_required JSON string for item ID:', row.id, 'Raw string:', row.approvers_required, 'Error:', e);
+          row.approvers_required = [];
+        }
+      } else if (row.approvers_required === null || !Array.isArray(row.approvers_required)) {
+        row.approvers_required = [];
+      }
+    });
+
     res.json({ status: 'success', data: rows });
-
   } catch (err) {
-    console.error('getAssignedApprovals error:', err);
-    res.status(500).json({ status: 'error', message: 'خطأ في جلب البيانات' });
+    console.error('Error in getAssignedApprovals:', err);
+    res.status(500).json({ status: 'error', message: 'Internal Server Error' });
   }
 };
 

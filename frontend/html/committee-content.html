@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>محتويات اللجنة</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/shared.css">
+    <link rel="stylesheet" href="../css/department-content.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="hospital-logo">
+                <img src="../images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز">
+            </div>
+            <div class="system-title">
+                <img src="../images/system-title.png" alt="نظام إدارة الجودة والسلامة">
+            </div>
+        </div>
+    </header>
+    <div class="header-actions">
+        <button class="home-btn" onclick="window.location.href='index.html'">
+            <i class="fas fa-home"></i>
+            <span>الرئيسية</span>
+        </button>
+    </div>
+    <main>
+        <div class="container">
+            <h1>محتويات اللجنة</h1>
+            <div class="back-button-container">
+                <button class="back-button" id="mainBackBtn">
+                    <img src="../images/Back.png" alt="رجوع" class="back-arrow-icon">
+                    رجوع
+                </button>
+            </div>
+            <div id="backToFilesContainer" class="back-button-container" style="display: none;">
+                <button class="back-button" id="backToFilesBtn">
+                    <img src="../images/Back.png" alt="رجوع" class="back-arrow-icon">
+                    العودة للملفات
+                </button>
+            </div>
+            <div class="folders-section">
+                <div class="folder-controls-bar">
+                    <div class="search-bar">
+                        <input type="text" placeholder="ابحث عن مجلد">
+                        <img src="../images/serach.svg" alt="بحث" class="search-icon">
+                    </div>
+                    <button class="btn-primary" id="addFolderBtn">إضافة مجلد +</button>
+                </div>
+                <div class="folders-list">
+                </div>
+            </div>
+            <div class="folder-contents-section" style="display: none;">
+                <h2 class="folder-content-title"></h2>
+                <div class="file-controls-bar">
+                    <div class="search-bar">
+                        <input type="text" placeholder="ابحث عن محتوى">
+                        <img src="../images/serach.svg" alt="بحث" class="search-icon">
+                    </div>
+                    <button class="btn-primary" id="addContentBtn">إضافة محتوى +</button>
+                </div>
+                <div class="files-list">
+                </div>
+            </div>
+        </div>
+    </main>
+    <!-- Modals (مطابقة للأقسام مع تغيير المسميات) -->
+    <!-- Add Folder Modal -->
+    <div id="addFolderModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><img src="../images/folders.svg" alt="أيقونة مجلد" style="width: 24px; height: 24px; vertical-align: middle; margin-left: 10px;"> إضافة مجلد</h3>
+                <span class="close-button">&times;</span>
+            </div>
+            <hr>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="folderName">اسم المجلد</label>
+                    <input type="text" id="folderName" placeholder="أدخل اسم المجلد" required>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-primary" id="createFolderBtn">إنشاء</button>
+                <button class="btn-secondary" id="cancelFolderBtn">إلغاء</button>
+            </div>
+        </div>
+    </div>
+    <!-- Add Content Modal -->
+    <div id="addContentModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>إضافة محتوى للمجلد</h3>
+                <span class="close-button">&times;</span>
+            </div>
+            <hr>
+            <div  id="addContentFormElement">
+                <div class="modal-body">
+                    <input type="hidden" id="addContentFolderId">
+                    <div class="form-group">
+                        <label for="contentTitle">عنوان المحتوى</label>
+                        <input type="text" id="contentTitle" placeholder="أدخل عنوان المحتوى" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="contentFile">اختر ملف لإرفاقه</label>
+                        <div class="file-drop-area">
+                            <img src="../images/attach.svg" alt="أيقونة رفع" class="attach-icon">
+                            <input type="file" id="contentFile" accept="application/pdf" required>
+                            <div class="file-upload-text">
+                                <span class="supported-files">ملفات PDF فقط</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-buttons">
+                    <button class="btn-primary" id="createContentBtn" type="button">إضافة</button>
+                    <button class="btn-secondary" id="cancelContentBtn" type="button">إلغاء</button>
+                </div>
+            </div >
+        </div>
+    </div>
+    <!-- Edit Folder Modal -->
+    <div id="editFolderModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><img src="../images/folders.svg" alt="أيقونة مجلد" style="width: 24px; height: 24px; vertical-align: middle; margin-left: 10px;"> تعديل مجلد</h3>
+                <span class="close-button">&times;</span>
+            </div>
+            <hr>
+            <div class="modal-body">
+                <input type="hidden" id="editFolderId">
+                <div class="form-group">
+                    <label for="editFolderName">اسم المجلد</label>
+                    <input type="text" id="editFolderName" placeholder="أدخل اسم المجلد" required>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-primary" id="updateFolderBtn">تحديث</button>
+                <button class="btn-secondary" id="cancelEditFolderBtn">إلغاء</button>
+            </div>
+        </div>
+    </div>
+    <!-- Edit Content Modal -->
+    <div id="editContentModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>تعديل محتوى للمجلد</h3>
+                <span class="close-button">&times;</span>
+            </div>
+            <hr>
+            <div class="modal-body">
+                <input type="hidden" id="editContentId">
+                <div class="form-group">
+                    <label for="editContentTitle">عنوان المحتوى <span class="required">*</span></label>
+                    <input type="text" id="editContentTitle" placeholder="أدخل عنوان المحتوى" required>
+                </div>
+                <div class="form-group">
+                    <label for="editContentFile">اختر ملف جديد لإرفاقه <span class="required">*</span></label>
+                    <div class="file-drop-area">
+                        <img src="../images/attach.svg" alt="أيقونة رفع" class="attach-icon">
+                        <input type="file" id="editContentFile" accept="application/pdf" required>
+                        <div class="file-upload-text">
+                            <span class="supported-files">ملفات PDF فقط</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-primary" id="updateContentBtn">تحديث</button>
+                <button class="btn-secondary" id="cancelEditContentBtn">إلغاء</button>
+            </div>
+        </div>
+    </div>
+    <!-- Delete Folder Modal -->
+    <div id="deleteFolderModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>تأكيد حذف المجلد</h3>
+                <span class="close-button">&times;</span>
+            </div>
+            <hr>
+            <div class="modal-body">
+                <input type="hidden" id="deleteFolderId">
+                <p>هل أنت متأكد أنك تريد حذف هذا المجلد؟ سيؤدي هذا إلى حذف جميع المحتويات بداخله.</p>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-danger" id="confirmDeleteFolderBtn">حذف</button>
+                <button class="btn-secondary" id="cancelDeleteFolderBtn">إلغاء</button>
+            </div>
+        </div>
+    </div>
+    <!-- Delete Content Modal -->
+    <div id="deleteContentModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>تأكيد حذف المحتوى</h3>
+                <span class="close-button">&times;</span>
+            </div>
+            <hr>
+            <div class="modal-body">
+                <input type="hidden" id="deleteContentId">
+                <p>هل أنت متأكد أنك تريد حذف هذا المحتوى؟</p>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-danger" id="confirmDeleteContentBtn">حذف</button>
+                <button class="btn-secondary" id="cancelDeleteContentBtn">إلغاء</button>
+            </div>
+        </div>
+    </div>
+    <div id="toast-container"></div>
+    <script src="../js/committee-content.js"></script>
+</body>
+</html> 
