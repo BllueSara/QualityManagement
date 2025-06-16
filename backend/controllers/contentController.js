@@ -674,6 +674,122 @@ const getMyUploadedContent = async (req, res) => {
     }
   };
 
+/**
+ * GET /api/content-names
+ * جلب كل أسماء المحتويات
+ */
+const getContentNames = async (req, res) => {
+  try {
+    const conn = await db.getConnection();
+    const [rows] = await conn.execute(
+      'SELECT id, name FROM content_names ORDER BY name ASC'
+    );
+    conn.release();
+    return res.json({ status: 'success', data: rows });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'فشل جلب أسماء المحتويات.' });
+  }
+};
+
+/**
+ * POST /api/content-names
+ * إضافة اسم محتوى جديد
+ */
+const addContentName = async (req, res) => {
+  const { name } = req.body;
+  if (!name) {
+    return res.status(400).json({ message: 'الاسم مطلوب.' });
+  }
+  try {
+    const conn = await db.getConnection();
+    const [result] = await conn.execute(
+      'INSERT INTO content_names (name) VALUES (?)',
+      [name]
+    );
+    conn.release();
+    return res.status(201).json({
+      status: 'success',
+      message: '✅ تم إضافة اسم المحتوى بنجاح',
+      contentNameId: result.insertId
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: '❌ فشل في إضافة اسم المحتوى.' });
+  }
+};
+
+/**
+ * PUT /api/content-names/:id
+ * تعديل اسم محتوى وتحديث كل المحتويات التي تستخدم الاسم القديم
+ */
+const updateContentName = async (req, res) => {
+  const { id }   = req.params;
+  const { name } = req.body;
+  if (!name) {
+    return res.status(400).json({ message: 'الاسم الجديد مطلوب.' });
+  }
+
+  const conn = await db.getConnection();
+  try {
+    const [rows] = await conn.execute(
+      'SELECT name FROM content_names WHERE id = ?',
+      [id]
+    );
+    if (!rows.length) {
+      conn.release();
+      return res.status(404).json({ message: '❌ لم يتم العثور على اسم المحتوى.' });
+    }
+    const oldName = rows[0].name;
+
+    const [result] = await conn.execute(
+      'UPDATE content_names SET name = ? WHERE id = ?',
+      [name, id]
+    );
+    if (result.affectedRows === 0) {
+      conn.release();
+      return res.status(404).json({ message: '❌ لم يتم تحديث اسم المحتوى.' });
+    }
+
+    await conn.execute(
+      'UPDATE contents SET name = ? WHERE name = ?',
+      [name, oldName]
+    );
+
+    conn.release();
+    return res.json({
+      status: 'success',
+      message: '✅ تم تعديل اسم المحتوى وكل المحتويات المرتبطة بنجاح'
+    });
+  } catch (err) {
+    conn.release();
+    console.error(err);
+    return res.status(500).json({ message: '❌ فشل في تعديل اسم المحتوى.' });
+  }
+};
+
+/**
+ * DELETE /api/content-names/:id
+ * حذف اسم المحتوى
+ */
+const deleteContentName = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const conn = await db.getConnection();
+    const [result] = await conn.execute(
+      'DELETE FROM content_names WHERE id = ?',
+      [id]
+    );
+    conn.release();
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: '❌ اسم المحتوى غير موجود أو تم حذفه مسبقاً.' });
+    }
+    return res.json({ status: 'success', message: '✅ تم حذف اسم المحتوى بنجاح' });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: '❌ فشل في حذف اسم المحتوى.' });
+  }
+};
 
   
   module.exports = {
@@ -685,6 +801,10 @@ const getMyUploadedContent = async (req, res) => {
     downloadContent,
     getContentById,
     approveContent,
+      getContentNames,
+  addContentName,
+  updateContentName,
+  deleteContentName,
     upload
   };
   

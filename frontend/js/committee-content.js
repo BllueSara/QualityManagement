@@ -2,7 +2,7 @@
 // مثال: fetch(`/api/committees/${committeeId}/folders`) بدلاً من الأقسام
 // سيتم تضمين كل الدوال الخاصة بالإضافة والتعديل والحذف للمجلدات والمحتوى مع التعديلات اللازمة 
 
-const apiBase = 'http://localhost:3006/api';
+const apiBase = 'http://localhost:3006';
 const permissions = {
   canAddFolder:    false,
   canEditFolder:   false,
@@ -96,7 +96,7 @@ document.addEventListener('DOMContentLoaded',async function() {
       backToFilesContainer.style.display = 'none';
       folderContentTitle.textContent = 'مجلدات اللجنة';
       try {
-        const response = await fetch(`/api/committees/${committeeId}/folders`);
+        const response = await fetch(`${apiBase}/api/committees/${committeeId}/folders`);
         const folders = await response.json();
         const foldersList = document.querySelector('.folders-list');
         foldersList.innerHTML = '';
@@ -282,7 +282,7 @@ document.addEventListener('DOMContentLoaded',async function() {
         }
 
         try {
-            const response = await fetch(`/api/committees/${currentCommitteeId}/folders`, {
+            const response = await fetch(`${apiBase}/api/committees/${currentCommitteeId}/folders`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${getToken()}`,
@@ -313,7 +313,7 @@ document.addEventListener('DOMContentLoaded',async function() {
             return;
         }
         try {
-            const response = await fetch(`/api/committees/folders/${folderId}`, {
+            const response = await fetch(`${apiBase}/api/committees/folders/${folderId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -336,7 +336,7 @@ document.addEventListener('DOMContentLoaded',async function() {
 
     async function deleteFolder(folderId) {
         try {
-            const response = await fetch(`/api/committees/folders/${folderId}`, {
+            const response = await fetch(`${apiBase}/api/committees/folders/${folderId}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${getToken()}` }
             });
@@ -415,7 +415,7 @@ document.addEventListener('DOMContentLoaded',async function() {
         formData.append('approvers_required', JSON.stringify(approvers_required));
 
         try {
-            const response = await fetch(`/api/committees/folders/${folderIdToUpload}/contents`, {
+            const response = await fetch(`${apiBase}/api/committees/folders/${folderIdToUpload}/contents`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${getToken()}` }, // No Content-Type needed for FormData
                 body: formData
@@ -438,7 +438,7 @@ document.addEventListener('DOMContentLoaded',async function() {
     function openEditContentModal(contentId) {
         if (editContentModal) {
             try {
-                fetch(`/api/committees/contents/${contentId}`, {
+                fetch(`${apiBase}/api/committees/contents/${contentId}`, {
                     headers: { 'Authorization': `Bearer ${getToken()}` }
                 }).then(response => response.json())
                 .then(data => {
@@ -514,7 +514,7 @@ document.addEventListener('DOMContentLoaded',async function() {
         }
 
         try {
-            const response = await fetch(`/api/committees/contents/${contentId}`, {
+            const response = await fetch(`${apiBase}/api/committees/contents/${contentId}`, {
                 method: 'PUT',
                 headers: { 'Authorization': `Bearer ${getToken()}` },
                 body: formData
@@ -539,7 +539,7 @@ document.addEventListener('DOMContentLoaded',async function() {
         if (!contentId) return;
 
         try {
-            const response = await fetch(`/api/committees/contents/${contentId}`, {
+            const response = await fetch(`${apiBase}/api/committees/contents/${contentId}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${getToken()}` }
             });

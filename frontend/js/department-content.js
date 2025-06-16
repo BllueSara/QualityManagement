@@ -1,4 +1,7 @@
 const apiBase      = 'http://localhost:3006/api';
+let currentDepartmentId = null;
+let currentFolderId     = null;
+
 const permissions = {
   canAddFolder:    false,
   canEditFolder:   false,
@@ -7,9 +10,537 @@ const permissions = {
   canEditContent:  false,
   canDeleteContent:false
 };
+    function getToken() {
+        const token = localStorage.getItem('token');
+        console.log('Token retrieved in getToken():', token ? 'Exists' : 'Not Found');
+        return token;
+    }
+// 1) مصفوفة الأسماء والاختيار
+let folderNames = [];
+let selectedFolderId = null;
+
+// 1) جلب الأسماء
+async function loadFolderNames() {
+  if (!currentDepartmentId) return;
+  try {
+    const res = await fetch(
+      `${apiBase}/departments/${currentDepartmentId}/folders/folder-names`,
+      { headers: { 'Authorization': `Bearer ${getToken()}` } }
+    );
+    const json = await res.json();
+    folderNames = json.data || [];             // ← خزنهم هنا
+    renderFolderNames(folderNames);
+    // ظهر البحث والإضافة
+    document.getElementById('folderNameSearch').classList.remove('hidden');
+    document.getElementById('addNewFolderNameLink').classList.remove('hidden');
+  } catch (err) {
+    console.error('Error loading folder names:', err);
+  }
+}
+function toggleDropdown() {
+  document.getElementById('folderNameMenu'      ).classList.toggle('hidden');
+  document.getElementById('folderNameSearch'    ).classList.toggle('hidden');
+  document.getElementById('addNewFolderNameLink').classList.toggle('hidden');
+}
+function closeDropdown() {
+  document.getElementById('folderNameMenu'      ).classList.add('hidden');
+  document.getElementById('folderNameSearch'    ).classList.add('hidden');
+  document.getElementById('addNewFolderNameLink').classList.add('hidden');
+}
+
+// 2) عرض الأسماء
+function renderFolderNames(list) {
+  const container = document.getElementById('folderNamesContainer');
+  container.innerHTML = '';
+  list.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'folder-item';
+    div.innerHTML = `
+      <span class="label">${item.name}</span>
+      <span class="actions">
+        ${permissions.canEditFolder   ? `<button class="edit-name"   data-id="${item.id}">✎</button>` : ''}
+        ${permissions.canDeleteFolder ? `<button class="delete-name" data-id="${item.id}">🗑</button>` : ''}
+      </span>
+    `;
+
+    // 1) بدل ما نخلي الاختيار بس على الـ .label، نخلي السطر كله
+    div.addEventListener('click', e => {
+      // إذا ضغطت على زر تعديل أو حذف، نوقف هنا
+      if (e.target.closest('.actions')) return;
+      selectedFolderId = item.id;
+      // نحدث نص الزر ونحافظ على السهم
+      document.getElementById('folderNameToggle').innerHTML =
+        `${item.name} <span class="arrow">▾</span>`;
+      closeDropdown();
+    });
+
+    // 2) تعديل الاسم
+    if (permissions.canEditFolder) {
+      div.querySelector('.edit-name').onclick = async e => {
+        e.stopPropagation();
+        const newName = prompt('ادخل الاسم الجديد:', item.name);
+        if (!newName) return;
+        await fetch(`${apiBase}/departments/${currentDepartmentId}/folders/folder-names/${item.id}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${getToken()}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ name: newName })
+        });
+        await loadFolderNames();
+      };
+    }
+
+    // 3) حذف الاسم
+    if (permissions.canDeleteFolder) {
+      div.querySelector('.delete-name').onclick = async e => {
+        e.stopPropagation();
+        if (!confirm('هل تريد حذف هذا الاسم؟')) return;
+        await fetch(`${apiBase}/departments/${currentDepartmentId}/folders/folder-names/${item.id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${getToken()}` }
+        });
+        if (selectedFolderId === item.id) {
+          selectedFolderId = null;
+          document.getElementById('folderNameToggle').textContent = 'اختر من القائمة...';
+        }
+        await loadFolderNames();
+      };
+    }
+
+    container.appendChild(div);
+  });
+}
+
+// --- dropdown للتعديل ---
+function toggleEditDropdown() {
+  document.getElementById('editFolderMenu')   .classList.toggle('hidden');
+  document.getElementById('editFolderSearch') .classList.toggle('hidden');
+  document.getElementById('editAddNewLink')   .classList.toggle('hidden');
+}
+function closeEditDropdown() {
+  document.getElementById('editFolderMenu')   .classList.add('hidden');
+  document.getElementById('editFolderSearch') .classList.add('hidden');
+  document.getElementById('editAddNewLink')   .classList.add('hidden');
+}
+/** يعرض قائمة الأسماء في المودال التعديل */
+function renderEditFolderNames(list) {
+  const container = document.getElementById('editFolderNamesContainer');
+  container.innerHTML = '';
+  list.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'folder-item';
+    div.innerHTML = `
+      <span class="label">${item.name}</span>
+      <span class="actions">
+        ${permissions.canEditFolder   ? `<button class="edit-name"   data-id="${item.id}">✎</button>` : ''}
+        ${permissions.canDeleteFolder ? `<button class="delete-name" data-id="${item.id}">🗑</button>` : ''}
+      </span>
+    `;
+    // اختيار السطر كلّه
+    div.addEventListener('click', e => {
+      if (e.target.closest('.actions')) return;
+      selectedFolderId = item.id;
+      document.getElementById('editFolderToggle').innerHTML =
+        `${item.name} <span class="arrow">▾</span>`;
+      closeEditDropdown();
+    });
+    // تعديل اسم
+    if (permissions.canEditFolder) {
+      div.querySelector('.edit-name').onclick = async e => {
+        e.stopPropagation();
+        const newName = prompt('ادخل الاسم الجديد:', item.name);
+        if (!newName) return;
+        await fetch(`${apiBase}/departments/${currentDepartmentId}/folders/folder-names/${item.id}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${getToken()}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ name: newName })
+        });
+        await loadFolderNames();
+        renderEditFolderNames(folderNames);
+      };
+    }
+    // حذف اسم
+    if (permissions.canDeleteFolder) {
+      div.querySelector('.delete-name').onclick = async e => {
+        e.stopPropagation();
+        if (!confirm('هل تريد حذف هذا الاسم؟')) return;
+        await fetch(`${apiBase}/departments/${currentDepartmentId}/folders/folder-names/${item.id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${getToken()}` }
+        });
+        await loadFolderNames();
+        renderEditFolderNames(folderNames);
+      };
+    }
+    container.appendChild(div);
+  });
+}
+
+// 3) فتح/غلق الدروبدَاون
+// حالة الأسماء والاختيار
+let contentNames = [];
+let selectedContentNameId = null;
+
+// 1) جلب أسماء المحتوى
+async function loadContentNames() {
+  try {
+    const res = await fetch(
+      `${apiBase}/content-names`, // ✅ التعديل هنا
+      {
+        headers: { 'Authorization': `Bearer ${getToken()}` }
+      }
+    );
+    if (!res.ok) throw new Error(`Status ${res.status}`);
+    const { data } = await res.json();
+    contentNames = data || [];
+    renderContentNames(contentNames);
+    document.getElementById('contentNameSearch').classList.remove('hidden');
+    document.getElementById('addNewContentNameLink').classList.remove('hidden');
+  } catch (err) {
+    console.error('Error loading content names:', err);
+  }
+}
+
+
+
+// 2) عرض القائمة
+function renderContentNames(list) {
+  const container = document.getElementById('contentNamesContainer');
+  container.innerHTML = '';
+
+  list.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'folder-item';
+
+    div.innerHTML = `
+      <span class="label">${item.name}</span>
+      <span class="actions">
+        ${permissions.canEditContent ? `<button class="edit-name"   data-id="${item.id}">✎</button>` : ''}
+        ${permissions.canDeleteContent ? `<button class="delete-name" data-id="${item.id}">🗑️</button>` : ''}
+      </span>
+    `;
+
+    // ✅ اختيار الاسم عند الضغط
+    div.addEventListener('click', e => {
+      if (e.target.closest('.actions')) return; // تجاهل الضغط على أزرار التعديل/الحذف
+      document.getElementById('contentNameToggle').innerHTML =
+        `${item.name} <span class="arrow">▾</span>`;
+
+      const hiddenInput = document.getElementById('selectedContentNameId');
+      if (hiddenInput) {
+        hiddenInput.value = item.name; // ← نرسل الاسم مو الـ ID حسب رغبتك
+        console.log('✅ تم اختيار اسم محتوى:', item.name);
+      }
+
+      closeContentDropdown();
+    });
+
+    // ✏️ زر التعديل
+    if (permissions.canEditContent) {
+      div.querySelector('.edit-name')?.addEventListener('click', async e => {
+        e.stopPropagation();
+        const newName = prompt('ادخل الاسم الجديد:', item.name);
+        if (!newName) return;
+
+        await fetch(`${apiBase}/content-names/${item.id}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${getToken()}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ name: newName })
+        });
+        await loadContentNames();
+      });
+    }
+
+    // 🗑️ زر الحذف
+    if (permissions.canDeleteContent) {
+      div.querySelector('.delete-name')?.addEventListener('click', async e => {
+        e.stopPropagation();
+        if (!confirm('هل تريد حذف هذا الاسم؟')) return;
+
+        await fetch(`${apiBase}/content-names/${item.id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${getToken()}`
+          }
+        });
+
+        await loadContentNames();
+      });
+    }
+
+    container.appendChild(div);
+  });
+}
+
+
+
+// 3) فتح/غلق الدروبدَاون
+function toggleContentDropdown() {
+  document.getElementById('contentNameMenu').classList.toggle('hidden');
+  document.getElementById('contentNameSearch').classList.toggle('hidden');
+  document.getElementById('addNewContentNameLink').classList.toggle('hidden');
+}
+function closeContentDropdown() {
+  document.getElementById('contentNameMenu').classList.add('hidden');
+  document.getElementById('contentNameSearch').classList.add('hidden');
+  document.getElementById('addNewContentNameLink').classList.add('hidden');
+}
+
+function renderEditContentNames(list) {
+  const container = document.getElementById('editContentNamesContainer');
+  container.innerHTML = '';
+
+  list.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'folder-item';
+
+    // 1) بناء المحتوى: الاسم + مساحة للأزرار
+    div.innerHTML = `
+      <span class="label">${item.name}</span>
+      <span class="actions">
+        ${permissions.canEditContent   ? `<button class="edit-name"   data-id="${item.id}">✎</button>` : ''}
+        ${permissions.canDeleteContent ? `<button class="delete-name" data-id="${item.id}">🗑️</button>` : ''}
+      </span>
+    `;
+
+    // 2) اختيار الاسم عند الضغط على السطر (ما عدا الأزرار)
+    div.addEventListener('click', e => {
+      if (e.target.closest('.actions')) return; // تجاهل الضغط على الأزرار
+      document.getElementById('editContentNameToggle').innerHTML =
+        `${item.name} <span class="arrow">▾</span>`;
+      document.getElementById('editSelectedContentNameId').value = item.name;
+      // إخفاء القائمة
+      document.getElementById('editContentNameMenu').classList.add('hidden');
+      document.getElementById('editContentNameSearch').classList.add('hidden');
+      document.getElementById('editAddNewContentNameLink').classList.add('hidden');
+    });
+
+    // 3) زر تعديل الاسم
+    if (permissions.canEditContent) {
+      div.querySelector('.edit-name').addEventListener('click', async e => {
+        e.stopPropagation();
+        const newName = prompt('ادخل الاسم الجديد:', item.name);
+        if (!newName) return;
+        await fetch(`${apiBase}/content-names/${item.id}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${getToken()}`,
+            'Content-Type':  'application/json'
+          },
+          body: JSON.stringify({ name: newName })
+        });
+        // بعد التعديل، أعِد جلب وطباعة القائمة
+        await loadContentNames();
+        renderEditContentNames(contentNames);
+      });
+    }
+
+    // 4) زر حذف الاسم
+    if (permissions.canDeleteContent) {
+      div.querySelector('.delete-name').addEventListener('click', async e => {
+        e.stopPropagation();
+        if (!confirm('هل تريد حذف هذا الاسم؟')) return;
+        await fetch(`${apiBase}/content-names/${item.id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${getToken()}`
+          }
+        });
+        // بعد الحذف، أعِد جلب وطباعة القائمة
+        await loadContentNames();
+        renderEditContentNames(contentNames);
+      });
+    }
+
+    container.appendChild(div);
+  });
+}
+
 
 document.addEventListener('DOMContentLoaded',async function() {
     // console.log('DOMContentLoaded event fired in department-content.js');
+   const toggleBtn   = document.getElementById('folderNameToggle');
+  const menu        = document.getElementById('folderNameMenu');
+  const searchInput = document.getElementById('folderNameSearch');
+  const addLink     = document.getElementById('addNewFolderNameLink');
+
+
+  // wire the opener
+  toggleBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    toggleDropdown();             // ← use the function, not manual toggles
+    if (!folderNames.length) loadFolderNames();
+  });
+
+  // click‐out closes
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#folderNameDropdown')) {
+      closeDropdown();
+    }
+  });
+
+  // searching
+  searchInput.addEventListener('input', e => {
+    const q = e.target.value.trim().toLowerCase();
+    renderFolderNames(
+      folderNames.filter(f => f.name.toLowerCase().includes(q))
+    );
+  });
+
+  // “add new” link
+  addLink.addEventListener('click', async () => {
+    const name = prompt('أدخل اسم المجلد الجديد:');
+    if (!name) return;
+    await fetch(
+      `${apiBase}/departments/${currentDepartmentId}/folders/folder-names`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${getToken()}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name })
+      }
+    );
+    await loadFolderNames();
+  });
+  // --- ربط dropdown التعديل ---
+const edtToggle   = document.getElementById('editFolderToggle');
+const edtMenu     = document.getElementById('editFolderMenu');
+const edtSearch   = document.getElementById('editFolderSearch');
+const edtAddLink  = document.getElementById('editAddNewLink');
+
+edtToggle.addEventListener('click', e => {
+  e.stopPropagation();
+  toggleEditDropdown();
+  if (!folderNames.length) loadFolderNames();
+  renderEditFolderNames(folderNames);
+});
+document.addEventListener('click', e => {
+  if (!e.target.closest('#editFolderDropdown')) {
+    closeEditDropdown();
+  }
+});
+edtSearch.addEventListener('input', e => {
+  const q = e.target.value.trim().toLowerCase();
+  renderEditFolderNames(
+    folderNames.filter(f => f.name.toLowerCase().includes(q))
+  );
+});
+edtAddLink.addEventListener('click', async () => {
+  const name = prompt('أدخل اسم المجلد الجديد:');
+  if (!name) return;
+  await fetch(`${apiBase}/departments/${currentDepartmentId}/folders/folder-names`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${getToken()}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ name })
+  });
+  await loadFolderNames();
+  renderEditFolderNames(folderNames);
+});
+// ——— Content-name dropdown setup ———
+  const contentToggleBtn    = document.getElementById('contentNameToggle');
+  const contentMenu         = document.getElementById('contentNameMenu');
+  const contentSearchInput  = document.getElementById('contentNameSearch');
+  const contentAddLink      = document.getElementById('addNewContentNameLink');
+
+  contentToggleBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    toggleContentDropdown();
+    if (!contentNames.length) loadContentNames();
+  });
+
+  contentSearchInput.addEventListener('input', e => {
+    const q = e.target.value.trim().toLowerCase();
+    renderContentNames(
+      contentNames.filter(f => f.name.toLowerCase().includes(q))
+    );
+  });
+
+  contentAddLink.addEventListener('click', async () => {
+    const name = prompt('أدخل اسم المحتوى الجديد:');
+    if (!name) return;
+    await fetch(
+      `${apiBase}/content-names`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${getToken()}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name })
+      }
+    );
+    await loadContentNames();
+  });
+
+  // Close on outside click
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#contentNameDropdown')) {
+      closeContentDropdown();
+    }
+  });
+// عناصر دروبداون تعديل المحتوى
+const editContentNameToggleBtn   = document.getElementById('editContentNameToggle');
+const editContentNameMenu        = document.getElementById('editContentNameMenu');
+const editContentNameSearchInput = document.getElementById('editContentNameSearch');
+const editAddNewContentNameLink  = document.getElementById('editAddNewContentNameLink');
+
+// فتح/إغلاق القائمة وعرض الأسماء
+editContentNameToggleBtn.addEventListener('click', async e => {
+  e.stopPropagation();
+  editContentNameMenu.classList.toggle('hidden');
+  editContentNameSearchInput.classList.toggle('hidden');
+  editAddNewContentNameLink.classList.toggle('hidden');
+  if (!contentNames.length) {
+    await loadContentNames();
+  }
+  renderEditContentNames(contentNames);
+});
+
+// إغلاق الدروبدَاون عند الضغط خارج
+document.addEventListener('click', e => {
+  if (!e.target.closest('#editContentNameDropdown')) {
+    editContentNameMenu.classList.add('hidden');
+    editContentNameSearchInput.classList.add('hidden');
+    editAddNewContentNameLink.classList.add('hidden');
+  }
+});
+
+// فلترة البحث
+editContentNameSearchInput.addEventListener('input', e => {
+  const q = e.target.value.trim().toLowerCase();
+  renderEditContentNames(
+    contentNames.filter(c => c.name.toLowerCase().includes(q))
+  );
+});
+
+// إضافة اسم جديد
+editAddNewContentNameLink.addEventListener('click', async () => {
+  const name = prompt('أدخل اسم المحتوى الجديد:');
+  if (!name) return;
+  await fetch(`${apiBase}/content-names`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${getToken()}`,
+      'Content-Type':  'application/json'
+    },
+    body: JSON.stringify({ name })
+  });
+  await loadContentNames();
+  renderEditContentNames(contentNames);
+});
+
       let isInitialFetch = true;  // ← الفلاج
 
     const foldersSection = document.querySelector('.folders-section');
@@ -98,8 +629,7 @@ if (cancelContentBtn) {
 
     const mainBackBtn = document.getElementById('mainBackBtn');
 
-    let currentDepartmentId = null; // متغير لتخزين معرف القسم الحالي
-    let currentFolderId = null; // متغير لتخزين معرف المجلد الحالي
+
 
     await fetchPermissions();
 // أخف أو أظهر الأزرار العامّة
@@ -107,11 +637,7 @@ if (cancelContentBtn) {
   if (!permissions.canAddContent) addContentBtn .style.display = 'none';
 
     // دالة لجلب التوكن من localStorage (مكررة، يمكن نقلها إلى shared.js)
-    function getToken() {
-        const token = localStorage.getItem('token');
-        console.log('Token retrieved in getToken():', token ? 'Exists' : 'Not Found');
-        return token;
-    }
+
 
     // دالة لفك تشفير التوكن والحصول على دور المستخدم
     function getUserRoleFromToken() {
@@ -385,21 +911,12 @@ async function fetchFolders(departmentId) {
     }
 
     // Function to open the Add Folder modal
-    function openAddFolderModal() {
-        console.log('Add Folder button clicked. Opening modal.');
-        if (addFolderModal) {
-            addFolderModal.style.display = 'flex';
-        }
-    }
 
     // Function to close the Add Folder modal
-    function closeAddFolderModal() {
-        if (addFolderModal) {
-            addFolderModal.style.display = 'none';
-            document.getElementById('folderName').value = '';
-        }
-    }
-
+function closeAddFolderModal() {
+  addFolderModal.style.display = 'none';
+  // ما في حاجة لمسح input غير موجود
+}
     // Function to handle Create Folder
     async function handleCreateFolder() {
         const folderName = document.getElementById('folderName').value;
@@ -490,143 +1007,153 @@ async function fetchFolders(departmentId) {
     });
 
     // Function to close the Add Content modal
-    function closeAddContentModal() {
-        if (addContentModal) {
-            addContentModal.style.display = 'none';
-            document.getElementById('contentTitle').value = ''; // Clear form field
-            document.getElementById('contentFile').value = ''; // Clear file input
-            const fileDropArea = document.querySelector('#addContentModal .file-drop-area');
-            const fileUploadText = fileDropArea.querySelector('.file-upload-text');
-            fileUploadText.innerHTML = '<span class="supported-files">ملفات PDF فقط</span>';
-            fileDropArea.classList.remove('has-file');
-            // console.log('Add Content Modal closed. Form fields cleared.');
-        }
+function closeAddContentModal() {
+    if (addContentModal) {
+        addContentModal.style.display = 'none';
+        // إعادة دروبداون الاسم لوضعيته الافتراضية
+        document.getElementById('contentNameToggle').innerHTML = 'اختر اسماً… <span class="arrow">▾</span>';
+        // مسح قيمة الـ hidden input
+        document.getElementById('selectedContentNameId').value = '';
+        // مسح الملف
+        document.getElementById('contentFile').value = '';
+        const fileDropArea = document.querySelector('#addContentModal .file-drop-area');
+        const fileUploadText = fileDropArea.querySelector('.file-upload-text');
+        fileUploadText.innerHTML = '<span class="supported-files">ملفات PDF فقط</span>';
+        fileDropArea.classList.remove('has-file');
     }
+}
+
 
     // Function to handle Create Content
-    async function handleCreateContent() {
-        const folderIdToUpload = document.getElementById('addContentFolderId').value;
-        const contentTitle = document.getElementById('contentTitle').value;
-        const contentFile = document.getElementById('contentFile').files[0];
+async function handleCreateContent() {
+  const folderIdToUpload = document.getElementById('addContentFolderId')?.value;
+  const contentFile      = document.getElementById('contentFile')?.files[0];
 
-        if (!folderIdToUpload || !contentTitle || !contentFile) {
-            showToast('الرجاء إدخال عنوان واختيار ملف.', 'error');
-            return;
-        }
+  // 🟢 نجيب الاسم المختار من الزر
+  const selectedContentName = document.getElementById('contentNameToggle')?.textContent?.replace('▾', '').trim();
 
-        const formData = new FormData();
-        formData.append('title', contentTitle);
-        formData.append('file', contentFile);
+  if (!folderIdToUpload || !selectedContentName || !contentFile || selectedContentName === 'اختر اسماً…') {
+    showToast('يرجى اختيار اسم المحتوى ورفع ملف PDF.', 'error');
+    return;
+  }
 
-        try {
-            const response = await fetch(
-                `http://localhost:3006/api/folders/${folderIdToUpload}/contents`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${getToken()}` },
-                    body: formData
-                }
-            );
-            const result = await response.json();
+  const formData = new FormData();
+  formData.append('title', selectedContentName);
+  formData.append('file', contentFile);
 
-            if (response.ok) {
-                showToast(result.message || 'تم رفع المحتوى بنجاح!', 'success');
-                closeAddContentModal();
-                await fetchFolderContents(folderIdToUpload);
-            } else {
-                showToast(`فشل إضافة المحتوى: ${result.message||'خطأ'}`, 'error');
-            }
-        } catch (err) {
-            console.error(err);
-            showToast('خطأ في الاتصال بالخادم.', 'error');
-        }
+  try {
+    const response = await fetch(
+      `http://localhost:3006/api/folders/${folderIdToUpload}/contents`,
+      {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${getToken()}` },
+        body: formData
+      }
+    );
+
+    const result = await response.json();
+
+    if (response.ok) {
+      showToast(result.message || '✅ تم رفع المحتوى بنجاح!', 'success');
+      closeAddContentModal();
+      await fetchFolderContents(folderIdToUpload);
+    } else {
+      showToast(`❌ فشل إضافة المحتوى: ${result.message || 'خطأ'}`, 'error');
     }
+  } catch (err) {
+    console.error(err);
+    showToast('❌ خطأ في الاتصال بالخادم.', 'error');
+  }
+}
 
 
 
     // --- Edit/Delete Modal Functions ---
 
-    async function openEditFolderModal(folderId) {
-        console.log('Opening edit modal for folder:', folderId);
-        if (editFolderModal) {
-            try {
-                const response = await fetch(`http://localhost:3006/api/folders/${folderId}`, {
-                    headers: {
-                        'Authorization': `Bearer ${getToken()}`
-                    }
-                });
+async function openEditFolderModal(folderId) {
+  // جلب بيانات المجلد الحالي
+  const res = await fetch(`${apiBase}/folders/${folderId}`, {
+    headers: { 'Authorization': `Bearer ${getToken()}` }
+  });
+  const { data } = await res.json();
+
+  if (!res.ok) {
+    showToast('فشل جلب بيانات المجلد.', 'error');
+    return;
+  }
+
+  editFolderIdInput.value = folderId;    // نحفظ ID
+  // نحمل كل الأسماء أولاً (لو ما محمّلّهم)
+  if (!folderNames.length) await loadFolderNames();
+  // nرسم القائمة
+  renderEditFolderNames(folderNames);
+
+  // نحدد القيمة الحالية في الزر
+  const current = folderNames.find(f => f.id === folderId);
+  if (current) {
+    selectedFolderId = folderId;
+    document.getElementById('editFolderToggle').innerHTML =
+      `${current.name} <span class="arrow">▾</span>`;
+  }
+
+  editFolderModal.style.display = 'flex';
+}
+
     
-                const data = await response.json();
-                console.log("🧪 Response from /api/folders/:id:", data); // ← أضف هذا السطر للتأكد
-    
-                if (response.ok && data && data.data) {
-                    editFolderIdInput.value = folderId;
-                    editFolderNameInput.value = data.data.title;
+
+function closeEditFolderModal() {
+  if (editFolderModal) {
+    // إخفاء المودال
+    editFolderModal.style.display = 'none';
+    // مسح الـ ID المخفي
+    document.getElementById('editFolderId').value = '';
+    // إعادة زرّ الدروبداون لوضعه الافتراضي
+    document.getElementById('editFolderToggle').innerHTML =
+      'اختر من القائمة... <span class="arrow">▾</span>';
+    // تأكد إن قائمة الاختيار مقفولة
+    closeEditDropdown();
+  }
+}
 
 
+async function handleUpdateFolder() {
+  const folderId   = document.getElementById('editFolderId').value;
+  // اقرأ الاسم من الزرّ
+  const rawText    = document.getElementById('editFolderToggle').textContent;
+  const folderName = rawText.replace('▾', '').trim();
 
-                    editFolderModal.style.display = 'flex';
-                } else {
-                    showToast(data.message || 'فشل جلب بيانات المجلد.', 'error');
-                    console.error('⛔️ Failed to fetch folder data:', data);
-                }
-            } catch (error) {
-                console.error('❌ Error fetching folder data:', error);
-                showToast('حدث خطأ في الاتصال بجلب بيانات المجلد.', 'error');
-            }
-        }
+  if (!folderId || !folderName) {
+    showToast('اختر اسم المجلد أولاً.', 'error');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${apiBase}/folders/${folderId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${getToken()}`,
+        'Content-Type':  'application/json'
+      },
+      body: JSON.stringify({ name: folderName })
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+      showToast('تم تحديث المجلد بنجاح!', 'success');
+      closeEditFolderModal();
+      currentFolderId = null;
+      fetchFolders(currentDepartmentId);
+    } else {
+      showToast(data.message || 'فشل التحديث.', 'error');
     }
-    
+  } catch (err) {
+    console.error(err);
+    showToast('خطأ في الاتصال.', 'error');
+  }
+}
+document.getElementById('updateFolderBtn')
+  .addEventListener('click', handleUpdateFolder);
 
-    function closeEditFolderModal() {
-         if (editFolderModal) {
-             editFolderModal.style.display = 'none';
-             // Optional: Clear form fields
-             editFolderIdInput.value = '';
-             editFolderNameInput.value = '';
-             // editFolderFileInput.value = ''; // No longer relevant as file input was removed
-         }
-    }
-
-     async function handleUpdateFolder() { // جعل الدالة async
-         const folderId = editFolderIdInput.value; // Get stored ID
-         const folderName = editFolderNameInput.value;
-
-         console.log('Updating Folder:', folderId);
-         console.log('New Name:', folderName);
-
-         if (!folderId || !folderName) {
-            showToast('اسم المجلد مطلوب.', 'error');
-            return;
-         }
-
-         try {
-             const response = await fetch(`http://localhost:3006/api/folders/${folderId}`, {
-                 method: 'PUT',
-                 headers: {
-                     'Authorization': `Bearer ${getToken()}`,
-                     'Content-Type': 'application/json'
-                 },
-                 body: JSON.stringify({ name: folderName })
-             });
-
-             const data = await response.json();
-
-             if (response.ok) {
-                showToast(data.message || 'تم تحديث المجلد بنجاح!', 'success');
-                closeEditFolderModal();
-                currentFolderId = null; // ⬅️ أضف هذا
-                fetchFolders(currentDepartmentId);
-                        
-          
-             } else {
-                 showToast(data.message || 'فشل تحديث المجلد.', 'error');
-                 console.error('Failed to update folder:', data.message);
-             }
-         } catch (error) {
-             console.error('Error updating folder:', error);
-             showToast('حدث خطأ في الاتصال بتحديث المجلد.', 'error');
-         }
-     }
 
     // Get references for Delete Folder Modal
     const deleteFolderModal = document.getElementById('deleteFolderModal');
@@ -699,9 +1226,16 @@ async function fetchFolders(departmentId) {
                  const data = await response.json();
 
                  if (response.ok && data.data) {
-                     editContentIdInput.value = contentId; // Store ID
-                     editContentTitleInput.value = data.data.title; // Populate with current content title
-                     editContentModal.style.display = 'flex';
+editContentIdInput.value = contentId;    // نحفظ الـ ID
+// نعبّي دروبداون الاسم:
+const title = data.data.title;
+document.getElementById('editContentNameToggle').innerHTML =
+  `${title} <span class="arrow">▾</span>`;
+// نعبّي الـ hidden input
+document.getElementById('editSelectedContentNameId').value = title;
+// عرض المودال
+editContentModal.style.display = 'flex';
+
                  } else {
                      showToast(data.message || 'فشل جلب بيانات المحتوى.', 'error');
                      console.error('Failed to fetch content data. Status:', response.status, 'Message:', data.message);
@@ -713,23 +1247,36 @@ async function fetchFolders(departmentId) {
          }
     }
 
-     function closeEditContentModal() {
-         if (editContentModal) {
-             editContentModal.style.display = 'none';
-             // Optional: Clear form fields
-             editContentIdInput.value = '';
-             editContentTitleInput.value = '';
-             editContentFileInput.value = '';
-             const fileDropArea = document.querySelector('#editContentModal .file-drop-area');
-             const fileUploadText = fileDropArea.querySelector('.file-upload-text');
-             fileUploadText.innerHTML = '<span class="supported-files">ملفات PDF فقط</span>';
-             fileDropArea.classList.remove('has-file');
-         }
-    }
+function closeEditContentModal() {
+  if (editContentModal) {
+    // أخف المودال
+    editContentModal.style.display = 'none';
+
+    // مسح الـ ID
+    editContentIdInput.value = '';
+
+    // إعادة زر الدروبداون إلى النص الافتراضي
+    document.getElementById('editContentNameToggle').innerHTML =
+      'اختر اسماً… <span class="arrow">▾</span>';
+
+    // مسح قيمة الـ hidden input
+    document.getElementById('editSelectedContentNameId').value = '';
+
+    // مسح اختيار الملف
+    editContentFileInput.value = '';
+
+    // إعادة نص منطقة الرفع
+    const fileDropArea = document.querySelector('#editContentModal .file-drop-area');
+    const fileUploadText = fileDropArea.querySelector('.file-upload-text');
+    fileUploadText.innerHTML = '<span class="supported-files">ملفات PDF فقط</span>';
+    fileDropArea.classList.remove('has-file');
+  }
+}
+
 
     async function handleUpdateContent() {
         let contentId = editContentIdInput.value.trim();
-        const contentTitle = editContentTitleInput.value.trim();
+const contentTitle = document.getElementById('editSelectedContentNameId').value.trim();
         const contentFile = document.getElementById('editContentFile').files[0];
       
         // تنظيف معرف المحتوى (إزالة رموز غير رقمية مثل ⁃)
@@ -811,7 +1358,13 @@ async function fetchFolders(departmentId) {
 
     // Event listener to open the Add Folder modal
     if (addFolderBtn) {
-        addFolderBtn.addEventListener('click', openAddFolderModal);
+addFolderBtn.onclick = () => {
+  selectedFolderId = null;
+  document.getElementById('folderNameToggle').textContent = 'اختر من القائمة...';
+  document.getElementById('folderNameSearch').value = '';
+  closeDropdown();
+  addFolderModal.style.display = 'flex';
+};
     }
 
     // Event listeners to close the Add Folder modal
@@ -834,8 +1387,37 @@ async function fetchFolders(departmentId) {
 
     // Event listener for the Create Folder button
     if (createFolderBtn) {
-        createFolderBtn.addEventListener('click', handleCreateFolder);
+createFolderBtn.onclick = async () => {
+  if (!currentDepartmentId || !selectedFolderId) {
+    showToast('اختر اسم المجلد من القائمة أولاً.', 'error');
+    return;
+  }
+  const chosen = folderNames.find(f => f.id === selectedFolderId);
+  try {
+    const res = await fetch(
+      `${apiBase}/departments/${currentDepartmentId}/folders`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${getToken()}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name: chosen.name })
+      }
+    );
+    const data = await res.json();
+    if (res.ok) {
+      showToast('تم إضافة المجلد بنجاح!', 'success');
+      closeAddFolderModal();
+      fetchFolders(currentDepartmentId);
+    } else {
+      showToast(data.message || 'فشل إضافة المجلد.', 'error');
     }
+  } catch (err) {
+    console.error(err);
+    showToast('حدث خطأ في الاتصال.', 'error');
+  }
+};   }
 
     // Event listener to open the Add Content modal
     if (addContentBtn) {
