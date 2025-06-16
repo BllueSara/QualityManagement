@@ -1,3 +1,4 @@
+apiBase = 'http://localhost:3006';
 document.addEventListener('DOMContentLoaded', function() {
     // DOM Elements
     const addCommitteeButton = document.getElementById('addCommitteeButton');
@@ -97,7 +98,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('confirmDeleteCommittee').addEventListener('click', async function() {
         const id = document.getElementById('editCommitteeId').value;
         try {
-            const response = await fetch(`/api/committees/${id}`, {
+            const response = await fetch(`${apiBase}/api/committees/${id}`, {
                 method: 'DELETE'
             });
             if (response.ok) {
@@ -122,7 +123,7 @@ function hideModal(modal) {
 }
 async function loadCommittees() {
     try {
-        const response = await fetch('/api/committees');
+        const response = await fetch('http://localhost:3006/api/committees');
         const committees = await response.json();
         const committeesGrid = document.getElementById('committeesGrid');
         committeesGrid.innerHTML = '';
@@ -136,26 +137,58 @@ async function loadCommittees() {
     }
 }
 function createCommitteeCard(committee) {
-    const card = document.createElement('div');
-    card.className = 'card';
-    let imageSrc = committee.image ? (committee.image.startsWith('/uploads/') ? committee.image : '/' + committee.image.replace(/^\/+/, '')) : '../images/committee.svg';
-    let icons = `<div class="card-icons">
-        <a href="#" class="edit-icon" onclick="event.stopPropagation(); editCommittee(${committee.id}); return false;"><img src="../images/edit.svg" alt="تعديل"></a>
-        <a href="#" class="delete-icon" onclick="event.stopPropagation(); deleteCommittee(${committee.id}); return false;"><img src="../images/delet.svg" alt="حذف"></a>
-    </div>`;
-    card.innerHTML = icons +
-        `<div class="card-icon bg-orange"><img src="${imageSrc}" alt="${committee.name}"></div>` +
-        `<div class="card-title">${committee.name}</div>`;
-    card.addEventListener('click', (e) => {
-        if (e.target.closest('.card-icons')) return;
-        // عند الضغط على الكارد انتقل لصفحة محتوى اللجنة
-        window.location.href = `committee-content.html?committeeId=${committee.id}`;
-    });
-    return card;
+  const card = document.createElement('div');
+  card.className = 'card';
+
+  // Compute image source with absolute base URL
+  const imgPath = committee.image
+    ? (committee.image.startsWith('/uploads/')
+        ? committee.image
+        : `/${committee.image.replace(/^\/+/, '')}`)
+    : '/images/committee.svg';
+  const imageSrc = `${apiBase}${imgPath}`;
+
+  // Build inner HTML structure without inline handlers
+  card.innerHTML = `
+    <div class="card-icons">
+      <button type="button" class="edit-icon" data-id="${committee.id}" aria-label="تعديل لجنة">
+        <img src="../images/edit.svg" alt="تعديل">
+      </button>
+      <button type="button" class="delete-icon" data-id="${committee.id}" aria-label="حذف لجنة">
+        <img src="../images/delet.svg" alt="حذف">
+      </button>
+    </div>
+    <div class="card-icon bg-orange">
+      <img src="${imageSrc}" alt="${committee.name}">
+    </div>
+    <div class="card-title">${committee.name}</div>
+  `;
+
+  // Delegate click on edit/delete buttons
+  const editBtn = card.querySelector('.edit-icon');
+  const deleteBtn = card.querySelector('.delete-icon');
+
+  editBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    editCommittee(committee.id);
+  });
+
+  deleteBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    deleteCommittee(committee.id);
+  });
+
+  // Navigate to committee content on card click
+  card.addEventListener('click', () => {
+    window.location.href = `committee-content.html?committeeId=${committee.id}`;
+  });
+
+  return card;
 }
+
 // دوال التعديل والحذف
 window.editCommittee = function(id) {
-    fetch(`/api/committees/${id}`)
+    fetch(`${apiBase}/api/committees/${id}`)
         .then(response => response.json())
         .then(committee => {
             document.getElementById('editCommitteeId').value = committee.id;

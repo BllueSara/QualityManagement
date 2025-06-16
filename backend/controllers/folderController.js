@@ -62,7 +62,8 @@ const getFolders = async (req, res) => {
       data: folders
     });
   } catch (err) {
-    res.status(500).json({ message: 'Error getting folders.' });
+    console.error(err);
+    return res.status(500).json({ message: 'خطأ في الخادم.' });
   }
 };
 
@@ -128,7 +129,8 @@ await insertNotification(
       folderId: result.insertId
     });
   } catch (err) {
-    res.status(500).json({ message: 'Error adding folder.' });
+    console.error(err);
+    return res.status(500).json({ message: 'خطأ في الخادم.' });
   }
 };
 
@@ -171,7 +173,8 @@ const updateFolder = async (req, res) => {
 
     res.json({ message: 'تم تحديث اسم المجلد بنجاح.' });
   } catch (err) {
-    res.status(500).json({ message: 'Error updating folder.' });
+    console.error(err);
+    res.status(500).json({ message: 'خطأ أثناء تعديل المجلد.' });
   }
 };
 
@@ -202,7 +205,8 @@ const getFolderById = async (req, res) => {
 
     res.json({ status: 'success', data: rows[0] });
   } catch (err) {
-    res.status(500).json({ message: 'Error getting folder.' });
+    console.error(err);
+    res.status(500).json({ message: 'حدث خطأ في الخادم أثناء جلب المجلد.' });
   }
 };
 
@@ -243,14 +247,127 @@ const deleteFolder = async (req, res) => {
 
     return res.json({ message: 'تم حذف المجلد بنجاح.' });
   } catch (err) {
-    res.status(500).json({ message: 'Error deleting folder.' });
+    console.error(err);
+    return res.status(500).json({ message: 'حدث خطأ في الخادم أثناء حذف المجلد.' });
   }
 };
+const getFolderNames = async (req, res) => {
+  try {
+    const conn = await pool.getConnection();
+    const [rows] = await conn.execute('SELECT id, name FROM folder_names ORDER BY name ASC');
+    conn.release();
+    return res.json({ status: 'success', data: rows });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'فشل جلب أسماء المجلدات.' });
+  }
+};
+const addFolderName = async (req, res) => {
+  const { name } = req.body;
+
+  if (!name) {
+    return res.status(400).json({ message: 'الاسم مطلوب.' });
+  }
+
+  try {
+    const conn = await pool.getConnection();
+    const [result] = await conn.execute(
+      'INSERT INTO folder_names (name) VALUES (?)',
+      [name]
+    );
+    conn.release();
+
+    return res.status(201).json({
+      status: 'success',
+      message: '✅ تم إضافة المجلد بنجاح',
+      folderId: result.insertId
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: '❌ فشل في إضافة المجلد.' });
+  }
+};
+const updateFolderName = async (req, res) => {
+  const { id }   = req.params;
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ message: 'الاسم الجديد مطلوب.' });
+
+  const conn = await pool.getConnection();
+  try {
+    // 1) جيب الاسم القديم
+    const [rows] = await conn.execute(
+      'SELECT name FROM folder_names WHERE id = ?',
+      [id]
+    );
+    if (!rows.length) {
+      conn.release();
+      return res.status(404).json({ message: '❌ لم يتم العثور على اسم المجلد.' });
+    }
+    const oldName = rows[0].name;
+
+    // 2) حدّث اسم الـ folder_names
+    const [result] = await conn.execute(
+      'UPDATE folder_names SET name = ? WHERE id = ?',
+      [name, id]
+    );
+    if (result.affectedRows === 0) {
+      conn.release();
+      return res.status(404).json({ message: '❌ لم يتم تحديث اسم المجلد.' });
+    }
+
+    // 3) حدّث أسماء المجلدات في جدول folders اللي كانت بنفس الاسم القديم
+    await conn.execute(
+      'UPDATE folders SET name = ? WHERE name = ?',
+      [name, oldName]
+    );
+
+    conn.release();
+    return res.json({
+      status: 'success',
+      message: '✅ تم تعديل اسم المجلد وكل المجلدات المرتبطة بنجاح'
+    });
+  } catch (err) {
+    conn.release();
+    console.error(err);
+    return res.status(500).json({ message: '❌ فشل في تعديل المجلد.' });
+  }
+};
+
+const deleteFolderName = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const conn = await pool.getConnection();
+    const [result] = await conn.execute(
+      'DELETE FROM folder_names WHERE id = ?',
+      [id]
+    );
+    conn.release();
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: '❌ المجلد غير موجود أو تم حذفه مسبقاً.' });
+    }
+
+    return res.json({
+      status: 'success',
+      message: '✅ تم حذف المجلد بنجاح'
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: '❌ فشل في حذف المجلد.' });
+  }
+};
+
 
 module.exports = {
   getFolders,
   createFolder,
   updateFolder,
   getFolderById,
-  deleteFolder
+  deleteFolder,
+  getFolderNames,
+  addFolderName,
+  updateFolderName,
+  deleteFolderName
+
 };

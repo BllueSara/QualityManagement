@@ -29,6 +29,7 @@ const pendingCommitteeApprovalRoutes = require('./routes/pendingCommitteeApprova
 const dashboardRouter = require('./routes/dashboardRoutes');
 const committeesRoutes = require('./routes/committees');
 const committeeApprovalRoutes = require('./routes/committeeApprovalRoutes');
+const globalContentRouter = require('./routes/globalContentRoutes');
 
  
 
@@ -76,6 +77,7 @@ app.use('/api/pending-committee-approvals', pendingCommitteeApprovalRoutes);
 app.use('/api/committee-approvals', committeeApprovalRoutes);
 
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api', globalContentRouter); // 👈 هذا يعطيك: /api/content-names
 
 // Ensure all committee routes are correctly loaded
 

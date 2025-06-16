@@ -1,4 +1,4 @@
-body {
+html,body {
     font-family: 'Tajawal', Arial, sans-serif;
     direction: rtl;
     margin: 0;
@@ -140,10 +140,7 @@ main h1 {
     height: 18px;
 }
 
-/* --- Folder Contents Section --- */
-.folder-contents-section {
-    /* Initially hidden via inline style in HTML */
-}
+
 
 /* زر الرجوع - تنسيق موحد */
 .back-button-container {
@@ -591,3 +588,159 @@ main h1 {
     border-radius: 4px;
     cursor: pointer;
 } 
+.custom-dropdown {
+  position: relative;
+  width: 100%;
+  font-family: 'Tajawal', sans-serif;
+}
+
+.dropdown-toggle {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 15px;
+  border: none;
+  border-radius: 10px;
+  background: #f8f9fa;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.arrow {
+  font-size: 14px;
+  opacity: 0.6;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  z-index: 20;
+  max-height: 300px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  margin-top: 4px;
+  padding: 6px 0;
+}
+
+.dropdown-search {
+  padding: 10px;
+  font-size: 14px;
+  outline: none;
+  width: calc(100% - 24px);
+  margin: 0 auto 10px;
+  background: #f2f2f2;
+  border: none;
+  border-radius: 8px;
+}
+
+.dropdown-list {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 220px;
+  scrollbar-width: thin;
+  scrollbar-color: #ccc transparent;
+  padding: 0 8px;
+}
+
+.dropdown-list::-webkit-scrollbar {
+  width: 5px;
+}
+.dropdown-list::-webkit-scrollbar-thumb {
+  background-color: #ccc;
+  border-radius: 4px;
+}
+
+.folder-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f9f9f9;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.folder-item:hover {
+  background-color: #f1f1f1;
+}
+
+.folder-item .label {
+  flex-grow: 1;
+}
+
+.folder-item .actions {
+  display: flex;
+  gap: 6px;
+  margin-right: auto; /* ← هذا يحرك الأزرار لأقصى اليسار */
+}
+
+.folder-item .actions button {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px;
+  transition: color 0.2s;
+}
+.folder-item .actions button:hover {
+  color: #dc3545;
+}
+
+.add-folder-new {
+  padding: 10px 12px;
+  font-size: 14px;
+  color: #007bff;
+  cursor: pointer;
+  text-align: center;
+  border-top: 1px solid #eee;
+}
+.add-folder-new:hover {
+  background-color: #f0f0f0;
+}
+
+.hidden {
+  display: none;
+}
+/* للمتصفحات الحديثة */
+.dropdown-search::placeholder {
+  font-family: 'Tajawal', sans-serif;
+  color: #666;        /* إذا حابّ تغير لونه */
+  opacity: 1;         /* حتى يظهر بشكل عادي */
+}
+
+/* WebKit browsers */
+.dropdown-search::-webkit-input-placeholder {
+  font-family: 'Tajawal', sans-serif;
+}
+
+/* Firefox */
+.dropdown-search::-moz-placeholder {
+  font-family: 'Tajawal', sans-serif;
+}
+
+/* IE */
+.dropdown-search:-ms-input-placeholder {
+  font-family: 'Tajawal', sans-serif;
+}
+
+/* Edge */
+.dropdown-search::-ms-input-placeholder {
+  font-family: 'Tajawal', sans-serif;
+}
+.btn-primary,
+.btn-secondary,
+.custom-dropdown button,
+.add-folder-new {
+  font-family: inherit;
+}
