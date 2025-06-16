@@ -28,6 +28,7 @@ const pendingApprovalRoutes = require('./routes/pendingApprovals.routes');
 const pendingCommitteeApprovalRoutes = require('./routes/pendingCommitteeApprovals.routes');
 const dashboardRouter = require('./routes/dashboardRoutes');
 const committeesRoutes = require('./routes/committees');
+const committeeApprovalRoutes = require('./routes/committeeApprovalRoutes');
 
  
 
@@ -47,7 +48,10 @@ app.use('/api/users',       usersRouter);
 app.use('/api/permissions/definitions', permsDefRouter);
 app.use('/api/departments', deptRouter);
 app.use('/api/tickets',     ticketRouter);
-app.use('/api/committees',  committeesRoutes);
+app.use('/api/committees',  (req, res, next) => {
+  // console.log('Request hitting /api/committees route');
+  next();
+}, committeesRoutes);
 
 // folders nested under departments
 app.use('/api/departments/:departmentId/folders', folderRouter);
@@ -69,16 +73,18 @@ app.use('/api/approvals', approvalRouter);
 
 app.use('/api/pending-approvals', pendingApprovalRoutes);
 app.use('/api/pending-committee-approvals', pendingCommitteeApprovalRoutes);
+app.use('/api/committee-approvals', committeeApprovalRoutes);
 
 app.use('/api/dashboard', dashboardRouter);
 
+// Ensure all committee routes are correctly loaded
 
 // serve static frontend
 app.use('/', express.static(path.join(__dirname, '../frontend')));
 
 app.get('/health', (req, res) => res.send('OK'));
 app.use((err, req, res, next) => {
-  console.error(err);
+  // console.error(err);
   res.status(500).json({ status: 'error', message: 'Internal Server Error' });
 });
 

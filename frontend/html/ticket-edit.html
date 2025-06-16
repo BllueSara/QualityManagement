@@ -275,10 +275,7 @@
       const res = await fetch(`${apiBase}/departments`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
-      console.log('Departments HTTP status:', res.status);
-
       const body = await res.json();
-      console.log('Departments response body:', body);
 
       if (!res.ok || body.status !== 'success') {
         throw new Error(body.message || `Response not OK (${res.status})`);
@@ -295,8 +292,7 @@
         respondingDeptSelect.add(new Option(d.name, d.id));
       });
     } catch (err) {
-      console.error('Error loading departments:', err);
-      alert('حدث خطأ أثناء تحميل الأقسام: ' + err.message);
+      alert('خطأ أثناء تحميل الأقسام: ' + err.message);
     }
   }
 
@@ -308,10 +304,8 @@ async function loadTicket() {
     const res  = await fetch(`${apiBase}/tickets/${ticketId}`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     });
-    console.log('Ticket HTTP status:', res.status);
 
     const json = await res.json();
-    console.log('Ticket response body:', json);
 
     // إذا API أرجع الكائن مباشرة (كما في console) فلا ننتظر json.status
     let t;
@@ -344,7 +338,6 @@ async function loadTicket() {
     }
 
   } catch (err) {
-    console.error('Error loading ticket:', err);
     alert('خطأ في جلب بيانات التذكرة: ' + err.message);
   }
 }
@@ -367,7 +360,6 @@ async function loadTicket() {
       alert('تم حفظ التعديلات بنجاح');
       history.back();
     } catch (err) {
-      console.error('Error updating ticket:', err);
       alert('خطأ أثناء حفظ التعديلات: ' + err.message);
     }
   });

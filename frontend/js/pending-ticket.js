@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const token = localStorage.getItem('token');
   const tbody = document.querySelector('tbody');
-      console.log( token ? JSON.parse(atob(token.split('.')[1])) : 'no token' );
+      // console.log( token ? JSON.parse(atob(token.split('.')[1])) : 'no token' );
 
   if (!token) return;
 
@@ -264,8 +264,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       alert('تم تحويل التذكرة بنجاح');
       row.querySelector('.badge-pending').textContent = 'تم الإرسال';
     } catch (err) {
-      console.error(err);
-      alert('فشل التحويل: ' + err.message);
+      // console.error(err);
+      alert('حدث خطأ أثناء إرسال التذكرة');
     }
   });
   }

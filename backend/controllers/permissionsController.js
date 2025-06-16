@@ -34,8 +34,7 @@ const getUserPermissions = async (req, res) => {
    const keys = rows.map(r => r.permission);
     return res.status(200).json({ status: 'success', data: keys });
   } catch (error) {
-    console.error('خطأ في جلب صلاحيات المستخدم:', error);
-    return res.status(500).json({ status: 'error', message: 'حدث خطأ في السيرفر' });
+    res.status(500).json({ message: 'خطأ في جلب صلاحيات المستخدم' });
   }
 };
 
@@ -74,8 +73,7 @@ const updateUserPermissions = async (req, res) => {
     return res.json({ status: 'success', message: 'تم تحديث الصلاحيات بنجاح' });
   } catch (error) {
     await conn.rollback();
-    console.error('❌ updateUserPermissions error:', error);
-    return res.status(500).json({ status: 'error', message: 'حدث خطأ في السيرفر' });
+    res.status(500).json({ message: 'Failed to update user permissions.' });
   } finally {
     conn.release();
   }
@@ -107,8 +105,7 @@ const addUserPermission = async (req, res) => {
 
     return res.json({ status: 'success', message: 'تم إضافة الصلاحية' });
   } catch (error) {
-    console.error('❌ addUserPermission error:', error);
-    return res.status(500).json({ status: 'error', message: 'حدث خطأ في السيرفر' });
+    res.status(500).json({ message: 'Failed to add user permission.' });
   }
 };
 
@@ -142,8 +139,7 @@ const removeUserPermission = async (req, res) => {
 
     return res.json({ status: 'success', message: 'تم إزالة الصلاحية' });
   } catch (error) {
-    console.error('❌ removeUserPermission error:', error);
-    return res.status(500).json({ status: 'error', message: 'حدث خطأ في السيرفر' });
+    res.status(500).json({ message: 'Failed to remove user permission.' });
   }
 };
 

@@ -93,11 +93,8 @@ return res.status(200).json({ status:'success', data: rows[0] });
 
 
   } catch (err) {
-    console.error('getStats error:', err);
-    if (err.name === 'JsonWebTokenError') {
-      return res.status(401).json({ status:'error', message:'Invalid token' });
-    }
-    return res.status(500).json({ status:'error', message:'Internal Server Error' });
+    // console.error('getStats error:', err);
+    res.status(500).json({ message: 'Error getting dashboard stats.' });
   }
 };
 
@@ -147,11 +144,8 @@ const getClosedWeek = async (req, res) => {
     return res.status(200).json({ status:'success', data: rows });
 
   } catch (err) {
-    console.error('getClosedWeek error:', err);
-    if (err.name === 'JsonWebTokenError') {
-      return res.status(401).json({ status:'error', message:'Invalid token' });
-    }
-    return res.status(500).json({ status:'error', message:'Internal Server Error' });
+    // console.error('getClosedWeek error:', err);
+    res.status(500).json({ message: 'Error getting closed tickets by week.' });
   }
 };
 

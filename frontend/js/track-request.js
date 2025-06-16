@@ -1,11 +1,18 @@
 document.addEventListener("DOMContentLoaded", async () => {
   const params = new URLSearchParams(window.location.search);
   const contentId = params.get("id");
+  const contentType = params.get("type") || "department";
 
   if (!contentId) return alert("معرف الطلب غير موجود!");
 
   try {
-    const res = await fetch(`http://localhost:3006/api/contents/track/${contentId}`);
+    const endpoint = contentType === 'committee' ? 'committees/contents/track' : 'contents/track';
+    const res = await fetch(`http://localhost:3006/api/${endpoint}/${contentId}`);
+
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+
     const data = await res.json();
 
     if (!data || data.status !== 'success') {
@@ -21,7 +28,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     } else if (timeline.length === 0 && pending.length > 0) {
       nextDeptElem.textContent = 'في انتظار التوقيع من القسم الأول';
     } else if (pending.length > 0) {
-      const next = pending.find(p => p.status === 'pending');
+      const next = pending[0];
       nextDeptElem.textContent = next 
         ? `${next.department} - ${next.approver}` 
         : '---';
@@ -107,7 +114,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
   } catch (err) {
-    console.error('Error:', err);
+    // console.error('Error:', err);
     alert("حدث خطأ أثناء تحميل البيانات.");
   }
 });

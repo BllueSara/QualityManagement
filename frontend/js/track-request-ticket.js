@@ -1,7 +1,8 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const params = new URLSearchParams(window.location.search);
   const ticketId = params.get('id');
-  if (!ticketId) return console.error('Missing ticket id');
+
+  // if (!ticketId) return console.error('Missing ticket id');
 
   try {
     const res = await fetch(`http://localhost:3006/api/tickets/${ticketId}/track`, {
@@ -133,7 +134,7 @@ const badgeClass =
     }
 
   } catch (err) {
-    console.error(err);
-    alert('فشل جلب بيانات التتبع');
+    // console.error(err);
+    alert("حدث خطأ أثناء تحميل البيانات.");
   }
 });
