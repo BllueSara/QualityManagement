@@ -589,19 +589,25 @@ const getAssignedApprovals = async (req, res) => {
 };
 
 const delegateApproval = async (req, res) => {
-  const contentId = req.params.id;
+  // 1) فكّ الـ prefix وخذ الرقم فقط
+  const rawId = req.params.id;            // e.g. "dept-10" أو "comm-5"
+  const parts = rawId.split('-');
+  const contentId = parseInt(parts[1], 10);
+
   const { delegateTo, notes } = req.body;
 
   try {
     const token = req.headers.authorization?.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const currentUserId = decoded.id;
-    
-    if (!contentId || !delegateTo || !currentUserId) {
-      console.error('❌ قيم ناقصة:', { contentId, delegateTo, currentUserId });
-      return res.status(400).json({ status: 'error', message: 'بيانات مفقودة للتفويض' });
+
+    // 2) تحقق من صحة القيم بعد التحويل
+    if (isNaN(contentId) || !delegateTo || !currentUserId) {
+      console.error('❌ قيم ناقصة أو غير صحيحة:', { contentId, delegateTo, currentUserId });
+      return res.status(400).json({ status: 'error', message: 'بيانات مفقودة أو غير صحيحة للتفويض' });
     }
 
+    // 3) نفّذ الاستعلام مع الرقم الصحيح
     await db.execute(`
       INSERT INTO approval_logs (
         content_id,
@@ -620,17 +626,18 @@ const delegateApproval = async (req, res) => {
         comments = VALUES(comments),
         created_at = NOW()
     `, [contentId, delegateTo, currentUserId, notes || null]);
-    
-    res.status(200).json({
+
+    return res.status(200).json({
       status: 'success',
       message: '✅ تم التفويض بالنيابة بنجاح'
     });
 
   } catch (err) {
     console.error('خطأ أثناء التفويض بالنيابة:', err);
-    res.status(500).json({ status: 'error', message: 'فشل التفويض بالنيابة' });
+    return res.status(500).json({ status: 'error', message: 'فشل التفويض بالنيابة' });
   }
 };
+
 
 const getProxyApprovals = async (req, res) => {
   try {

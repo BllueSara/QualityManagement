@@ -72,16 +72,20 @@
       </div>
     </div>
   </main>
-
-  <div id="popupOverlay" class="popup-overlay" style="display: none;">
-    <div class="popup">
-      <p>✅ سيتم تحويلك إلى صفحة الاعتمادات لتوقيع الملف بالطريقة المناسبة لك.</p>
-      <div class="popup-actions">
-        <button id="popupConfirm">متابعة</button>
-        <button id="popupCancel">إلغاء</button>
-      </div>
+<div id="popupOverlay" class="popup-overlay" style="display: none;">
+  <div class="popup">
+    <p id="popupMessage"></p>
+    <textarea id="rejectReason"
+              rows="4"
+              placeholder="اكتب سبب الرفض هنا…"
+              style="display: none; width: 100%; box-sizing: border-box; margin-top: 8px;"></textarea>
+    <div class="popup-actions" style="margin-top: 12px; text-align: right;">
+      <button id="popupConfirm">متابعة</button>
+      <button id="popupCancel" style="margin-left: 8px;">إلغاء</button>
     </div>
   </div>
+</div>
+
   
 
 </body>
