@@ -577,3 +577,29 @@ select {
     height: 24px;
     background-color: yellow; /* Debugging */
 }
+/* في ملف الـ CSS المشترك أو داخل <style> */
+.card-icons button {
+  border: none;        /* يشيل الحدود */
+  background: none;    /* يشيل الخلفية الافتراضية */
+  padding: 0;          /* لو حابب تصغر المساحة */
+  cursor: pointer;     /* لتغيير المؤشر على أنها زر */
+}
+
+/* وإذا تبغى تشيل خطوط الـ focus لما يضغط الكيبورد على الزر */
+.card-icons button:focus {
+  outline: none;
+}
+
+/* شيل الحدود والخلفية عن أزرار التعديل والحذف */
+.btn-edit,
+.btn-delete {
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+/* لو ما تبي تظهر الـ outline لما يركّز الكيبورد عليهم */
+.btn-edit:focus,
+.btn-delete:focus {
+  outline: none;
+}

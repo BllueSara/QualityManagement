@@ -16,34 +16,35 @@ async function loadDepartments() {
       }
     });
 
-    // اطبع حالة الاستجابة
     console.log('Departments HTTP status:', response.status);
-
-    // اقرأ JSON كامل
     const body = await response.json();
     console.log('Departments response body:', body);
 
-    // تحقق من نجاح النداء
-    if (!response.ok || body.status !== 'success') {
+    // فقط تحقق من response.ok:
+    if (!response.ok) {
       throw new Error(body.message || `Response not OK (${response.status})`);
     }
 
-    // استخرج المصفوفة من الحقل data
-    const departments = body.data;
+    // إذا كانت البيانات في field.data، استخدمها، وإلا اعتبر body نفسه مصفوفة
+    const departments = Array.isArray(body.data) 
+      ? body.data 
+      : Array.isArray(body) 
+        ? body 
+        : [];
 
-    // فرّغ الخيارات القديمة
-    reportingDeptSelect.innerHTML = '<option value="" disabled selected>اختر القسم</option>';
-    respondingDeptSelect.innerHTML = '<option value="" disabled selected>اختر القسم</option>';
+    // صفِّر الخيارات القديمة
+    reportingDeptSelect.innerHTML   = '<option value="" disabled selected>اختر القسم</option>';
+    respondingDeptSelect.innerHTML  = '<option value="" disabled selected>اختر القسم</option>';
 
-    // أضف الأقسام الجديدة
+    // أضف كل قسم للقائمتين
     departments.forEach(dept => {
       const opt1 = document.createElement('option');
-      opt1.value = dept.id;
+      opt1.value       = dept.id;
       opt1.textContent = dept.name;
       reportingDeptSelect.appendChild(opt1);
 
       const opt2 = document.createElement('option');
-      opt2.value = dept.id;
+      opt2.value       = dept.id;
       opt2.textContent = dept.name;
       respondingDeptSelect.appendChild(opt2);
     });
@@ -53,6 +54,7 @@ async function loadDepartments() {
     alert('حدث خطأ أثناء تحميل الأقسام: ' + (error.message || error));
   }
 }
+
 
 
     // Load departments when the page loads

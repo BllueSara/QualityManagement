@@ -162,60 +162,60 @@ document.addEventListener('DOMContentLoaded', function() {
         selectArrowIcon.style.display = 'block'; // أو أي نمط مناسب لجعله مرئياً
     }
 
-    registerForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        // جمع البيانات من النموذج
-        const formData = {
-            username: document.getElementById('reg-username').value,
-            email: document.getElementById('reg-email').value,
-            password: document.getElementById('reg-password').value,
-            department_id: departmentSelect.value 
-        };
+registerForm.addEventListener('submit', async function(e) {
+  e.preventDefault();
+  
+  // جمع البيانات من النموذج
+  const formData = {
+    username: document.getElementById('reg-username').value.trim(),
+    email:    document.getElementById('reg-email').value.trim(),
+    password: document.getElementById('reg-password').value,
+    department_id: departmentSelect.value,
+    employee_number: document.getElementById('reg-employee').value.trim()  // ← هنا
+  };
 
-        // التحقق من أن القسم تم اختياره (وليس خيار الإضافة أو الخيار الفارغ)
-        // تخطي التحقق إذا كان المستخدم admin
-        const username = document.getElementById('reg-username').value.toLowerCase();
-        if (username !== 'admin') {
-            if (formData.department_id === '' || formData.department_id === '__ADD_NEW_DEPARTMENT__') {
-                alert('الرجاء اختيار قسم أو إضافة قسم جديد.');
-                return;
-            }
-        }
+  // تحقق من القسم (مال admins)
+  const username = formData.username.toLowerCase();
+  if (username !== 'admin') {
+    if (!formData.department_id || formData.department_id === '__ADD_NEW_DEPARTMENT__') {
+      alert('الرجاء اختيار قسم أو إضافة قسم جديد.');
+      return;
+    }
+  }
 
-        // التحقق من تطابق كلمتي المرور
-        const confirmPassword = document.getElementById('reg-confirm-password').value;
-        if (formData.password !== confirmPassword) {
-            alert('كلمتا المرور غير متطابقتين');
-            return;
-        }
+  // تحقق من تطابق كلمتي المرور
+  const confirmPassword = document.getElementById('reg-confirm-password').value;
+  if (formData.password !== confirmPassword) {
+    alert('كلمتا المرور غير متطابقتين');
+    return;
+  }
 
-        try {
-            // إرسال طلب التسجيل إلى الباك اند
-            const response = await fetch('http://localhost:3006/api/auth/register', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(formData)
-            });
+  // **تحقق من وجود الرقم الوظيفي**
+  if (!formData.employee_number) {
+    alert('الرجاء إدخال الرقم الوظيفي.');
+    return;
+  }
 
-            const data = await response.json();
-
-            if (response.ok) {
-                // نجاح التسجيل
-                alert(data.message);
-                // حفظ التوكن في localStorage
-                localStorage.setItem('token', data.token);
-                // توجيه المستخدم إلى صفحة index.html
-                window.location.href = 'index.html';
-            } else {
-                // عرض رسالة الخطأ
-                alert(data.message);
-            }
-        } catch (error) {
-            console.error('خطأ في التسجيل:', error);
-            alert('حدث خطأ أثناء التسجيل. يرجى المحاولة مرة أخرى.');
-        }
+  try {
+    const response = await fetch('http://localhost:3006/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData)
     });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      alert(data.message);
+      localStorage.setItem('token', data.token);
+      window.location.href = 'index.html';
+    } else {
+      alert(data.message);
+    }
+  } catch (error) {
+    console.error('خطأ في التسجيل:', error);
+    alert('حدث خطأ أثناء التسجيل. يرجى المحاولة مرة أخرى.');
+  }
+});
+
 });  

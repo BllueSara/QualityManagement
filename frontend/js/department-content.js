@@ -4,11 +4,18 @@ let currentFolderId     = null;
 
 const permissions = {
   canAddFolder:    false,
+  canAddFolderName: false,
   canEditFolder:   false,
+  canEditFolderName: false,
   canDeleteFolder: false,
+  canDeleteFolderName: false,
+
   canAddContent:   false,
+  canAddContentName: false,
   canEditContent:  false,
-  canDeleteContent:false
+  canEditContentName: false,
+  canDeleteContent:false,
+  canDeleteContentName:false
 };
     function getToken() {
         const token = localStorage.getItem('token');
@@ -32,16 +39,18 @@ async function loadFolderNames() {
     renderFolderNames(folderNames);
     // ظهر البحث والإضافة
     document.getElementById('folderNameSearch').classList.remove('hidden');
+  if (permissions.canAddFolderName) {
     document.getElementById('addNewFolderNameLink').classList.remove('hidden');
-  } catch (err) {
+  }  } catch (err) {
     console.error('Error loading folder names:', err);
   }
 }
 function toggleDropdown() {
   document.getElementById('folderNameMenu'      ).classList.toggle('hidden');
   document.getElementById('folderNameSearch'    ).classList.toggle('hidden');
-  document.getElementById('addNewFolderNameLink').classList.toggle('hidden');
-}
+if (permissions.canAddFolderName) {
+    document.getElementById('addNewFolderNameLink').classList.toggle('hidden');
+  }}
 function closeDropdown() {
   document.getElementById('folderNameMenu'      ).classList.add('hidden');
   document.getElementById('folderNameSearch'    ).classList.add('hidden');
@@ -58,8 +67,8 @@ function renderFolderNames(list) {
     div.innerHTML = `
       <span class="label">${item.name}</span>
       <span class="actions">
-        ${permissions.canEditFolder   ? `<button class="edit-name"   data-id="${item.id}">✎</button>` : ''}
-        ${permissions.canDeleteFolder ? `<button class="delete-name" data-id="${item.id}">🗑</button>` : ''}
+        ${permissions.canEditFolderName   ? `<button class="edit-name"   data-id="${item.id}">✎</button>` : ''}
+        ${permissions.canDeleteFolderName ? `<button class="delete-name" data-id="${item.id}">🗑</button>` : ''}
       </span>
     `;
 
@@ -75,7 +84,7 @@ function renderFolderNames(list) {
     });
 
     // 2) تعديل الاسم
-    if (permissions.canEditFolder) {
+    if (permissions.canEditFolderName) {
       div.querySelector('.edit-name').onclick = async e => {
         e.stopPropagation();
         const newName = prompt('ادخل الاسم الجديد:', item.name);
@@ -93,7 +102,7 @@ function renderFolderNames(list) {
     }
 
     // 3) حذف الاسم
-    if (permissions.canDeleteFolder) {
+    if (permissions.canDeleteFolderName) {
       div.querySelector('.delete-name').onclick = async e => {
         e.stopPropagation();
         if (!confirm('هل تريد حذف هذا الاسم؟')) return;
@@ -117,6 +126,7 @@ function renderFolderNames(list) {
 function toggleEditDropdown() {
   document.getElementById('editFolderMenu')   .classList.toggle('hidden');
   document.getElementById('editFolderSearch') .classList.toggle('hidden');
+  if (permissions.canAddFolderName)
   document.getElementById('editAddNewLink')   .classList.toggle('hidden');
 }
 function closeEditDropdown() {
@@ -134,8 +144,8 @@ function renderEditFolderNames(list) {
     div.innerHTML = `
       <span class="label">${item.name}</span>
       <span class="actions">
-        ${permissions.canEditFolder   ? `<button class="edit-name"   data-id="${item.id}">✎</button>` : ''}
-        ${permissions.canDeleteFolder ? `<button class="delete-name" data-id="${item.id}">🗑</button>` : ''}
+        ${permissions.canEditFolderName   ? `<button class="edit-name"   data-id="${item.id}">✎</button>` : ''}
+        ${permissions.canDeleteFolderName ? `<button class="delete-name" data-id="${item.id}">🗑</button>` : ''}
       </span>
     `;
     // اختيار السطر كلّه
@@ -147,7 +157,7 @@ function renderEditFolderNames(list) {
       closeEditDropdown();
     });
     // تعديل اسم
-    if (permissions.canEditFolder) {
+    if (permissions.canEditFolderName) {
       div.querySelector('.edit-name').onclick = async e => {
         e.stopPropagation();
         const newName = prompt('ادخل الاسم الجديد:', item.name);
@@ -165,7 +175,7 @@ function renderEditFolderNames(list) {
       };
     }
     // حذف اسم
-    if (permissions.canDeleteFolder) {
+    if (permissions.canDeleteFolderName) {
       div.querySelector('.delete-name').onclick = async e => {
         e.stopPropagation();
         if (!confirm('هل تريد حذف هذا الاسم؟')) return;
@@ -200,8 +210,9 @@ async function loadContentNames() {
     contentNames = data || [];
     renderContentNames(contentNames);
     document.getElementById('contentNameSearch').classList.remove('hidden');
-    document.getElementById('addNewContentNameLink').classList.remove('hidden');
-  } catch (err) {
+ if (permissions.canAddContentName) {
+      document.getElementById('addNewContentNameLink').classList.remove('hidden');
+    }  } catch (err) {
     console.error('Error loading content names:', err);
   }
 }
@@ -220,8 +231,8 @@ function renderContentNames(list) {
     div.innerHTML = `
       <span class="label">${item.name}</span>
       <span class="actions">
-        ${permissions.canEditContent ? `<button class="edit-name"   data-id="${item.id}">✎</button>` : ''}
-        ${permissions.canDeleteContent ? `<button class="delete-name" data-id="${item.id}">🗑️</button>` : ''}
+        ${permissions.canEditContentName ? `<button class="edit-name"   data-id="${item.id}">✎</button>` : ''}
+        ${permissions.canDeleteContentName ? `<button class="delete-name" data-id="${item.id}">🗑️</button>` : ''}
       </span>
     `;
 
@@ -241,7 +252,7 @@ function renderContentNames(list) {
     });
 
     // ✏️ زر التعديل
-    if (permissions.canEditContent) {
+    if (permissions.canEditContentName) {
       div.querySelector('.edit-name')?.addEventListener('click', async e => {
         e.stopPropagation();
         const newName = prompt('ادخل الاسم الجديد:', item.name);
@@ -260,7 +271,7 @@ function renderContentNames(list) {
     }
 
     // 🗑️ زر الحذف
-    if (permissions.canDeleteContent) {
+    if (permissions.canDeleteContentName) {
       div.querySelector('.delete-name')?.addEventListener('click', async e => {
         e.stopPropagation();
         if (!confirm('هل تريد حذف هذا الاسم؟')) return;
@@ -286,6 +297,7 @@ function renderContentNames(list) {
 function toggleContentDropdown() {
   document.getElementById('contentNameMenu').classList.toggle('hidden');
   document.getElementById('contentNameSearch').classList.toggle('hidden');
+  if (permissions.canAddContentName)
   document.getElementById('addNewContentNameLink').classList.toggle('hidden');
 }
 function closeContentDropdown() {
@@ -306,8 +318,8 @@ function renderEditContentNames(list) {
     div.innerHTML = `
       <span class="label">${item.name}</span>
       <span class="actions">
-        ${permissions.canEditContent   ? `<button class="edit-name"   data-id="${item.id}">✎</button>` : ''}
-        ${permissions.canDeleteContent ? `<button class="delete-name" data-id="${item.id}">🗑️</button>` : ''}
+        ${permissions.canEditContentName   ? `<button class="edit-name"   data-id="${item.id}">✎</button>` : ''}
+        ${permissions.canDeleteContentName ? `<button class="delete-name" data-id="${item.id}">🗑️</button>` : ''}
       </span>
     `;
 
@@ -320,11 +332,13 @@ function renderEditContentNames(list) {
       // إخفاء القائمة
       document.getElementById('editContentNameMenu').classList.add('hidden');
       document.getElementById('editContentNameSearch').classList.add('hidden');
-      document.getElementById('editAddNewContentNameLink').classList.add('hidden');
+      if (permissions.canAddContentName){
+        document.getElementById('editAddNewContentNameLink').classList.remove('hidden');
+      }
     });
 
     // 3) زر تعديل الاسم
-    if (permissions.canEditContent) {
+    if (permissions.canEditContentName) {
       div.querySelector('.edit-name').addEventListener('click', async e => {
         e.stopPropagation();
         const newName = prompt('ادخل الاسم الجديد:', item.name);
@@ -344,7 +358,7 @@ function renderEditContentNames(list) {
     }
 
     // 4) زر حذف الاسم
-    if (permissions.canDeleteContent) {
+    if (permissions.canDeleteContentName) {
       div.querySelector('.delete-name').addEventListener('click', async e => {
         e.stopPropagation();
         if (!confirm('هل تريد حذف هذا الاسم؟')) return;
@@ -394,23 +408,26 @@ document.addEventListener('DOMContentLoaded',async function() {
       folderNames.filter(f => f.name.toLowerCase().includes(q))
     );
   });
-
-  // “add new” link
-  addLink.addEventListener('click', async () => {
-    const name = prompt('أدخل اسم المجلد الجديد:');
-    if (!name) return;
-    await fetch(
-      `${apiBase}/departments/${currentDepartmentId}/folders/folder-names`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${getToken()}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ name })
-      }
-    );
-    await loadFolderNames();
-  });
+  if (permissions.canAddFolderName) {
+    addLink.classList.remove('hidden');  // إبقاء الرابط مرئيًا
+    addLink.addEventListener('click', async () => {
+      const name = prompt('أدخل اسم المجلد الجديد:');
+      if (!name) return;
+      await fetch(
+        `${apiBase}/departments/${currentDepartmentId}/folders/folder-names`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${getToken()}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ name })
+        }
+      );
+      await loadFolderNames();
+    });
+  } else {
+    addLink.classList.add('hidden');  // أخفِ الرابط لو ما عنده صلاحية
+  }
   // --- ربط dropdown التعديل ---
 const edtToggle   = document.getElementById('editFolderToggle');
 const edtMenu     = document.getElementById('editFolderMenu');
@@ -501,12 +518,18 @@ editContentNameToggleBtn.addEventListener('click', async e => {
   e.stopPropagation();
   editContentNameMenu.classList.toggle('hidden');
   editContentNameSearchInput.classList.toggle('hidden');
-  editAddNewContentNameLink.classList.toggle('hidden');
+
+  // بدلًا من التبديل الدائم، فقط إذا كان مسموحًا:
+  if (permissions.canAddContentName) {
+    editAddNewContentNameLink.classList.toggle('hidden');
+  }
+
   if (!contentNames.length) {
     await loadContentNames();
   }
   renderEditContentNames(contentNames);
 });
+
 
 // إغلاق الدروبدَاون عند الضغط خارج
 document.addEventListener('click', e => {
@@ -582,9 +605,7 @@ if (createContentBtn) {
   });
 }}
 
-    // console.log('addContentBtn:', addContentBtn);
-    // console.log('addContentModal:', addContentModal);
-    // console.log('createContentBtn:', createContentBtn);
+
 
     // Get references for Add Content Modal Form
     const addContentForm = addContentModal ? addContentModal.querySelector('#addContentFormElement') : null;
@@ -609,6 +630,9 @@ if (cancelContentBtn) {
     // Get references for Edit Content Modal
     const editContentModal = document.getElementById('editContentModal');
     const editContentCloseBtn = editContentModal ? editContentModal.querySelector('.close-button') : null;
+    if (editContentCloseBtn) {
+  editContentCloseBtn.addEventListener('click', closeEditContentModal);
+}
     const cancelEditContentBtn = editContentModal ? editContentModal.querySelector('#cancelEditContentBtn') : null;
     const updateContentBtn = editContentModal ? editContentModal.querySelector('#updateContentBtn') : null;
     const editContentIdInput = document.getElementById('editContentId');
@@ -675,10 +699,16 @@ async function fetchPermissions() {
   if (keys.includes('add_folder'))    permissions.canAddFolder    = true;
   if (keys.includes('edit_folder'))   permissions.canEditFolder   = true;
   if (keys.includes('delete_folder')) permissions.canDeleteFolder = true;
+  if (keys.includes('add_folder_name'))    permissions.canAddFolderName    = true;
+  if (keys.includes('edit_folder_name'))   permissions.canEditFolderName   = true;
+  if (keys.includes('delete_folder_name')) permissions.canDeleteFolderName = true;
   // وبالمثل لمحتوى الملفات:
   if (keys.includes('add_content'))    permissions.canAddContent    = true;
   if (keys.includes('edit_content'))   permissions.canEditContent   = true;
   if (keys.includes('delete_content')) permissions.canDeleteContent = true;
+  if (keys.includes('add_content_name'))    permissions.canAddContentName    = true;
+  if (keys.includes('edit_content_name'))   permissions.canEditContentName   = true;
+  if (keys.includes('delete_content_name')) permissions.canDeleteContentName = true;
 }
 
     // دالة لجلب مجلدات القسم بناءً على departmentId
