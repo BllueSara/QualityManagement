@@ -1,156 +1,173 @@
+
 document.addEventListener('DOMContentLoaded', loadDelegations);
 
-const apiBase = 'http://localhost:3006' + '/api/approvals/proxy';  // ✔ استخدم endpoint الصحيح
-const token = localStorage.getItem('token');
+  const apiBaseDept = 'http://localhost:3006/api/approvals/proxy';
+  const apiBaseComm = 'http://localhost:3006/api/committee-approvals/proxy';
+  const token = localStorage.getItem('token');
 
-let selectedContentId = null;
+  let selectedContentId = null;
+  let selectedContentType = null;
 
-async function loadDelegations() {
-  const tbody = document.querySelector('.proxy-table tbody');
-  tbody.innerHTML = '';
+  async function loadDelegations() {
+    const tbody = document.querySelector('.proxy-table tbody');
+    tbody.innerHTML = '';
 
-  try {
-    const res = await fetch(apiBase, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+    try {
+      const [deptRes, commRes] = await Promise.all([
+        fetch(apiBaseDept, { headers: authHeaders() }),
+        fetch(apiBaseComm, { headers: authHeaders() })
+      ]);
+      const deptJson = await deptRes.json();
+      const commJson = await commRes.json();
+
+      if (deptJson.status !== 'success' || commJson.status !== 'success') {
+        throw new Error('فشل جلب بيانات التفويض');
       }
+
+      const deptData = deptJson.data.map(d => ({ ...d, type: 'dept' }));
+      const commData = commJson.data.map(d => ({ ...d, type: 'committee' }));
+      const allData = [...deptData, ...commData];
+
+      if (allData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:20px;">لا توجد مستندات للتوقيع بالنيابة</td></tr>`;
+        return;
+      }
+
+      allData.forEach(d => {
+        // نجيب الاسم من أي حقل متوفر
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${escapeHtml(d.title)}</td>
+<td class="col-signer">
+  ${escapeHtml(d.delegated_by_name || d.delegated_by || '—')}
+</td>
+          <td class="col-action">
+            <button class="btn-accept" data-id="${d.id}" data-type="${d.type}">قبول</button>
+            <button class="btn-reject" data-id="${d.id}" data-type="${d.type}">رفض</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // زر القبول
+// زر القبول
+document.querySelectorAll('.btn-accept').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const contentId = btn.dataset.id;
+    const type      = btn.dataset.type;
+    const page      = type === 'dept'
+      ? 'approvals-recived.html'
+      : 'committee-approvals-recived.html';
+    const message   = '✅ سيتم تحويلك إلى صفحة الاعتمادات لتوقيع الملف بالطريقة المناسبة لك.';
+
+    // أفتح البوب اب برسالة القبول، وعند متابعة نعيد التوجيه
+    showPopup(message, () => {
+      window.location.href = `/frontend/html/${page}?id=${contentId}`;
     });
+  });
+});
 
-    const { status, data } = await res.json();
-    if (status !== 'success') throw new Error('Server error');
+// زر الرفض
+document.querySelectorAll('.btn-reject').forEach(btn => {
+  btn.addEventListener('click', () => {
+    selectedContentId   = btn.dataset.id;
+    selectedContentType = btn.dataset.type;
 
-    if (data.length === 0) {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td colspan="3" style="text-align:center; padding:20px;">لا توجد مستندات للتوقيع بالنيابة</td>`;
-      tbody.appendChild(tr);
-      return;
+    showPopup(
+      '⚠️ يرجى كتابة سبب الرفض ثم اضغط متابعة.',
+      submitReject,
+      true   // تظهر textarea
+    );
+  });
+});
+
+
+
+    } catch (err) {
+      console.error(err);
+      alert('حدث خطأ أثناء جلب بيانات التفويض');
     }
-
-    data.forEach(d => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td class="col-file">${escapeHtml(d.title)}</td>
-        <td class="col-signer">${escapeHtml(d.delegated_by_name)}</td>
-        <td class="col-action">
-          <button class="btn-accept" data-id="${d.id}">قبول</button>
-          <button class="btn-reject" data-id="${d.id}">رفض</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
-
-    document.querySelectorAll('.btn-accept').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const contentId = btn.dataset.id;
-        // ✅ بدل الاعتماد، نحول المستخدم لصفحة اختيار الاعتماد
-        alert('✅ تم قبول التفويض وسيتم تحويلك إلى الاعتمادات المستلمة');
-
-        window.location.href = `/frontend/html/approvals-recived.html?id=${contentId}`;
-      });
-    });
-
-    document.querySelectorAll('.btn-reject').forEach(btn => {
-      btn.addEventListener('click', () => {
-        selectedContentId = btn.dataset.id;
-        document.getElementById('rejectModal').style.display = 'flex';
-        document.getElementById('rejectReason').value = '';
-      });
-    });
-
-  } catch (err) {
-    alert('حدث خطأ أثناء جلب البيانات');
   }
-}
 
+  function authHeaders() {
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    };
+  }
 function closeRejectModal() {
-  document.getElementById('rejectModal').style.display = 'none';
-}
-
-async function submitReject() {
-  const reason = document.getElementById('rejectReason').value.trim();
-  if (!reason) return alert('⚠️ يرجى كتابة سبب الرفض');
-
-  try {
-    const res = await fetch(`http://localhost:3006/api/approvals/${selectedContentId}/approve`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        approved: false,
-        signature: null,
-        electronic_signature: false,
-        notes: reason
-      })
-    });
-
-    const json = await res.json();
-    if (json.status === 'success') {
-      alert('❌ تم رفض المستند');
-      closeRejectModal();
-      loadDelegations();
-    } else {
-      throw new Error(json.message);
-    }
-  } catch (err) {
-    alert('حدث خطأ أثناء الرفض');
-  }
-}
-
-async function signDelegation(contentId) {
-  if (!confirm('هل تريد توقيع هذا المستند بالنيابة؟')) return;
-
-  try {
-    const res = await fetch(`http://localhost:3006/api/approvals/${contentId}/approve`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        approved: true,
-        electronic_signature: true,
-        notes: '',
-      })
-    });
-
-    const result = await res.json();
-    if (result.status === 'success') {
-      alert('تم التوقيع بنجاح');
-      loadDelegations();
-    } else {
-      throw new Error(result.message);
-    }
-  } catch (err) {
-    alert('فشل في التوقيع، حاول مرة أخرى');
-  }
-}
-
-function escapeHtml(str) {
-  return String(str || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-function showPopup(onConfirm) {
   const overlay = document.getElementById('popupOverlay');
-  overlay.style.display = 'flex';
+  if (overlay) overlay.style.display = 'none';
+}
 
-  document.getElementById('popupConfirm').onclick = () => {
+  async function submitReject() {
+    const reason = document.getElementById('rejectReason').value.trim();
+    if (!reason) return alert('⚠️ يرجى كتابة سبب الرفض');
+
+    const endpointRoot = (selectedContentType === 'dept')
+      ? 'approvals'
+      : 'committee-approvals';
+
+    try {
+      const res = await fetch(`http://localhost:3006/api/${endpointRoot}/${selectedContentId}/approve`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          approved: false,
+          signature: null,
+          electronic_signature: false,
+          notes: reason
+        })
+      });
+      const json = await res.json();
+      if (json.status === 'success') {
+        alert('❌ تم رفض المستند');
+        loadDelegations();
+      } else {
+        throw new Error(json.message);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('حدث خطأ أثناء الرفض');
+    }
+  }
+
+  function escapeHtml(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+function showPopup(message, onConfirm, showReason = false) {
+  const overlay    = document.getElementById('popupOverlay');
+  const msgEl      = document.getElementById('popupMessage');
+  const reasonEl   = document.getElementById('rejectReason');
+  const btnConfirm = document.getElementById('popupConfirm');
+  const btnCancel  = document.getElementById('popupCancel');
+
+  // نص الرسالة وظهور/إخفاء textarea
+  msgEl.textContent = message;
+  reasonEl.style.display = showReason ? 'block' : 'none';
+
+  // إزالة أي مستمعين أقدم
+  btnConfirm.replaceWith(btnConfirm.cloneNode(true));
+  btnCancel .replaceWith(btnCancel.cloneNode(true));
+
+  // ربط الأحداث على النسخ الجديد
+  document.getElementById('popupConfirm').addEventListener('click', () => {
     overlay.style.display = 'none';
     onConfirm();
-  };
-
-  document.getElementById('popupCancel').onclick = () => {
+  });
+  document.getElementById('popupCancel').addEventListener('click', () => {
     overlay.style.display = 'none';
-  };
-}
+  });
 
+  overlay.style.display = 'flex';
+}
 function setupSignatureCanvas() {
   canvas = document.getElementById('signatureCanvas');
   if (!canvas) return;
@@ -188,3 +205,4 @@ async function sendApproval(contentId, approvalData) {
     alert('خطأ أثناء إرسال الاعتماد.');
   }
 }
+

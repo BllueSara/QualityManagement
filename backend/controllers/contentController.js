@@ -197,21 +197,7 @@ const addContent = async (req, res) => {
       }
   
       // التحقق من عدم وجود محتوى بنفس العنوان
-      const [existingContent] = await connection.execute(
-        'SELECT id FROM contents WHERE title = ? AND folder_id = ?',
-        [title, folderId]
-      );
-  
-      if (existingContent.length > 0) {
-        connection.release();
-        if (req.file && fs.existsSync(req.file.path)) {
-          fs.unlinkSync(req.file.path);
-        }
-        return res.status(409).json({ 
-          status: 'error',
-          message: 'يوجد محتوى بنفس العنوان في هذا المجلد بالفعل.' 
-        });
-      }
+
   
       // 1) إضافة المحتوى
       const [result] = await connection.execute(

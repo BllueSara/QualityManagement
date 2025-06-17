@@ -30,8 +30,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // إذا كان التوكن يحتوي على اسم المستخدم، يمكن عرضه هنا
             // usernameSpan.textContent = user.username || 'غير متاح';
             // بما أن الفورم لا يرسل username، سنعرض الإيميل كاسم مستخدم مؤقتاً أو نتركه فارغاً إذا لم يكن مطلوباً
-            usernameSpan.textContent = user.email.split('@')[0] || 'غير متاح'; // عرض الجزء الأول من الإيميل كاسم مستخدم
-
+  usernameSpan.textContent = user.username
         } else {
             // إذا كان التوكن غير صالح، توجيه المستخدم لصفحة تسجيل الدخول
             alert('جلسة غير صالحة. يرجى تسجيل الدخول مرة أخرى.');

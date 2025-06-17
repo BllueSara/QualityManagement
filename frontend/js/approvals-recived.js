@@ -456,31 +456,33 @@ function setupSignatureModal() {
 
 // تحميل الأقسام
 async function loadDepartments() {
-  // console.log("🔄 تحميل الأقسام...");
   const deptSelect = document.getElementById('delegateDept');
   if (!deptSelect) return;
 
   try {
-    const res = await fetch(`${apiBase}/departments`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    // نجيب النتيجة كاملة
+    const res = await fetchJSON(`${apiBase}/departments`);
+    
+    // لو رجّع كائن { data: [...] } نستعمل data،
+    // وإذا رجّع مصفوفة مباشرة ناخدها
+    const departments = Array.isArray(res)
+      ? res
+      : (res.data || []);
 
-    const { data: departments } = await res.json();
-    // console.log("✅ الأقسام:", departments);
-
+    // بناء الـ <option>
     deptSelect.innerHTML = `<option value="" disabled selected>اختر القسم</option>`;
-    departments.forEach(dept => {
+    departments.forEach(d => {
       const opt = document.createElement('option');
-      opt.value = dept.id;
-      opt.textContent = dept.name;
+      opt.value = d.id;
+      opt.textContent = d.name;
       deptSelect.appendChild(opt);
     });
-
   } catch (err) {
-    // console.error('❌ فشل تحميل الأقسام:', err);
-    alert('فشل تحميل الأقسام.');
+    console.error('❌ فشل تحميل الأقسام:', err);
+    alert(`❌ فشل تحميل الأقسام: ${err.message}`);
   }
 }
+
 
 // تحميل المستخدمين عند اختيار قسم
 document.getElementById('delegateDept').addEventListener('change', async (e) => {
