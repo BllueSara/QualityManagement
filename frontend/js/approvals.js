@@ -1,6 +1,6 @@
 // approvals.js
 let permissionsKeys = [];
-
+apiBase = 'http://localhost:3006/api';
 async function fetchPermissions() {
     const token = localStorage.getItem('token');
     if (!token) return;
@@ -61,7 +61,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const searchInput = document.getElementById("searchInput");
     const filterStatus = document.getElementById("filterStatus");
     const filterDept = document.getElementById("filterDept");
-    const filterFolder = document.getElementById("filterFolder"); // New folder filter
+    const filterFolder = document.getElementById("filterFolder");
     const btnFilter = document.getElementById("btnFilter");
     const approvalsBody = document.getElementById("approvalsBody");
     const noContentMessage = document.getElementById("noContentMessage");
@@ -73,107 +73,99 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const prevPageBtn = document.getElementById("prevPage");
     const nextPageBtn = document.getElementById("nextPage");
-    const pageNumbersContainer = document.getElementById("pageNumbers"); // Changed to container
+    const pageNumbersContainer = document.getElementById("pageNumbers");
 
     let currentPage = 1;
     const rowsPerPage = 5;
-    let allContents = []; // Store all fetched contents
-    let filteredContents = []; // Store currently filtered contents
+    let allContents = [];
+    let filteredContents = [];
 
-    // Populate department and folder filters dynamically (optional, based on available data)
-    async function populateFilters() {
-        try {
-            const token = getToken();
-            if (!token) return;
+    // Populate department and folder filters dynamically
+async function populateFilters() {
+  try {
+    const token = getToken();
+    if (!token) return;
 
-            // Fetch departments
-            const deptResponse = await fetch('http://localhost:3006/api/departments', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const deptData = await deptResponse.json();
+    // — Departments
+    const deptRes = await fetch(`${apiBase}/departments`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!deptRes.ok) throw new Error(`Departments ${deptRes.status}`);
+    const deptJson = await deptRes.json();
+    // لو رجع Array خليه كذا، وإلا خذ deptJson.data
+    const depts = Array.isArray(deptJson) ? deptJson : (deptJson.data || []);
 
-            // Fetch committees
-            const committeeResponse = await fetch('http://localhost:3006/api/committees', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const committeeData = await committeeResponse.json();
+    // — Committees
+    const commRes = await fetch(`${apiBase}/committees`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!commRes.ok) throw new Error(`Committees ${commRes.status}`);
+    const commJson = await commRes.json();
+    const comms = Array.isArray(commJson)
+      ? commJson
+      : (commJson.data || commJson);
 
-            // Clear existing options, keep "All"
-            filterDept.innerHTML = '<option value="all">جميع الأقسام/اللجان</option>';
+    // امسح الخيارات القديمة وابدأ “كل الأقسام”
+    filterDept.innerHTML = `<option value="all">${getTranslation('all-departments-committees')}</option>`;
 
-            // Add departments
-            if (deptData.data) {
-                deptData.data.forEach(dept => {
-                    const option = document.createElement('option');
-                    option.value = dept.name; // Value is just the name
-                    option.textContent = `قسم: ${dept.name}`;
-                    filterDept.appendChild(option);
-                });
-            }
+    depts.forEach(dept => {
+      const o = document.createElement('option');
+      o.value = dept.name;
+      o.textContent = `${getTranslation('department')}: ${dept.name}`;
+      filterDept.appendChild(o);
+    });
 
-            // Add committees
-            if (committeeData) {
-                const committeesArray = committeeData.data || committeeData;
-                committeesArray.forEach(committee => {
-                    const option = document.createElement('option');
-                    option.value = committee.name; // Value is just the name
-                    option.textContent = `لجنة: ${committee.name}`;
-                    filterDept.appendChild(option);
-                });
-            }
+    comms.forEach(c => {
+      const o = document.createElement('option');
+      o.value = c.name;
+      o.textContent = `${getTranslation('committee')}: ${c.name}`;
+      filterDept.appendChild(o);
+    });
 
-        } catch (error) {
-            console.error('Error populating filters:', error);
-        }
-    }
+  } catch (err) {
+    console.error(err);
+    showToast(getTranslation('error-fetching-departments'), 'error');
+  }
+}
 
     // Function to fetch content uploaded by the current user
-    async function fetchMyUploadedContent() {
-        try {
-            // جلب محتوى الأقسام
-            const deptResponse = await fetchJSON('/api/departments/contents/my-uploads', {
-                headers: { 'Authorization': `Bearer ${getToken()}` }
-            });
-            const deptItems = deptResponse.data || [];
+async function fetchMyUploadedContent() {
+  try {
+    const token = getToken();
+    if (!token) throw new Error('no token');
 
-            // جلب محتوى اللجان
-            const committeeResponse = await fetchJSON('/api/committees/contents/my-uploads', {
-                headers: { 'Authorization': `Bearer ${getToken()}` }
-            });
-            const committeeItems = (committeeResponse.data || []).map(item => ({ ...item, type: 'committee' }));
+    // مسار واحد يعيد جميع uploads (أقسام + لجان)
+    const res = await fetch(`${apiBase}/contents/my-uploads`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error(`Contents uploads ${res.status}`);
 
-            if (deptResponse.success || committeeResponse.success) {
-                // دمج المصفوفات مع التأكد من عدم تكرار الملفات
-                const uniqueContents = new Map();
-                
-                // إضافة محتويات الأقسام
-                deptItems.forEach(item => {
-                    uniqueContents.set(item.id, { ...item, type: 'department' });
-                });
-                
-                // إضافة محتويات اللجان (ستستبدل أي تكرارات)
-                committeeItems.forEach(item => {
-                    uniqueContents.set(item.id, item);
-                });
-                
-                allContents = Array.from(uniqueContents.values());
-                applyFilters();
-                populateFolderFilter();
-            } else {
-                showToast('فشل جلب الملفات المرفوعة.', 'error');
-                allContents = [];
-                applyFilters();
-            }
-        } catch (error) {
-            showToast('حدث خطأ في الاتصال بجلب الملفات المرفوعة.', 'error');
-            allContents = [];
-            applyFilters();
-        }
-    }
+    const items = await res.json();   // المفروض array من العناصر
+    // إذا الـ API يرجّع { data: […] } بدل array مباشرة:
+    const all = Array.isArray(items) ? items : (items.data || []);
+
+    // لو كل عنصر عنده type في السيرفر، خلاص.
+    // أما لو تبغى تضيف type يدوياً:
+    allContents = all.map(item =>
+      ({ ...item, type: item.source === 'committee' ? 'committee' : 'department' })
+    );
+
+    applyFilters();
+    populateFolderFilter();
+
+  } catch (err) {
+    console.error(err);
+    showToast(getTranslation('error-connection'), 'error');
+    allContents = [];
+    applyFilters();
+  }
+}
+
+
 
     // Populate folder filter based on `allContents`
     function populateFolderFilter() {
-        filterFolder.innerHTML = '<option value="all">جميع المجلدات</option>'; // Reset
+        filterFolder.innerHTML = `<option value="all">${getTranslation('all-folders')}</option>`;
         const uniqueFolders = [...new Set(allContents.map(content => content.folderName))];
         uniqueFolders.forEach(folderName => {
             const option = document.createElement('option');
@@ -200,7 +192,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     function renderTable() {
         approvalsBody.innerHTML = '';
     
-        // حدد من يقدر يشوف زر التتبع
         const canTrack = permissionsKeys.includes('*') || permissionsKeys.includes('track_credits');
     
         if (filteredContents.length === 0) {
@@ -212,9 +203,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
         noContentMessage.style.display = 'none';
     
-        // ✅ ترتيب العناصر: قيد المراجعة أولاً ثم المعتمدة (مع الأخذ في الاعتبار أن is_approved الآن Boolean)
         filteredContents.sort((a, b) => {
-            // false (pending) comes before true (approved)
             return (a.is_approved === b.is_approved) ? 
                    (new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt)) : 
                    (a.is_approved ? 1 : -1);
@@ -225,14 +214,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         const pageData = filteredContents.slice(startIdx, endIdx);
     
         pageData.forEach(content => {
-            console.log('Rendering content item (in renderTable - after sort):', content); // DEBUG: Inspect each content item after sort
-
-            const approvalStatusText = content.is_approved ? 'معتمد' : 'قيد المراجعة';
+            const approvalStatusText = content.is_approved ? getTranslation('status-approved') : getTranslation('status-awaiting');
             const approvalStatusClass = content.is_approved ? 'badge-approved' : 'badge-pending';
             const dateText = new Date(content.created_at || content.createdAt)
-                .toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+                .toLocaleDateString(localStorage.getItem('language') === 'ar' ? 'ar-EG' : 'en-US', 
+                    { year: 'numeric', month: 'long', day: 'numeric' });
             
-            const contentType = (content.type === 'committee' ? 'ملف لجنة' : 'تقرير قسم') || 'غير معروف';
+            const contentType = content.type === 'committee' ? getTranslation('committee-file') : getTranslation('department-report');
             const displaySourceName = content.source_name || '-';
 
             const row = document.createElement('tr');
@@ -246,13 +234,12 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <td class="col-status"><span class="badge ${approvalStatusClass}">${approvalStatusText}</span></td>
                 <td class="col-date">${dateText}</td>
                 <td class="col-actions">
-                    ${canTrack ? `<button class="btn-track" data-id="${content.id}" data-type="${content.type}">تتبع</button>` : ''}
+                    ${canTrack ? `<button class="btn-track" data-id="${content.id}" data-type="${content.type}">${getTranslation('track')}</button>` : ''}
                 </td>
             `;
             approvalsBody.appendChild(row);
         });
     
-        // ربط أحداث التتبع إذا كانت الصلاحية موجودة
         if (canTrack) {
             approvalsBody.querySelectorAll('.btn-track').forEach(btn => {
                 btn.addEventListener('click', () => {
@@ -267,13 +254,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         updateTotalCount(filteredContents.length);
         updatePaginationButtons(filteredContents.length);
     }
-    
-
 
     // Update pagination buttons
     function updatePaginationButtons(totalFilteredRows) {
         const totalPages = Math.ceil(totalFilteredRows / rowsPerPage);
-        pageNumbersContainer.innerHTML = ''; // Clear existing page numbers
+        pageNumbersContainer.innerHTML = '';
 
         for (let i = 1; i <= totalPages; i++) {
             const pageBtn = document.createElement('button');
@@ -307,7 +292,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         filteredContents = allContents.filter(content => {
             const contentTitle = content.title.toLowerCase();
-            const sourceName = (content.source_name || '').toLowerCase(); // Should now be clean name
+            const sourceName = (content.source_name || '').toLowerCase();
             const folderName = (content.folderName || '').toLowerCase();
             const isApproved = content.is_approved ? 'approved' : 'pending';
 
@@ -317,22 +302,22 @@ document.addEventListener("DOMContentLoaded", async () => {
                 folderName.includes(searchQuery);
 
             const matchesStatus = selectedStatus === 'all' || isApproved === selectedStatus;
-            const matchesDept = selectedDept === 'all' || sourceName === selectedDept.toLowerCase(); // Direct comparison now
+            const matchesDept = selectedDept === 'all' || sourceName === selectedDept.toLowerCase();
             const matchesFolder = selectedFolder === 'all' || folderName === selectedFolder.toLowerCase();
 
             return matchesSearch && matchesStatus && matchesDept && matchesFolder;
         });
 
-        currentPage = 1; // Reset to first page after applying filters
+        currentPage = 1;
         renderTable();
     }
 
     // Event Listeners
     btnFilter.addEventListener('click', applyFilters);
-    searchInput.addEventListener('input', applyFilters); // Apply filters on input
+    searchInput.addEventListener('input', applyFilters);
     filterStatus.addEventListener('change', applyFilters);
     filterDept.addEventListener('change', applyFilters);
-    filterFolder.addEventListener('change', applyFilters); // New event listener for folder filter
+    filterFolder.addEventListener('change', applyFilters);
 
     prevPageBtn.addEventListener("click", () => {
         if (currentPage > 1) {
@@ -350,6 +335,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     // Initial fetch and render
-    populateFilters(); // Populate department filter first
+    populateFilters();
     fetchMyUploadedContent();
-});
+}); 

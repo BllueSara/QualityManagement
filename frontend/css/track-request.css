@@ -20,6 +20,34 @@ body {
 body {
   direction: rtl; /* من اليمين إلى اليسار */
 }
+
+/* Language support for track request page */
+body[dir="ltr"] {
+  direction: ltr;
+  text-align: left;
+}
+
+
+.track-header,
+.next-dept {
+  flex: 1;
+  min-width: 200px;
+}
+
+/* تجعل النص من اليسار للإنجليزي */
+body[dir="ltr"] .track-header,
+body[dir="ltr"] .next-dept {
+  text-align: left;
+}
+
+/* تجعل النص من اليمين للعربي */
+body[dir="rtl"] .track-header,
+body[dir="rtl"] .next-dept {
+  text-align: right;
+}
+
+
+
 .header-actions {
   position: relative;
   height: 50px;
@@ -144,11 +172,8 @@ body {
 
 /* ===== القسم التالي ===== */
 .next-dept {
-  position: absolute;
-  top: 16px;
-  right: 24px;
-  font-size: 0.95rem;
-  color: #374151;
+  position: static;
+  margin-bottom: 0;
 }
 
 .next-dept .label-text {
@@ -163,10 +188,10 @@ body {
 
 /* ===== رأس البطاقة: الحالة والتحديث ===== */
 .track-top {
-  padding: 24px 32px 12px 32px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
+  padding: 24px 32px 12px 32px;
 }
 
 /* ضبط محاذاة عنوان الحالة لليسار */
@@ -536,4 +561,23 @@ body {
 .reply-badge {
   background-color: #ff9800;
   color: white;
+}
+:lang(ar) body, 
+:lang(ar) input, 
+:lang(ar) select, 
+:lang(ar) button, 
+:lang(ar) textarea, 
+:lang(ar) .header-title, 
+:lang(ar) .page-title {
+  font-family: 'Tajawal', sans-serif;
+}
+
+:lang(en) body, 
+:lang(en) input, 
+:lang(en) select, 
+:lang(en) button, 
+:lang(en) textarea, 
+:lang(en) .header-title, 
+:lang(en) .page-title {
+  font-family: Arial, sans-serif;
 }

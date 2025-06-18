@@ -33,8 +33,18 @@ async function loadDepartments() {
         : [];
 
     // صفِّر الخيارات القديمة
-    reportingDeptSelect.innerHTML   = '<option value="" disabled selected>اختر القسم</option>';
-    respondingDeptSelect.innerHTML  = '<option value="" disabled selected>اختر القسم</option>';
+reportingDeptSelect.innerHTML = `
+  <option value="" disabled selected data-translate="placeholder-select-dept">
+    ${translations[localStorage.getItem('language') || 'ar']["placeholder-select-dept"]}
+  </option>
+`;
+
+respondingDeptSelect.innerHTML = `
+  <option value="" disabled selected data-translate="placeholder-select-dept">
+    ${translations[localStorage.getItem('language') || 'ar']["placeholder-select-dept"]}
+  </option>
+`;
+
 
     // أضف كل قسم للقائمتين
     departments.forEach(dept => {
@@ -48,6 +58,9 @@ async function loadDepartments() {
       opt2.textContent = dept.name;
       respondingDeptSelect.appendChild(opt2);
     });
+
+    // تحديث الترجمات بعد إضافة الخيارات
+    updateModalTexts(localStorage.getItem('language') || 'ar');
 
   } catch (error) {
     console.error('Error loading departments:', error);
@@ -131,6 +144,8 @@ const classificationValues = Array.from(checkboxes)
 
 // 2. خزنهم في FormData كسلسلة JSON
 formData.set('classification', JSON.stringify(classificationValues));
+formData.set('language', localStorage.getItem('language') || 'ar'); // ✅ أضف هذا
+
         try {
 const response = await fetch(`${apiBase}/tickets`, {
                 method: 'POST',

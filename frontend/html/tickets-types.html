@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>التذاكر - نظام إدارة الجودة والسلامة</title>
+  <title data-translate="tickets-page-title">التذاكر - نظام إدارة الجودة والسلامة</title>
 
   <!-- استيراد خط Tajawal من Google Fonts -->
   <link
@@ -38,18 +38,18 @@
         <div class="header-actions">
     <button class="back-btn" onclick="history.back()">
         <i class="fas fa-arrow-left"></i>
-        <span>رجوع</span>
+        <span data-translate="back">رجوع</span>
   </button>
   <button class="home-btn" onclick="window.location.href='index.html'">
     <i class="fas fa-home"></i>
-    <span>الرئيسية</span>
+    <span data-translate="home">الرئيسية</span>
   </button>
 </div>
   <!-- ===== المحتوى الرئيسي ===== -->
   <main class="content-wrapper">
     <div class="page-header">
-      <h1 class="page-title">التذاكر</h1>
-      <p class="page-subtitle">إدارة وإنشاء التذاكر الخاصة بك</p>
+      <h1 class="page-title" data-translate="tickets">التذاكر</h1>
+      <p class="page-subtitle" data-translate="tickets-page-subtitle">إدارة وإنشاء التذاكر الخاصة بك</p>
     </div>
 
     <div class="cards-container">
@@ -60,32 +60,33 @@
         <div class="card-icon">
           <i class="fas fa-ticket-alt"></i>
         </div>
-        <h2 class="card-title">إنشاء تذكرة</h2>
-        <p class="card-desc">إنشاء تذكرة دعم فني جديدة</p>
-        <a href="/frontend/html/ticket.html" class="card-btn-outline">إنشاء تذكرة جديدة</a>
+        <h2 class="card-title" data-translate="create-ticket-title">إنشاء تذكرة</h2>
+        <p class="card-desc" data-translate="create-ticket-desc">إنشاء تذكرة دعم فني جديدة</p>
+        <a href="/frontend/html/ticket.html" class="card-btn-outline" data-translate="create-new-ticket">إنشاء تذكرة جديدة</a>
       </div>
             <!-- بطاقة عرض التذاكر -->
       <div class="ticket-card">
         <div class="card-icon">
           <i class="fas fa-folder-open"></i>
         </div>
-        <h2 class="card-title">عرض التذاكر</h2>
-        <p class="card-desc">استعراض وإدارة التذاكر الحالية</p>
-        <a href="/frontend/html/ticket-list.html" class="card-btn-outline">عرض جميع التذاكر</a>
+        <h2 class="card-title" data-translate="view-tickets-title">عرض التذاكر</h2>
+        <p class="card-desc" data-translate="view-tickets-desc">استعراض وإدارة التذاكر الحالية</p>
+        <a href="/frontend/html/ticket-list.html" class="card-btn-outline" data-translate="view-all-tickets">عرض جميع التذاكر</a>
       </div>
 <div class="ticket-card" data-permission="transfer_tickets">
   <div class="card-icon">
     <!-- أيقونة تبادل للتذاكر -->
     <i class="fas fa-exchange-alt"></i>
   </div>
-  <h2 class="card-title">تحويل التذاكر</h2>
-  <p class="card-desc">إدارة وتحويل التذاكر الحالية بسلاسة</p>
-  <a href="/frontend/html/pending-ticket.html" class="card-btn-outline">
+  <h2 class="card-title" data-translate="transfer-tickets-title">تحويل التذاكر</h2>
+  <p class="card-desc" data-translate="transfer-tickets-desc">إدارة وتحويل التذاكر الحالية بسلاسة</p>
+  <a href="/frontend/html/pending-ticket.html" class="card-btn-outline" data-translate="start-transfer">
     ابدأ عملية التحويل
   </a>
 </div>
 
   </main>
+  <script src="/frontend/js/language.js"></script>
   <script src="/frontend/js/tickets-types.js"></script>
 </body>
 </html>

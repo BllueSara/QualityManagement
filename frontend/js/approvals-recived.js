@@ -3,6 +3,7 @@ const token = localStorage.getItem('token');
 let permissionsKeys = [];
 let selectedContentId = null;
 let canvas, ctx;
+const currentLang = localStorage.getItem('language') || 'ar';
 
 // جلب صلاحيات المستخدم
 async function fetchPermissions() {
@@ -24,7 +25,7 @@ async function fetchPermissions() {
     const { data: perms } = await res.json();
     permissionsKeys = perms.map(p => typeof p === 'string' ? p : (p.permission || p.permission_key));
   } catch (e) {
-    // console.error('Failed to fetch permissions', e);
+    console.error('Failed to fetch permissions', e);
   }
 }
 
@@ -41,7 +42,7 @@ async function fetchJSON(url, opts = {}) {
 
 // عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', async () => {
-  if (!token) return alert("غير مصرح: الرجاء تسجيل الدخول.");
+  if (!token) return alert(getTranslation('please-login'));
 
   await fetchPermissions();
 
@@ -49,25 +50,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const deptResponse = await fetchJSON(`${apiBase}/approvals/assigned-to-me`);
     const committeeResponse = await fetchJSON(`${apiBase}/committee-approvals/assigned-to-me`);
 
-    // DEBUG: Log raw data from backend
-    console.log('DEBUG: Raw Department Approvals Data:', deptResponse.data);
-    console.log('DEBUG: Raw Committee Approvals Data:', committeeResponse.data);
-
-    // Detailed logging for department items
-    if (deptResponse.data) {
-      deptResponse.data.forEach(item => {
-        console.log('DEBUG: Raw Dept Item ID:', item.id, 'Type:', item.type);
-      });
-    }
-    // Detailed logging for committee items
-    if (committeeResponse.data) {
-      committeeResponse.data.forEach(item => {
-        console.log('DEBUG: Raw Comm Item ID:', item.id, 'Type:', item.type);
-      });
-    }
-
-    // Combine all items, department items first, then committee items.
-    // The backend should already be providing the correct 'type' and prefixed 'id'.
     let allCombinedItems = [
       ...(deptResponse.data || []),
       ...(committeeResponse.data || []),
@@ -75,18 +57,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const uniqueItemsMap = new Map();
     allCombinedItems.forEach(item => {
-      uniqueItemsMap.set(item.id, item); // Store the item as is, with its type from backend
+      uniqueItemsMap.set(item.id, item);
     });
 
     allItems = Array.from(uniqueItemsMap.values());
-    // DEBUG: Log allItems after de-duplication
-    console.log('DEBUG: Merged and De-duplicated All Items:', allItems);
 
     await setupFilters(allItems);
     renderApprovals(allItems);
   } catch (err) {
-    // console.error("خطأ في جلب الاعتمادات:", err);
-    alert("حدث خطأ أثناء تحميل البيانات");
+    console.error("Error loading approvals:", err);
+    alert(getTranslation('error-loading'));
   }
 
   setupSignatureModal();
@@ -96,7 +76,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (btnSendReason) {
     btnSendReason.addEventListener('click', async () => {
       const reason = document.getElementById('rejectReason').value.trim();
-      if (!reason) return alert('⚠️ يرجى كتابة سبب الرفض');
+      if (!reason) return alert(getTranslation('please-enter-reason'));
 
       const contentType = document.querySelector(`tr[data-id="${selectedContentId}"]`).dataset.type;
       const endpoint = contentType === 'committee' ? 'committee-approvals' : 'approvals';
@@ -111,13 +91,13 @@ document.addEventListener('DOMContentLoaded', async () => {
           })
         });
 
-        alert('❌ تم رفض الاعتماد');
+        alert(getTranslation('success-rejected'));
         closeModal('rejectModal');
 
         updateApprovalStatusInUI(selectedContentId, 'rejected');
       } catch (err) {
-        // console.error('فشل إرسال الرفض:', err);
-        alert('❌ حدث خطأ أثناء إرسال سبب الرفض');
+        console.error('Failed to send rejection:', err);
+        alert(getTranslation('error-sending'));
       }
     });
   }
@@ -126,16 +106,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function setupFilters(items) {
   const deptSet = new Set(items.map(i => i.source_name).filter(Boolean));
   const deptFilter = document.getElementById('deptFilter');
-  deptFilter.innerHTML = '<option value="all">الكل</option>'; // Ensure 'الكل' option is always present
+  deptFilter.innerHTML = `<option value="all">${getTranslation('all-departments')}</option>`;
   deptSet.forEach(name => {
     const opt = document.createElement('option');
     opt.value = name;
     opt.textContent = name;
     deptFilter.appendChild(opt);
-  });
-
-  ['all', 'pending', 'rejected', 'approved'].forEach(status => {
-    // الافتراضي معد مسبقاً في HTML
   });
 
   deptFilter.addEventListener('change', applyFilters);
@@ -160,17 +136,14 @@ function applyFilters() {
   renderApprovals(filtered);
 }
 
-// فتح مودال عام
 function openModal(modalId) {
   document.getElementById(modalId).style.display = 'flex';
 }
 
-// إغلاق مودال عام
 function closeModal(modalId) {
   document.getElementById(modalId).style.display = 'none';
 }
 
-// ربط أزرار الإغلاق بالمودالات
 function setupCloseButtons() {
   document.querySelectorAll('.modal-close').forEach(btn => {
     btn.addEventListener('click', e => {
@@ -180,7 +153,6 @@ function setupCloseButtons() {
   });
 }
 
-// عرض الاعتمادات
 function renderApprovals(items) {
   const tbody = document.getElementById("approvalsBody");
   tbody.innerHTML = "";
@@ -194,9 +166,6 @@ function renderApprovals(items) {
   });
 
   items.forEach(item => {
-    // DEBUG: Log each item before rendering
-    console.log('DEBUG: Rendering item:', JSON.parse(JSON.stringify(item)));
-    console.log('DEBUG: Item ID:', item.id, 'Item Type:', item.type);
     const tr = document.createElement("tr");
     tr.dataset.id = item.id;
     tr.dataset.status = item.approval_status;
@@ -205,14 +174,14 @@ function renderApprovals(items) {
 
     let actionsHTML = '';
     if (item.approval_status === 'pending') {
-      actionsHTML += `<button class="btn-sign"><i class="fas fa-user-check"></i> توقيع</button>`;
-      actionsHTML += `<button class="btn-delegate"><i class="fas fa-user-friends"></i> توقيع بالنيابة</button>`;
-      actionsHTML += `<button class="btn-qr"><i class="fas fa-qrcode"></i> اعتماد إلكتروني</button>`;
-      actionsHTML += `<button class="btn-reject"><i class="fas fa-times"></i> رفض</button>`;
-      actionsHTML += `<button class="btn-preview"><i class="fas fa-eye"></i> عرض</button>`;
+      actionsHTML += `<button class="btn-sign"><i class="fas fa-user-check"></i> ${getTranslation('sign')}</button>`;
+      actionsHTML += `<button class="btn-delegate"><i class="fas fa-user-friends"></i> ${getTranslation('delegate')}</button>`;
+      actionsHTML += `<button class="btn-qr"><i class="fas fa-qrcode"></i> ${getTranslation('electronic')}</button>`;
+      actionsHTML += `<button class="btn-reject"><i class="fas fa-times"></i> ${getTranslation('reject')}</button>`;
+      actionsHTML += `<button class="btn-preview"><i class="fas fa-eye"></i> ${getTranslation('preview')}</button>`;
     }
 
-    const contentType = item.type === 'committee' ? 'ملف لجنة' : 'تقرير قسم';
+    const contentType = item.type === 'committee' ? getTranslation('committee-file') : getTranslation('department-report');
 
     tr.innerHTML = `
       <td>
@@ -242,21 +211,17 @@ function updateApprovalStatusInUI(id, newStatus) {
   const item = allItems.find(i => i.id == id);
   if (!item) return;
   item.approval_status = newStatus;
-
-  // إعادة تصفية العناصر حسب الفلاتر الحالية وإعادة العرض والفرز
   applyFilters();
 }
 
-// تصنيف الحالة
 function statusLabel(status) {
   switch (status) {
-    case 'approved': return ' معتمد';
-    case 'rejected': return ' مرفوض';
-    default:         return ' قيد الانتظار';
+    case 'approved': return getTranslation('approved');
+    case 'rejected': return getTranslation('rejected');
+    default: return getTranslation('pending');
   }
 }
 
-// ربط الأزرار بالمودالات
 function initActions() {
   document.querySelectorAll('.btn-sign').forEach(btn => {
     btn.addEventListener('click', e => {
@@ -293,9 +258,8 @@ function initActions() {
       const itemId = tr.dataset.id;
       const item = allItems.find(i => i.id == itemId);
 
-      // ✅ تحقّق من وجود المسار الفعلي للملف
       if (!item || !item.file_path) {
-        alert('❌ لا يوجد محتوى مرتبط');
+        alert(getTranslation('no-content'));
         return;
       }
 
@@ -306,7 +270,7 @@ function initActions() {
 }
 
 document.getElementById('btnElectronicApprove')?.addEventListener('click', async () => {
-  if (!selectedContentId) return alert('⚠️ لا يوجد عنصر محدد لاعتماده.');
+  if (!selectedContentId) return alert(getTranslation('please-select-user'));
 
   const contentType = document.querySelector(`tr[data-id="${selectedContentId}"]`).dataset.type;
   const endpoint = contentType === 'committee' ? 'committee-approvals' : 'approvals';
@@ -321,19 +285,16 @@ document.getElementById('btnElectronicApprove')?.addEventListener('click', async
         notes: ''
       })
     });
-    alert('✅ تم الاعتماد الإلكتروني بنجاح');
+    alert(getTranslation('success-approved'));
     closeModal('qrModal');
     updateApprovalStatusInUI(selectedContentId, 'approved');
     disableActionsFor(selectedContentId);
   } catch (err) {
-    // console.error('فشل الاعتماد الإلكتروني:', err);
-    alert('حدث خطأ أثناء الاعتماد الإلكتروني');
+    console.error('Failed to electronically approve:', err);
+    alert(getTranslation('error-sending'));
   }
 });
 
-// =====================
-// التوقيع
-// =====================
 function openSignatureModal(contentId) {
   selectedContentId = contentId;
   const modal = document.getElementById('signatureModal');
@@ -386,7 +347,6 @@ function setupSignatureModal() {
     };
   }
 
-  // Mouse events
   canvas.addEventListener('mousedown', e => {
     drawing = true;
     const pos = getPos(e);
@@ -404,7 +364,6 @@ function setupSignatureModal() {
   canvas.addEventListener('mouseup', () => drawing = false);
   canvas.addEventListener('mouseleave', () => drawing = false);
 
-  // Touch events
   canvas.addEventListener('touchstart', e => {
     drawing = true;
     const pos = getPos(e);
@@ -421,12 +380,10 @@ function setupSignatureModal() {
 
   canvas.addEventListener('touchend', () => drawing = false);
 
-  // مسح التوقيع
   document.getElementById('btnClear').addEventListener('click', () => {
     clearCanvas();
   });
 
-  // تأكيد التوقيع
   document.getElementById('btnConfirmSignature').addEventListener('click', async () => {
     const base64Signature = canvas.toDataURL('image/png');
     const contentType = document.querySelector(`tr[data-id="${selectedContentId}"]`).dataset.type;
@@ -441,36 +398,26 @@ function setupSignatureModal() {
           notes: ''
         })
       });
-      alert('✅ تم إرسال التوقيع');
+      alert(getTranslation('success-sent'));
       closeSignatureModal();
       updateApprovalStatusInUI(selectedContentId, 'approved');
       disableActionsFor(selectedContentId);
     } catch (err) {
-      // console.error('فشل الإرسال:', err);
-      alert('خطأ أثناء إرسال التوقيع');
+      console.error('Failed to send signature:', err);
+      alert(getTranslation('error-sending'));
     }
   });
 }
 
-// فتح مودال التوقيع بالنيابة وتحميل الأقسام
-
-// تحميل الأقسام
 async function loadDepartments() {
   const deptSelect = document.getElementById('delegateDept');
   if (!deptSelect) return;
 
   try {
-    // نجيب النتيجة كاملة
     const res = await fetchJSON(`${apiBase}/departments`);
-    
-    // لو رجّع كائن { data: [...] } نستعمل data،
-    // وإذا رجّع مصفوفة مباشرة ناخدها
-    const departments = Array.isArray(res)
-      ? res
-      : (res.data || []);
+    const departments = Array.isArray(res) ? res : (res.data || []);
 
-    // بناء الـ <option>
-    deptSelect.innerHTML = `<option value="" disabled selected>اختر القسم</option>`;
+    deptSelect.innerHTML = `<option value="" disabled selected>${getTranslation('select-department')}</option>`;
     departments.forEach(d => {
       const opt = document.createElement('option');
       opt.value = d.id;
@@ -478,27 +425,22 @@ async function loadDepartments() {
       deptSelect.appendChild(opt);
     });
   } catch (err) {
-    console.error('❌ فشل تحميل الأقسام:', err);
-    alert(`❌ فشل تحميل الأقسام: ${err.message}`);
+    console.error('Failed to load departments:', err);
+    alert(getTranslation('error-loading'));
   }
 }
 
-
-// تحميل المستخدمين عند اختيار قسم
 document.getElementById('delegateDept').addEventListener('change', async (e) => {
   const deptId = e.target.value;
-  // console.log("🔄 تحميل المستخدمين للقسم:", deptId);
   try {
     const res = await fetch(`${apiBase}/users?departmentId=${deptId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
 
     const json = await res.json();
-    // console.log("✅ المستخدمين المستلمين:", json);
-
     const users = json.data || [];
     const userSelect = document.getElementById('delegateUser');
-    userSelect.innerHTML = `<option value="" disabled selected>اختر المستخدم</option>`;
+    userSelect.innerHTML = `<option value="" disabled selected>${getTranslation('select-user')}</option>`;
 
     users.forEach(user => {
       const opt = document.createElement('option');
@@ -508,17 +450,16 @@ document.getElementById('delegateDept').addEventListener('change', async (e) => 
     });
 
   } catch (err) {
-    // console.error('❌ فشل تحميل المستخدمين:', err);
-    alert('فشل تحميل المستخدمين.');
+    console.error('Failed to load users:', err);
+    alert(getTranslation('error-loading'));
   }
 });
 
-// تأكيد التوقيع بالنيابة
 document.getElementById('btnDelegateConfirm').addEventListener('click', async () => {
   const userId = document.getElementById('delegateUser').value;
   const notes = document.getElementById('delegateNotes').value;
 
-  if (!userId) return alert('⚠️ يرجى اختيار المستخدم.');
+  if (!userId) return alert(getTranslation('please-select-user'));
 
   const contentType = document.querySelector(`tr[data-id="${selectedContentId}"]`).dataset.type;
   const endpoint = contentType === 'committee' ? 'committee-approvals' : 'approvals';
@@ -531,12 +472,12 @@ document.getElementById('btnDelegateConfirm').addEventListener('click', async ()
         notes: notes
       })
     });
-    alert('✅ تم تفويض المستخدم بنجاح');
+    alert(getTranslation('success-delegated'));
     closeModal('delegateModal');
     disableActionsFor(selectedContentId);
   } catch (err) {
-    // console.error('❌ خطأ أثناء التفويض بالنيابة:', err);
-    alert('❌ حدث خطأ أثناء إرسال التفويض');
+    console.error('Failed to delegate:', err);
+    alert(getTranslation('error-sending'));
   }
 });
 
@@ -544,5 +485,5 @@ function disableActionsFor(contentId) {
   const row = document.querySelector(`tr[data-id="${contentId}"]`);
   if (!row) return;
   const actionsCell = row.querySelector('.col-actions');
-  if (actionsCell) actionsCell.innerHTML = ''; // إخفاء جميع الأزرار
+  if (actionsCell) actionsCell.innerHTML = '';
 }

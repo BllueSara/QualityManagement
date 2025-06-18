@@ -17,6 +17,7 @@
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     crossorigin="anonymous"
   />
+  <link rel="stylesheet" href="../css/shared.css"/>
 
   <!-- ربط ملف التنسيقات -->
   <link rel="stylesheet" href="/frontend/css/ticket-details.css" />
@@ -36,37 +37,38 @@
   <div class="header-actions">
     <button class="back-btn" onclick="history.back()">
       <i class="fas fa-arrow-left"></i>
-      <span>رجوع</span>
+      <span data-translate="back">رجوع</span>
     </button>
     <button class="home-btn" onclick="window.location.href='index.html'">
       <i class="fas fa-home"></i>
-      <span>الرئيسية</span>
+      <span data-translate="home">الرئيسية</span>
     </button>
+
   </div>
 
   <!-- ===== المحتوى الرئيسي ===== -->
   <main class="content-wrapper">
-    <h1 class="page-title">عرض التذكرة</h1>
+    <h1 class="page-title" data-translate="view-ticket">عرض التذكرة</h1>
 
     <!-- ===== قسم: تفاصيل الحدث ===== -->
     <section class="card-section">
       <div class="section-header">
         <i class="fas fa-file-lines section-icon"></i>
-        <h2 class="section-title">تفاصيل الحدث</h2>
+        <h2 class="section-title" data-translate="event-details">تفاصيل الحدث</h2>
       </div>
       <div class="section-content">
         <div class="field-row">
           <!-- تاريخ الحدث -->
           <div class="field-group">
-            <label class="field-label">تاريخ الحدث</label>
+            <label class="field-label" data-translate="event-date">تاريخ الحدث</label>
             <div class="field-value" data-field="event-date">15 فبراير 2024</div>
           </div>
           <!-- وقت الحدث -->
           <div class="field-group">
-            <label class="field-label">وقت الحدث</label>
+            <label class="field-label" data-translate="event-time">وقت الحدث</label>
             <div class="field-value" data-field="event-time">
               <span class="radio-readonly">
-                <input type="radio" checked disabled /> صباحاً
+                <input type="radio" checked disabled /> <span data-translate="morning">صباحاً</span>
               </span>
               <span class="time-text">09:30</span>
             </div>
@@ -75,19 +77,19 @@
 
         <div class="field-single">
           <!-- موقع الحدث -->
-          <label class="field-label">موقع الحدث</label>
+          <label class="field-label" data-translate="event-location">موقع الحدث</label>
           <div class="field-value" data-field="event-location">قسم الطوارئ - الطابق الأول</div>
         </div>
 
         <div class="field-row">
           <!-- القسم المبلغ -->
           <div class="field-group">
-            <label class="field-label">القسم المبلغ</label>
+            <label class="field-label" data-translate="reporting-dept">القسم المبلغ</label>
             <div class="field-value" data-field="reporting-dept">قسم الطوارئ</div>
           </div>
           <!-- القسم المستجيب -->
           <div class="field-group">
-            <label class="field-label">القسم المستجيب</label>
+            <label class="field-label" data-translate="responding-dept">القسم المستجيب</label>
             <div class="field-value" data-field="responding-dept">إدارة السلامة</div>
           </div>
         </div>
@@ -98,18 +100,18 @@
     <section class="card-section">
       <div class="section-header">
         <i class="fas fa-user-injured section-icon"></i>
-        <h2 class="section-title">معلومات المريض</h2>
+        <h2 class="section-title" data-translate="patient-info">معلومات المريض</h2>
       </div>
       <div class="section-content">
         <div class="field-row">
           <!-- اسم المريض -->
           <div class="field-group">
-            <label class="field-label">اسم المريض</label>
+            <label class="field-label" data-translate="patient-name">اسم المريض</label>
             <div class="field-value" data-field="patient-name">أحمد محمد</div>
           </div>
           <!-- رقم الملف الطبي -->
           <div class="field-group">
-            <label class="field-label">رقم الملف الطبي</label>
+            <label class="field-label" data-translate="medical-record-no">رقم الملف الطبي</label>
             <div class="field-value" data-field="medical-record-no">123456789</div>
           </div>
         </div>
@@ -117,10 +119,10 @@
         <div class="field-row">
           <!-- الجنس -->
           <div class="field-group">
-            <label class="field-label">الجنس</label>
+            <label class="field-label" data-translate="gender">الجنس</label>
             <div class="field-value" data-field="gender">
               <span class="radio-readonly">
-                <input type="radio" checked disabled /> ذكر
+                <input type="radio" checked disabled /> <span data-translate="male">ذكر</span>
               </span>
             </div>
           </div>
@@ -134,15 +136,15 @@
     <section class="card-section">
       <div class="section-header">
         <i class="fas fa-exclamation-triangle section-icon"></i>
-        <h2 class="section-title">نوع البلاغ</h2>
+        <h2 class="section-title" data-translate="report-type">نوع البلاغ</h2>
       </div>
       <div class="section-content">
         <div class="field-value" data-field="report-type">
           <span class="radio-readonly">
-            <input type="radio" disabled /> شبه خطأ
+            <input type="radio" disabled /> <span data-translate="near-miss">شبه خطأ</span>
           </span>
           <span class="radio-readonly">
-            <input type="radio" checked disabled /> حادث
+            <input type="radio" checked disabled /> <span data-translate="accident">حادث</span>
           </span>
         </div>
       </div>
@@ -152,7 +154,7 @@
     <section class="card-section">
       <div class="section-header">
         <i class="fas fa-file-alt section-icon"></i>
-        <h2 class="section-title">وصف الحدث</h2>
+        <h2 class="section-title" data-translate="event-description">وصف الحدث</h2>
       </div>
       <div class="section-content">
         <div class="field-single">
@@ -161,7 +163,7 @@
           </div>
         </div>
         <div class="attachments">
-          <i class="fas fa-paperclip"></i> يوجد مرفقات
+          <i class="fas fa-paperclip"></i> <span data-translate="has-attachments">يوجد مرفقات</span>
         </div>
       </div>
     </section>
@@ -170,30 +172,30 @@
     <section class="card-section">
       <div class="section-header">
         <i class="fas fa-user section-icon"></i>
-        <h2 class="section-title">بيانات المبلغ</h2>
+        <h2 class="section-title" data-translate="reporter-info">بيانات المبلغ</h2>
       </div>
       <div class="section-content">
         <div class="field-row">
           <!-- الاسم -->
           <div class="field-group">
-            <label class="field-label">الاسم</label>
+            <label class="field-label" data-translate="reporter-name">الاسم</label>
             <div class="field-value" data-field="reporter-name">محمد أحمد</div>
           </div>
           <!-- رقم الجوال -->
           <div class="field-group">
-            <label class="field-label">رقم الجوال</label>
+            <label class="field-label" data-translate="reporter-phone">رقم الجوال</label>
             <div class="field-value" data-field="reporter-phone">05xxxxxxx</div>
           </div>
         </div>
         <div class="field-row">
           <!-- المسمي الوظيفي -->
           <div class="field-group">
-            <label class="field-label">المسمي الوظيفي</label>
+            <label class="field-label" data-translate="reporter-position">المسمي الوظيفي</label>
             <div class="field-value" data-field="reporter-position">أخصائي سلامة</div>
           </div>
           <!-- البريد الإلكتروني -->
           <div class="field-group">
-            <label class="field-label">البريد الإلكتروني</label>
+            <label class="field-label" data-translate="reporter-email">البريد الإلكتروني</label>
             <div class="field-value" data-field="reporter-email">mohammed@example.com</div>
           </div>
         </div>
@@ -204,7 +206,7 @@
     <section class="card-section">
       <div class="section-header">
         <i class="fas fa-tools section-icon"></i>
-        <h2 class="section-title">الإجراءات المتخذة</h2>
+        <h2 class="section-title" data-translate="actions-taken">الإجراءات المتخذة</h2>
       </div>
       <div class="section-content">
         <div class="field-single">
@@ -219,13 +221,13 @@
     <section class="card-section">
       <div class="section-header">
         <i class="fas fa-th-large section-icon"></i>
-        <h2 class="section-title">تصنيف الحدث</h2>
+        <h2 class="section-title" data-translate="event-classification">تصنيف الحدث</h2>
       </div>
       <div class="section-content">
         <div class="tags-container">
-          <span class="tag">الأجهزة الطبية</span>
-          <span class="tag">البنية</span>
-          <span class="tag">قضايا أمنية</span>
+          <span class="tag" data-translate="medical-equipment">الأجهزة الطبية</span>
+          <span class="tag" data-translate="infrastructure">البنية</span>
+          <span class="tag" data-translate="security-issues">قضايا أمنية</span>
         </div>
       </div>
     </section>
@@ -234,19 +236,19 @@
     <section class="card-section">
       <div class="section-header">
         <i class="fas fa-info-circle section-icon"></i>
-        <h2 class="section-title">تفاصيل الإصابة</h2>
+        <h2 class="section-title" data-translate="injury-details">تفاصيل الإصابة</h2>
       </div>
       <div class="section-content">
         <div class="field-value" data-field="had-injury">
-          <label class="field-label-inline">هل حدثت إصابة؟</label>
+          <label class="field-label-inline" data-translate="had-injury">هل حدثت إصابة؟</label>
           <span class="radio-readonly">
-            <input type="radio" checked disabled /> نعم
+            <input type="radio" checked disabled /> <span data-translate="yes">نعم</span>
           </span>
         </div>
         <div class="field-value" data-field="injury-type">
-          <label class="field-label-inline">نوع الإصابة</label>
+          <label class="field-label-inline" data-translate="injury-type">نوع الإصابة</label>
           <span class="radio-readonly">
-            <input type="radio" checked disabled /> جسدية
+            <input type="radio" checked disabled /> <span data-translate="physical">جسدية</span>
           </span>
         </div>
       </div>
@@ -256,15 +258,16 @@
     <section class="card-section">
       <div class="section-header">
         <i class="fas fa-comments section-icon"></i>
-        <h2 class="section-title">إضافة رد / إجراء من الجهة المختصة</h2>
+        <h2 class="section-title" data-translate="add-reply">إضافة رد / إجراء من الجهة المختصة</h2>
       </div>
       <div class="section-content">
         <textarea
           id="replyTextarea"
           class="reply-textarea"
+          data-translate-placeholder="write-reply"
           placeholder="اكتب ردّك هنا..."
         ></textarea>
-        <button id="submitReply" class="btn-submit-reply">إرسال الرد</button>
+        <button id="submitReply" class="btn-submit-reply" data-translate="send-reply">إرسال الرد</button>
       </div>
     </section>
 
@@ -272,13 +275,14 @@
     <section class="card-section timeline-section">
       <div class="section-header">
         <i class="fas fa-clock section-icon"></i>
-        <h2 class="section-title">الردود السابقة</h2>
+        <h2 class="section-title" data-translate="previous-replies">الردود السابقة</h2>
       </div>
       <div class="timeline-content"></div>
     </section>
 
   </main>
   <!-- السكربت بعد نهاية المحتوى -->
+  <script src="/frontend/js/language.js"></script>
   <script src="/frontend/js/tickets-details.js"></script>
 
 </body>

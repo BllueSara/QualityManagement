@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>قائمة التذاكر - نظام إدارة الجودة والسلامة</title>
+  <title data-translate="ticket-list-title">قائمة التذاكر - نظام إدارة الجودة والسلامة</title>
 
   <!-- استيراد خط Tajawal من Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet" />
@@ -14,6 +14,7 @@
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     crossorigin="anonymous"
   />
+  <link rel="stylesheet" href="../css/shared.css"/>
 
   <!-- ربط ملف التنسيقات المحدث -->
   <link rel="stylesheet" href="/frontend/css/ticket-list.css" />
@@ -36,16 +37,16 @@
            <div class="header-actions">
     <button class="back-btn" onclick="history.back()">
         <i class="fas fa-arrow-left"></i>
-        <span>رجوع</span>
+        <span data-translate="back">رجوع</span>
   </button>
   <button class="home-btn" onclick="window.location.href='index.html'">
     <i class="fas fa-home"></i>
-    <span>الرئيسية</span>
+    <span data-translate="home">الرئيسية</span>
   </button>
 </div>
   <main class="content-wrapper">
     
-    <h1 class="page-title">قائمة التذاكر</h1>
+    <h1 class="page-title" data-translate="ticket-list">قائمة التذاكر</h1>
 
     <!-- صندوق البحث وزر التصفية -->
     <div class="search-filter-container">
@@ -55,13 +56,14 @@
         <input
           type="text"
           id="searchInput"
+          data-translate-placeholder="search"
           placeholder="بحث..."
           autocomplete="off"
         />
       </div>
       <button id="filterBtn" class="btn-filter">
         <i class="fas fa-sliders-h"></i>
-        تصفية
+        <span data-translate="filter">تصفية</span>
       </button>
     </div>
 
@@ -70,11 +72,11 @@
 <table class="tickets-table">
   <thead>
     <tr>
-      <th class="col-ticket">رقم التذكرة</th>
-      <th class="col-status">الرد</th>
-      <th class="col-location">الموقع</th>
-      <th class="col-date">التاريخ</th>
-      <th class="col-actions">الإجراءات</th>
+      <th class="col-ticket" data-translate="ticket-number">رقم التذكرة</th>
+      <th class="col-status" data-translate="response">الرد</th>
+      <th class="col-location" data-translate="location">الموقع</th>
+      <th class="col-date" data-translate="date">التاريخ</th>
+      <th class="col-actions" data-translate="actions">الإجراءات</th>
     </tr>
   </thead>
   <tbody id="ticketsBody">
@@ -89,20 +91,21 @@
 
     <!-- نص يوضح عدد التذاكر المعروضة -->
     <div class="records-info">
-      عرض 1-5 من 25 تذكرة
+      <span data-translate="showing">عرض</span> 1-5 <span data-translate="of">من</span> 25 <span data-translate="tickets">تذكرة</span>
     </div>
 
     <!-- أزرار التنقل بين الصفحات -->
     <div class="pagination">
-      <button class="page-btn" id="prevPage" disabled>السابق</button>
+      <button class="page-btn" id="prevPage" disabled data-translate="previous">السابق</button>
       <button class="page-number active" data-page="1">1</button>
       <button class="page-number" data-page="2">2</button>
       <button class="page-number" data-page="3">3</button>
-      <button class="page-btn" id="nextPage">التالي</button>
+      <button class="page-btn" id="nextPage" data-translate="next">التالي</button>
     </div>
   </main>
 
   <!-- استدعاء ملف JavaScript (دون تغيير) -->
+  <script src="/frontend/js/language.js"></script>
   <script src="/frontend/js/ticket-list.js"></script>
 </body>
 </html>

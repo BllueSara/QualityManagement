@@ -1,163 +1,153 @@
-
 document.addEventListener('DOMContentLoaded', loadDelegations);
 
-  const apiBaseDept = 'http://localhost:3006/api/approvals/proxy';
-  const apiBaseComm = 'http://localhost:3006/api/committee-approvals/proxy';
-  const token = localStorage.getItem('token');
+const apiBaseDept = 'http://localhost:3006/api/approvals/proxy';
+const apiBaseComm = 'http://localhost:3006/api/committee-approvals/proxy';
+const token = localStorage.getItem('token');
 
-  let selectedContentId = null;
-  let selectedContentType = null;
+let selectedContentId = null;
+let selectedContentType = null;
 
-  async function loadDelegations() {
-    const tbody = document.querySelector('.proxy-table tbody');
-    tbody.innerHTML = '';
+async function loadDelegations() {
+  const tbody = document.querySelector('.proxy-table tbody');
+  tbody.innerHTML = '';
 
-    try {
-      const [deptRes, commRes] = await Promise.all([
-        fetch(apiBaseDept, { headers: authHeaders() }),
-        fetch(apiBaseComm, { headers: authHeaders() })
-      ]);
-      const deptJson = await deptRes.json();
-      const commJson = await commRes.json();
+  try {
+    const [deptRes, commRes] = await Promise.all([
+      fetch(apiBaseDept, { headers: authHeaders() }),
+      fetch(apiBaseComm, { headers: authHeaders() })
+    ]);
+    const deptJson = await deptRes.json();
+    const commJson = await commRes.json();
 
-      if (deptJson.status !== 'success' || commJson.status !== 'success') {
-        throw new Error('فشل جلب بيانات التفويض');
-      }
-
-      const deptData = deptJson.data.map(d => ({ ...d, type: 'dept' }));
-      const commData = commJson.data.map(d => ({ ...d, type: 'committee' }));
-      const allData = [...deptData, ...commData];
-
-      if (allData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:20px;">لا توجد مستندات للتوقيع بالنيابة</td></tr>`;
-        return;
-      }
-
-      allData.forEach(d => {
-        // نجيب الاسم من أي حقل متوفر
-
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${escapeHtml(d.title)}</td>
-<td class="col-signer">
-  ${escapeHtml(d.delegated_by_name || d.delegated_by || '—')}
-</td>
-          <td class="col-action">
-            <button class="btn-accept" data-id="${d.id}" data-type="${d.type}">قبول</button>
-            <button class="btn-reject" data-id="${d.id}" data-type="${d.type}">رفض</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-
-      // زر القبول
-// زر القبول
-document.querySelectorAll('.btn-accept').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const contentId = btn.dataset.id;
-    const type      = btn.dataset.type;
-    const page      = type === 'dept'
-      ? 'approvals-recived.html'
-      : 'committee-approvals-recived.html';
-    const message   = '✅ سيتم تحويلك إلى صفحة الاعتمادات لتوقيع الملف بالطريقة المناسبة لك.';
-
-    // أفتح البوب اب برسالة القبول، وعند متابعة نعيد التوجيه
-    showPopup(message, () => {
-      window.location.href = `/frontend/html/${page}?id=${contentId}`;
-    });
-  });
-});
-
-// زر الرفض
-document.querySelectorAll('.btn-reject').forEach(btn => {
-  btn.addEventListener('click', () => {
-    selectedContentId   = btn.dataset.id;
-    selectedContentType = btn.dataset.type;
-
-    showPopup(
-      '⚠️ يرجى كتابة سبب الرفض ثم اضغط متابعة.',
-      submitReject,
-      true   // تظهر textarea
-    );
-  });
-});
-
-
-
-    } catch (err) {
-      console.error(err);
-      alert('حدث خطأ أثناء جلب بيانات التفويض');
+    if (deptJson.status !== 'success' || commJson.status !== 'success') {
+      throw new Error(getTranslation('error-loading'));
     }
-  }
 
-  function authHeaders() {
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    };
+    const deptData = deptJson.data.map(d => ({ ...d, type: 'dept' }));
+    const commData = commJson.data.map(d => ({ ...d, type: 'committee' }));
+    const allData = [...deptData, ...commData];
+
+    if (allData.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:20px;">${getTranslation('no-documents')}</td></tr>`;
+      return;
+    }
+
+    allData.forEach(d => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${escapeHtml(d.title)}</td>
+        <td class="col-signer">
+          ${escapeHtml(d.delegated_by_name || d.delegated_by || '—')}
+        </td>
+        <td class="col-action">
+          <button class="btn-accept" data-id="${d.id}" data-type="${d.type}">${getTranslation('accept')}</button>
+          <button class="btn-reject" data-id="${d.id}" data-type="${d.type}">${getTranslation('reject')}</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // زر القبول
+    document.querySelectorAll('.btn-accept').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const contentId = btn.dataset.id;
+        const type = btn.dataset.type;
+        const page = type === 'dept'
+          ? 'approvals-recived.html'
+          : 'committee-approvals-recived.html';
+
+        showPopup(getTranslation('accept-message'), () => {
+          window.location.href = `/frontend/html/${page}?id=${contentId}`;
+        });
+      });
+    });
+
+    // زر الرفض
+    document.querySelectorAll('.btn-reject').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedContentId = btn.dataset.id;
+        selectedContentType = btn.dataset.type;
+
+        showPopup(
+          getTranslation('reject-message'),
+          submitReject,
+          true
+        );
+      });
+    });
+
+  } catch (err) {
+    console.error(err);
+    alert(getTranslation('error-loading'));
   }
+}
+
+function authHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  };
+}
+
 function closeRejectModal() {
   const overlay = document.getElementById('popupOverlay');
   if (overlay) overlay.style.display = 'none';
 }
 
-  async function submitReject() {
-    const reason = document.getElementById('rejectReason').value.trim();
-    if (!reason) return alert('⚠️ يرجى كتابة سبب الرفض');
+async function submitReject() {
+  const reason = document.getElementById('rejectReason').value.trim();
+  if (!reason) return alert(getTranslation('reason-required'));
 
-    const endpointRoot = (selectedContentType === 'dept')
-      ? 'approvals'
-      : 'committee-approvals';
+  const endpointRoot = (selectedContentType === 'dept')
+    ? 'approvals'
+    : 'committee-approvals';
 
-    try {
-      const res = await fetch(`http://localhost:3006/api/${endpointRoot}/${selectedContentId}/approve`, {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({
-          approved: false,
-          signature: null,
-          electronic_signature: false,
-          notes: reason
-        })
-      });
-      const json = await res.json();
-      if (json.status === 'success') {
-        alert('❌ تم رفض المستند');
-        loadDelegations();
-      } else {
-        throw new Error(json.message);
-      }
-    } catch (err) {
-      console.error(err);
-      alert('حدث خطأ أثناء الرفض');
+  try {
+    const res = await fetch(`http://localhost:3006/api/${endpointRoot}/${selectedContentId}/approve`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        approved: false,
+        signature: null,
+        electronic_signature: false,
+        notes: reason
+      })
+    });
+    const json = await res.json();
+    if (json.status === 'success') {
+      alert(getTranslation('reject-success'));
+      loadDelegations();
+    } else {
+      throw new Error(json.message);
     }
+  } catch (err) {
+    console.error(err);
+    alert(getTranslation('error-rejecting'));
   }
+}
 
-  function escapeHtml(str) {
-    return String(str || '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 function showPopup(message, onConfirm, showReason = false) {
-  const overlay    = document.getElementById('popupOverlay');
-  const msgEl      = document.getElementById('popupMessage');
-  const reasonEl   = document.getElementById('rejectReason');
+  const overlay = document.getElementById('popupOverlay');
+  const msgEl = document.getElementById('popupMessage');
+  const reasonEl = document.getElementById('rejectReason');
   const btnConfirm = document.getElementById('popupConfirm');
-  const btnCancel  = document.getElementById('popupCancel');
+  const btnCancel = document.getElementById('popupCancel');
 
-  // نص الرسالة وظهور/إخفاء textarea
   msgEl.textContent = message;
   reasonEl.style.display = showReason ? 'block' : 'none';
 
-  // إزالة أي مستمعين أقدم
   btnConfirm.replaceWith(btnConfirm.cloneNode(true));
-  btnCancel .replaceWith(btnCancel.cloneNode(true));
+  btnCancel.replaceWith(btnCancel.cloneNode(true));
 
-  // ربط الأحداث على النسخ الجديد
   document.getElementById('popupConfirm').addEventListener('click', () => {
     overlay.style.display = 'none';
     onConfirm();
@@ -168,6 +158,7 @@ function showPopup(message, onConfirm, showReason = false) {
 
   overlay.style.display = 'flex';
 }
+
 function setupSignatureCanvas() {
   canvas = document.getElementById('signatureCanvas');
   if (!canvas) return;

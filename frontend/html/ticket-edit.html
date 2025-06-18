@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>تعديل التذكرة - نظام إدارة الجودة والسلامة</title>
+  <title data-translate="ticket-edit">تعديل التذكرة - نظام إدارة الجودة والسلامة</title>
 
   <!-- استيراد خط Tajawal -->
   <link
@@ -16,6 +16,8 @@
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     crossorigin="anonymous"
   />
+    <link rel="stylesheet" href="../css/shared.css"/>
+
   <!-- رابط تنسيقات ticket-details.css -->
   <link rel="stylesheet" href="/frontend/css/ticket-details.css" />
 </head>
@@ -33,48 +35,48 @@
   </header>
   <div class="header-actions">
     <button class="back-btn" onclick="history.back()">
-      <i class="fas fa-arrow-left"></i><span>رجوع</span>
+      <i class="fas fa-arrow-left"></i><span data-translate="back">رجوع</span>
     </button>
     <button class="home-btn" onclick="window.location.href='index.html'">
-      <i class="fas fa-home"></i><span>الرئيسية</span>
+      <i class="fas fa-home"></i><span data-translate="home">الرئيسية</span>
     </button>
   </div>
 
   <main class="content-wrapper">
-    <h1 class="page-title">تعديل التذكرة</h1>
+    <h1 class="page-title" data-translate="ticket-edit">تعديل التذكرة</h1>
 
     <form id="editTicketForm" class="ticket-form" enctype="multipart/form-data">
       <!-- تفاصيل الحدث -->
       <section class="card-section">
         <div class="section-header">
           <i class="fas fa-file-lines section-icon"></i>
-          <h2 class="section-title">تفاصيل الحدث</h2>
+          <h2 class="section-title" data-translate="event-details">تفاصيل الحدث</h2>
         </div>
         <div class="section-content">
           <div class="field-row">
             <div class="field-group">
-              <label for="event_date" class="field-label">تاريخ الحدث</label>
+              <label for="event_date" class="field-label" data-translate="event-date">تاريخ الحدث</label>
               <input type="date" id="event_date" name="event_date" class="field-input" required />
             </div>
             <div class="field-group">
-              <label for="event_time" class="field-label">وقت الحدث</label>
+              <label for="event_time" class="field-label" data-translate="event-time">وقت الحدث</label>
               <select id="event_time" name="event_time" class="field-input" required>
-                <option value="صباحاً">صباحاً</option>
-                <option value="مساءً">مساءً</option>
+                <option value="صباحاً" data-translate="morning">صباحاً</option>
+                <option value="مساءً" data-translate="evening">مساءً</option>
               </select>
             </div>
           </div>
           <div class="field-single">
-            <label for="event_location" class="field-label">موقع الحدث</label>
-            <input type="text" id="event_location" name="event_location" class="field-input" required />
+            <label for="event_location" class="field-label" data-translate="event-location">موقع الحدث</label>
+            <input type="text" id="event_location" name="event_location" class="field-input" required data-translate-placeholder="enter-event-location" placeholder="ادخل موقع الحدث هنا" />
           </div>
           <div class="field-row">
             <div class="field-group">
-              <label for="reporting_dept_id" class="field-label">القسم المبلغ</label>
+              <label for="reporting_dept_id" class="field-label" data-translate="reporting-dept">القسم المبلغ</label>
               <select id="reporting_dept_id" name="reporting_dept_id" class="field-input" required></select>
             </div>
             <div class="field-group">
-              <label for="responding_dept_id" class="field-label">القسم المستجيب</label>
+              <label for="responding_dept_id" class="field-label" data-translate="responding-dept">القسم المستجيب</label>
               <select id="responding_dept_id" name="responding_dept_id" class="field-input" required></select>
             </div>
           </div>
@@ -85,36 +87,29 @@
       <section class="card-section">
         <div class="section-header">
           <i class="fas fa-user-injured section-icon"></i>
-          <h2 class="section-title">معلومات المريض</h2>
+          <h2 class="section-title" data-translate="patient-info">معلومات المريض</h2>
         </div>
         <div class="section-content">
           <div class="field-row">
             <div class="field-group">
-              <label for="patient_name" class="field-label">اسم المريض</label>
-              <input type="text" id="patient_name" name="patient_name" class="field-input" />
+              <label for="patient_name" class="field-label" data-translate="patient-name">اسم المريض</label>
+              <input type="text" id="patient_name" name="patient_name" class="field-input" data-translate-placeholder="enter-patient-name" placeholder="ادخل اسم المريض" />
             </div>
             <div class="field-group">
-              <label for="medical_record_no" class="field-label">رقم الملف الطبي</label>
-              <input type="text" id="medical_record_no" name="medical_record_no" class="field-input" />
+              <label for="medical_record_no" class="field-label" data-translate="medical-record">رقم الملف الطبي</label>
+              <input type="text" id="medical_record_no" name="medical_record_no" class="field-input" data-translate-placeholder="enter-medical-record" placeholder="ادخل رقم الملف الطبي" />
             </div>
           </div>
           <div class="field-row">
             <div class="field-group">
-              <label class="field-label">الجنس</label>
+              <label class="field-label" data-translate="gender">الجنس</label>
               <select id="gender" name="gender" class="field-input">
                 <option value="">—</option>
-                <option value="ذكر">ذكر</option>
-                <option value="أنثى">أنثى</option>
+                <option value="ذكر" data-translate="male">ذكر</option>
+                <option value="أنثى" data-translate="female">أنثى</option>
               </select>
             </div>
-            <div class="field-group">
-              <label class="field-label">نوع الشخص</label>
-              <select id="patient_type" name="patient_type" class="field-input">
-                <option value="">—</option>
-                <option value="مراجع">مراجع</option>
-                <option value="مريض">مريض</option>
-              </select>
-            </div>
+
           </div>
         </div>
       </section>
@@ -123,15 +118,15 @@
       <section class="card-section">
         <div class="section-header">
           <i class="fas fa-exclamation-triangle section-icon"></i>
-          <h2 class="section-title">نوع البلاغ</h2>
+          <h2 class="section-title" data-translate="report-type">نوع البلاغ</h2>
         </div>
         <div class="section-content">
           <select id="report_type" name="report_type" class="field-input" required>
-            <option value="حادث">حادث</option>
-            <option value="حدث قابل للتبليغ">حدث قابل للتبليغ</option>
-            <option value="حدث جسيم">حدث جسيم</option>
-            <option value="تنبيه خطأ">تنبيه خطأ</option>
-            <option value="وضع غير آمن">وضع غير آمن</option>
+            <option value="حادث" data-translate="accident">حادث</option>
+            <option value="حدث قابل للتبليغ" data-translate="near-miss">حدث قابل للتبليغ</option>
+            <option value="حدث جسيم" data-translate="serious">حدث جسيم</option>
+            <option value="تنبيه خطأ" data-translate="error">تنبيه خطأ</option>
+            <option value="وضع غير آمن" data-translate="unsafe">وضع غير آمن</option>
           </select>
         </div>
       </section>
@@ -140,7 +135,7 @@
       <section class="card-section">
         <div class="section-header">
           <i class="fas fa-file-alt section-icon"></i>
-          <h2 class="section-title">وصف الحدث</h2>
+          <h2 class="section-title" data-translate="event-description">وصف الحدث</h2>
         </div>
         <div class="section-content">
           <textarea
@@ -148,6 +143,7 @@
             name="event_description"
             class="field-input"
             rows="4"
+            data-translate-placeholder="enter-event-description"
             placeholder="صف الحدث..."
             required
           ></textarea>
@@ -158,27 +154,27 @@
       <section class="card-section">
         <div class="section-header">
           <i class="fas fa-user section-icon"></i>
-          <h2 class="section-title">بيانات المبلغ</h2>
+          <h2 class="section-title" data-translate="reporter-info">بيانات المبلغ</h2>
         </div>
         <div class="section-content">
           <div class="field-row">
             <div class="field-group">
-              <label for="reporter_name" class="field-label">الاسم</label>
-              <input type="text" id="reporter_name" name="reporter_name" class="field-input" required />
+              <label for="reporter_name" class="field-label" data-translate="reporter-name">الاسم</label>
+              <input type="text" id="reporter_name" name="reporter_name" class="field-input" required data-translate-placeholder="enter-reporter-name" placeholder="ادخل اسم المبلغ" />
             </div>
             <div class="field-group">
-              <label for="reporter_phone" class="field-label">رقم الجوال</label>
-              <input type="tel" id="reporter_phone" name="reporter_phone" class="field-input" required />
+              <label for="reporter_phone" class="field-label" data-translate="reporter-phone">رقم الجوال</label>
+              <input type="tel" id="reporter_phone" name="reporter_phone" class="field-input" required data-translate-placeholder="placeholder-phone" placeholder="05XXXXXXXX" />
             </div>
           </div>
           <div class="field-row">
             <div class="field-group">
-              <label for="reporter_position" class="field-label">المسميات الوظيفي</label>
-              <input type="text" id="reporter_position" name="reporter_position" class="field-input" />
+              <label for="reporter_position" class="field-label" data-translate="reporter-position">المسمي الوظيفي</label>
+              <input type="text" id="reporter_position" name="reporter_position" class="field-input" data-translate-placeholder="enter-reporter-position" placeholder="ادخل المسمي الوظيفي" />
             </div>
             <div class="field-group">
-              <label for="reporter_email" class="field-label">البريد الإلكتروني</label>
-              <input type="email" id="reporter_email" name="reporter_email" class="field-input" />
+              <label for="reporter_email" class="field-label" data-translate="reporter-email">البريد الإلكتروني</label>
+              <input type="email" id="reporter_email" name="reporter_email" class="field-input" data-translate-placeholder="enter-email" placeholder="name@moh.gov.sa" />
             </div>
           </div>
         </div>
@@ -188,7 +184,7 @@
       <section class="card-section">
         <div class="section-header">
           <i class="fas fa-tools section-icon"></i>
-          <h2 class="section-title">الإجراءات المتخذة</h2>
+          <h2 class="section-title" data-translate="actions-taken">الإجراءات المتخذة</h2>
         </div>
         <div class="section-content">
           <textarea
@@ -196,6 +192,7 @@
             name="actions_taken"
             class="field-input"
             rows="3"
+            data-translate-placeholder="enter-actions"
             placeholder="اكتب الإجراءات المتخذة..."
           ></textarea>
         </div>
@@ -205,11 +202,11 @@
       <section class="card-section">
         <div class="section-header">
           <i class="fas fa-th-large section-icon"></i>
-          <h2 class="section-title">تصنيف الحدث</h2>
+          <h2 class="section-title" data-translate="event-classification">تصنيف الحدث</h2>
         </div>
         <div class="section-content tags-container">
-          <input type="text" id="classification" name="classification" class="field-input" placeholder="الأجهزة الطبية, البنية, ..." />
-          <small class="hint">افصل بين التصنيفات بفواصل</small>
+          <input type="text" id="classification" name="classification" class="field-input" data-translate-placeholder="event-classification" placeholder="الأجهزة الطبية, البنية, ..." />
+          <small class="hint" data-translate="hint">افصل بين التصنيفات بفواصل</small>
         </div>
       </section>
 
@@ -217,23 +214,23 @@
       <section class="card-section">
         <div class="section-header">
           <i class="fas fa-info-circle section-icon"></i>
-          <h2 class="section-title">تفاصيل الإصابة</h2>
+          <h2 class="section-title" data-translate="injury-details">تفاصيل الإصابة</h2>
         </div>
         <div class="section-content">
           <div class="field-row">
             <div class="field-group">
-              <label class="field-label">هل حدثت إصابة؟</label>
+              <label class="field-label" data-translate="had-injury">هل حدثت إصابة؟</label>
               <select id="had_injury" name="had_injury" class="field-input">
-                <option value="لا">لا</option>
-                <option value="نعم">نعم</option>
+                <option value="لا" data-translate="no">لا</option>
+                <option value="نعم" data-translate="yes">نعم</option>
               </select>
             </div>
             <div class="field-group">
-              <label class="field-label">نوع الإصابة</label>
+              <label class="field-label" data-translate="injury-type">نوع الإصابة</label>
               <select id="injury_type" name="injury_type" class="field-input">
                 <option value="">—</option>
-                <option value="جسدية">جسدية</option>
-                <option value="نفسية">نفسية</option>
+                <option value="جسدية" data-translate="physical">جسدية</option>
+                <option value="نفسية" data-translate="psychic">نفسية</option>
               </select>
             </div>
           </div>
@@ -244,23 +241,21 @@
       <section class="card-section">
         <div class="section-header">
           <i class="fas fa-paperclip section-icon"></i>
-          <h2 class="section-title">مرفقات (اختياري)</h2>
+          <h2 class="section-title" data-translate="attachments">مرفقات (اختياري)</h2>
         </div>
         <div class="section-content">
           <input type="file" name="attachments" multiple />
         </div>
       </section>
 
-      <!-- حالة التذكرة -->
-   
-
       <!-- أزرار الإرسال -->
       <div class="form-actions">
-        <button type="submit" class="btn-primary">حفظ التعديلات</button>
-        <button type="button" class="btn-secondary" onclick="history.back()">إلغاء</button>
+        <button type="submit" class="btn-primary" data-translate="save">حفظ التعديلات</button>
+        <button type="button" class="btn-secondary" onclick="history.back()" data-translate="cancel">إلغاء</button>
       </div>
     </form>
   </main>
+<script src="/frontend/js/language.js"></script>
 <script>
   // ——————————— 1) متغيّرات عامّة ———————————
   const form                  = document.getElementById('editTicketForm');
@@ -270,31 +265,35 @@
   const respondingDeptSelect  = document.getElementById('responding_dept_id');
 
   // ——————————— 2) تحميل الأقسام ———————————
-  async function loadDepartments() {
-    try {
-      const res = await fetch(`${apiBase}/departments`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      const body = await res.json();
+async function loadDepartments() {
+  try {
+    const res = await fetch(`${apiBase}/departments`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
 
-      if (!res.ok || body.status !== 'success') {
-        throw new Error(body.message || `Response not OK (${res.status})`);
-      }
+    if (!res.ok) throw new Error(`Response not OK (${res.status})`);
 
-      const depts = Array.isArray(body.data) ? body.data : [];
-      if (!depts.length) throw new Error('لا توجد أقسام');
+    const body = await res.json();
+    console.log('📦 استجابة الأقسام:', body);
 
-      // افرغ ثم أضف الخيارات
-      reportingDeptSelect.innerHTML  = '<option value="" disabled selected>اختر القسم</option>';
-      respondingDeptSelect.innerHTML = '<option value="" disabled selected>اختر القسم</option>';
-      depts.forEach(d => {
-        reportingDeptSelect.add(new Option(d.name, d.id));
-        respondingDeptSelect.add(new Option(d.name, d.id));
-      });
-    } catch (err) {
-      alert('خطأ أثناء تحميل الأقسام: ' + err.message);
-    }
+    // لأن الاستجابة مصفوفة مباشرة
+    const depts = Array.isArray(body) ? body : [];
+    if (!depts.length) throw new Error('لا توجد أقسام');
+
+    reportingDeptSelect.innerHTML  = '<option value="" disabled selected data-translate="select-dept">اختر القسم</option>';
+    respondingDeptSelect.innerHTML = '<option value="" disabled selected data-translate="select-dept">اختر القسم</option>';
+
+    depts.forEach(d => {
+      reportingDeptSelect.add(new Option(d.name, d.id));
+      respondingDeptSelect.add(new Option(d.name, d.id));
+    });
+
+  } catch (err) {
+    console.error('❌ خطأ في تحميل الأقسام:', err);
+    alert('خطأ أثناء تحميل الأقسام: ' + err.message);
   }
+}
+
 
   // ——————————— 3) تحميل بيانات التذكرة ———————————
 async function loadTicket() {
