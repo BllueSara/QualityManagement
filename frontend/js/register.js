@@ -56,8 +56,12 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Departments API response:', data);
 
             if (response.ok) {
+                // احصل على اللغة الحالية
+                const lang = localStorage.getItem('language') || 'ar';
+                // ترجمات خيار اختر القسم
+                const selectDepartmentText = lang === 'ar' ? 'اختر القسم' : 'Select Department';
                 // مسح الخيارات الحالية باستثناء الخيار الأول (اختر القسم)
-                departmentSelect.innerHTML = '<option value="">اختر القسم</option>';
+                departmentSelect.innerHTML = `<option value="">${selectDepartmentText}</option>`;
                 // تعبئة قائمة الاختيار بالأقسام المسترجعة
                 data.forEach(department => {
                     const option = document.createElement('option');
@@ -68,7 +72,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // إضافة الخيار الثابت "إضافة قسم جديد" في النهاية
                 const addNewOption = document.createElement('option');
                 addNewOption.value = '__ADD_NEW_DEPARTMENT__';
-                addNewOption.textContent = 'إضافة قسم جديد';
+                addNewOption.textContent = lang === 'ar' ? 'إضافة قسم جديد' : 'Add New Department';
                 departmentSelect.appendChild(addNewOption);
 
                 console.log('Departments dropdown populated successfully.');
@@ -84,6 +88,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // استدعاء الدالة عند تحميل الصفحة
     fetchDepartments();
+
+    // إعادة تعبئة القائمة عند تغيير اللغة
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'language') {
+            fetchDepartments();
+        }
+    });
 
     // معالجة حدث التغيير على القائمة المنسدلة للقسم
     departmentSelect.addEventListener('change', function() {

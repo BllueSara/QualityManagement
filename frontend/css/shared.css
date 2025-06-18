@@ -55,6 +55,7 @@ body {
   cursor: pointer;
   padding: 0 12px;      /* مسافة داخلية مناسبة */
   font-family: inherit; /* يرث ستايل الخط */
+  flex-direction: row-reverse;
 }
 
 /* زرّ الرئيسية في المنتصف */
@@ -575,7 +576,7 @@ select {
     display: inline-block;
     width: 24px;
     height: 24px;
-    background-color: yellow; /* Debugging */
+    /* background-color: yellow; */
 }
 /* في ملف الـ CSS المشترك أو داخل <style> */
 .card-icons button {
@@ -602,4 +603,40 @@ select {
 .btn-edit:focus,
 .btn-delete:focus {
   outline: none;
+}
+/* —————— Icon positioning —————— */
+[dir="rtl"] .input-icon-wrapper .icon {
+  left: 10px;
+  right: auto;
+}
+
+[dir="ltr"] .input-icon-wrapper .icon {
+  right: 10px;
+  left: auto;
+}
+
+/* —————— Input padding & text-align —————— */
+[dir="rtl"] .input-icon-wrapper input,
+[dir="rtl"] .input-icon-wrapper select {
+  padding: 10px 10px 10px 35px;
+  text-align: right;
+}
+
+[dir="ltr"] .input-icon-wrapper input,
+[dir="ltr"] .input-icon-wrapper select {
+  padding: 10px 35px 10px 10px;
+  text-align: left;
+}
+
+/* —————— Placeholder direction & alignment —————— */
+[dir="rtl"] .input-icon-wrapper input::placeholder,
+[dir="rtl"] .input-icon-wrapper select:invalid {
+  text-align: right;
+  direction: rtl;
+}
+
+[dir="ltr"] .input-icon-wrapper input::placeholder,
+[dir="ltr"] .input-icon-wrapper select:invalid {
+  text-align: left;
+  direction: ltr;
 }
