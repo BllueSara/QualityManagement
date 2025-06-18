@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>طلباتي - نظام إدارة الجودة والسلامة</title>
+  <title data-translate="my-requests">طلباتي - نظام إدارة الجودة والسلامة</title>
 
   <!-- استيراد خط Tajawal -->
   <link
@@ -36,19 +36,22 @@
           <div class="header-actions">
     <button class="back-btn" onclick="history.back()">
         <i class="fas fa-arrow-left"></i>
-        <span>رجوع</span>
+        <span data-translate="back">رجوع</span>
   </button>
   <button class="home-btn" onclick="window.location.href='index.html'">
     <i class="fas fa-home"></i>
-    <span>الرئيسية</span>
+    <span data-translate="home">الرئيسية</span>
   </button>
 </div>
   <!-- ===== المحتوى الرئيسي ===== -->
   <main class="content-wrapper">
-    <h1 class="page-title">طلباتي</h1>
+    <h1 class="page-title" data-translate="my-requests">طلباتي</h1>
 
     <!-- إجمالي الطلبات -->
-    <div class="total-count">إجمالي الطلبات: <span id="totalRequests">0</span></div>
+<div class="total-count">
+  <span data-translate="total-requests">إجمالي الطلبات:</span>
+  <span id="totalRequests">0</span>
+</div>
 
     <!-- ===== صندوق البحث والتصفية ===== -->
     <div class="search-filter-container">
@@ -58,29 +61,29 @@
         <input
           type="text"
           id="searchInput"
+          data-placeholder="search"
           placeholder="بحث..."
           autocomplete="off"
         />
       </div>
       <!-- قائمة الحالات -->
       <select id="filterStatus" class="filter-select">
-        <option value="all">جميع الحالات</option>
-        <option value="pending">قيد المراجعة</option>
-        <option value="approved">تمت الموافقة</option>
-        <!-- No rejected status for content approvals, it's either approved or pending -->
+        <option value="all" data-translate="all-statuses">جميع الحالات</option>
+        <option value="pending" data-translate="status-awaiting">قيد المراجعة</option>
+        <option value="approved" data-translate="status-approved">تمت الموافقة</option>
       </select>
-      <!-- قائمة الأقسام - This will be populated dynamically -->
+      <!-- قائمة الأقسام -->
       <select id="filterDept" class="filter-select">
-        <option value="all">جميع الأقسام</option>
+        <option value="all" data-translate="all-departments">جميع الأقسام</option>
       </select>
-        <!-- قائمة المجلدات - New filter for folders -->
+        <!-- قائمة المجلدات -->
         <select id="filterFolder" class="filter-select">
-            <option value="all">جميع المجلدات</option>
+            <option value="all" data-translate="all-folders">جميع المجلدات</option>
         </select>
       <!-- زر تصفية النتائج -->
       <button id="btnFilter" class="btn-primary btn-filter">
         <i class="fas fa-sliders-h"></i>
-        تصفية النتائج
+        <span data-translate="filter-results">تصفية النتائج</span>
       </button>
     </div>
 
@@ -89,26 +92,31 @@
       <table class="approvals-table">
         <thead>
           <tr>
-            <th class="col-file">اسم المحتوى</th>
-            <th class="col-folder">المجلد</th>
-            <th class="col-dept">المصدر</th>
-            <th class="col-status">حالة الاعتماد</th>
-            <th class="col-date">تاريخ الرفع</th>
-            <th class="col-actions">الإجراءات</th>
+            <th class="col-file" data-translate="content-name">اسم المحتوى</th>
+            <th class="col-folder" data-translate="folder">المجلد</th>
+            <th class="col-dept" data-translate="source">المصدر</th>
+            <th class="col-status" data-translate="approval-status">حالة الاعتماد</th>
+            <th class="col-date" data-translate="upload-date">تاريخ الرفع</th>
+            <th class="col-actions" data-translate="actions">الإجراءات</th>
           </tr>
         </thead>
         <tbody id="approvalsBody">
           <!-- Content items will be dynamically loaded here by JavaScript -->
         </tbody>
       </table>
-        <div id="noContentMessage" style="display: none; text-align: center; padding: 20px;">لا يوجد ملفات مرفوعة بواسطة هذا المستخدم.</div>
+        <div id="noContentMessage" style="display: none; text-align: center; padding: 20px;" data-translate="no-uploaded-files">لا يوجد ملفات مرفوعة بواسطة هذا المستخدم.</div>
     </div>
 
     <!-- نص يوضح عدد العروض -->
-    <div class="records-info">
-      عرض <span id="startRecord">0</span>-
-      <span id="endRecord">0</span> من <span id="totalCount">0</span> طلب
-    </div>
+<div class="records-info">
+  <span data-translate="showing">عرض</span>
+  <span id="startRecord">0</span>-
+  <span id="endRecord">0</span>
+  <span data-translate="of">من</span>
+  <span id="totalCount">0</span>
+  <span data-translate="requests">طلب</span>
+</div>
+
 
     <!-- ===== أزرار التنقل بين الصفحات ===== -->
     <div class="pagination">
@@ -125,6 +133,7 @@
   </main>
 
   <!-- سكربت جافاسكربت للبحث والتصفية والصفحات -->
+  <script src="/frontend/js/language.js"></script>
   <script src="/frontend/js/approvals.js"></script>
 </body>
 </html>

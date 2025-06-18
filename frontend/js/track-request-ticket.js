@@ -1,4 +1,10 @@
 document.addEventListener('DOMContentLoaded', async () => {
+  // Apply language settings
+  const currentLang = localStorage.getItem('language') || 'ar';
+  if (typeof setLanguage === 'function') {
+    setLanguage(currentLang);
+  }
+
   const params = new URLSearchParams(window.location.search);
   const ticketId = params.get('id');
 
@@ -16,18 +22,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // القسم التالي
     document.querySelector('.next-dept .dept-name').textContent =
-      isClosed ? '—' : (pending.length ? pending[0].department : '—');
+      isClosed ? getTranslation('no-data') : (pending.length ? pending[0].department : getTranslation('no-data'));
 
     // عنوان الحالة
-    document.querySelector('.track-status-title').textContent =
-      isClosed ? 'مغلقة' : `قيد ${content.current_status} في ${content.responding_dept_name}`;
+    const statusText = isClosed ? getTranslation('closed') : `${getTranslation('pending')} في ${content.responding_dept_name}`;
+    document.querySelector('.track-status-title').textContent = statusText;
 
     // آخر تحديث
     const updatedAt = new Date(content.created_at);
-    document.querySelector('.last-update').textContent =
-      `آخر تحديث: ${updatedAt.toLocaleDateString('ar-SA', {
-        year: 'numeric', month: 'long', day: 'numeric'
-      })}`;
+    const dateOptions = {
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric'
+    };
+    const formattedDate = updatedAt.toLocaleDateString(
+      currentLang === 'ar' ? 'ar-SA' : 'en-US', 
+      dateOptions
+    );
+    document.querySelector('.last-update').textContent = `${getTranslation('last-update')} ${formattedDate}`;
 
     // التقدم
 const completedCount = timeline.length;
@@ -49,8 +61,10 @@ const progressPercent = totalSteps > 0
     document.querySelector('.percentage-text').textContent = `${progressPercent}%`;
 
     // النص
-    document.querySelector('.progress-steps').textContent =
-      `${completedCount} من ${totalSteps} خطوات مكتملة`;
+    const progressText = currentLang === 'ar' 
+      ? `${completedCount} من ${totalSteps} خطوات مكتملة`
+      : `${completedCount} of ${totalSteps} steps completed`;
+    document.querySelector('.progress-steps').textContent = progressText;
 
     // بناء التايملاين
     const container = document.querySelector('.timeline');
@@ -68,9 +82,20 @@ if (item.status === 'رد') {
   stateClass = 'waiting';
 }
 
-
       const date = new Date(item.created_at)
-        .toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
+        .toLocaleDateString(currentLang === 'ar' ? 'ar-SA' : 'en-US', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        });
+
+      // Translate status text
+      let statusText = item.status;
+      if (item.status === 'رد') statusText = getTranslation('reply');
+      else if (item.status === 'معتمد') statusText = getTranslation('approved');
+      else if (item.status === 'مغلق') statusText = getTranslation('closed');
+      else if (item.status === 'قيد المراجعة') statusText = getTranslation('pending');
+      else if (item.status === 'تم الإرسال') statusText = getTranslation('sent');
 
 const badgeClass = 
   stateClass === 'completed' ? 'approved-badge' :
@@ -99,7 +124,7 @@ const badgeClass =
               </div>
               <div class="timeline-details">
                 <span class="timeline-date">${date}</span>
-                <span class="status-badge ${badgeClass}">${item.status}</span>
+                <span class="status-badge ${badgeClass}">${statusText}</span>
               </div>
             </div>
             ${item.comments ? `<p class="timeline-note">${item.comments}</p>` : ''}
@@ -123,8 +148,8 @@ const badgeClass =
                   <span>${dept.department}</span>
                 </div>
                 <div class="timeline-details">
-                  <span class="timeline-date">متوقع: —</span>
-                  <span class="status-badge waiting-badge">في الانتظار</span>
+                  <span class="timeline-date">${getTranslation('expected')} —</span>
+                  <span class="status-badge waiting-badge">${getTranslation('waiting')}</span>
                 </div>
               </div>
             </div>
@@ -135,6 +160,6 @@ const badgeClass =
 
   } catch (err) {
     // console.error(err);
-    alert("حدث خطأ أثناء تحميل البيانات.");
+    alert(getTranslation('error-loading-data'));
   }
 });

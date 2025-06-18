@@ -1,9 +1,15 @@
 document.addEventListener("DOMContentLoaded", async () => {
-  const params = new URLSearchParams(window.location.search);
-  const contentId = params.get("id");
-  const contentType = params.get("type") || "department";
+const params = new URLSearchParams(window.location.search);
+const rawId = params.get("id");
+const contentId = rawId?.startsWith("dept-") ? rawId.replace("dept-", "") : rawId;
+const contentType = params.get("type") || "department";
+const currentLang = localStorage.getItem('language') || 'ar';
 
-  if (!contentId) return alert("معرف الطلب غير موجود!");
+
+  if (!contentId) {
+    alert(getTranslation('request-id-missing'));
+    return;
+  }
 
   try {
     const endpoint = contentType === 'committee' ? 'committees/contents/track' : 'contents/track';
@@ -16,7 +22,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const data = await res.json();
 
     if (!data || data.status !== 'success') {
-      return alert("فشل تحميل معلومات الطلب");
+      alert(getTranslation('failed-to-load-request'));
+      return;
     }
 
     const { content, timeline, pending } = data;
@@ -24,43 +31,45 @@ document.addEventListener("DOMContentLoaded", async () => {
     // القسم التالي
     const nextDeptElem = document.querySelector('.next-dept .dept-name');
     if (timeline.length === 0 && pending.length === 0) {
-      nextDeptElem.textContent = 'لم يتم تعيين أي جهة لاعتماد الطلب بعد';
+      nextDeptElem.textContent = getTranslation('no-department-assigned');
     } else if (timeline.length === 0 && pending.length > 0) {
-      nextDeptElem.textContent = 'في انتظار التوقيع من القسم الأول';
+      nextDeptElem.textContent = getTranslation('waiting-first-department');
     } else if (pending.length > 0) {
       const next = pending[0];
       nextDeptElem.textContent = next 
         ? `${next.department} - ${next.approver}` 
         : '---';
     } else {
-      nextDeptElem.textContent = 'تم التوقيع من الجميع ';
+      nextDeptElem.textContent = getTranslation('all-departments-signed');
     }
 
     // آخر تحديث
     const lastUpdateElem = document.querySelector('.last-update');
     const latestDate = timeline.at(-1)?.created_at || content.created_at;
-    lastUpdateElem.textContent = `آخر تحديث: ${new Date(latestDate).toLocaleDateString('ar-EG')}`;
+    const formattedDate = new Date(latestDate).toLocaleDateString(currentLang === 'ar' ? 'ar-EG' : 'en-US');
+    lastUpdateElem.textContent = `${getTranslation('last-update')}: ${formattedDate}`;
 
     // الحالة الرئيسية
     const statusTitle = document.querySelector('.track-status-title');
-    let statusText = 'قيد المراجعة';
+    let statusText = getTranslation('under-review');
 
     if (timeline.length === 0 && pending.length === 0) {
-      statusText = 'لم يتم الاعتماد بعد';
+      statusText = getTranslation('not-approved-yet');
     } else if (timeline.some(log => log.status === 'rejected')) {
-      statusText = 'مرفوض';
+      statusText = getTranslation('rejected');
     } else if (content.approval_status === 'approved') {
-      statusText = 'معتمد';
+      statusText = getTranslation('approved');
     }
 
-    statusTitle.textContent = `الحالة: ${statusText}`;
+    statusTitle.textContent = `${getTranslation('status')}: ${statusText}`;
 
     // نسبة التقدم
     const stepsCompleted = timeline.filter(log => log.status === 'approved').length;
     const stepsTotal = stepsCompleted + pending.length;
     const percent = stepsTotal > 0 ? Math.round((stepsCompleted / stepsTotal) * 100) : 0;
 
-    document.querySelector('.progress-steps').textContent = `${stepsCompleted} من ${stepsTotal} خطوات مكتملة`;
+    document.querySelector('.progress-steps').textContent = 
+      `${stepsCompleted} ${getTranslation('of')} ${stepsTotal} ${getTranslation('steps-completed')}`;
     document.querySelector('.percentage-text').textContent = `${percent}%`;
     document.querySelector('.circle').setAttribute('stroke-dasharray', `${percent},100`);
 
@@ -85,6 +94,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       item.classList.add('timeline-item', statusClass);
 
+      const formattedDate = log.created_at 
+        ? new Date(log.created_at).toLocaleDateString(currentLang === 'ar' ? 'ar-EG' : 'en-US')
+        : getTranslation('waiting');
+
       item.innerHTML = `
         <div class="icon-wrapper">
           <div class="icon-bg ${statusClass}-bg">
@@ -94,27 +107,25 @@ document.addEventListener("DOMContentLoaded", async () => {
         <div class="timeline-content">
           <h3 class="timeline-dept">${log.department} - ${log.approver}</h3>
           <div class="timeline-details">
-            <span class="timeline-date">
-              ${log.created_at ? new Date(log.created_at).toLocaleDateString('ar-EG') : 'في الانتظار'}
-            </span>
+            <span class="timeline-date">${formattedDate}</span>
             <span class="status-badge ${badgeClass}">
               ${
                 log.status === 'approved'
-                  ? 'معتمد'
+                  ? getTranslation('approved')
                   : log.status === 'rejected'
-                  ? 'مرفوض'
-                  : 'قيد الانتظار'
+                  ? getTranslation('rejected')
+                  : getTranslation('waiting')
               }
             </span>
           </div>
-          <p class="timeline-note">${log.comments || 'بدون ملاحظات'}</p>
+          <p class="timeline-note">${log.comments || getTranslation('no-notes')}</p>
         </div>
       `;
       timelineContainer.appendChild(item);
     });
 
   } catch (err) {
-    // console.error('Error:', err);
-    alert("حدث خطأ أثناء تحميل البيانات.");
+    console.error('Error:', err);
+    alert(getTranslation('error-loading-data'));
   }
 });

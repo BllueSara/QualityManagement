@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>الاعتمادات المرسلة لك - نظام إدارة الجودة والسلامة</title>
+    <title data-translate="approvals-received-title">الاعتمادات المرسلة لك - نظام إدارة الجودة والسلامة</title>
 
     <!-- استيراد خط Tajawal -->
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet" />
@@ -12,6 +12,7 @@
     <!-- Font Awesome للأيقونات -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
         crossorigin="anonymous" />
+  <link rel="stylesheet" href="../css/shared.css"/>
 
     <!-- ربط ملف التنسيقات -->
     <link rel="stylesheet" href="/frontend/css/approvals-recived.css" />
@@ -19,31 +20,32 @@
 
 <body>
     <!-- ===== الهيدر العلوي ===== -->
-  <header class="main-header">
-    <div class="header-container">
-      <div class="system-title">
-          <img src="/frontend/images/system-title.png" alt="نظام إدارة الجودة والسلامة">
-  </div>
-       <div class="hospital-logo">
+    <header class="main-header">
+        <div class="header-container">
+            <div class="system-title">
+                <img src="/frontend/images/system-title.png" alt="نظام إدارة الجودة والسلامة">
+            </div>
+            <div class="hospital-logo">
                 <img src="/frontend/images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز">
             </div>
+        </div>
+    </header>
+    <div class="header-actions">
+        <button class="back-btn" onclick="history.back()">
+            <i class="fas fa-arrow-left"></i>
+            <span data-translate="back">رجوع</span>
+        </button>
+        <button class="home-btn" onclick="window.location.href='index.html'">
+            <i class="fas fa-home"></i>
+            <span data-translate="home">الرئيسية</span>
+        </button>
     </div>
-  </header>
-        <div class="header-actions">
-    <button class="back-btn" onclick="history.back()">
-        <i class="fas fa-arrow-left"></i>
-        <span>رجوع</span>
-  </button>
-  <button class="home-btn" onclick="window.location.href='index.html'">
-    <i class="fas fa-home"></i>
-    <span>الرئيسية</span>
-  </button>
-</div>
+
     <!-- ===== المحتوى الرئيسي ===== -->
     <main class="content-wrapper">
         <!-- عنوان الصفحة -->
         <div class="page-header">
-            <h1 class="page-title">الاعتمادات المرسلة لك</h1>
+            <h1 class="page-title" data-translate="approvals-received">الاعتمادات المرسلة لك</h1>
         </div>
 
         <!-- ===== شريط البحث والفلاتر ===== -->
@@ -51,23 +53,22 @@
             <!-- حقل البحث -->
             <div class="search-box">
                 <i class="fas fa-search search-icon"></i>
-                <input type="text" id="searchInput" placeholder="البحث في الملفات..." autocomplete="off" />
+                <input type="text" id="searchInput" data-placeholder="search-files" placeholder="البحث في الملفات..." autocomplete="off" />
             </div>
             <!-- فلتر التاريخ -->
             <button id="dateFilterBtn" class="filter-btn">
-                <i class="fas fa-calendar-alt"></i> اختر التاريخ
+                <i class="fas fa-calendar-alt"></i> <span data-translate="select-date">اختر التاريخ</span>
             </button>
             <!-- فلتر الحالة -->
             <select id="statusFilter" class="filter-select">
-                <option value="all">جميع الحالات</option>
-                <option value="pending">قيد الانتظار</option>
-                <option value="approved">معتمد</option>
-                <option value="rejected">مرفوض</option>
+                <option value="all" data-translate="all-statuses">جميع الحالات</option>
+                <option value="pending" data-translate="pending">قيد الانتظار</option>
+                <option value="approved" data-translate="approved">معتمد</option>
+                <option value="rejected" data-translate="rejected">مرفوض</option>
             </select>
             <!-- فلتر الأقسام -->
             <select id="deptFilter" class="filter-select">
-                <option value="all">جميع الأقسام</option>
-            
+                <option value="all" data-translate="all-departments">جميع الأقسام</option>
             </select>
         </div>
 
@@ -76,135 +77,109 @@
             <table class="approvals-table">
                 <thead>
                     <tr>
-                        <th class="col-file">اسم الملف</th>
-                        <th class="col-dept">القسم</th>
-                        <th class="col-response">الرد</th>
-                        <th class="col-actions">الاعتماد</th>
+                        <th class="col-file" data-translate="file-name">اسم الملف</th>
+                        <th class="col-dept" data-translate="department">القسم</th>
+                        <th class="col-response" data-translate="response">الرد</th>
+                        <th class="col-actions" data-translate="approval">الاعتماد</th>
                     </tr>
                 </thead>
                 <tbody id="approvalsBody">
-               
                 </tbody>
             </table>
         </div>
     </main>
-      <!-- ===== توقيع (Signature) Modal ===== -->
-<!-- ===== توقيع (Signature) Modal ===== -->
-<div id="signatureModal" class="modal-overlay" style="display: none;">
-  <div class="modal">
-    <!-- رأس المودال -->
-    <div class="modal-header">
-      <button class="modal-close">&times;</button>
-      <h2 class="modal-title">توقيع</h2>
-    </div>
-    <!-- جسم المودال -->
-    <div class="modal-body">
-      <div class="canvas-wrapper">
-        <canvas id="signatureCanvas"></canvas>
 
-      </div>
-    </div>
-    <!-- تذييل المودال -->
-    <div class="modal-footer">
-      <button id="btnConfirmSignature" class="btn-confirm">تأكيد التوقيع</button>
-      <button id="btnClear" class="btn-cancel">مسح</button>
-    </div>
-  </div>
-</div>
-
-<!-- ===== رفض الطلب Modal ===== -->
-<div id="rejectModal" class="modal-overlay" style="display: none;">
-  <div class="modal">
-    <!-- رأس المودال -->
-    <div class="modal-header">
-      <button class="modal-close" data-modal="rejectModal">&times;</button>
-      <h2 class="modal-title" style="color: #2563eb;">رفض الطلب</h2>
-    </div>
-    <!-- جسم المودال -->
-    <div class="modal-body">
-      <label for="rejectReason" class="body-label">يرجى كتابة سبب الرفض</label>
-      <textarea id="rejectReason" class="body-textarea" rows="4"></textarea>
-    </div>
-    <!-- تذييل المودال -->
-    <div class="modal-footer">
-      <button id="btnSendReason" class="btn-confirm">إرسال السبب</button>
-      <button class="btn-cancel" data-modal="rejectModal">إلغاء</button>
-    </div>
-  </div>
-</div>
-<!-- ===== مودال QR Code ===== -->
-<!-- ===== مودال QR Code ===== -->
-<div id="qrModal" class="modal-overlay" style="display:none;">
-  <div class="modal">
-    <!-- رأس المودال -->
-    <div class="modal-header">
-      <h2 class="modal-title">الاعتماد الإلكتروني</h2>
-      <button class="modal-close" data-modal="qrModal">&times;</button>
-    </div>
-
-    <!-- جسم المودال -->
-    <div class="modal-body">
-      <p style="font-size: 16px; color: #333; margin-bottom: 20px;">
-        سيتم اعتماد هذا الملف بشكل إلكتروني ولن تكون هناك حاجة للتوقيع اليدوي.
-      </p>
-      <!-- يمكنك لاحقًا توليد QR Code هنا -->
-      <div id="qrCodePreview"></div>
-    </div>
-
-    <!-- تذييل المودال -->
-    <div class="modal-footer">
-      <button id="btnElectronicApprove" class="btn-confirm">اعتماد إلكتروني</button>
-
-    </div>
-  </div>
-</div>
-
-<!-- ===== توقيع بالنيابة عن Modal ===== -->
-<div id="delegateModal" class="modal-overlay" style="display:none;">
-  <div class="modal">
-    <!-- رأس المودال -->
-    <div class="modal-header">
-      <button class="modal-close" data-modal="delegateModal">&times;</button>
-      <h2 class="modal-title">توقيع بالنيابة عن</h2>
-    </div>
-    <!-- جسم المودال -->
-    <div class="modal-body">
-      <form id="delegateForm" novalidate>
-     
-        <div class="form-group">
-          <label for="delegateDept">القسم</label>
-          <select id="delegateDept" name="delegateDept" required>
-            <option value="" disabled selected>اختر القسم</option>
-           
-          </select>
+    <!-- ===== توقيع (Signature) Modal ===== -->
+    <div id="signatureModal" class="modal-overlay" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <button class="modal-close">&times;</button>
+                <h2 class="modal-title" data-translate="signature">توقيع</h2>
+            </div>
+            <div class="modal-body">
+                <div class="canvas-wrapper">
+                    <canvas id="signatureCanvas"></canvas>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btnConfirmSignature" class="btn-confirm" data-translate="confirm-signature">تأكيد التوقيع</button>
+                <button id="btnClear" class="btn-cancel" data-translate="clear">مسح</button>
+            </div>
         </div>
-
-        <div class="form-group">
-          <label for="delegateUser">اسم المستخدم</label>
-
-          <select id="delegateUser" name="delegateUser" required>
-            <option value="" disabled selected>اختر المستخدم</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="delegateNotes">ملاحظات</label>
-          <textarea id="delegateNotes" name="delegateNotes" rows="4" placeholder=""></textarea>
-        </div>
-      </form>
     </div>
-    <!-- تذييل المودال -->
-    <div class="modal-footer">
-      <button id="btnDelegateConfirm" class="btn-confirm">تأكيد</button>
+
+    <!-- ===== رفض الطلب Modal ===== -->
+    <div id="rejectModal" class="modal-overlay" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <button class="modal-close" data-modal="rejectModal">&times;</button>
+                <h2 class="modal-title" style="color: #2563eb;" data-translate="reject-request">رفض الطلب</h2>
+            </div>
+            <div class="modal-body">
+                <label for="rejectReason" class="body-label" data-translate="enter-reject-reason">يرجى كتابة سبب الرفض</label>
+                <textarea id="rejectReason" class="body-textarea" rows="4"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button id="btnSendReason" class="btn-confirm" data-translate="send-reason">إرسال السبب</button>
+                <button class="btn-cancel" data-modal="rejectModal" data-translate="cancel">إلغاء</button>
+            </div>
+        </div>
     </div>
-  </div>
-</div>
 
-<!-- QRCode.js من CDN لتوليد QR -->
+    <!-- ===== مودال QR Code ===== -->
+    <div id="qrModal" class="modal-overlay" style="display:none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title" data-translate="electronic-approval">الاعتماد الإلكتروني</h2>
+                <button class="modal-close" data-modal="qrModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 16px; color: #333; margin-bottom: 20px;" data-translate="electronic-approval-desc">
+                    سيتم اعتماد هذا الملف بشكل إلكتروني ولن تكون هناك حاجة للتوقيع اليدوي.
+                </p>
+                <div id="qrCodePreview"></div>
+            </div>
+            <div class="modal-footer">
+                <button id="btnElectronicApprove" class="btn-confirm" data-translate="electronic-approve">اعتماد إلكتروني</button>
+            </div>
+        </div>
+    </div>
 
+    <!-- ===== توقيع بالنيابة عن Modal ===== -->
+    <div id="delegateModal" class="modal-overlay" style="display:none;">
+        <div class="modal">
+            <div class="modal-header">
+                <button class="modal-close" data-modal="delegateModal">&times;</button>
+                <h2 class="modal-title" data-translate="sign-on-behalf">توقيع بالنيابة عن</h2>
+            </div>
+            <div class="modal-body">
+                <form id="delegateForm" novalidate>
+                    <div class="form-group">
+                        <label for="delegateDept" data-translate="department">القسم</label>
+                        <select id="delegateDept" name="delegateDept" required>
+                            <option value="" disabled selected data-translate="select-department">اختر القسم</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="delegateUser" data-translate="user-name">اسم المستخدم</label>
+                        <select id="delegateUser" name="delegateUser" required>
+                            <option value="" disabled selected data-translate="select-user">اختر المستخدم</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="delegateNotes" data-translate="notes">ملاحظات</label>
+                        <textarea id="delegateNotes" name="delegateNotes" rows="4" placeholder=""></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="btnDelegateConfirm" class="btn-confirm" data-translate="confirm">تأكيد</button>
+            </div>
+        </div>
+    </div>
 
-    <script src="../js/approvals-recived.js"></script>
-
+    <script src="/frontend/js/language.js"></script>
+    <script src="/frontend/js/approvals-recived.js"></script>
 </body>
 
 </html>

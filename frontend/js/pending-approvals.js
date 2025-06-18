@@ -40,10 +40,57 @@ function showToast(message, type = 'info', duration = 3000) {
 
 document.addEventListener('DOMContentLoaded', async () => {
   try {
+    // Set initial direction based on language
+    const currentLang = localStorage.getItem('language') || 'ar';
+    updatePageDirection(currentLang);
+    
     await loadPendingApprovals();
     await initDropdowns();
   } catch (err) {
     console.error('Error initializing page:', err);
+  }
+});
+
+// Add function to update page direction
+function updatePageDirection(lang) {
+  const mainContent = document.querySelector('.file-card');
+  if (mainContent) {
+    mainContent.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    mainContent.style.textAlign = lang === 'ar' ? 'right' : 'left';
+  }
+
+  // Update table direction
+  const table = document.querySelector('.approvals-table');
+  if (table) {
+    table.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  }
+
+  // Update dropdowns direction
+  document.querySelectorAll('.dropdown-custom').forEach(dropdown => {
+    dropdown.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  });
+
+  // Update search inputs direction
+  document.querySelectorAll('.dropdown-search').forEach(input => {
+    input.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  });
+
+  // Update buttons direction
+  document.querySelectorAll('.btn-send, .btn-view').forEach(btn => {
+    btn.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  });
+
+  // Update badges direction
+  document.querySelectorAll('.badge').forEach(badge => {
+    badge.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  });
+}
+
+// Add event listener for language changes
+window.addEventListener('storage', function(e) {
+  if (e.key === 'language') {
+    const lang = localStorage.getItem('language') || 'ar';
+    updatePageDirection(lang);
   }
 });
 
@@ -107,7 +154,7 @@ async function loadPendingApprovals() {
       return `<span class="badge">${name}</span>`;
     }).join('');
 
-    const contentType = item.type === 'committee' ? 'ملف لجنة' : 'تقرير قسم';
+    const contentType = item.type === 'committee' ? getTranslation('committee-file') : getTranslation('department-report');
 
     const tr = document.createElement('tr');
     tr.dataset.id = item.id;
@@ -120,32 +167,32 @@ async function loadPendingApprovals() {
       </td>
       <td>
         <div class="dropdown-custom" data-type="dept">
-          <button class="dropdown-btn">اختر القسم</button>
+          <button class="dropdown-btn">${getTranslation('select-department')}</button>
           <div class="dropdown-content">
-            <input type="text" class="dropdown-search" placeholder="ابحث...">
+            <input type="text" class="dropdown-search" placeholder="${getTranslation('search-department')}">
           </div>
         </div>
       </td>
       <td>
         <div class="dropdown-custom" data-type="users">
-          <button class="dropdown-btn" disabled>اختر القسم أولاً</button>
+          <button class="dropdown-btn" disabled>${getTranslation('select-department-first')}</button>
           <div class="dropdown-content">
-            <input class="dropdown-search" placeholder="ابحث...">
+            <input class="dropdown-search" placeholder="${getTranslation('search-person')}">
           </div>
         </div>
       </td>
       <td class="selected-cell">${approverBadges}</td>
       <td>
         <span class="${hasApprovers ? 'badge-sent' : 'badge-pending'}">
-          ${hasApprovers ? 'تم الإرسال' : 'بانتظار الإرسال'}
+          ${hasApprovers ? getTranslation('sent') : getTranslation('waiting-send')}
         </span>
       </td>
       <td>
         <button class="btn-send" ${hasApprovers ? 'disabled' : ''} style="padding:6px 12px;">
-          ${hasApprovers ? '<i class="bi bi-check-circle"></i> تم الإرسال' : '<i class="bi bi-send"></i> إرسال'}
+          ${hasApprovers ? `<i class="bi bi-check-circle"></i> ${getTranslation('sent')}` : `<i class="bi bi-send"></i> ${getTranslation('send')}`}
         </button>
         ${item.file_path ? `<button class="btn-view" data-file-path="${item.file_path}" style="margin-right: 5px; padding: 6px 12px;">
-          <i class="bi bi-eye"></i> عرض
+          <i class="bi bi-eye"></i> ${getTranslation('view')}
         </button>` : ''}
       </td>
     `;
@@ -162,7 +209,7 @@ async function loadPendingApprovals() {
         if (filePath) {
           window.open(`${baseUrl}/${filePath}`, '_blank');
         } else {
-          showToast('رابط الملف غير متوفر.', 'error');
+          showToast(getTranslation('file-link-unavailable'), 'error');
         }
       });
     }
@@ -183,7 +230,7 @@ async function initDropdowns() {
 
     const deptBtn  = deptDrop.querySelector('.dropdown-btn');
     const deptList = deptDrop.querySelector('.dropdown-content');
-    deptList.innerHTML = `<input type="text" class="dropdown-search" placeholder="ابحث القسم...">`;
+    deptList.innerHTML = `<input type="text" class="dropdown-search" placeholder="${getTranslation('search-department')}">`;
     departments.forEach(d => {
       const itm = document.createElement('div');
       itm.className     = 'dropdown-item';
@@ -213,12 +260,12 @@ async function initDropdowns() {
         selectedDepts = Array.from(deptList.querySelectorAll('.dropdown-item.selected'))
                               .map(i => ({ id: i.dataset.value, name: i.textContent }));
         if (selectedDepts.length === 0) {
-          deptBtn.textContent = 'اختر القسم';
+          deptBtn.textContent = getTranslation('select-department');
           selectedUsers = [];
         } else if (selectedDepts.length === 1) {
           deptBtn.textContent = selectedDepts[0].name;
         } else {
-          deptBtn.textContent = `${selectedDepts.length} أقسام`;
+          deptBtn.textContent = `${selectedDepts.length} ${getTranslation('departments-count')}`;
         }
         deptList.classList.remove('active');
         await rebuildUsersList();
@@ -229,16 +276,16 @@ async function initDropdowns() {
     async function rebuildUsersList() {
       const uBtn  = userDrop.querySelector('.dropdown-btn');
       const uList = userDrop.querySelector('.dropdown-content');
-      uList.innerHTML = `<input type="text" class="dropdown-search" placeholder="ابحث الشخص...">`;
+      uList.innerHTML = `<input type="text" class="dropdown-search" placeholder="${getTranslation('search-person')}">`;
 
       if (!selectedDepts.length) {
         uBtn.disabled = true;
-        uBtn.textContent = 'اختر القسم أولاً';
+        uBtn.textContent = getTranslation('select-department-first');
         return;
       }
 
       uBtn.disabled = false;
-      uBtn.textContent = selectedUsers.length ? `${selectedUsers.length} مختار` : 'اختر الأشخاص';
+      uBtn.textContent = selectedUsers.length ? `${selectedUsers.length} ${getTranslation('selected-count')}` : getTranslation('select-people');
 
       for (const dept of selectedDepts) {
         const divider = document.createElement('div');
@@ -297,7 +344,7 @@ async function initDropdowns() {
           selectedUsers = selectedUsers.filter(x => x.id !== userId);
         }
 
-        btn.textContent = selectedUsers.length ? `${selectedUsers.length} مختار` : 'اختر الأشخاص';
+        btn.textContent = selectedUsers.length ? `${selectedUsers.length} ${getTranslation('selected-count')}` : getTranslation('select-people');
 
         const selCell = row.querySelector('.selected-cell');
         selCell.innerHTML = '';
@@ -313,7 +360,7 @@ async function initDropdowns() {
 
     sendBtn.addEventListener('click', async () => {
       if (!selectedUsers.length) {
-        alert('الرجاء اختيار مستخدمين أولاً.');
+        alert(getTranslation('please-select-users'));
         return;
       }
 
@@ -333,7 +380,7 @@ async function initDropdowns() {
           if (statusSpan) {
             statusSpan.classList.remove('badge-pending');
             statusSpan.classList.add('badge-sent');
-            statusSpan.textContent = 'تم الإرسال';
+            statusSpan.textContent = getTranslation('sent');
           }
 
           const selectedCell = row.querySelector('.selected-cell');
@@ -347,11 +394,11 @@ async function initDropdowns() {
 
           await loadPendingApprovals();
         } else {
-          showToast('فشل إرسال المعتمدين', 'error');
+          showToast(getTranslation('send-failed'), 'error');
         }
       } catch (err) {
         console.error('فشل الإرسال:', err);
-        showToast('فشل إرسال المعتمدين', 'error');
+        showToast(getTranslation('send-failed'), 'error');
       }
     });
   });

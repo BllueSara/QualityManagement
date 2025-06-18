@@ -1,62 +1,108 @@
 document.addEventListener('DOMContentLoaded', () => {
-  // احصل على مُعرّف التذكرة من الـ URL
+  // Apply language settings
+  const currentLang = localStorage.getItem('language') || 'ar';
+  if (typeof setLanguage === 'function') {
+    setLanguage(currentLang);
+  }
+
   const params = new URLSearchParams(window.location.search);
   const ticketId = params.get('id');
   if (!ticketId) {
-    alert('لم يتم العثور على معرف التذكرة');
+    alert(getTranslation('ticket-not-found'));
     return;
   }
-const token = localStorage.getItem('token');
-  // اجلب بيانات التذكرة من الخادم
- fetch(`http://localhost:3006/api/tickets/${ticketId}`, {
-  headers: {
-    'Authorization': `Bearer ${token}`
+
+  const token = localStorage.getItem('token');
+
+  // 🟡 الدالة التي تجلب وتعرض الردود
+  async function reloadReplies() {
+    try {
+      const res = await fetch(`http://localhost:3006/api/tickets/${ticketId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const ticket = await res.json();
+
+      const timeline = document.querySelector('.timeline-content');
+      timeline.innerHTML = '';
+      ticket.replies.forEach(reply => {
+        const item = document.createElement('div');
+        item.className = 'timeline-item';
+        
+        // Format date based on current language
+        const dateOptions = {
+          day: 'numeric', 
+          month: 'long', 
+          year: 'numeric', 
+          hour: 'numeric', 
+          minute: 'numeric'
+        };
+        
+        const formattedDate = new Date(reply.created_at).toLocaleString(
+          currentLang === 'ar' ? 'ar-EG' : 'en-US', 
+          dateOptions
+        );
+        
+        item.innerHTML = `
+          <div class="timeline-dot"></div>
+          <div class="timeline-body">
+            <div class="timeline-date">${formattedDate}</div>
+            <div class="timeline-text">${reply.text}</div>
+            <div class="timeline-author">${reply.author || getTranslation('user')}</div>
+          </div>
+        `;
+        timeline.appendChild(item);
+      });
+    } catch (err) {
+      alert(getTranslation('error-loading-replies'));
+    }
   }
-})
+
+  // جلب بيانات التذكرة
+  fetch(`http://localhost:3006/api/tickets/${ticketId}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  })
     .then(response => {
       if (!response.ok) throw new Error(`خطأ في الشبكة: ${response.status}`);
       return response.json();
     })
     .then(ticket => {
-      // دالة مساعدة لعرض التاريخ بنمط عربي
-      const formatDate = iso => new Date(iso).toLocaleDateString('ar-EG', {
-        year: 'numeric', month: 'long', day: 'numeric'
-      });
+      const formatDate = iso => new Date(iso).toLocaleDateString(
+        currentLang === 'ar' ? 'ar-EG' : 'en-US', 
+        {
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric'
+        }
+      );
 
-      // مثال على كيفية تعبئة الحقول
       document.querySelector('[data-field="event-date"]').textContent = formatDate(ticket.event_date);
-document.querySelector('[data-field="event-time"]').textContent =
-  ticket.event_time;       document.querySelector('[data-field="event-location"]').textContent = ticket.event_location;
+      document.querySelector('[data-field="event-time"]').textContent = ticket.event_time;
+      document.querySelector('[data-field="event-location"]').textContent = ticket.event_location;
       document.querySelector('[data-field="reporting-dept"]').textContent = ticket.reporting_dept_name;
       document.querySelector('[data-field="responding-dept"]').textContent = ticket.responding_dept_name;
-
-      // بيانات المريض
       document.querySelector('[data-field="patient-name"]').textContent = ticket.patient_name || '-';
       document.querySelector('[data-field="medical-record-no"]').textContent = ticket.medical_record_no || '-';
       document.querySelector('[data-field="gender"]').textContent = ticket.gender;
-
-      // نوع البلاغ
       document.querySelector('[data-field="report-type"]').textContent = ticket.report_type;
-
-      // وصف الحدث والمرفقات
       document.querySelector('[data-field="event-description"]').textContent = ticket.event_description;
+
       const attachmentsEl = document.querySelector('.attachments');
       if (ticket.attachments && ticket.attachments.length) {
-        attachmentsEl.innerHTML = `<i class="fas fa-paperclip"></i> ${ticket.attachments.length} مرفقات`;
+        const currentLang = localStorage.getItem('language') || 'ar';
+        const attachmentText = currentLang === 'ar' 
+          ? `${ticket.attachments.length} مرفقات`
+          : `${ticket.attachments.length} attachments`;
+        attachmentsEl.innerHTML = `<i class="fas fa-paperclip"></i> ${attachmentText}`;
       } else {
         attachmentsEl.style.display = 'none';
       }
 
-      // بيانات المبلغ
       document.querySelector('[data-field="reporter-name"]').textContent = ticket.reporter_name;
       document.querySelector('[data-field="reporter-phone"]').textContent = ticket.reporter_phone;
       document.querySelector('[data-field="reporter-position"]').textContent = ticket.reporter_position;
       document.querySelector('[data-field="reporter-email"]').textContent = ticket.reporter_email;
-
-      // الإجراءات المتخذة
       document.querySelector('[data-field="actions-taken"]').textContent = ticket.actions_taken;
 
-      // تصنيف الحدث
       const tagsContainer = document.querySelector('.tags-container');
       tagsContainer.innerHTML = '';
       ticket.classifications.forEach(cls => {
@@ -66,7 +112,6 @@ document.querySelector('[data-field="event-time"]').textContent =
         tagsContainer.appendChild(span);
       });
 
-      // تفاصيل الإصابة
       document.querySelector('[data-field="had-injury"]').textContent = ticket.had_injury;
       if (ticket.had_injury === 'نعم') {
         document.querySelector('[data-field="injury-type"]').textContent = ticket.injury_type;
@@ -74,42 +119,25 @@ document.querySelector('[data-field="event-time"]').textContent =
         document.querySelector('[data-field="injury-type"]').closest('.field-value').style.display = 'none';
       }
 
-      // الردود السابقة
-      const timeline = document.querySelector('.timeline-content');
-      timeline.innerHTML = '';
-      ticket.replies.forEach(reply => {
-        const item = document.createElement('div');
-        item.className = 'timeline-item';
-        item.innerHTML = `
-          <div class="timeline-dot"></div>
-          <div class="timeline-body">
-            <div class="timeline-date">${new Date(reply.created_at).toLocaleString('ar-EG', {day:'numeric',month:'long',year:'numeric',hour:'numeric',minute:'numeric'})}</div>
-            <div class="timeline-text">${reply.text}</div>
-            <div class="timeline-author">${reply.author}</div>
-          </div>
-        `;
-        timeline.appendChild(item);
-      });
+      // 🟢 هنا نستدعي الردود من نفس الدالة
+      reloadReplies();
     })
-    
     .catch(error => {
-      // console.error('حدث خطأ أثناء جلب بيانات التذكرة:', error);
-      alert('حدث خطأ أثناء جلب بيانات التذكرة.');
+      alert(getTranslation('error-loading-ticket'));
     });
 
-  // بعد بناء الـ timeline…
   const replyTextarea = document.getElementById('replyTextarea');
-  const submitReply   = document.getElementById('submitReply');
+  const submitReply = document.getElementById('submitReply');
 
   submitReply.addEventListener('click', async () => {
     const text = replyTextarea.value.trim();
     if (!text) {
-      alert('اكتب ردّك أولاً');
+      alert(getTranslation('write-reply-first'));
       return;
     }
 
     submitReply.disabled = true;
-    submitReply.textContent = 'جاري الإرسال…';
+    submitReply.textContent = getTranslation('sending');
 
     try {
       const res = await fetch(`http://localhost:3006/api/tickets/${ticketId}/replies`, {
@@ -120,46 +148,53 @@ document.querySelector('[data-field="event-time"]').textContent =
         },
         body: JSON.stringify({ text })
       });
+
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.message || res.statusText);
       }
-      const newReply = await res.json();
-      // أضف الرد جديداً في الـ timeline
-      const timeline = document.querySelector('.timeline-content');
-      const item = document.createElement('div');
-      item.className = 'timeline-item';
-      item.innerHTML = `
-        <div class="timeline-dot"></div>
-        <div class="timeline-body">
-          <div class="timeline-date">${new Date(newReply.created_at)
-            .toLocaleString('ar-EG',{day:'numeric',month:'long',year:'numeric',hour:'numeric',minute:'numeric'})}</div>
-          <div class="timeline-text">${newReply.text}</div>
-          <div class="timeline-author">${newReply.author}</div>
-        </div>
-      `;
-      timeline.prepend(item);
+
+      // ✅ بعد الإرسال، نعيد تحميل الردود
+      await reloadReplies();
+
       replyTextarea.value = '';
     } catch (err) {
-      // console.error(err);
-      alert('خطأ أثناء إرسال الرد: ' + err.message);
+      alert(getTranslation('error-sending-reply') + err.message);
     } finally {
       submitReply.disabled = false;
-      submitReply.textContent = 'إرسال الرد';
+      submitReply.textContent = getTranslation('send-reply');
     }
   });
 
-  // Handle reply form submission
-  document.getElementById('replyForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const replyText = document.getElementById('replyText').value;
-    if (!replyText) return;
+  // Language switcher functionality
+  const languageBtn = document.querySelector('.language-btn');
+  const languageDropdown = document.querySelector('.language-switcher .dropdown');
+  
+  if (languageBtn && languageDropdown) {
+    languageBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      languageDropdown.classList.toggle('show');
+    });
 
-    try {
-      // ...
-    } catch (err) {
-      // console.error(err);
-      alert('حدث خطأ أثناء إضافة الرد.');
-    }
-  });
+    // Handle language selection
+    document.querySelectorAll('.language-switcher .dropdown a').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const lang = e.target.getAttribute('data-lang');
+        if (lang && typeof setLanguage === 'function') {
+          setLanguage(lang);
+        }
+        languageDropdown.classList.remove('show');
+      });
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.language-switcher')) {
+        languageDropdown.classList.remove('show');
+      }
+    });
+  }
 });

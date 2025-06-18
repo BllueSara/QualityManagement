@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Ensure authentication
     function checkAuth() {
         if (!getToken()) {
-            alert('يرجى تسجيل الدخول أولاً.');
+            alert(getTranslation('please-login'));
             window.location.href = 'login.html';
         }
     }
@@ -126,8 +126,8 @@ async function fetchPermissions() {
                 let icons = '';
                 if (permissions.canEdit || permissions.canDelete) {
                     icons = '<div class="card-icons">';
-                    if (permissions.canEdit) icons += `<a href="#" class="edit-icon" data-id="${dept.id}" data-name="${dept.name}"><img src="../images/edit.svg" alt="تعديل"></a>`;
-                    if (permissions.canDelete) icons += `<a href="#" class="delete-icon" data-id="${dept.id}"><img src="../images/delet.svg" alt="حذف"></a>`;
+                    if (permissions.canEdit) icons += `<a href="#" class="edit-icon" data-id="${dept.id}" data-name="${dept.name}"><img src="../images/edit.svg" alt="${getTranslation('edit')}"></a>`;
+                    if (permissions.canDelete) icons += `<a href="#" class="delete-icon" data-id="${dept.id}"><img src="../images/delet.svg" alt="${getTranslation('delete')}"></a>`;
                     icons += '</div>';
                 }
 
@@ -147,7 +147,7 @@ async function fetchPermissions() {
 
         } catch (err) {
             console.error('Error fetching departments:', err);
-            alert(err.message);
+            alert(getTranslation('error-fetching-departments'));
         }
     }
 
@@ -170,13 +170,16 @@ async function fetchPermissions() {
         if (!permissions.canAdd) return;
         const name = addDepartmentNameInput.value;
         const file = addDepartmentImageInput.files[0];
-        if (!name || !file) return alert('اسم القسم والصورة مطلوبان.');
+        if (!name || !file) {
+            alert(getTranslation('department-name-required') + ' & ' + getTranslation('department-image-required'));
+            return;
+        }
         const fd = new FormData(); fd.append('name', name); fd.append('image', file);
         try {
             const res = await fetch('http://localhost:3006/api/departments', { method: 'POST', headers: { 'Authorization': `Bearer ${getToken()}` }, body: fd });
             const r = await res.json(); if (!res.ok) throw new Error(r.message);
-            alert(r.message); closeModal(addDepartmentModal); fetchDepartments();
-        } catch (err) { console.error(err); alert(err.message); }
+            alert(getTranslation('department-added-success')); closeModal(addDepartmentModal); fetchDepartments();
+        } catch (err) { console.error(err); alert(getTranslation('error-adding-department')); }
     });
 
     // Edit department
@@ -184,14 +187,17 @@ async function fetchPermissions() {
         if (!permissions.canEdit) return;
         const id = editDepartmentIdInput.value;
         const name = editDepartmentNameInput.value;
-        if (!id || !name) return alert('اسم القسم مطلوب للتعديل.');
+        if (!id || !name) {
+            alert(getTranslation('department-name-required'));
+            return;
+        }
         const fd = new FormData(); fd.append('name', name);
         const file = editDepartmentImageInput.files[0]; if (file) fd.append('image', file);
         try {
             const res = await fetch(`http://localhost:3006/api/departments/${id}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${getToken()}` }, body: fd });
             const r = await res.json(); if (!res.ok) throw new Error(r.message);
-            alert(r.message); closeModal(editDepartmentModal); fetchDepartments();
-        } catch (err) { console.error(err); alert(err.message); }
+            alert(getTranslation('department-updated-success')); closeModal(editDepartmentModal); fetchDepartments();
+        } catch (err) { console.error(err); alert(getTranslation('error-updating-department')); }
     });
 
     // Delete department
@@ -201,8 +207,8 @@ async function fetchPermissions() {
         try {
             const res = await fetch(`http://localhost:3006/api/departments/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${getToken()}` } });
             const r = await res.json(); if (!res.ok) throw new Error(r.message);
-            alert(r.message); closeModal(deleteDepartmentModal); fetchDepartments();
-        } catch (err) { console.error(err); alert(err.message); }
+            alert(getTranslation('department-deleted-success')); closeModal(deleteDepartmentModal); fetchDepartments();
+        } catch (err) { console.error(err); alert(getTranslation('error-deleting-department')); }
     });
 
     // Cancel buttons
