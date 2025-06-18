@@ -19,6 +19,62 @@ body {
   direction: rtl; 
   line-height: 1.6;
 }
+
+/* Language support for ticket details page */
+body[dir="ltr"] {
+  direction: ltr;
+  text-align: left;
+}
+
+
+body[dir="ltr"] .header-actions .home-btn {
+  left: 50%;
+  right: auto;
+}
+
+body[dir="ltr"] .section-icon {
+  margin-left: 0;
+  margin-right: 8px;
+}
+
+body[dir="ltr"] .radio-readonly {
+  margin-left: 0;
+  margin-right: 12px;
+}
+
+body[dir="ltr"] .time-text {
+  margin-left: 0;
+  margin-right: 8px;
+}
+
+/* RTL support for Arabic */
+body[dir="rtl"] {
+  direction: rtl;
+  text-align: right;
+}
+
+
+
+body[dir="rtl"] .header-actions .home-btn {
+  right: auto;
+  left: 50%;
+}
+
+body[dir="rtl"] .section-icon {
+  margin-right: 0;
+  margin-left: 8px;
+}
+
+body[dir="rtl"] .radio-readonly {
+  margin-right: 0;
+  margin-left: 12px;
+}
+
+body[dir="rtl"] .time-text {
+  margin-right: 0;
+  margin-left: 8px;
+}
+
 .hospital-logo img,
 .system-title img {
   max-height: 40px;
@@ -320,4 +376,122 @@ body {
   .timeline-content {
     margin-left: 12px;
   }
+}
+/* تنعيم الكروت */
+.card-section {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.3s ease;
+}
+.card-section:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* تحسين حقول الإدخال */
+.field-input,
+textarea.field-input,
+select.field-input {
+  background-color: #f9fafb;
+  border: 1px solid #d1d5db;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.field-input:focus,
+textarea.field-input:focus,
+select.field-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  outline: none;
+}
+
+/* شكل أزرار جميل */
+.btn-primary {
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+.btn-primary:hover {
+  background-color: #1e40af;
+}
+
+.btn-secondary {
+  background-color: #e5e7eb;
+  color: #374151;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+.btn-secondary:hover {
+  background-color: #d1d5db;
+}
+
+/* تظبيط الملاحظات */
+.hint {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+/* تحسين شكل العناوين */
+.section-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+:lang(ar) body, 
+:lang(ar) input, 
+:lang(ar) select, 
+:lang(ar) button, 
+:lang(ar) textarea, 
+:lang(ar) .header-title, 
+:lang(ar) .page-title {
+  font-family: 'Tajawal', sans-serif;
+}
+
+:lang(en) body, 
+:lang(en) input, 
+:lang(en) select, 
+:lang(en) button, 
+:lang(en) textarea, 
+:lang(en) .header-title, 
+:lang(en) .page-title {
+  font-family: Arial, sans-serif;
+}
+:lang(ar) .back-btn,
+[dir="rtl"] .back-btn {
+  right: 50px;
+  left: auto;
+  flex-direction: row;
+}
+
+:lang(en) .back-btn,
+[dir="ltr"] .back-btn {
+  left: 50px;
+  right: auto;
+  flex-direction: row-reverse;
+}
+
+/* يقلب أيقونات FA داخل back-btn في الوضع LTR */
+[dir="ltr"] .back-btn .fa-arrow-right {
+  transform: scaleX(-1);
+}
+
+/* بأي حال، لو LTR خلي الأيقونة بلا تقليب */
+[dir="ltr"] .back-btn .fa-arrow-left {
+  transform: none;
 }

@@ -164,7 +164,8 @@ function renderTickets() {
     // Helper function to format date
     function formatDate(dateString) {
         const date = new Date(dateString);
-        return date.toLocaleDateString('ar-SA', {
+        const lang = localStorage.getItem('language') || 'ar';
+        return date.toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', {
             year: 'numeric',
             month: 'long',
             day: 'numeric'
@@ -194,7 +195,13 @@ function renderTickets() {
         const firstRec = startIdx + 1;
         const lastRec = Math.min(endIdx, totalRows);
         const recordsInfo = document.querySelector('.records-info');
-        recordsInfo.textContent = `عرض ${firstRec}-${lastRec} من ${totalRows} تذكرة`;
+        const lang = localStorage.getItem('language') || 'ar';
+        
+        if (lang === 'ar') {
+            recordsInfo.textContent = `عرض ${firstRec}-${lastRec} من ${totalRows} تذكرة`;
+        } else {
+            recordsInfo.textContent = `Showing ${firstRec}-${lastRec} of ${totalRows} tickets`;
+        }
     }
   
     // Search functionality

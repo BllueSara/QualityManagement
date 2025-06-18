@@ -11,18 +11,21 @@ const pool = mysql.createPool({
 });
 
 class Reply {
-  static async create({ ticketId, text, authorId, authorName }) {
-    try {
-      const [result] = await pool.execute(
-        'INSERT INTO ticket_replies (ticket_id, text, author_id, author_name) VALUES (?, ?, ?, ?)',
-        [ticketId, text, authorId, authorName]
-      );
-      return result.insertId;
-    } catch (error) {
-      console.error('Error creating reply:', error);
-      throw new Error('Failed to create reply.');
-    }
+static async create({ ticketId, text, authorId }) {
+  try {
+    console.log('📥 Params:', { ticketId, text, authorId });
+
+    const [result] = await pool.execute(
+      'INSERT INTO ticket_replies (ticket_id, text, author_id) VALUES (?, ?, ?)',
+      [ticketId, text, authorId]
+    );
+    return result.insertId;
+  } catch (error) {
+    console.error('Error creating reply:', error);
+    throw new Error('Failed to create reply.');
   }
+}
+
 }
 
 module.exports = Reply; 

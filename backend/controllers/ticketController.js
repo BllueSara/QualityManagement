@@ -187,14 +187,13 @@ exports.getTicketStatusHistory = async (req, res) => {
 }; 
 exports.addReply = async (req, res) => {
     try {
-        const { ticketId } = req.params;
+const ticketId = req.params.id;
         const { text } = req.body;
         const token = req.headers.authorization.split(' ')[1];
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const userId = decoded.id;
-        const username = decoded.username;
 
-        await Reply.create({ ticketId, text, authorId: userId, authorName: username });
+await Reply.create({ ticketId, text, authorId: userId });
         res.status(201).json({ message: 'Reply added successfully.' });
     } catch (err) {
         // console.error(err);

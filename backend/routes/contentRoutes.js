@@ -47,39 +47,60 @@ router.delete('/:contentId', deleteContent);
 router.get('/track/:contentId', async (req, res) => {
   try {
     const { contentId } = req.params;
+
     const [contentRows] = await db.execute('SELECT * FROM contents WHERE id = ?', [contentId]);
     if (contentRows.length === 0) {
       return res.status(404).json({ status: 'error', message: 'Content not found.' });
     }
     const content = contentRows[0];
 
+    // ✅ استعلام سجل الموافقات
     const [timelineRows] = await db.execute(`
-      SELECT al.status, al.comments, al.created_at, u.username AS approver, d.name AS department
+      SELECT 
+        al.status, al.comments, al.created_at, 
+        u.username AS approver, 
+        d.name AS department
       FROM approval_logs al
       JOIN users u ON al.approver_id = u.id
       JOIN contents c ON al.content_id = c.id
-      JOIN departments d ON c.department_id = d.id
+      JOIN folders f ON c.folder_id = f.id
+      LEFT JOIN departments d ON f.department_id = d.id
       WHERE al.content_id = ?
       ORDER BY al.created_at ASC
     `, [contentId]);
 
+    // ✅ استعلام المعتمدين اللي ما وقعوا
     const [pendingApproversRows] = await db.execute(`
-      SELECT u.username AS approver, d.name AS department
+      SELECT 
+        u.username AS approver, 
+        d.name AS department
       FROM content_approvers ca
       JOIN users u ON ca.user_id = u.id
       JOIN contents c ON ca.content_id = c.id
-      JOIN departments d ON c.department_id = d.id
-      WHERE ca.content_id = ? AND NOT EXISTS (
-          SELECT 1 FROM approval_logs al WHERE al.content_id = ca.content_id AND al.approver_id = ca.user_id AND al.status = 'approved'
-      )
+      JOIN folders f ON c.folder_id = f.id
+      LEFT JOIN departments d ON f.department_id = d.id
+      WHERE ca.content_id = ?
+        AND NOT EXISTS (
+          SELECT 1 
+          FROM approval_logs al 
+          WHERE al.content_id = ca.content_id 
+            AND al.approver_id = ca.user_id 
+            AND al.status = 'approved'
+        )
     `, [contentId]);
 
-    res.json({ status: 'success', content, timeline: timelineRows, pending: pendingApproversRows });
+    res.json({
+      status: 'success',
+      content,
+      timeline: timelineRows,
+      pending: pendingApproversRows
+    });
   } catch (err) {
-    // console.error('Error fetching track info:', err);
+    console.error('❌ Error fetching track info:', err);
     res.status(500).json({ status: 'error', message: 'Failed to fetch track info.' });
   }
 });
+
 
 
 

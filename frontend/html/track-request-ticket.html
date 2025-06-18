@@ -17,6 +17,7 @@
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     crossorigin="anonymous"
   />
+  <link rel="stylesheet" href="../css/shared.css"/>
 
   <!-- ===== ربط ملف التنسيقات ===== -->
   <link rel="stylesheet" href="/frontend/css/track-request.css" />
@@ -36,11 +37,11 @@
   <div class="header-actions">
     <button class="back-btn" onclick="history.back()">
         <i class="fas fa-arrow-left"></i>
-        <span>رجوع</span>
+        <span data-translate="back">رجوع</span>
   </button>
   <button class="home-btn" onclick="window.location.href='index.html'">
     <i class="fas fa-home"></i>
-    <span>الرئيسية</span>
+    <span data-translate="home">الرئيسية</span>
   </button>
 </div>
   <!-- ===== خط أفقي أسفل الهيدر ===== -->
@@ -50,29 +51,28 @@
   <main class="content-wrapper">
     <!-- ===== عنوان الصفحة والوصف ===== -->
     <div class="page-header">
-      <h1 class="page-title">تتبع الطلب</h1>
+      <h1 class="page-title" data-translate="track-request">تتبع الطلب</h1>
     </div>
 
     <!-- ===== بطاقة تتبع الطلب ===== -->
     <div class="track-card">
-      <!-- ===== القسم التالي في أعلى اليمين ===== -->
-      <div class="next-dept">
-        <span class="label-text">القسم التالي:</span>
-        <span class="dept-name"> </span>
-      </div>
-
-      <!-- ===== رأس البطاقة: الحالة الحالية وأخر تحديث ===== -->
       <div class="track-top">
+        <!-- القسم التالي -->
+        <div class="next-dept">
+          <span class="label-text" data-translate="next-department">القسم التالي:</span>
+          <span class="dept-name"> </span>
+        </div>
+        <!-- رأس البطاقة: الحالة الحالية وأخر تحديث -->
         <div class="track-header">
-          <h2 class="track-status-title">   </h2>
-          <span class="last-update">   </span>
+          <h2 class="track-status-title" data-translate="track-status-title">   </h2>
+          <span class="last-update" data-translate="last-update">   </span>
         </div>
 
         <!-- ===== قسم التقدم (Progress) ===== -->
         <div class="track-progress-container">
           <!-- نص التقدم -->
           <div class="progress-info">
-            <span class="progress-label"> </span>
+            <span class="progress-label" data-translate="progress-label"> </span>
             <span class="progress-steps">    </span>
           </div>
           <!-- دائرة النسبة -->
@@ -160,6 +160,7 @@
 
   </main>
 </body>
+<script src="/frontend/js/language.js"></script>
 <script src="/frontend/js/track-request-ticket.js"></script>
 
 </html>

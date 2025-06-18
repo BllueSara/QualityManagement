@@ -5,7 +5,6 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: "Tajawal", sans-serif;
 }
 
 html,
@@ -62,6 +61,7 @@ main {
   font-weight: 600;
   color: #1f2937;
   margin-bottom: 8px;
+
 }
 
 .page-subtitle {

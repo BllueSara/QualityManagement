@@ -1,3 +1,37 @@
+// استيراد الترجمة
+if (typeof getTranslation !== 'function') {
+  function getTranslation(key) {
+    const lang = localStorage.getItem('language') || 'ar';
+    if (window.translations && window.translations[lang] && window.translations[lang][key]) {
+      return window.translations[lang][key];
+    }
+    return key;
+  }
+}
+
+function updateTableUI() {
+  const lang = localStorage.getItem('language') || 'ar';
+  // تحديث رؤوس الجدول
+  document.querySelectorAll('th[data-translate]').forEach(th => {
+    const key = th.getAttribute('data-translate');
+    th.textContent = getTranslation(key);
+  });
+  // تحديث عنوان الصفحة
+  const title = document.querySelector('h2[data-translate]');
+  if (title) title.textContent = getTranslation(title.getAttribute('data-translate'));
+  // تحديث أزرار الهيدر
+  const backBtnText = document.getElementById('mainBackBtnText');
+  if (backBtnText) backBtnText.textContent = getTranslation('back');
+  const homeBtn = document.querySelector('.home-btn span');
+  if (homeBtn) homeBtn.textContent = getTranslation('home');
+  // تحديث اتجاه الصفحة
+  const main = document.querySelector('main.content-wrapper');
+  if (main) {
+    main.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    main.style.textAlign = lang === 'ar' ? 'right' : 'left';
+  }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   const token = localStorage.getItem('token');
   const tbody = document.querySelector('tbody');
@@ -18,11 +52,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   const { data: tickets } = await ticketsRes.json();
 
-  // 2) جلب كل الأقسام
-  const deptsRes = await fetch('http://localhost:3006/api/departments', {
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-  const { data: depts } = await deptsRes.json();
+
+const deptsRes = await fetch('http://localhost:3006/api/departments', {
+  headers: { 'Authorization': `Bearer ${token}` }
+});
+
+const resJson = await deptsRes.json(); // فقط هنا
+console.log('📦 استجابة الأقسام:', resJson);
+
+const depts = Array.isArray(resJson) ? resJson : [];
+
 
   // 3) بناء صف لكل تذكرة
   tickets.forEach(ticket => {
@@ -38,9 +77,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tdDept = document.createElement('td');
     tdDept.innerHTML = `
       <div class="dropdown-custom" data-type="dept">
-        <button class="dropdown-btn">اختر القسم</button>
+        <button class="dropdown-btn">${getTranslation('select-department')}</button>
         <div class="dropdown-content">
-          <input type="text" class="dropdown-search" placeholder="ابحث...">
+          <input type="text" class="dropdown-search" placeholder="${getTranslation('search-department')}">
           ${depts.map(d => `<div class="dropdown-item" data-value="${d.id}">${d.name}</div>`).join('')}
         </div>
       </div>`;
@@ -50,9 +89,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tdUsers = document.createElement('td');
     tdUsers.innerHTML = `
       <div class="dropdown-custom" data-type="users">
-        <button class="dropdown-btn" disabled>اختر القسم أولاً</button>
+        <button class="dropdown-btn" disabled>${getTranslation('select-department-first')}</button>
         <div class="dropdown-content">
-          <input type="text" class="dropdown-search" placeholder="ابحث...">
+          <input type="text" class="dropdown-search" placeholder="${getTranslation('search-person')}">
         </div>
       </div>`;
     row.append(tdUsers);
@@ -64,16 +103,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // خلية الحالة
     const tdStatus = document.createElement('td');
-    tdStatus.innerHTML = `<span class="badge-pending">${ticket.status}</span>`;
+    tdStatus.innerHTML = `<span class="badge-pending">${getTranslation(ticket.status === 'تم الإرسال' || ticket.status === 'Sent' ? 'sent' : ticket.status === 'قيد الانتظار' || ticket.status === 'Pending' ? 'pending' : ticket.status)}</span>`;
     row.append(tdStatus);
 
     // زر التحويل
     const tdAct = document.createElement('td');
-    tdAct.innerHTML = `<button class="btn-send"><i class="bi bi-send"></i> تحويل</button>`;
+    tdAct.innerHTML = `<button class="btn-send"><i class="bi bi-send"></i> ${getTranslation('send')}</button>`;
     row.append(tdAct);
 
     tbody.append(row);
   });
+
+  // بعد بناء الجدول
+  updateTableUI();
+  if (typeof applyLanguageUI === 'function') {
+    const lang = localStorage.getItem('language') || 'ar';
+    applyLanguageUI(lang);
+  }
 
   // 4) ضبط جميع الصفوف
   document.querySelectorAll('tbody tr').forEach(initRow);
@@ -88,17 +134,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function rebuildUsersList() {
       const uBtn = userDrop.querySelector('.dropdown-btn');
       const uList = userDrop.querySelector('.dropdown-content');
-      uList.innerHTML = `<input type="text" class="dropdown-search" placeholder="ابحث...">`;
+      uList.innerHTML = `<input type="text" class="dropdown-search" placeholder="${getTranslation('search-person')}">`;
 
       if (!selectedDepts.length) {
         uBtn.disabled = true;
-        uBtn.textContent = 'اختر القسم أولاً';
+        uBtn.textContent = getTranslation('select-department-first');
         return;
       }
       uBtn.disabled = false;
       uBtn.textContent = selectedUsers.length
-        ? `${selectedUsers.length} مختار`
-        : 'اختر الأشخاص';
+        ? `${selectedUsers.length} ${getTranslation('selected')}`
+        : getTranslation('select-people');
 
       // لكل قسم، اجلب المستخدمين
       for (const deptVal of selectedDepts) {
@@ -168,12 +214,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // تحديث نص الزر
         if (!selectedDepts.length) {
-          btn.textContent = 'اختر القسم';
+          btn.textContent = getTranslation('select-department');
           selectedUsers = [];
         } else if (selectedDepts.length === 1) {
           btn.textContent = list.querySelector('.dropdown-item.selected').textContent;
         } else {
-          btn.textContent = `${selectedDepts.length} أقسام`;
+          btn.textContent = `${selectedDepts.length} ${getTranslation('departments-count')}`;
         }
 
         list.classList.remove('active');
@@ -215,8 +261,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // حدّث نص الزر
         btn.textContent = selectedUsers.length
-          ? `${selectedUsers.length} مختار`
-          : 'اختر الأشخاص';
+          ? `${selectedUsers.length} ${getTranslation('selected')}`
+          : getTranslation('select-people');
 
         // حدّث خلية المختارون
         const selCell = row.querySelector('.selected-cell');
@@ -233,7 +279,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const sendBtn = row.querySelector('.btn-send');
   sendBtn.addEventListener('click', async () => {
     if (!selectedUsers.length) {
-      alert('رجاءً اختر أشخاصاً أولاً');
+      alert(getTranslation('please-select-users'));
       return;
     }
 
@@ -261,12 +307,81 @@ document.addEventListener('DOMContentLoaded', async () => {
         body: JSON.stringify({ assignees })
       });
 
-      alert('تم تحويل التذكرة بنجاح');
-      row.querySelector('.badge-pending').textContent = 'تم الإرسال';
+      alert(getTranslation('success-sent'));
+      row.querySelector('.badge-pending').textContent = getTranslation('sent');
     } catch (err) {
       // console.error(err);
-      alert('حدث خطأ أثناء إرسال التذكرة');
+      alert(getTranslation('error-sending'));
     }
   });
   }
 });
+
+function updateDropdownsDirection(lang) {
+  // تحديث اتجاه حقول البحث في dropdowns
+  document.querySelectorAll('.dropdown-search').forEach(input => {
+    if (lang === 'ar') {
+      input.style.setProperty('direction', 'rtl', 'important');
+      input.style.setProperty('text-align', 'right', 'important');
+    } else {
+      input.style.setProperty('direction', 'ltr', 'important');
+      input.style.setProperty('text-align', 'left', 'important');
+    }
+  });
+  
+  // تحديث اتجاه عناصر dropdown
+  document.querySelectorAll('.dropdown-item').forEach(item => {
+    if (lang === 'ar') {
+      item.style.setProperty('direction', 'rtl', 'important');
+      item.style.setProperty('text-align', 'right', 'important');
+    } else {
+      item.style.setProperty('direction', 'ltr', 'important');
+      item.style.setProperty('text-align', 'left', 'important');
+    }
+  });
+  
+  // تحديث اتجاه أزرار dropdown
+  document.querySelectorAll('.dropdown-btn').forEach(btn => {
+    if (lang === 'ar') {
+      btn.style.setProperty('direction', 'rtl', 'important');
+      btn.style.setProperty('text-align', 'right', 'important');
+    } else {
+      btn.style.setProperty('direction', 'ltr', 'important');
+      btn.style.setProperty('text-align', 'left', 'important');
+    }
+  });
+  
+  // تحديث اتجاه السهم في أزرار dropdown
+  updateDropdownArrows(lang);
+}
+
+function updateDropdownArrows(lang) {
+  document.querySelectorAll('.dropdown-btn').forEach(btn => {
+    // إزالة السهم الحالي إذا وجد
+    const existingArrow = btn.querySelector('.dropdown-arrow');
+    if (existingArrow) {
+      existingArrow.remove();
+    }
+    
+    // إضافة السهم الجديد حسب اللغة
+    const arrow = document.createElement('i');
+    arrow.className = 'dropdown-arrow';
+    
+    if (lang === 'ar') {
+      arrow.className += ' fas fa-chevron-left';
+      arrow.style.marginRight = '8px';
+      arrow.style.marginLeft = '0';
+    } else {
+      arrow.className += ' fas fa-chevron-right';
+      arrow.style.marginLeft = '8px';
+      arrow.style.marginRight = '0';
+    }
+    
+    // إضافة السهم في بداية النص للعربية وفي النهاية للإنجليزية
+    if (lang === 'ar') {
+      btn.insertBefore(arrow, btn.firstChild);
+    } else {
+      btn.appendChild(arrow);
+    }
+  });
+}

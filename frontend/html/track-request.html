@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>تتبع الطلب - نظام إدارة الجودة والسلامة</title>
+  <title data-translate="track-request-title">تتبع الطلب - نظام إدارة الجودة والسلامة</title>
 
   <!-- ===== استيراد خط Tajawal ===== -->
   <link
@@ -17,6 +17,7 @@
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     crossorigin="anonymous"
   />
+  <link rel="stylesheet" href="../css/shared.css"/>
 
   <!-- ===== ربط ملف التنسيقات ===== -->
   <link rel="stylesheet" href="/frontend/css/track-request.css" />
@@ -27,22 +28,22 @@
     <div class="header-container">
       <div class="system-title">
           <img src="/frontend/images/system-title.png" alt="نظام إدارة الجودة والسلامة">
-  </div>
-       <div class="hospital-logo">
-                <img src="/frontend/images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز">
-            </div>
+      </div>
+      <div class="hospital-logo">
+          <img src="/frontend/images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز">
+      </div>
     </div>
   </header>
   <div class="header-actions">
     <button class="back-btn" onclick="history.back()">
         <i class="fas fa-arrow-left"></i>
-        <span>رجوع</span>
-  </button>
-  <button class="home-btn" onclick="window.location.href='index.html'">
-    <i class="fas fa-home"></i>
-    <span>الرئيسية</span>
-  </button>
-</div>
+        <span data-translate="back">رجوع</span>
+    </button>
+    <button class="home-btn" onclick="window.location.href='index.html'">
+      <i class="fas fa-home"></i>
+      <span data-translate="home">الرئيسية</span>
+    </button>
+  </div>
   <!-- ===== خط أفقي أسفل الهيدر ===== -->
   <div class="header-divider"></div>
 
@@ -50,36 +51,35 @@
   <main class="content-wrapper">
     <!-- ===== عنوان الصفحة والوصف ===== -->
     <div class="page-header">
-      <h1 class="page-title">تتبع الطلب</h1>
+      <h1 class="page-title" data-translate="track-request">تتبع الطلب</h1>
     </div>
 
     <!-- ===== بطاقة تتبع الطلب ===== -->
     <div class="track-card">
       <!-- ===== القسم التالي في أعلى اليمين ===== -->
       <div class="next-dept">
-        <span class="label-text">القسم التالي:</span>
+        <span class="label-text" data-translate="next-department">القسم التالي:</span>
         <span class="dept-name">قسم السلامة</span>
       </div>
 
       <!-- ===== رأس البطاقة: الحالة الحالية وأخر تحديث ===== -->
       <div class="track-top">
         <div class="track-header">
-          <h2 class="track-status-title">قيد المراجعة في قسم التفتيش</h2>
-          <span class="last-update">آخر تحديث: 23 فبراير 2024</span>
+          <h2 class="track-status-title" data-translate="status-under-review">قيد المراجعة في قسم التفتيش</h2>
+          <span class="last-update" data-translate="last-update">آخر تحديث: 23 فبراير 2024</span>
         </div>
 
         <!-- ===== قسم التقدم (Progress) ===== -->
         <div class="track-progress-container">
           <!-- نص التقدم -->
           <div class="progress-info">
-            <span class="progress-label">تقدم الطلب</span>
-            <span class="progress-steps">3 من 4 خطوات مكتملة</span>
+            <span class="progress-label" data-translate="request-progress">تقدم الطلب</span>
+            <span class="progress-steps" data-translate="steps-completed">3 من 4 خطوات مكتملة</span>
           </div>
           <!-- دائرة النسبة -->
           <div class="progress-circle">
             <svg viewBox="0 0 36 36" class="circular-chart blue">
-                              <text x="18" y="21" class="percentage-text">75%</text>
-
+              <text x="18" y="21" class="percentage-text">75%</text>
               <path
                 class="circle-bg"
                 d="M18 2.0845
@@ -114,9 +114,9 @@
             <h3 class="timeline-dept">قسم الجودة</h3>
             <div class="timeline-details">
               <span class="timeline-date">20 فبراير 2024</span>
-              <span class="status-badge approved-badge">معتمد</span>
+              <span class="status-badge approved-badge" data-translate="approved">معتمد</span>
             </div>
-            <p class="timeline-note">تم اعتماد الطلب بنجاح</p>
+            <p class="timeline-note" data-translate="request-approved">تم اعتماد الطلب بنجاح</p>
           </div>
         </div>
 
@@ -131,9 +131,9 @@
             <h3 class="timeline-dept">قسم السلامة</h3>
             <div class="timeline-details">
               <span class="timeline-date">22 فبراير 2024</span>
-              <span class="status-badge pending-badge">قيد المراجعة</span>
+              <span class="status-badge pending-badge" data-translate="under-review">قيد المراجعة</span>
             </div>
-            <p class="timeline-note">جاري مراجعة المستندات المطلوبة</p>
+            <p class="timeline-note" data-translate="reviewing-documents">جاري مراجعة المستندات المطلوبة</p>
           </div>
         </div>
 
@@ -147,19 +147,15 @@
           <div class="timeline-content">
             <h3 class="timeline-dept">قسم التفتيش</h3>
             <div class="timeline-details">
-              <span class="timeline-date">متوقع: 25 فبراير 2024</span>
-              <span class="status-badge waiting-badge">في الانتظار</span>
+              <span class="timeline-date" data-translate="expected-date">متوقع: 25 فبراير 2024</span>
+              <span class="status-badge waiting-badge" data-translate="waiting">في الانتظار</span>
             </div>
           </div>
         </div>
       </div>
-      <!-- نهاية التايملاين -->
-
     </div>
-    <!-- نهاية بطاقة التتبع -->
-
   </main>
 </body>
+<script src="/frontend/js/language.js"></script>
 <script src="/frontend/js/track-request.js"></script>
-
 </html>

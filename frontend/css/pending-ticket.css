@@ -1,4 +1,4 @@
-    body { font-family: 'Tajawal', sans-serif; margin: 0; padding: 0; background: #fff; }
+    body { margin: 0; padding: 0; background: #fff; }
     .main-header { background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .header-container { display: flex; justify-content: space-between; align-items: center; padding: 12px 24px; }
     .header-actions { display: flex; gap: 8px; padding: 12px 24px; background: #fff; }
@@ -52,4 +52,46 @@
   background: #f3f4f6;
   color: #374151;
   cursor: default;
+}
+:lang(ar) body, 
+:lang(ar) input, 
+:lang(ar) select, 
+:lang(ar) button, 
+:lang(ar) textarea, 
+:lang(ar) .header-title, 
+:lang(ar) .page-title {
+  font-family: 'Tajawal', sans-serif;
+}
+
+:lang(en) body, 
+:lang(en) input, 
+:lang(en) select, 
+:lang(en) button, 
+:lang(en) textarea, 
+:lang(en) .header-title, 
+:lang(en) .page-title {
+  font-family: Arial, sans-serif;
+}
+:lang(ar) .back-btn,
+[dir="rtl"] .back-btn {
+  right: 50px;
+  left: auto;
+  flex-direction: row;
+}
+
+:lang(en) .back-btn,
+[dir="ltr"] .back-btn {
+  left: 50px;
+  right: auto;
+  flex-direction: row;
+}
+
+/* يقلب أيقونات FA داخل back-btn في الوضع LTR */
+[dir="ltr"] .back-btn .fa-arrow-right {
+  transform: scaleX(-1);
+}
+
+/* بأي حال، لو LTR خلي الأيقونة بلا تقليب */
+[dir="ltr"] .back-btn .fa-arrow-left {
+  transform: none;
 }

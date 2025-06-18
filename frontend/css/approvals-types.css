@@ -1,16 +1,30 @@
 /* approvals-types.css */
 @import url("https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap");
 
-* {
-  margin: 0; padding: 0; box-sizing: border-box;
-  font-family: "Tajawal", sans-serif;
-}
-
 html, body {
   width: 100%; height: 100%;
   background-color: #ffffff;
   color: #1f2937;
-  direction: rtl;
+}
+
+/* 1) الافتراضي – كل العناصر Arial */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Arial, sans-serif !important;
+}
+
+/* 2) عند اللغة العربية أو اتجاه RTL – كل العناصر Tajawal */
+:lang(ar) *,
+[dir="rtl"] * {
+  font-family: 'Tajawal', sans-serif !important;
+}
+
+/* 3) لو المتصفح يترجم ويضيف كلاس body.translated-ltr (Chrome مثلاً) */
+body.translated-ltr *,
+html[lang="en"] * {
+  font-family: Arial, sans-serif !important;
 }
 
 .header-actions {
@@ -21,10 +35,9 @@ html, body {
   top: 10px;
 }
 
-/* زرّ الرجوع على أقصى يسار بلا حواف خارجية */
+/* زرّ الرجوع */
 .back-btn {
   position: absolute;
-  left: 50px;              /* flush لأقصى يسار */
   top: 50%;
   transform: translateY(-50%);
   display: flex;
@@ -32,11 +45,36 @@ html, body {
   gap: 4px;
   background: none;
   border: none;
-  font-size: 18px;      /* حجم يناسب النص */
+  font-size: 18px;
   color: #1D4ED8;
   cursor: pointer;
-  padding: 0 12px;      /* مسافة داخلية مناسبة */
-  font-family: inherit; /* يرث ستايل الخط */
+  padding: 0 12px;
+  font-family: inherit;
+}
+
+/* اتجاه زر الرجوع حسب اللغة */
+:lang(ar) .back-btn,
+[dir="rtl"] .back-btn {
+  right: 50px;
+  left: auto;
+  flex-direction: row;
+}
+
+:lang(en) .back-btn,
+[dir="ltr"] .back-btn {
+  left: 50px;
+  right: auto;
+  flex-direction: row-reverse;
+}
+
+/* يقلب أيقونات FA داخل back-btn في الوضع LTR */
+[dir="ltr"] .back-btn .fa-arrow-right {
+  transform: scaleX(-1);
+}
+
+/* بأي حال، لو LTR خلي الأيقونة بلا تقليب */
+[dir="ltr"] .back-btn .fa-arrow-left {
+  transform: none;
 }
 
 /* زرّ الرئيسية في المنتصف */
@@ -62,52 +100,68 @@ html, body {
 .home-btn:hover {
   opacity: 0.7;
 }
+
 .main-header {
   background-color: #ffffff;
   border-bottom: 1px solid #e0e0e0;
   padding: 16px 32px;
-  position: sticky; top: 0; z-index: 100;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .header-container {
-  display: flex; justify-content: space-between; align-items: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.header-title {
-  font-size: 1.3rem; font-weight: 500; color: #1f2937;
+.system-title img {
+  max-height: 40px;
+  width: auto;
 }
 
 .content-wrapper {
   padding-top: 10px;
-   max-width: 100%;
- margin: auto;
+  max-width: 100%;
+  margin: auto;
 }
 
 .page-header {
-  text-align: center; margin-bottom: 40px;
+  text-align: center;
+  margin-bottom: 40px;
 }
 
 .page-title {
-  font-size: 2.2rem; font-weight: 600; color: #1f2937; margin-bottom: 8px;
+  font-size: 2.2rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 8px;
 }
 
 .page-subtitle {
-  font-size: 1.1rem; color: #4b5563;
+  font-size: 1.1rem;
+  color: #4b5563;
 }
 
 /* Reuse ticket-card styles for uniform look */
 .cards-container {
-  display: flex; flex-wrap: wrap; justify-content: center; gap: 40px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 40px;
 }
 
 .ticket-card {
   background-color: #ffffff;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-  width: 360px; /* يمكنك ضبط العرض حسب الحاجة */
+  width: 360px;
   padding: 48px 40px;
   text-align: center;
-  display: flex; flex-direction: column; align-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   transition: transform .2s, box-shadow .2s;
   text-decoration: none;
   color: inherit;
@@ -119,29 +173,39 @@ html, body {
 }
 
 .card-icon {
-  width: 96px; height: 96px;
+  width: 96px;
+  height: 96px;
   background-color: #eef2ff;
   border-radius: 50%;
-  display: flex; justify-content: center; align-items: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   margin-bottom: 32px;
 }
 
 .icon-img {
-  max-width: 60%; max-height: 60%;
+  max-width: 60%;
+  max-height: 60%;
 }
 
 .card-title {
-  font-size: 1.75rem; font-weight: 500; color: #1f2937; margin-bottom: 12px;
+  font-size: 1.75rem;
+  font-weight: 500;
+  color: #1f2937;
+  margin-bottom: 12px;
 }
 
 .card-desc {
-  font-size: 1.1rem; color: #4b5563; margin-bottom: 28px;
+  font-size: 1.1rem;
+  color: #4b5563;
+  margin-bottom: 28px;
 }
 
 .card-btn-outline {
   display: inline-block;
   padding: 14px 28px;
-  font-size: 1.05rem; font-weight: 500;
+  font-size: 1.05rem;
+  font-weight: 500;
   color: #2563eb;
   border: 2px solid #2563eb;
   border-radius: 6px;
@@ -157,16 +221,41 @@ html, body {
 
 /* Responsive */
 @media (max-width: 1024px) {
-  .ticket-card { width: 300px; padding: 36px 28px; }
-  .card-icon { width: 80px; height: 80px; }
-  .card-icon .icon-img { max-width: 50%; }
+  .ticket-card {
+    width: 300px;
+    padding: 36px 28px;
+  }
+  .card-icon {
+    width: 80px;
+    height: 80px;
+  }
+  .card-icon .icon-img {
+    max-width: 50%;
+  }
 }
 
 @media (max-width: 768px) {
-  .cards-container { flex-direction: column; align-items: center; }
-  .ticket-card { width: 100%; max-width: 400px; padding: 28px 20px; }
-  .card-icon { width: 64px; height: 64px; }
-  .card-title { font-size: 1.3rem; }
-  .card-desc { font-size: 0.95rem; }
-  .card-btn-outline { padding: 10px 20px; font-size: 0.95rem; }
+  .cards-container {
+    flex-direction: column;
+    align-items: center;
+  }
+  .ticket-card {
+    width: 100%;
+    max-width: 400px;
+    padding: 28px 20px;
+  }
+  .card-icon {
+    width: 64px;
+    height: 64px;
+  }
+  .card-title {
+    font-size: 1.3rem;
+  }
+  .card-desc {
+    font-size: 0.95rem;
+  }
+  .card-btn-outline {
+    padding: 10px 20px;
+    font-size: 0.95rem;
+  }
 }

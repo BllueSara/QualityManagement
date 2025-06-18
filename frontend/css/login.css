@@ -41,6 +41,16 @@ body {
     font-weight: bold;
     color: #555;
     font-size: 0.9em;
+    text-align: right;
+}
+
+/* Language-specific label alignment */
+[dir="ltr"] .form-group label {
+    text-align: left;
+}
+
+[dir="rtl"] .form-group label {
+    text-align: right;
 }
 
 .input-icon-wrapper {
