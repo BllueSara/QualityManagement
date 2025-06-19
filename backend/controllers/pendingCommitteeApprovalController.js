@@ -141,6 +141,13 @@ exports.sendApprovalRequest = async (req, res) => {
          VALUES (?, ?, 'pending', NULL, 0, NULL, CURRENT_TIMESTAMP)`,
         [contentId, userId]
       );
+      // إشعار للمعتمد الجديد
+      await insertNotification(
+        userId,
+        'تم تفويضك للتوقيع',
+        `تم تفويضك للتوقيع على ملف لجنة جديد رقم ${contentId}`,
+        'proxy'
+      );
     }
 
     // 3) نحدّث حالة المحتوى
