@@ -6,8 +6,7 @@ async function fetchStats() {
     }
   });
   if (res.status === 401) {
-    // يمكنك هنا إعادة توجيه المستخدم لتسجيل الدخول أو إظهار رسالة
-    alert('يُرجى تسجيل الدخول أولاً');
+    alert(getTranslation('please-login'));
     return {};
   }
   const json = await res.json();
@@ -22,27 +21,40 @@ async function fetchClosedWeek() {
     }
   });
   if (res.status === 401) {
-    alert('يُرجى تسجيل الدخول أولاً');
+    alert(getTranslation('please-login'));
     return [];
   }
   const json = await res.json();
   return json.data;
 }
 
-
-
-
-function renderStats({  closed, new_tickets }) {
-  document.querySelector('.stat-card:nth-child(2) .stat-value').textContent = closed;
-  document.querySelector('.stat-card:nth-child(3) .stat-value').textContent = new_tickets;
+function getTranslation(key) {
+  const lang = localStorage.getItem('language') || document.documentElement.lang || 'ar';
+  if (window.translations && window.translations[lang] && window.translations[lang][key]) {
+    return window.translations[lang][key];
+  }
+  return key;
 }
 
+function renderStats(data) {
+  document.getElementById('closed-tickets').textContent = data.closed;
+  document.getElementById('new-tickets').textContent = data.new_tickets;
+  document.getElementById('total-users').textContent = data.total_users;
+  document.getElementById('admin-count').textContent = data.admins;
+  document.getElementById('pending-contents').textContent = data.pending_contents;
+  document.getElementById('approved-contents').textContent = data.approved_contents;
+  document.getElementById('committee-count').textContent = data.committees;
+  document.getElementById('pending-committee-contents').textContent = data.committee_contents_pending;
+}
+
+
 function renderChart(data) {
+  const lang = localStorage.getItem('language') || document.documentElement.lang || 'ar';
+  const daysAr = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  const daysEn = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const labels = data.map(r => {
     const d = new Date(r.date);
-    // خريطة من اسم اليوم بالإنجليزي للعربي
-    const daysAr = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
-    return daysAr[d.getDay()];
+    return lang === 'en' ? daysEn[d.getDay()] : daysAr[d.getDay()];
   });
   const counts = data.map(r => r.closed_count);
 
@@ -53,7 +65,7 @@ function renderChart(data) {
       data: {
         labels,
         datasets: [{
-          label: 'التذاكر المغلقة',
+          label: getTranslation('closed-tickets'),
           data: counts,
           backgroundColor: '#3a7ffb',
           borderColor:   '#3a7ffb',
@@ -70,10 +82,10 @@ function renderChart(data) {
         plugins: {
           legend:  { display: false },
           tooltip: {
-            rtl: true,
+            rtl: lang !== 'en',
             callbacks: {
               title: ctx => ctx[0].label,
-              label: ctx => 'التذاكر المغلقة: ' + ctx.parsed.y
+              label: ctx => getTranslation('closed-tickets') + ': ' + ctx.parsed.y
             }
           }
         }

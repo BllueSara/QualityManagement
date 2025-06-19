@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>الإشعارات</title>
+  <title data-translate="notifications-title">الإشعارات</title>
 
   <!-- خطوط وأيقونات -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -31,35 +31,33 @@
 
   <div class="header-actions">
     <button class="back-btn" onclick="history.back()">
-      <i class="fas fa-arrow-left"></i>
-      <span>رجوع</span>
+     <i class="fas fa-arrow-right" id="backIcon"></i>      <span data-translate="back">رجوع</span>
     </button>
     <button class="home-btn" onclick="window.location.href='index.html'">
       <i class="fas fa-home"></i>
-      <span>الرئيسية</span>
+      <span data-translate="home">الرئيسية</span>
     </button>
   </div>
 
   <main>
     <div class="container">
       <section class="notifications-header">
-        <h1 class="page-title">الإشعارات</h1>
+        <h1 class="page-title" data-translate="notifications-title">الإشعارات</h1>
         <div class="filters">
           <div class="input-group search-input">
-            <input type="text" id="search-input" placeholder="البحث في الإشعارات...">
+            <input type="text" id="search-input" data-translate-placeholder="notifications-search" placeholder="البحث في الإشعارات...">
           </div>
           <div class="input-group">
             <select id="notification-type" name="notification-type">
-              <option value="">نوع الإشعار</option>
-<option value="ticket">تذكرة</option>
-<option value="approval">اعتماد</option>
-<option value="signature">توقيع</option>
-<option value="proxy">بالنيابة</option>
-<option value="add">إضافة</option>
-<option value="update">تحديث</option>
-<option value="delete">حذف</option>
-<option value="other">أخرى</option>
-
+              <option value="" data-translate="notification-type">نوع الإشعار</option>
+              <option value="ticket" data-translate="notification-ticket">تذكرة</option>
+              <option value="approval" data-translate="notification-approval">اعتماد</option>
+              <option value="signature" data-translate="notification-signature">توقيع</option>
+              <option value="proxy" data-translate="notification-proxy">بالنيابة</option>
+              <option value="add" data-translate="notification-add">إضافة</option>
+              <option value="update" data-translate="notification-update">تحديث</option>
+              <option value="delete" data-translate="notification-delete">حذف</option>
+              <option value="other" data-translate="notification-other">أخرى</option>
             </select>
           </div>
         </div>
@@ -71,6 +69,7 @@
       </section>
     </div>
   </main>
+    <script src="../js/language.js"></script>
 
   <script src="../js/notifications.js"></script>
 </body>

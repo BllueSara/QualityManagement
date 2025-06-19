@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   function checkAuth() {
     if (!getToken()) {
-      alert('يرجى تسجيل الدخول أولاً.');
+      alert(getTranslation('please-login'));
       return window.location.href = 'login.html';
     }
   }
@@ -96,24 +96,31 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // load & render
   async function loadCommittees() {
-    const res = await fetch(`${apiBase}/committees`, {
-      headers: authHeaders()
-    });
-    const list = await res.json();
-    grid.innerHTML = '';
-    list.forEach(item => {
-      const card = createCard(item);
-      grid.appendChild(card);
-    });
+    try {
+      const res = await fetch(`${apiBase}/committees`, {
+        headers: authHeaders()
+      });
+      const list = await res.json();
+      if (!res.ok) throw new Error(list.message);
+      
+      grid.innerHTML = '';
+      list.forEach(item => {
+        const card = createCard(item);
+        grid.appendChild(card);
+      });
 
-    // wire up edit/delete icons only if allowed
-    if (permissions.canEdit) {
-      grid.querySelectorAll('.edit-icon')
-          .forEach(btn => btn.addEventListener('click', onEditClick));
-    }
-    if (permissions.canDelete) {
-      grid.querySelectorAll('.delete-icon')
-          .forEach(btn => btn.addEventListener('click', onDeleteClick));
+      // wire up edit/delete icons only if allowed
+      if (permissions.canEdit) {
+        grid.querySelectorAll('.edit-icon')
+            .forEach(btn => btn.addEventListener('click', onEditClick));
+      }
+      if (permissions.canDelete) {
+        grid.querySelectorAll('.delete-icon')
+            .forEach(btn => btn.addEventListener('click', onDeleteClick));
+      }
+    } catch (err) {
+      console.error('Error fetching committees:', err);
+      alert(getTranslation('error-fetching-committees'));
     }
   }
 
@@ -126,31 +133,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (permissions.canEdit || permissions.canDelete) {
       icons = `<div class="card-icons">`;
       if (permissions.canEdit) {
-        icons += `<button class="edit-icon" data-id="${committee.id}" aria-label="تعديل">
-                    <img src="../images/edit.svg" alt="تعديل">
+        icons += `<button class="edit-icon" data-id="${committee.id}" aria-label="${getTranslation('edit')}">
+                    <img src="../images/edit.svg" alt="${getTranslation('edit')}">
                   </button>`;
       }
       if (permissions.canDelete) {
-        icons += `<button class="delete-icon" data-id="${committee.id}" aria-label="حذف">
-                    <img src="../images/delet.svg" alt="حذف">
+        icons += `<button class="delete-icon" data-id="${committee.id}" aria-label="${getTranslation('delete')}">
+                    <img src="../images/delet.svg" alt="${getTranslation('delete')}">
                   </button>`;
       }
       icons += `</div>`;
     }
 
-    const imgPath = committee.image
-      ? (committee.image.startsWith('/uploads/')
-          ? committee.image
-          : `/${committee.image.replace(/^\/+/, '')}`)
-      : '/images/committee.svg';
+const imgPath = committee.image
+  ? (committee.image.startsWith('uploads/')
+      ? `http://localhost:3006/${committee.image}`
+      : committee.image)
+  : '/images/committee.svg';
 
-    card.innerHTML = `
-      ${icons}
-      <div class="card-icon bg-orange">
-        <img src="${apiBase}${imgPath}" alt="${committee.name}">
-      </div>
-      <div class="card-title">${committee.name}</div>
-    `;
+card.innerHTML = `
+  ${icons}
+  <div class="card-icon bg-orange">
+    <img src="${imgPath}" alt="${committee.name}">
+  </div>
+  <div class="card-title">${committee.name}</div>
+`;
+
+
 
     card.addEventListener('click', () => {
       window.location.href = `committee-content.html?committeeId=${committee.id}`;
@@ -170,13 +179,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         editName.value    = data.name;
         showModal(editModal);
       })
-      .catch(() => alert('خطأ في جلب بيانات اللجنة'));
+      .catch(() => alert(getTranslation('error-fetching-committee')));
   }
 
   function onDeleteClick(e) {
     e.stopPropagation();
     const id = e.currentTarget.dataset.id;
-    editIdInput.value = id;
+    deleteModal.dataset.committeeId = id;
     showModal(deleteModal);
   }
 
@@ -186,20 +195,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!permissions.canAdd) return;
     const name = document.getElementById('committeeName').value;
     const file = document.getElementById('committeeImage').files[0];
-    if (!name) return alert('الرجاء إدخال اسم اللجنة');
+    if (!name) {
+      alert(getTranslation('committee-name-required'));
+      return;
+    }
     const fd = new FormData();
     fd.append('name', name);
     if (file) fd.append('image', file);
 
-    const res = await fetch(`${apiBase}/committees`, {
-      method: 'POST',
-      headers: authHeaders(),
-      body: fd
-    });
-    const msg = await res.json();
-    if (!res.ok) return alert(msg.message || 'فشل الإضافة');
-    hideModal(addModal);
-    loadCommittees();
+    try {
+      const res = await fetch(`${apiBase}/committees`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: fd
+      });
+      const msg = await res.json();
+      if (!res.ok) throw new Error(msg.message || getTranslation('error-adding-committee'));
+      
+      alert(getTranslation('committee-added-success'));
+      hideModal(addModal);
+      loadCommittees();
+    } catch (err) {
+      console.error(err);
+      alert(getTranslation('error-adding-committee'));
+    }
   });
   cancelAdd.addEventListener('click', () => hideModal(addModal));
 
@@ -208,35 +227,52 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!permissions.canEdit) return;
     const id = editIdInput.value;
     const name = editName.value;
-    if (!name) return alert('الرجاء إدخال اسم اللجنة');
+    if (!name) {
+      alert(getTranslation('committee-name-required'));
+      return;
+    }
     const fd = new FormData();
     fd.append('name', name);
     if (editImage.files[0]) fd.append('image', editImage.files[0]);
 
-    const res = await fetch(`${apiBase}/committees/${id}`, {
-      method: 'PUT',
-      headers: authHeaders(),
-      body: fd
-    });
-    const msg = await res.json();
-    if (!res.ok) return alert(msg.message || 'فشل التعديل');
-    hideModal(editModal);
-    loadCommittees();
+    try {
+      const res = await fetch(`${apiBase}/committees/${id}`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: fd
+      });
+      const msg = await res.json();
+      if (!res.ok) throw new Error(msg.message || getTranslation('error-updating-committee'));
+      
+      alert(getTranslation('committee-updated-success'));
+      hideModal(editModal);
+      loadCommittees();
+    } catch (err) {
+      console.error(err);
+      alert(getTranslation('error-updating-committee'));
+    }
   });
   cancelEdit.addEventListener('click', () => hideModal(editModal));
 
   // Delete committee
   confirmDel.addEventListener('click', async () => {
     if (!permissions.canDelete) return;
-    const id = editIdInput.value;
-    const res = await fetch(`${apiBase}/committees/${id}`, {
-      method: 'DELETE',
-      headers: authHeaders()
-    });
-    const msg = await res.json();
-    if (!res.ok) return alert(msg.message || 'فشل الحذف');
-    hideModal(deleteModal);
-    loadCommittees();
+    const id = deleteModal.dataset.committeeId;
+    try {
+      const res = await fetch(`${apiBase}/committees/${id}`, {
+        method: 'DELETE',
+        headers: authHeaders()
+      });
+      const msg = await res.json();
+      if (!res.ok) throw new Error(msg.message || getTranslation('error-deleting-committee'));
+      
+      alert(getTranslation('committee-deleted-success'));
+      hideModal(deleteModal);
+      loadCommittees();
+    } catch (err) {
+      console.error(err);
+      alert(getTranslation('error-deleting-committee'));
+    }
   });
   cancelDel.addEventListener('click', () => hideModal(deleteModal));
 
@@ -246,6 +282,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     grid.querySelectorAll('.card').forEach(c => {
       const title = c.querySelector('.card-title').textContent.toLowerCase();
       c.style.display = title.includes(term) ? '' : 'none';
+    });
+  });
+
+  // Close modals when clicking overlay
+  document.querySelectorAll('.modal-overlay').forEach(m => {
+    m.addEventListener('click', e => {
+      if (e.target === m) hideModal(m);
     });
   });
 

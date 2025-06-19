@@ -48,6 +48,12 @@ async function loadFolderNameOptions() {
 function renderFolderNameOptions(list) {
   folderNamesContainer.innerHTML = '';
 
+  // إذا لم توجد مجلدات، اعرض رسالة
+  if (!list.length) {
+    folderNamesContainer.innerHTML = `<div class="no-content" data-translate="no-folders">${getTranslation('no-folders')}</div>`;
+    return;
+  }
+
   list.forEach(item => {
     const div = document.createElement('div');
     div.className = 'folder-item';
@@ -76,7 +82,7 @@ function renderFolderNameOptions(list) {
       btnEdit.textContent = '✎';
       btnEdit.addEventListener('click', e => {
         e.stopPropagation();
-        const newName = prompt('📝 أدخل الاسم الجديد:', item.name);
+        const newName = prompt(getTranslation('edit-folder-prompt'), item.name);
         if (newName && newName.trim()) {
           updateFolderName(item.id, newName.trim());
         }
@@ -92,7 +98,7 @@ function renderFolderNameOptions(list) {
       btnDelete.textContent = '🗑';
       btnDelete.addEventListener('click', e => {
         e.stopPropagation();
-        if (confirm(`هل أنت متأكد من حذف "${item.name}"؟`)) {
+        if (confirm(getTranslation('delete-folder-confirm'))) {
           deleteFolderName(item.id);
         }
       });
@@ -134,7 +140,7 @@ folderNameSearch.addEventListener('input', () => {
   renderFolderNameOptions(filtered);
 });
 addNewFolderNameLink.addEventListener('click', async () => {
-  const name = prompt('أدخل اسم المجلد الجديد:');
+  const name = prompt(getTranslation('add-folder-prompt'));
   if (!name) return;
 
   try {
@@ -150,11 +156,13 @@ addNewFolderNameLink.addEventListener('click', async () => {
       selectedFolderName.value = name;
       folderNameToggle.innerHTML = `${name} <span class="arrow">▾</span>`;
       closeFolderNameDropdown();
+      showToast(getTranslation('folder-added-success'), 'success');
     } else {
-      alert('❌ ' + (json.message || 'فشل في الإضافة'));
+      showToast(json.message || getTranslation('error-occurred'), 'error');
     }
   } catch (err) {
     console.error('فشل في إضافة الاسم:', err);
+    showToast(getTranslation('error-occurred'), 'error');
   }
 });
 document.addEventListener('click', e => {
@@ -173,13 +181,14 @@ async function updateFolderName(id, newName) {
     });
     const json = await res.json();
     if (res.ok) {
-      showToast('✅ تم التعديل بنجاح');
+      showToast(getTranslation('folder-updated-success'), 'success');
       await loadFolderNameOptions();
     } else {
-      showToast(json.message || '❌ فشل في التعديل', 'error');
+      showToast(json.message || getTranslation('error-occurred'), 'error');
     }
   } catch (err) {
     console.error('خطأ أثناء التعديل:', err);
+    showToast(getTranslation('error-occurred'), 'error');
   }
 }
 
@@ -190,13 +199,14 @@ async function deleteFolderName(id) {
     });
     const json = await res.json();
     if (res.ok) {
-      showToast('🗑️ تم الحذف');
+      showToast(getTranslation('folder-deleted-success'), 'success');
       await loadFolderNameOptions();
     } else {
-      showToast(json.message || '❌ فشل في الحذف', 'error');
+      showToast(json.message || getTranslation('error-occurred'), 'error');
     }
   } catch (err) {
     console.error('خطأ أثناء الحذف:', err);
+    showToast(getTranslation('error-occurred'), 'error');
   }
 }
 async function loadEditFolderNameOptions() {
@@ -243,11 +253,11 @@ function renderEditFolderNameOptions(list) {
       btnEdit.textContent  = '✎';
       btnEdit.addEventListener('click', async e => {
         e.stopPropagation();
-        const newName = prompt('أدخل الاسم الجديد:', item.name);
+        const newName = prompt(getTranslation('edit-folder-prompt'), item.name);
         if (newName && newName.trim() !== '') {
           await updateFolderName(item.id, newName.trim());
           await loadEditFolderNameOptions();
-          showToast('✅ تم تعديل الاسم بنجاح');
+          showToast(getTranslation('folder-updated-success'), 'success');
         }
       });
       actions.appendChild(btnEdit);
@@ -261,10 +271,10 @@ function renderEditFolderNameOptions(list) {
       btnDelete.textContent  = '🗑';
       btnDelete.addEventListener('click', async e => {
         e.stopPropagation();
-        if (confirm(`هل أنت متأكد أنك تريد حذف "${item.name}"؟`)) {
+        if (confirm(getTranslation('delete-folder-confirm'))) {
           await deleteFolderName(item.id);
           await loadEditFolderNameOptions();
-          showToast('🗑️ تم حذف الاسم');
+          showToast(getTranslation('folder-deleted-success'), 'success');
         }
       });
       actions.appendChild(btnDelete);
@@ -274,16 +284,16 @@ function renderEditFolderNameOptions(list) {
     container.appendChild(div);
   });
 
-  // زر “+ أضف جديد”
+  // زر "+" أضف جديد
   const addNewBtn = document.getElementById('editAddNewFolderNameLink');
   if (permissions.canAddFolderName) {
     addNewBtn.classList.remove('hidden');
     addNewBtn.onclick = async () => {
-      const name = prompt('أدخل اسم المجلد الجديد:');
+      const name = prompt(getTranslation('add-folder-prompt'));
       if (name && name.trim() !== '') {
         await createFolderName(name.trim());
         await loadEditFolderNameOptions();
-        showToast('✅ تم إضافة الاسم بنجاح');
+        showToast(getTranslation('folder-added-success'), 'success');
       }
     };
   } else {
@@ -307,7 +317,7 @@ async function createFolderName(name) {
     return await res.json();
   } catch (err) {
     console.error('Create Folder Name Error:', err);
-    showToast('❌ فشل في إضافة اسم جديد', 'error');
+    showToast(getTranslation('error-occurred'), 'error');
   }
 }
 
@@ -341,6 +351,12 @@ function renderContentTitleOptions(list) {
   const searchInput  = document.getElementById('contentTitleSearch');
   container.innerHTML = '';
 
+  // إذا لم توجد عناوين، اعرض رسالة
+  if (!list.length) {
+    container.innerHTML = `<div class="no-content" data-translate="no-contents">${getTranslation('no-contents')}</div>`;
+    return;
+  }
+
   list.forEach(item => {
     const div = document.createElement('div');
     div.className = 'folder-item';
@@ -365,11 +381,11 @@ function renderContentTitleOptions(list) {
       btnEdit.textContent  = '✎';
       btnEdit.addEventListener('click', async e => {
         e.stopPropagation();
-        const newName = prompt('أدخل عنوان المحتوى الجديد:', item.name);
+        const newName = prompt(getTranslation('edit-content-prompt'), item.name);
         if (newName && newName.trim()) {
           await updateContentTitle(item.id, newName.trim());
           await loadContentTitleOptions();
-          showToast('✅ تم تعديل العنوان بنجاح');
+          showToast(getTranslation('content-updated-success'), 'success');
         }
       });
       div.appendChild(btnEdit);
@@ -383,10 +399,10 @@ function renderContentTitleOptions(list) {
       btnDelete.textContent = '🗑';
       btnDelete.addEventListener('click', async e => {
         e.stopPropagation();
-        if (confirm(`هل تريد حقاً حذف "${item.name}"؟`)) {
+        if (confirm(getTranslation('delete-content-confirm'))) {
           await deleteContentTitle(item.id);
           await loadContentTitleOptions();
-          showToast('🗑️ تم حذف العنوان');
+          showToast(getTranslation('content-deleted-success'), 'success');
         }
       });
       div.appendChild(btnDelete);
@@ -394,25 +410,27 @@ function renderContentTitleOptions(list) {
 
     container.appendChild(div);
   });
-
-  // فلترة البحث
-  searchInput.oninput = () => {
-    const search   = searchInput.value.toLowerCase();
-    const filtered = list.filter(c => c.name.toLowerCase().includes(search));
-    renderContentTitleOptions(filtered);
-  };
 }
+function setupAddNewContentTitleLink() {
+  const link = document.getElementById('addNewContentTitleLink');
+  if (!link) return;
 
-// ربط زرّ “+ أضف جديد” بشرط الصلاحية
-const addNewContentTitleLink = document.getElementById('addNewContentTitleLink');
-if (permissions.canAddContentName) {
-  addNewContentTitleLink.classList.remove('hidden');
-  addNewContentTitleLink.onclick = async () => {
-    const newTitle = prompt('أدخل عنوان المحتوى الجديد:');
+  // أظهر الزر أو أخفه عند كل مرة بناءً على الصلاحية
+  if (permissions.canAddContentName) {
+    link.classList.remove('hidden');
+  } else {
+    link.classList.add('hidden');
+  }
+
+  // اربط الحدث مرّة وحدة
+  link.onclick = async () => {
+    if (!permissions.canAddContentName) return;
+
+    const newTitle = prompt(getTranslation('add-content-prompt'));
     if (!newTitle || !newTitle.trim()) return;
 
     try {
-      const res  = await fetch(`${apiBase}/api/committees/content-titles`, {
+      const res = await fetch(`${apiBase}/api/committees/content-titles`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -420,59 +438,31 @@ if (permissions.canAddContentName) {
         },
         body: JSON.stringify({ name: newTitle.trim() })
       });
+
       const json = await res.json();
       if (res.ok) {
         await loadContentTitleOptions();
         document.getElementById('selectedContentTitle').value = newTitle.trim();
         document.getElementById('contentTitleToggle').innerHTML = `${newTitle.trim()} <span class="arrow">▾</span>`;
+        showToast(getTranslation('content-added-success'), 'success');
       } else {
-        showToast(json.message || 'فشل في الإضافة', 'error');
+        showToast(json.message || getTranslation('error-occurred'), 'error');
       }
     } catch (err) {
       console.error('❌ خطأ في إضافة عنوان المحتوى:', err);
-      showToast('فشل في الاتصال بالخادم', 'error');
+      showToast(getTranslation('error-occurred'), 'error');
     }
   };
-} else {
-  addNewContentTitleLink.classList.add('hidden');
-  addNewContentTitleLink.onclick = null;
 }
+
 
 document.addEventListener('DOMContentLoaded', () => {
   // تحميل العناوين
+  
   loadContentTitleOptions();
+  setupAddNewContentTitleLink();
 
-  // تحقق من وجود العنصر قبل إضافة الأحداث
-  const addLink = document.getElementById('addNewContentTitleLink');
-  if (addLink) {
-    addLink.onclick = async () => {
-      const newTitle = prompt('أدخل عنوان المحتوى الجديد:');
-      if (!newTitle) return;
 
-      try {
-        const res = await fetch(`${apiBase}/api/committees/content-titles`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${getToken()}`
-          },
-          body: JSON.stringify({ name: newTitle })
-        });
-
-        const json = await res.json();
-        if (res.ok) {
-          await loadContentTitleOptions();
-          document.getElementById('selectedContentTitle').value = newTitle;
-          document.getElementById('contentTitleToggle').innerHTML = `${newTitle} <span class="arrow">▾</span>`;
-        } else {
-          showToast(json.message || 'فشل في الإضافة', 'error');
-        }
-      } catch (err) {
-        console.error('❌ خطأ في إضافة عنوان المحتوى:', err);
-        showToast('فشل في الاتصال بالخادم', 'error');
-      }
-    };
-  }
 
   const container = document.getElementById('contentTitleOptionsContainer');
   if (container) {
@@ -481,7 +471,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const name = e.target.dataset.name;
 
       if (e.target.classList.contains('btn-edit')) {
-        const updated = prompt('تعديل العنوان:', name);
+        const updated = prompt(getTranslation('edit-content-prompt'), name);
         if (!updated || updated === name) return;
 
         const res = await fetch(`${apiBase}/api/committees/content-titles/${id}`, {
@@ -496,14 +486,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const json = await res.json();
         if (res.ok) {
           await loadContentTitleOptions();
-          showToast('تم التحديث بنجاح', 'success');
+          showToast(getTranslation('content-updated-success'), 'success');
         } else {
-          showToast(json.message || 'فشل في التحديث', 'error');
+          showToast(json.message || getTranslation('error-occurred'), 'error');
         }
       }
 
       if (e.target.classList.contains('btn-delete')) {
-        if (!confirm('هل أنت متأكد من حذف العنوان؟')) return;
+        if (!confirm(getTranslation('delete-content-confirm'))) return;
 
         const res = await fetch(`${apiBase}/api/committees/content-titles/${id}`, {
           method: 'DELETE',
@@ -515,9 +505,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const json = await res.json();
         if (res.ok) {
           await loadContentTitleOptions();
-          showToast('تم الحذف بنجاح', 'success');
+          showToast(getTranslation('content-deleted-success'), 'success');
         } else {
-          showToast(json.message || 'فشل في الحذف', 'error');
+          showToast(json.message || getTranslation('error-occurred'), 'error');
         }
       }
     });
@@ -537,6 +527,8 @@ function closeContentTitleDropdown() {
 document.getElementById('contentTitleToggle').addEventListener('click', () => {
   const menu = document.getElementById('contentTitleMenu');
   menu.classList.toggle('hidden');
+    setupAddNewContentTitleLink(); // 🔁 تأكد أنه يتحدث كل مرة
+
 });
 document.addEventListener('click', function (e) {
   const dropdown = document.getElementById('contentTitleDropdown');
@@ -561,6 +553,12 @@ function renderEditContentTitleOptions(list) {
   const container   = document.getElementById('editContentTitlesContainer');
   const searchInput = document.getElementById('editContentTitleSearch');
   container.innerHTML = '';
+
+  // إذا لم توجد عناوين، اعرض رسالة
+  if (!list.length) {
+    container.innerHTML = `<div class="no-content" data-translate="no-contents">${getTranslation('no-contents')}</div>`;
+    return;
+  }
 
   list.forEach(item => {
     const div = document.createElement('div');
@@ -587,11 +585,11 @@ function renderEditContentTitleOptions(list) {
       btnEdit.textContent  = '✎';
       btnEdit.addEventListener('click', async e => {
         e.stopPropagation();
-        const newName = prompt('أدخل عنوان المحتوى الجديد:', item.name);
+        const newName = prompt(getTranslation('edit-content-prompt'), item.name);
         if (newName && newName.trim()) {
           await updateContentTitle(item.id, newName.trim());
           await loadEditContentTitleOptions();
-          showToast('✅ تم تعديل العنوان بنجاح');
+          showToast(getTranslation('content-updated-success'), 'success');
         }
       });
       div.appendChild(btnEdit);
@@ -605,10 +603,10 @@ function renderEditContentTitleOptions(list) {
       btnDelete.textContent = '🗑';
       btnDelete.addEventListener('click', async e => {
         e.stopPropagation();
-        if (confirm(`هل تريد حذف "${item.name}"؟`)) {
+        if (confirm(getTranslation('delete-content-confirm'))) {
           await deleteContentTitle(item.id);
           await loadEditContentTitleOptions();
-          showToast('🗑️ تم حذف العنوان');
+          showToast(getTranslation('content-deleted-success'), 'success');
         }
       });
       div.appendChild(btnDelete);
@@ -631,7 +629,7 @@ function renderEditContentTitleOptions(list) {
   if (permissions.canAddContentName) {
     addNewBtn.classList.remove('hidden');
     addNewBtn.onclick = async () => {
-      const newTitle = prompt('أدخل عنوان المحتوى الجديد:');
+      const newTitle = prompt(getTranslation('add-content-prompt'));
       if (!newTitle || !newTitle.trim()) return;
       try {
         const res  = await fetch(`${apiBase}/api/committees/content-titles`, {
@@ -648,13 +646,13 @@ function renderEditContentTitleOptions(list) {
           document.getElementById('editSelectedContentTitle').value = newTitle.trim();
           document.getElementById('editContentTitleToggle').innerHTML =
             `${newTitle.trim()} <span class="arrow">▾</span>`;
-          showToast('✅ تم إضافة العنوان بنجاح');
+          showToast(getTranslation('content-added-success'), 'success');
         } else {
-          showToast(json.message || 'فشل في الإضافة', 'error');
+          showToast(json.message || getTranslation('error-occurred'), 'error');
         }
       } catch (err) {
         console.error('❌ خطأ في إضافة عنوان المحتوى:', err);
-        showToast('فشل في الاتصال بالخادم', 'error');
+        showToast(getTranslation('error-occurred'), 'error');
       }
     };
   } else {
@@ -668,7 +666,7 @@ document.getElementById('editContentTitlesContainer').addEventListener('click', 
   const name = e.target.dataset.name;
 
   if (e.target.classList.contains('btn-edit')) {
-    const updated = prompt('تعديل العنوان:', name);
+    const updated = prompt(getTranslation('edit-content-prompt'), name);
     if (!updated || updated === name) return;
 
     const res = await fetch(`${apiBase}/api/committees/content-titles/${id}`, {
@@ -683,14 +681,14 @@ document.getElementById('editContentTitlesContainer').addEventListener('click', 
     const json = await res.json();
     if (res.ok) {
       await loadEditContentTitleOptions();
-      showToast('تم التحديث بنجاح', 'success');
+      showToast(getTranslation('content-updated-success'), 'success');
     } else {
-      showToast(json.message || 'فشل في التحديث', 'error');
+      showToast(json.message || getTranslation('error-occurred'), 'error');
     }
   }
 
   if (e.target.classList.contains('btn-delete')) {
-    if (!confirm('هل أنت متأكد من حذف العنوان؟')) return;
+    if (!confirm(getTranslation('delete-content-confirm'))) return;
 
     const res = await fetch(`${apiBase}/api/committees/content-titles/${id}`, {
       method: 'DELETE',
@@ -702,9 +700,9 @@ document.getElementById('editContentTitlesContainer').addEventListener('click', 
     const json = await res.json();
     if (res.ok) {
       await loadEditContentTitleOptions();
-      showToast('تم الحذف بنجاح', 'success');
+      showToast(getTranslation('content-deleted-success'), 'success');
     } else {
-      showToast(json.message || 'فشل في الحذف', 'error');
+      showToast(json.message || getTranslation('error-occurred'), 'error');
     }
   }
 });
@@ -783,7 +781,6 @@ document.getElementById('editContentTitlesContainer').addEventListener('click', 
         }
     }
     
-        const userRole = getUserRoleFromToken();
 async function fetchPermissions() {
   const userId = JSON.parse(atob(getToken().split('.')[1])).id;
   const headers = { 'Authorization': `Bearer ${getToken()}` };
@@ -882,106 +879,107 @@ async function fetchPermissions() {
             }
           });
         } else {
-          foldersList.innerHTML = '<div class="no-content">لا يوجد مجلدات في هذه اللجنة.</div>';
+          foldersList.innerHTML = `<div class="no-content" data-translate="no-folders">${getTranslation('no-folders')}</div>`;
         }
       } catch (err) {
-        showToast('حدث خطأ في الاتصال بجلب مجلدات اللجنة.', 'error');
+        showToast(getTranslation('error-occurred'), 'error');
       }
     }
 
-    async function fetchFolderContents(folderId, folderName) {
-      currentFolderId = folderId;
-      foldersSection.style.display = 'none';
-      folderContentsSection.style.display = 'block';
-      backToFilesContainer.style.display = 'block';
-      folderContentTitle.textContent = folderName || 'محتوى المجلد';
-      try {
-        const token = getToken();
-        const response = await fetch(`${apiBase}/api/committees/folders/${folderId}/contents`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
+async function fetchFolderContents(folderId, folderName) {
+  currentFolderId = folderId;
+  foldersSection.style.display = 'none';
+  folderContentsSection.style.display = 'block';
+  backToFilesContainer.style.display = 'block';
+  folderContentTitle.textContent = folderName || getTranslation('folder-content-title');
+
+  try {
+    const token = getToken();
+    const response = await fetch(`${apiBase}/api/committees/folders/${folderId}/contents`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    const responseJson = await response.json();
+    const contents = Array.isArray(responseJson.data)
+      ? responseJson.data
+      : (Array.isArray(responseJson) ? responseJson : []);
+
+    const filesList = document.querySelector('.files-list');
+    filesList.innerHTML = '';
+
+    const decodedToken = JSON.parse(atob(token.split('.')[1]));
+    const isAdmin = decodedToken.role === 'admin';
+
+    const filteredContents = isAdmin ? contents : contents.filter(content => content.approval_status === 'approved');
+
+    if (filteredContents.length > 0) {
+      filteredContents.forEach(content => {
+        let icons = '<div class="item-icons">';
+        if (permissions.canEditContent)
+          icons += `<a href="#" class="edit-icon" data-content-id="${content.id}"><img src="../images/edit.svg" alt="تعديل"></a>`;
+        if (permissions.canDeleteContent)
+          icons += `<a href="#" class="delete-icon" data-content-id="${content.id}"><img src="../images/delet.svg" alt="حذف"></a>`;
+        icons += '</div>';
+
+        const fileItem = document.createElement('div');
+        fileItem.className = 'file-item';
+        fileItem.dataset.contentId = content.id;
+
+        const approvalStatusText = (content.approval_status === 'approved') ? getTranslation('status-approved') : getTranslation('status-awaiting');
+        const approvalClass = (content.approval_status === 'approved') ? 'approved' : 'pending';
+
+        fileItem.innerHTML = `
+          ${icons}
+          <img src="../images/pdf.svg" alt="ملف PDF">
+          <div class="file-info">
+            <div class="file-name">${content.title}</div>
+            <div class="approval-status ${approvalClass}">${approvalStatusText}</div>
+          </div>
+        `;
+        filesList.appendChild(fileItem);
+
+        fileItem.addEventListener('click', function(e) {
+          if (!e.target.closest('.edit-icon') && !e.target.closest('.delete-icon')) {
+            if (content.file_path) {
+              const baseUrl = apiBase.replace('/api', '');
+              window.open(`${baseUrl}/${content.file_path}`, '_blank');
+            } else {
+              showToast(getTranslation('file-link-unavailable'), 'error');
+            }
           }
         });
-        const contents = await response.json();
-        const filesList = document.querySelector('.files-list');
-        filesList.innerHTML = '';
 
-        // Get user role from token
-        const decodedToken = JSON.parse(atob(token.split('.')[1]));
-        const isAdmin = decodedToken.role === 'admin';
+        const editIcon = fileItem.querySelector('.edit-icon');
+        const deleteIcon = fileItem.querySelector('.delete-icon');
 
-        // Filter contents based on user role
-        const filteredContents = isAdmin ? contents : contents.filter(content => content.approval_status === 'approved');
-
-        if (filteredContents.length) {
-          filteredContents.forEach(content => {
-            let icons = '<div class="item-icons">';
-            // Only show edit/delete icons for admins
-                        if (permissions.canEditContent)
-              icons += `<a href="#" class="edit-icon" data-content-id="${content.id}"><img src="../images/edit.svg" alt="تعديل"></a>`;
-                        if (permissions.canDeleteContent)
-              icons += `<a href="#" class="delete-icon" data-content-id="${content.id}"><img src="../images/delet.svg" alt="حذف"></a>`;
-        
-            icons += '</div>';
-            const fileItem = document.createElement('div');
-            fileItem.className = 'file-item';
-            fileItem.dataset.contentId = content.id;
-
-            // Determine approval status and class
-            const approvalStatusText = (content.approval_status === 'approved') ? 'معتمد' : 'قيد الانتظار';
-            const approvalClass = (content.approval_status === 'approved') ? 'approved' : 'pending';
-
-            fileItem.innerHTML = `
-              ${icons}
-              <img src="../images/pdf.svg" alt="ملف PDF">
-              <div class="file-info">
-                <div class="file-name">${content.title}</div>
-                <div class="approval-status ${approvalClass}">${approvalStatusText}</div>
-              </div>
-            `;
-            filesList.appendChild(fileItem);
-
-            // Add click handler for file opening
-            fileItem.addEventListener('click', function(e) {
-              if (!e.target.closest('.edit-icon') && !e.target.closest('.delete-icon')) {
-                if (content.file_path) {
-                  const baseUrl = apiBase.replace('/api', '');
-                  window.open(`${baseUrl}/${content.file_path}`, '_blank');
-                } else {
-                  showToast('رابط الملف غير متوفر.', 'error');
-                }
-              }
-            });
-
-            // Add click handlers for edit/delete icons if admin
-
-              const editIcon = fileItem.querySelector('.edit-icon');
-              const deleteIcon = fileItem.querySelector('.delete-icon');
-
-              if (editIcon) {
-                editIcon.addEventListener('click', e => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  openEditContentModal(content.id);
-                });
-              }
-
-              if (deleteIcon) {
-                deleteIcon.addEventListener('click', e => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  openDeleteContentModal(content.id);
-                });
-              
-            }
+        if (editIcon) {
+          editIcon.addEventListener('click', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            openEditContentModal(content.id);
           });
-        } else {
-          filesList.innerHTML = '<div class="no-content">لا يوجد محتوى في هذا المجلد.</div>';
         }
-      } catch (err) {
-        showToast('حدث خطأ في الاتصال بجلب محتوى المجلد.', 'error');
-      }
+
+        if (deleteIcon) {
+          deleteIcon.addEventListener('click', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            openDeleteContentModal(content.id);
+          });
+        }
+      });
+    } else {
+      filesList.innerHTML = `<div class="no-content" data-translate="no-contents">${getTranslation('no-contents')}</div>`;
     }
+
+  } catch (err) {
+    console.error('❌ خطأ في fetchFolderContents:', err);
+    showToast(getTranslation('error-occurred'), 'error');
+  }
+}
+
 
     // باقي الدوال: إضافة/تعديل/حذف مجلد ومحتوى، modals، إلخ (مطابقة للأقسام مع تغيير المسميات)
 
@@ -993,13 +991,13 @@ async function fetchPermissions() {
 
 function closeAddFolderModal() {
   const modal = document.getElementById('addFolderModal');
-  if (modal) modal.style.display = 'none'; // ← هذا هو المطلوب
+  if (modal) modal.style.display = 'none';
 
   const selectedInput = document.getElementById('selectedFolderName');
   if (selectedInput) selectedInput.value = '';
 
   const toggleBtn = document.getElementById('folderNameToggle');
-  if (toggleBtn) toggleBtn.innerHTML = 'اختر اسم المجلد <span class="arrow">▾</span>';
+  if (toggleBtn) toggleBtn.innerHTML = `${getTranslation('choose-folder-name')} <span class="arrow">▾</span>`;
 }
 
 
@@ -1023,39 +1021,36 @@ function openEditFolderModal(folderId, folderName) {
     }
 
     function openDeleteFolderModal(folderId) {
-        if (confirm('هل أنت متأكد من حذف هذا المجلد؟')) {
+        if (confirm(getTranslation('delete-folder-confirm'))) {
             deleteFolder(folderId);
         }
     }
 
     async function handleCreateFolder() {
-const name = document.getElementById('selectedFolderName').value;
-        if (!name) {
-            showToast('الرجاء إدخال اسم المجلد', 'error');
+        const folderName = document.getElementById('selectedFolderName').value;
+        if (!folderName) {
+            showToast(getTranslation('folder-name-required'), 'error');
             return;
         }
-
         try {
             const response = await fetch(`${apiBase}/api/committees/${currentCommitteeId}/folders`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${getToken()}`,
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${getToken()}`
                 },
-                body: JSON.stringify({ name })
+                body: JSON.stringify({ name: folderName })
             });
-
+            const data = await response.json();
             if (response.ok) {
+                showToast(getTranslation('folder-added-success'), 'success');
                 closeAddFolderModal();
                 fetchFolders(currentCommitteeId);
-                showToast('تم إضافة المجلد بنجاح', 'success');
             } else {
-                const data = await response.json();
-                showToast(`فشل إضافة المجلد: ${data.message||'خطأ'}`, 'error');
+                showToast(data.message || getTranslation('error-occurred'), 'error');
             }
         } catch (err) {
-            console.error('Error creating folder:', err);
-            showToast('خطأ في الاتصال بالخادم أثناء الإضافة.', 'error');
+            showToast(getTranslation('error-occurred'), 'error');
         }
     }
 
@@ -1072,7 +1067,7 @@ async function handleUpdateFolder() {
   const newName = selectedNameInput.value;
 
   if (!newName) {
-    showToast('الرجاء اختيار اسم المجلد', 'error');
+    showToast(getTranslation('choose-folder-name'), 'error');
     return;
   }
 
@@ -1087,7 +1082,7 @@ async function handleUpdateFolder() {
     });
 
     if (response.ok) {
-      showToast('تم تحديث اسم المجلد بنجاح', 'success');
+      showToast(getTranslation('folder-updated-success'), 'success');
       closeEditFolderModal();
       fetchFolders(currentCommitteeId);
     } else {
@@ -1107,7 +1102,7 @@ async function handleUpdateFolder() {
                 headers: { 'Authorization': `Bearer ${getToken()}` }
             });
             if (response.ok) {
-                showToast('تم حذف المجلد بنجاح', 'success');
+                showToast(getTranslation('folder-deleted-success'), 'success');
                 fetchFolders(currentCommitteeId);
             } else {
                 const data = await response.json();
@@ -1134,19 +1129,16 @@ history.back();        }
 function openAddContentModal() {
   if (addContentModal) {
     if (!currentFolderId) {
-      showToast('يرجى اختيار مجلد أولاً لإضافة محتوى.', 'error');
+      showToast(getTranslation('select-folder'), 'error');
       return;
     }
-
     addContentModal.style.display = 'flex';
     document.getElementById('addContentFolderId').value = currentFolderId;
-
-    // 👇 تحميل عناوين المحتوى
+    // تحميل عناوين المحتوى
     loadContentTitleOptions();
-
-    // 👇 إعادة تعيين الدروب داون (اختياري)
+    // إعادة تعيين الدروب داون
     document.getElementById('selectedContentTitle').value = '';
-    document.getElementById('contentTitleToggle').innerHTML = 'اختر عنوان المحتوى <span class="arrow">▾</span>';
+    document.getElementById('contentTitleToggle').innerHTML = `${getTranslation('choose-content-name')} <span class="arrow">▾</span>`;
   }
 }
 
@@ -1163,8 +1155,11 @@ function openAddContentModal() {
             // Reset file drop area display
             const fileDropArea = fileInput.closest('.file-drop-area');
             const fileUploadText = fileDropArea.querySelector('.file-upload-text');
-            fileUploadText.innerHTML = '<span class="supported-files">ملفات PDF فقط</span>';
+            fileUploadText.innerHTML = `<span class="supported-files">${getTranslation('pdf-only')}</span>`;
             fileDropArea.classList.remove('has-file');
+            // إعادة تعيين الدروبداون
+            document.getElementById('selectedContentTitle').value = '';
+            document.getElementById('contentTitleToggle').innerHTML = `${getTranslation('choose-content-name')} <span class="arrow">▾</span>`;
         }
     }
 
@@ -1181,7 +1176,7 @@ async function handleCreateContent() {
     }
 
     if (!folderIdToUpload || !contentTitle || !contentFile) {
-        showToast('الرجاء إدخال العنوان والملف والمجلد', 'error');
+        showToast(getTranslation('select-content'), 'error');
         return;
     }
 
@@ -1203,14 +1198,14 @@ async function handleCreateContent() {
         if (response.ok) {
             closeAddContentModal();
             fetchFolderContents(currentFolderId);
-            showToast('تم إضافة المحتوى بنجاح', 'success');
+            showToast(getTranslation('content-added-success'), 'success');
         } else {
             const data = await response.json();
-            showToast(`فشل إضافة المحتوى: ${data.message || 'خطأ'}`, 'error');
+            showToast(`${getTranslation('error-occurred')}: ${data.message || getTranslation('please-try-again')}`, 'error');
         }
     } catch (err) {
         console.error('Error creating content:', err);
-        showToast('خطأ في الاتصال بالخادم أثناء الإضافة.', 'error');
+        showToast(getTranslation('error-occurred'), 'error');
     }
 }
 const editContentTitleToggle     = document.getElementById('editContentTitleToggle');
@@ -1252,7 +1247,7 @@ function openEditContentModal(id) {
 
     .catch(err => {
       console.error(err);
-      showToast('فشل جلب البيانات.', 'error');
+      showToast(getTranslation('error-occurred'), 'error');
     });
 }
 
@@ -1271,7 +1266,7 @@ function closeEditContentModal() {
 
   // مسح الـ dropdown
   editSelectedContentTitle.value = '';
-  editContentTitleToggle.innerHTML = 'اختر عنوان المحتوى <span class="arrow">▾</span>';
+  editContentTitleToggle.innerHTML = `${getTranslation('choose-content-name')} <span class="arrow">▾</span>`;
   editContentTitleMenu.classList.add('hidden');
 
   // مسح الملاحظات (لو ضفت textarea)
@@ -1284,7 +1279,7 @@ function closeEditContentModal() {
     editContentFileInput.value = '';
     const fileDropArea = editContentFileInput.closest('.file-drop-area');
     const fileUploadText = fileDropArea.querySelector('.file-upload-text');
-    fileUploadText.innerHTML = '<span class="supported-files">ملفات PDF فقط</span>';
+    fileUploadText.innerHTML = `<span class="supported-files">${getTranslation('pdf-only')}</span>`;
     fileDropArea.classList.remove('has-file');
   }
 }
@@ -1312,7 +1307,7 @@ async function handleUpdateContent() {
   const file      = editContentFileInput.files[0];
 
   if (!title) {
-    showToast('الرجاء إدخال عنوان المحتوى', 'error');
+    showToast(getTranslation('content-title-required'), 'error');
     return;
   }
 
@@ -1329,15 +1324,15 @@ async function handleUpdateContent() {
     });
     const result = await response.json();
     if (response.ok) {
-      showToast(result.message || 'تم تحديث المحتوى بنجاح!', 'success');
+      showToast(result.message || getTranslation('content-update-success'), 'success');
       closeEditContentModal();
       await fetchFolderContents(currentFolderId);
     } else {
-      showToast(`فشل تحديث المحتوى: ${result.message||'خطأ'}`, 'error');
+      showToast(result.message || getTranslation('error-occurred'), 'error');
     }
   } catch (err) {
     console.error('Error updating content:', err);
-    showToast('خطأ في الاتصال بالخادم أثناء التحديث.', 'error');
+    showToast(getTranslation('error-occurred'), 'error');
   }
 }
 
@@ -1354,15 +1349,15 @@ async function handleUpdateContent() {
 
             const result = await response.json();
             if (response.ok) {
-                showToast(result.message || 'تم حذف المحتوى بنجاح!', 'success');
+                showToast(result.message || getTranslation('content-deleted-success'), 'success');
                 closeDeleteContentModal(); // Use the dedicated close function
                 await fetchFolderContents(currentFolderId); // تحديث قائمة المحتويات
             } else {
-                showToast(`فشل حذف المحتوى: ${result.message||'خطأ'}`, 'error');
+                showToast(result.message || getTranslation('error-occurred'), 'error');
             }
         } catch (err) {
             console.error('Error deleting content:', err);
-            showToast('خطأ في الاتصال بالخادم أثناء الحذف.', 'error');
+            showToast(getTranslation('error-occurred'), 'error');
         }
     }
 
@@ -1421,21 +1416,24 @@ async function handleUpdateContent() {
     function handleFileSelection(inputElement) {
         const fileDropArea = inputElement.closest('.file-drop-area');
         const fileUploadText = fileDropArea.querySelector('.file-upload-text');
-
+        
         if (inputElement.files.length > 0) {
             const file = inputElement.files[0];
+            
+            // التحقق من نوع الملف
             if (file.type !== 'application/pdf') {
-                showToast('يرجى اختيار ملف PDF فقط', 'error');
-                inputElement.value = '';
-                fileUploadText.innerHTML = '<span class="supported-files">ملفات PDF فقط</span>';
+                showToast(getTranslation('pdf-only'), 'error');
+                inputElement.value = ''; // مسح الملف المختار
+                fileUploadText.innerHTML = `<span class="supported-files">${getTranslation('pdf-only')}</span>`;
                 fileDropArea.classList.remove('has-file');
                 return;
             }
+
             const fileName = file.name;
-            fileUploadText.innerHTML = `<span class="selected-file">تم اختيار: ${fileName}</span>`;
+            fileUploadText.innerHTML = `<span class="selected-file">${getTranslation('selected-file')}${fileName}</span>`;
             fileDropArea.classList.add('has-file');
         } else {
-            fileUploadText.innerHTML = '<span class="supported-files">ملفات PDF فقط</span>';
+            fileUploadText.innerHTML = `<span class="supported-files">${getTranslation('pdf-only')}</span>`;
             fileDropArea.classList.remove('has-file');
         }
     }
@@ -1448,12 +1446,12 @@ function showToast(message, type = 'info', duration = 3006) {
         console.warn('Toast container not found!');
         return;
     }
-
+    // استخدم الترجمة إذا كانت متوفرة
+    const translated = getTranslation(message);
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    toast.textContent = message;
+    toast.textContent = translated !== message ? translated : message;
     toastContainer.appendChild(toast);
-
     setTimeout(() => {
         toast.remove();
     }, duration);

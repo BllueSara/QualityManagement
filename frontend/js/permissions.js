@@ -68,24 +68,32 @@ async function fetchDepartments() {
         'Authorization': `Bearer ${token}`
       }
     });
+
     const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(result.message || 'فشل في جلب الأقسام');
+      throw new Error('فشل في جلب الأقسام');
+    }
+
+    if (!Array.isArray(result)) {
+      throw new Error('الرد ليس مصفوفة أقسام');
     }
 
     // تحديث القائمة المنسدلة
     departmentSelect.innerHTML = '<option value="">اختر القسم</option>';
-    result.data.forEach(dept => {
+    result.forEach(dept => {
       const option = document.createElement('option');
       option.value = dept.id;
       option.textContent = dept.name;
       departmentSelect.appendChild(option);
     });
   } catch (error) {
+    console.error('🚨 fetchDepartments error:', error);
     alert('خطأ في جلب الأقسام.');
   }
 }
+
+
 
 // =====================
 // 1) Load Users

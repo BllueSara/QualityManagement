@@ -123,3 +123,17 @@ main h1 {
   line-height: 1;
   z-index: 1;
 }
+.card-icon.icon-circle {
+  background-color: #ecbb71; /* نفس اللون البرتقالي أو استخدم كلاس bg-orange */
+  border-radius: 50%;
+  width: 70px;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-icon.icon-circle i {
+  color: rgb(187, 78, 53);
+  font-size: 28px;
+}

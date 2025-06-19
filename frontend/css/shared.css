@@ -640,6 +640,7 @@ select {
   text-align: left;
   direction: ltr;
 }
+
 :lang(ar) body, 
 :lang(ar) input, 
 :lang(ar) select, 
@@ -681,4 +682,7 @@ select {
 /* بأي حال، لو LTR خلي الأيقونة بلا تقليب */
 [dir="ltr"] .back-btn .fa-arrow-left {
   transform: none;
+}
+.page-title {
+  text-align: center !important;
 }

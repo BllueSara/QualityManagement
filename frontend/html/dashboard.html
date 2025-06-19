@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>إحصائيات التذاكر</title>
+    <title data-translate="dashboard-title">إحصائيات التذاكر</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
@@ -28,49 +28,120 @@
   </header>
     <div class="header-actions">
         <button class="back-btn" onclick="history.back()">
-            <i class="fas fa-arrow-left"></i>
-            <span>رجوع</span>
+     <i class="fas fa-arrow-right" id="backIcon"></i>            <span data-translate="back">رجوع</span>
         </button>
         <button class="home-btn" onclick="window.location.href='index.html'">
             <i class="fas fa-home"></i>
-            <span>الرئيسية</span>
+            <span data-translate="home">الرئيسية</span>
         </button>
     </div>
     <main>
  
         <div class="container">
-            <h1>إحصائيات التذاكر</h1>
+           <h2 data-translate="dashboard-overview"> قائمة الاحصائيات</h2>
+<div class="stats-grid">
 
-
+  <!-- بطاقة: التذاكر المغلقة -->
   <div class="stat-card">
     <div class="stat-icon gradient-blue-2">
       <i class="fas fa-check-circle fa-2x text-white"></i>
     </div>
     <div class="stat-info">
-      <div class="stat-label">التذاكر المغلقة</div>
-      <div class="stat-value"></div>
+      <div class="stat-label" data-translate="closed-tickets">التذاكر المغلقة</div>
+      <div class="stat-value" id="closed-tickets"></div>
     </div>
   </div>
 
+  <!-- بطاقة: التذاكر الجديدة -->
   <div class="stat-card">
     <div class="stat-icon gradient-blue-3">
-      <i class="fas fa-spinner fa-2x fa-pulse text-white"></i>
+      <i class="fas fa-plus-circle fa-2x text-white"></i>
     </div>
     <div class="stat-info">
-      <div class="stat-label">التذاكر الجارية</div>
-      <div class="stat-value"></div>
+      <div class="stat-label" data-translate="new-tickets">التذاكر الجديدة</div>
+      <div class="stat-value" id="new-tickets"></div>
     </div>
   </div>
 
+  <!-- المستخدمين -->
+  <div class="stat-card">
+    <div class="stat-icon gradient-blue-4">
+      <i class="fas fa-users fa-2x text-white"></i>
+    </div>
+    <div class="stat-info">
+      <div class="stat-label" data-translate="total-users">عدد المستخدمين</div>
+      <div class="stat-value" id="total-users"></div>
+    </div>
+  </div>
+
+  <!-- المشرفين -->
+  <div class="stat-card">
+    <div class="stat-icon gradient-blue-5">
+      <i class="fas fa-user-shield fa-2x text-white"></i>
+    </div>
+    <div class="stat-info">
+      <div class="stat-label" data-translate="admin-count">عدد المشرفين</div>
+      <div class="stat-value" id="admin-count"></div>
+    </div>
+  </div>
+
+  <!-- محتويات قيد الاعتماد -->
+  <div class="stat-card">
+    <div class="stat-icon gradient-blue-6">
+      <i class="fas fa-hourglass-half fa-2x text-white"></i>
+    </div>
+    <div class="stat-info">
+      <div class="stat-label" data-translate="pending-contents">محتويات بانتظار الاعتماد</div>
+      <div class="stat-value" id="pending-contents"></div>
+    </div>
+  </div>
+
+  <!-- محتويات معتمدة -->
+  <div class="stat-card">
+    <div class="stat-icon gradient-blue-7">
+      <i class="fas fa-check fa-2x text-white"></i>
+    </div>
+    <div class="stat-info">
+      <div class="stat-label" data-translate="approved-contents">محتويات معتمدة</div>
+      <div class="stat-value" id="approved-contents"></div>
+    </div>
+  </div>
+
+  <!-- عدد اللجان -->
+  <div class="stat-card">
+    <div class="stat-icon gradient-blue-8">
+      <i class="fas fa-users-cog fa-2x text-white"></i>
+    </div>
+    <div class="stat-info">
+      <div class="stat-label" data-translate="committee-count">عدد اللجان</div>
+      <div class="stat-value" id="committee-count"></div>
+    </div>
+  </div>
+
+  <!-- محتويات اللجان بانتظار الاعتماد -->
+  <div class="stat-card">
+    <div class="stat-icon gradient-blue-9">
+      <i class="fas fa-clock fa-2x text-white"></i>
+    </div>
+    <div class="stat-info">
+      <div class="stat-label" data-translate="pending-committee-contents">محتويات اللجان (قيد الاعتماد)</div>
+      <div class="stat-value" id="pending-committee-contents"></div>
+    </div>
+  </div>
+
+</div>
 
 
 
-            <h2>التذاكر المغلقة خلال آخر 7 أيام</h2>
+
+
+            <h2 data-translate="closed-last-7days">التذاكر المغلقة خلال آخر 7 أيام</h2>
             <div class="chart-container">
                 <canvas id="ticketsChart"></canvas>
             </div>
         </div>
     </main>
+    <script src="../js/language.js"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="../js/dashboard.js"></script>

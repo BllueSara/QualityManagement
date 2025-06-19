@@ -1,6 +1,17 @@
+function getTranslation(key) {
+    const lang = localStorage.getItem('language') || document.documentElement.lang || 'ar';
+    if (window.translations && window.translations[lang] && window.translations[lang][key]) {
+        return window.translations[lang][key];
+    }
+    return key;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const usernameSpan = document.getElementById('profile-username');
     const emailSpan = document.getElementById('profile-email');
+    const departmentSpan = document.getElementById('profile-department');
+const employeeNumberSpan = document.getElementById('profile-employee-number');
+
     const logoutButton = document.getElementById('logout-button');
 
     // دالة لفك تشفير JWT والحصول على معلومات المستخدم
@@ -26,26 +37,29 @@ document.addEventListener('DOMContentLoaded', function() {
         if (user) {
             // عرض معلومات المستخدم (اسم المستخدم أو البريد الإلكتروني)
             // سنفترض أن التوكن يحتوي على 'email'، ويمكن إضافة 'username' إذا كان متاحاً في التوكن
-            emailSpan.textContent = user.email || 'غير متاح';
+            emailSpan.textContent = user.email || getTranslation('not-available');
             // إذا كان التوكن يحتوي على اسم المستخدم، يمكن عرضه هنا
-            // usernameSpan.textContent = user.username || 'غير متاح';
+            // usernameSpan.textContent = user.username || getTranslation('not-available');
             // بما أن الفورم لا يرسل username، سنعرض الإيميل كاسم مستخدم مؤقتاً أو نتركه فارغاً إذا لم يكن مطلوباً
-  usernameSpan.textContent = user.username
+            usernameSpan.textContent = user.username || getTranslation('not-available');
+            departmentSpan.textContent = user.department_name || getTranslation('not-available');
+employeeNumberSpan.textContent = user.employee_number || getTranslation('not-available');
+
         } else {
             // إذا كان التوكن غير صالح، توجيه المستخدم لصفحة تسجيل الدخول
-            alert('جلسة غير صالحة. يرجى تسجيل الدخول مرة أخرى.');
+            alert(getTranslation('invalid-session'));
             window.location.href = 'login.html';
         }
     } else {
         // إذا لم يكن هناك توكن، توجيه المستخدم لصفحة تسجيل الدخول
-        alert('يرجى تسجيل الدخول أولاً.');
+        alert(getTranslation('please-login'));
         window.location.href = 'login.html';
     }
 
     // التعامل مع زر تسجيل الخروج
     logoutButton.addEventListener('click', function() {
         localStorage.removeItem('token'); // حذف التوكن
-        alert('تم تسجيل الخروج بنجاح.');
+        alert(getTranslation('logout-success'));
         window.location.href = 'login.html'; // التوجيه لصفحة تسجيل الدخول
     });
 }); 

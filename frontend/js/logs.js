@@ -32,10 +32,14 @@ document.addEventListener('DOMContentLoaded', () => {
       tr.dataset.user   = log.user;
       tr.dataset.action = log.action;
 
+      // تحديد اللغة الحالية
+      const lang = localStorage.getItem('language') || document.documentElement.lang || 'ar';
+      const locale = lang === 'en' ? 'en-US' : 'ar-SA';
+
       tr.innerHTML = `
         <td>${log.user || '-'}</td>
         <td>${log.description || ''}</td>
-        <td>${new Date(log.created_at).toLocaleString('ar-SA')}</td>
+        <td>${new Date(log.created_at).toLocaleString(locale)}</td>
         <td><span class="action-text">${log.action}</span></td>
       `;
       logsBody.appendChild(tr);

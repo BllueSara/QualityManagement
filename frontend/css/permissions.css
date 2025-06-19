@@ -1,17 +1,27 @@
-/* General Layout for Permissions Page */
-html, body, h1, h2, h3, h4, h5, h6,
-p, span, a, button, input, select, textarea,
-label, .modal, .modal-content, .permission-item,
-.switch, .slider, .user-item, .btn-primary, .btn-secondary,
-.btn-delete, .btn-confirm, .btn-cancel {
-  font-family: 'Tajawal', sans-serif !important;
-}
 body {
     background-color: #ffffff;
     margin: 0;
-    font-family: 'Tajawal', sans-serif;
     direction: rtl;
     text-align: right;
+}
+:lang(ar) body, 
+:lang(ar) input, 
+:lang(ar) select, 
+:lang(ar) button, 
+:lang(ar) textarea, 
+:lang(ar) .header-title, 
+:lang(ar) .page-title {
+  font-family: 'Tajawal', sans-serif;
+}
+
+:lang(en) body, 
+:lang(en) input, 
+:lang(en) select, 
+:lang(en) button, 
+:lang(en) textarea, 
+:lang(en) .header-title, 
+:lang(en) .page-title {
+  font-family: Arial, sans-serif;
 }
 
 main {

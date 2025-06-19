@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>سجلات النظام</title>
+    <title data-translate="logs-title">سجلات النظام</title>
     <!-- ربط ملفات CSS -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -29,12 +29,11 @@
   </header>
   <div class="header-actions">
     <button class="back-btn" onclick="history.back()">
-        <i class="fas fa-arrow-left"></i>
-        <span>رجوع</span>
+     <i class="fas fa-arrow-right" id="backIcon"></i>        <span data-translate="back">رجوع</span>
   </button>
   <button class="home-btn" onclick="window.location.href='index.html'">
     <i class="fas fa-home"></i>
-    <span>الرئيسية</span>
+    <span data-translate="home">الرئيسية</span>
   </button>
 </div>
     <main>
@@ -42,42 +41,42 @@
         <div class="container">
             <!-- قسم الفلترة -->
 <section class="filter-section">
-  <h2 class="section-title">سجلات النظام</h2>
+  <h2 class="section-title" data-translate="logs-title">سجلات النظام</h2>
   <div class="filter-row">
 
     <div class="input-group search-input">
-      <input type="text" id="search-input" placeholder="البحث في السجلات...">
+      <input type="text" id="search-input" data-translate-placeholder="logs-search" placeholder="البحث في السجلات...">
     </div>
 
     <div class="input-group">
-      <label for="from-date">من تاريخ</label>
+      <label for="from-date" data-translate="from-date">من تاريخ</label>
       <input type="date" id="from-date" name="from-date">
     </div>
 
     <div class="input-group">
-      <label for="to-date">إلى تاريخ</label>
+      <label for="to-date" data-translate="to-date">إلى تاريخ</label>
       <input type="date" id="to-date" name="to-date">
     </div>
 
     <div class="input-group">
-      <label for="action-type">نوع الإجراء</label>
+      <label for="action-type" data-translate="action-type">نوع الإجراء</label>
       <select id="action-type" name="action-type">
-        <option value="">جميع الإجراءات</option>
-        <option value="تسجيل دخول">تسجيل دخول</option>
-        <option value="إنشاء تذكرة">إنشاء تذكرة</option>
-        <option value="إضافة مجلد">إضافة مجلد</option>
-        <option value="توقيع">توقيع</option>
-        <option value="رفع طلب اعتماد">رفع طلب اعتماد</option>
-        <option value="إضافة قسم">إضافة قسم</option>
-        <option value="إضافة محتوى">إضافة محتوى</option>
+        <option value="" data-translate="all-actions">جميع الإجراءات</option>
+        <option value="تسجيل دخول" data-translate="action-login">تسجيل دخول</option>
+        <option value="إنشاء تذكرة" data-translate="action-create-ticket">إنشاء تذكرة</option>
+        <option value="إضافة مجلد" data-translate="action-add-folder">إضافة مجلد</option>
+        <option value="توقيع" data-translate="action-sign">توقيع</option>
+        <option value="رفع طلب اعتماد" data-translate="action-raise-approval">رفع طلب اعتماد</option>
+        <option value="إضافة قسم" data-translate="action-add-department">إضافة قسم</option>
+        <option value="إضافة محتوى" data-translate="action-add-content">إضافة محتوى</option>
       </select>
     </div>
 
     <!-- ✅ إضافة عنصر اسم المستخدم -->
     <div class="input-group">
-      <label for="user-name">اسم المستخدم</label>
+      <label for="user-name" data-translate="user-name">اسم المستخدم</label>
       <select id="user-name" name="user-name">
-        <option value="">جميع المستخدمين</option>
+        <option value="" data-translate="all-users">جميع المستخدمين</option>
       </select>
     </div>
   </div>
@@ -90,10 +89,10 @@
                 <table class="logs-table">
                     <thead>
                         <tr>
-                            <th>اسم المستخدم</th>
-                            <th>وصف مختصر</th>
-                            <th>التاريخ والوقت</th>
-                            <th>نوع الإجراء</th>
+                            <th data-translate="user-name">اسم المستخدم</th>
+                            <th data-translate="logs-description">وصف مختصر</th>
+                            <th data-translate="logs-date">التاريخ والوقت</th>
+                            <th data-translate="action-type">نوع الإجراء</th>
                         </tr>
                     </thead>
                     <tbody id="logs-body">
@@ -103,7 +102,7 @@
                             <td>تم تسجيل الدخول إلى النظام</td>
                             <td>22 يناير 2024، 09:15 ص</td>
                             <td>
-                                <span class="action-text">تسجيل دخول</span>
+                                <span class="action-text" data-translate="action-login">تسجيل دخول</span>
                             </td>
                         </tr>
                         <!-- سطر 2 -->
@@ -112,7 +111,7 @@
                             <td>إنشاء تذكرة دعم فني جديدة #12345</td>
                             <td>22 يناير 2024، 09:30 ص</td>
                             <td>
-                                <span class="action-text">إنشاء تذكرة</span>
+                                <span class="action-text" data-translate="action-create-ticket">إنشاء تذكرة</span>
                             </td>
                         </tr>
                         <!-- سطر 3 -->
@@ -121,7 +120,7 @@
                             <td>إنشاء مجلد جديد "المستندات المالية"</td>
                             <td>22 يناير 2024، 10:00 ص</td>
                             <td>
-                                <span class="action-text">إضافة مجلد</span>
+                                <span class="action-text" data-translate="action-add-folder">إضافة مجلد</span>
                             </td>
                         </tr>
                         <!-- سطر 4 -->
@@ -130,7 +129,7 @@
                             <td>توقيع المستند "عقد العمل"</td>
                             <td>22 يناير 2024، 10:15 ص</td>
                             <td>
-                                <span class="action-text">توقيع</span>
+                                <span class="action-text" data-translate="action-sign">توقيع</span>
                             </td>
                         </tr>
                         <!-- سطر 5 -->
@@ -139,7 +138,7 @@
                             <td>تم رفع طلب اعتماد إجازة</td>
                             <td>22 يناير 2024، 11:00 ص</td>
                             <td>
-                                <span class="action-text">رفع طلب اعتماد</span>
+                                <span class="action-text" data-translate="action-raise-approval">رفع طلب اعتماد</span>
                             </td>
                         </tr>
                         <!-- سطر 6 -->
@@ -148,7 +147,7 @@
                             <td>إضافة قسم جديد "الموارد البشرية"</td>
                             <td>22 يناير 2024، 11:30 ص</td>
                             <td>
-                                <span class="action-text">إضافة قسم</span>
+                                <span class="action-text" data-translate="action-add-department">إضافة قسم</span>
                             </td>
                         </tr>
                         <!-- سطر 7 -->
@@ -157,7 +156,7 @@
                             <td>إضافة ملف "التقرير الشهري"</td>
                             <td>22 يناير 2024، 12:00 م</td>
                             <td>
-                                <span class="action-text">إضافة محتوى</span>
+                                <span class="action-text" data-translate="action-add-content">إضافة محتوى</span>
                             </td>
                         </tr>
                     </tbody>
@@ -165,6 +164,7 @@
             </section>
         </div>
     </main>
+    <script src="../js/language.js"></script>
 
     <!-- ربط ملف JavaScript -->
     <script src="../js/logs.js"></script>

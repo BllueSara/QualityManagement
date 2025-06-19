@@ -249,3 +249,6 @@ main {
     font-size: 0.95rem;
   }
 }
+.page-title {
+  text-align: center !important;
+}
