@@ -1,30 +1,37 @@
 // scripts.js
 apiBase = 'http://localhost:3006/api';
 let permissionsKeys = [];
+const permissions = {
+  canDelete: false,
+  canEdit: false,
+  canAdd: false,
+  canTrack: false
+};
 
 async function fetchPermissions() {
   const token = localStorage.getItem('token');
-  if (!token) return;
-  const payload = JSON.parse(atob(token.split('.')[1] || '{}'));
-  const userRole = payload.role;
+  const payload = JSON.parse(atob(token.split('.')[1]));
+  const userId = payload.id;
+  const role = payload.role;
 
-  // الإدمن دائماً يرى كل شيء
-  if (['admin'].includes(userRole)) {
-    permissionsKeys = ['*'];
+  const headers = { 'Authorization': `Bearer ${token}` };
+
+  if (role === 'admin') {
+    permissions.canAdd = permissions.canEdit = permissions.canDelete = true;
     return;
   }
 
-  // خلاف ذلك جلب الصلاحيات من API
-  const userId = payload.id;
-  const res = await fetch(`${apiBase}/users/${userId}/permissions`, {
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-  if (!res.ok) return;
+  const res = await fetch(`http://localhost:3006/api/users/${userId}/permissions`, { headers });
   const { data: perms } = await res.json();
-  permissionsKeys = perms.map(p =>
-    typeof p === 'string' ? p : (p.permission || p.permission_key)
-  );
+
+  const keys = perms.map(p => typeof p === 'string' ? p : p.permission);
+
+  permissions.canEdit   = keys.includes('edit_ticket');
+  permissions.canDelete = keys.includes('delete_ticket');
+  permissions.canTrack  = keys.includes('track_tickets');
 }
+
+
 
 document.addEventListener('DOMContentLoaded', async () => {
     const searchInput = document.getElementById('searchInput');
@@ -63,9 +70,10 @@ tickets = body.data;
 function renderTickets() {
   ticketsBody.innerHTML = '';
   filteredTickets.forEach(ticket => {
-    const canEdit    = permissionsKeys.includes('*') || permissionsKeys.includes('edit_ticket');
-    const canDelete  = permissionsKeys.includes('*') || permissionsKeys.includes('delete_ticket');
-    const canTrack   = permissionsKeys.includes('*') || permissionsKeys.includes('track_tickets');
+const canEdit  = permissions.canEdit;
+const canDelete = permissions.canDelete;
+const canTrack = permissions.canTrack; // أو حط صلاحية خاصة إذا تحب
+
 
     const row = document.createElement('tr');
     console.log('🔥 status:', ticket.current_status);

@@ -205,9 +205,36 @@
           <i class="fas fa-th-large section-icon"></i>
           <h2 class="section-title" data-translate="event-classification">تصنيف الحدث</h2>
         </div>
-        <div class="section-content tags-container">
-          <input type="text" id="classification" name="classification" class="field-input" data-translate-placeholder="event-classification" placeholder="الأجهزة الطبية, البنية, ..." />
-          <small class="hint" data-translate="hint">افصل بين التصنيفات بفواصل</small>
+        <div class="section-content tags-container" id="classificationContainer">
+          <div class="checkbox-group" style="display:flex;flex-wrap:wrap;gap:12px;">
+            <label><input type="checkbox" name="classification" value="الأجهزة الطبية" checked data-translate="medical-equipment"> <span data-translate="medical-equipment">الأجهزة الطبية</span></label>
+            <label><input type="checkbox" name="classification" value="البنية"> <span data-translate="infrastructure">البنية</span></label>
+            <label><input type="checkbox" name="classification" value="قضايا أمنية"> <span data-translate="security-issues">قضايا أمنية</span></label>
+            <label><input type="checkbox" name="classification" value="النظافة"> <span data-translate="cleaning">النظافة</span></label>
+            <label><input type="checkbox" name="classification" value="السقوط"> <span data-translate="fall">السقوط</span></label>
+            <label><input type="checkbox" name="classification" value="مشكلات سلسلة الإمداد"> <span data-translate="supply-chain">مشكلات سلسلة الإمداد</span></label>
+            <label><input type="checkbox" name="classification" value="إدارة رعاية المرضى"> <span data-translate="patient-care">إدارة رعاية المرضى</span></label>
+            <label><input type="checkbox" name="classification" value="خدمات الطعام"> <span data-translate="food-services">خدمات الطعام</span></label>
+            <label><input type="checkbox" name="classification" value="الصحة المهنية"> <span data-translate="occupational-health">الصحة المهنية</span></label>
+            <label><input type="checkbox" name="classification" value="تكامل الجلد"> <span data-translate="skin-integrity">تكامل الجلد</span></label>
+            <label><input type="checkbox" name="classification" value="مشاكل التواصل"> <span data-translate="communication">مشاكل التواصل</span></label>
+            <label><input type="checkbox" name="classification" value="قضايا الولادة"> <span data-translate="maternal">قضايا الولادة</span></label>
+            <label><input type="checkbox" name="classification" value="أحداث جسيمة"> <span data-translate="serious-incidents">أحداث جسيمة</span></label>
+            <label><input type="checkbox" name="classification" value="قضايا الموظفين"> <span data-translate="staff-issues">قضايا الموظفين</span></label>
+            <label><input type="checkbox" name="classification" value="إجراءات طبية"> <span data-translate="medical-procedures">إجراءات طبية</span></label>
+            <label><input type="checkbox" name="classification" value="البيئة / السلامة"> <span data-translate="environment-safety">البيئة / السلامة</span></label>
+            <label><input type="checkbox" name="classification" value="التصوير الطبي"> <span data-translate="medical-imaging">التصوير الطبي</span></label>
+            <label><input type="checkbox" name="classification" value="الهوية / المستندات / الموافقات"> <span data-translate="identity-docs">الهوية / المستندات / الموافقات</span></label>
+            <label><input type="checkbox" name="classification" value="قضايا مكافحة العدوى"> <span data-translate="infection-control">قضايا مكافحة العدوى</span></label>
+            <label><input type="checkbox" name="classification" value="الحقن الوريدي"> <span data-translate="iv-injection">الحقن الوريدي</span></label>
+            <label><input type="checkbox" name="classification" value="الدواء"> <span data-translate="medication">الدواء</span></label>
+            <label><input type="checkbox" name="classification" value="العلاج الإشعاعي"> <span data-translate="radiation-therapy">العلاج الإشعاعي</span></label>
+            <label><input type="checkbox" name="classification" value="خدمات المختبر"> <span data-translate="lab-services">خدمات المختبر</span></label>
+            <label><input type="checkbox" name="classification" value="صيانة المنشأة"> <span data-translate="facility-maintenance">صيانة المنشأة</span></label>
+            <label><input type="checkbox" name="classification" value="قضايا تقنية المعلومات"> <span data-translate="it-issues">قضايا تقنية المعلومات</span></label>
+            <label><input type="checkbox" name="classification" value="التغذية السريرية"> <span data-translate="clinical-nutrition">التغذية السريرية</span></label>
+          </div>
+          <small class="hint" data-translate="classification-hint">افصل بين التصنيفات بفواصل</small>
         </div>
       </section>
 
@@ -245,14 +272,16 @@
           <h2 class="section-title" data-translate="attachments">مرفقات (اختياري)</h2>
         </div>
         <div class="section-content">
-          <input type="file" name="attachments" multiple />
+          <label for="attachmentsInput" data-translate="choose-file" style="margin-bottom:6px;display:block;cursor:pointer;">choose-file</label>
+          <input type="file" name="attachments" id="attachmentsInput" multiple style="margin-bottom:4px;" />
+          <div id="noFilesMsg" data-translate="no-files-selected" style="margin-top:8px;color:#888;font-size:0.95em">لم يتم اختيار أي ملفات</div>
         </div>
       </section>
 
       <!-- أزرار الإرسال -->
-      <div class="form-actions">
-        <button type="submit" class="btn-primary" data-translate="save">حفظ التعديلات</button>
-        <button type="button" class="btn-secondary" onclick="history.back()" data-translate="cancel">إلغاء</button>
+      <div class="form-actions" style="display:flex;gap:16px;justify-content:flex-end;flex-wrap:wrap;">
+        <button type="submit" class="btn-primary" data-translate="save" style="min-width:120px;font-weight:bold;">حفظ التعديلات</button>
+        <button type="button" class="btn-secondary" onclick="history.back()" data-translate="cancel" style="min-width:120px;">إلغاء</button>
       </div>
     </form>
   </main>
@@ -284,10 +313,23 @@ async function loadDepartments() {
     reportingDeptSelect.innerHTML  = '<option value="" disabled selected data-translate="select-dept">اختر القسم</option>';
     respondingDeptSelect.innerHTML = '<option value="" disabled selected data-translate="select-dept">اختر القسم</option>';
 
-    depts.forEach(d => {
-      reportingDeptSelect.add(new Option(d.name, d.id));
-      respondingDeptSelect.add(new Option(d.name, d.id));
-    });
+   const lang = localStorage.getItem('language') || 'ar';
+
+function getDeptName(name) {
+  try {
+    const parsed = JSON.parse(name);
+    return parsed[lang] || parsed['ar'] || parsed['en'] || name;
+  } catch {
+    return name;
+  }
+}
+
+depts.forEach(d => {
+  const deptName = getDeptName(d.name);
+  reportingDeptSelect.add(new Option(deptName, d.id));
+  respondingDeptSelect.add(new Option(deptName, d.id));
+});
+
 
   } catch (err) {
     console.error('❌ خطأ في تحميل الأقسام:', err);
@@ -332,9 +374,11 @@ async function loadTicket() {
     // بعد إضافة الأقسام:
     reportingDeptSelect.value  = t.reporting_dept_id || '';
     respondingDeptSelect.value = t.responding_dept_id  || '';
-       if (Array.isArray(t.classifications)) {
-      document.getElementById('classification').value =
-        t.classifications.join(', ');
+    if (Array.isArray(t.classifications)) {
+      // ألغِ تحديد الكل أولاً
+      document.querySelectorAll('input[name="classification"]').forEach(cb => {
+        cb.checked = t.classifications.includes(cb.value);
+      });
     }
 
   } catch (err) {
@@ -344,30 +388,75 @@ async function loadTicket() {
 
 
   // ——————————— 4) إرسال التعديلات ———————————
-  form.addEventListener('submit', async e => {
-    e.preventDefault();
-    const fd = new FormData(form);
-    fd.set('status_comments', 'تم التعديل من الواجهة');
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  const fd = new FormData(form);
 
-    try {
-      const res  = await fetch(`${apiBase}/tickets/${ticketId}`, {
-        method: 'PUT',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-        body: fd
-      });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.message || res.statusText);
-      alert('تم حفظ التعديلات بنجاح');
-      history.back();
-    } catch (err) {
-      alert('خطأ أثناء حفظ التعديلات: ' + err.message);
-    }
+  // 1) جمع التصنيفات المختارة
+  const selected = Array.from(
+    document.querySelectorAll('input[name="classification"]:checked')
+  ).map(cb => cb.value);
+
+  // 2) نشيل أي حقول classification مُضمّنة
+  fd.delete('classification');
+
+  // 3) نضيف كل قيمة كحقل multi-part
+  selected.forEach(val => {
+    fd.append('classification', val);
   });
+
+  // 4) التعليق الثابت
+  fd.set('status_comments', 'تم التعديل من الواجهة');
+
+  try {
+    const res = await fetch(`${apiBase}/tickets/${ticketId}`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+      body: fd
+    });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.message || res.statusText);
+    alert('تم حفظ التعديلات بنجاح');
+    history.back();
+  } catch (err) {
+    alert('خطأ أثناء حفظ التعديلات: ' + err.message);
+  }
+});
+
 
   // ——————————— 5) تهيئة الصفحة ———————————
   document.addEventListener('DOMContentLoaded', async () => {
     await loadDepartments();
     await loadTicket();
+  });
+
+  // Add dynamic update for attachments input
+  const attachmentsInput = document.getElementById('attachmentsInput');
+  const noFilesMsg = document.getElementById('noFilesMsg');
+  if (attachmentsInput && noFilesMsg) {
+    attachmentsInput.addEventListener('change', function() {
+      const lang = localStorage.getItem('language') || 'ar';
+      if (attachmentsInput.files.length === 0) {
+        noFilesMsg.textContent = getTranslation('no-files-selected');
+      } else {
+        noFilesMsg.textContent = Array.from(attachmentsInput.files).map(f => f.name).join(', ');
+      }
+    });
+  }
+
+  // After the dynamic update for attachments input
+  // Ensure translation updates for file input label and noFilesMsg on language change
+  window.addEventListener('storage', function(e) {
+    if (e.key === 'language') {
+      const lang = localStorage.getItem('language') || 'ar';
+      const chooseFileLabel = document.querySelector('label[for="attachmentsInput"][data-translate="choose-file"]');
+      if (chooseFileLabel) {
+        chooseFileLabel.textContent = getTranslation('choose-file');
+      }
+      if (noFilesMsg) {
+        noFilesMsg.textContent = getTranslation('no-files-selected');
+      }
+    }
   });
 </script>
 

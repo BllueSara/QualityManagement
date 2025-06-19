@@ -8,6 +8,19 @@ if (typeof getTranslation !== 'function') {
     return key;
   }
 }
+function getLocalizedName(name) {
+  const lang = localStorage.getItem('language') || 'ar';
+  try {
+    // إذا كانت JSON كسلسلة، فكّها
+    if (typeof name === 'string' && name.trim().startsWith('{')) {
+      name = JSON.parse(name);
+    }
+    return name?.[lang] || name?.ar || name?.en || (typeof name === 'string' ? name : '');
+  } catch {
+    return typeof name === 'string' ? name : '';
+  }
+}
+
 
 function updateTableUI() {
   const lang = localStorage.getItem('language') || 'ar';
@@ -80,7 +93,11 @@ const depts = Array.isArray(resJson) ? resJson : [];
         <button class="dropdown-btn">${getTranslation('select-department')}</button>
         <div class="dropdown-content">
           <input type="text" class="dropdown-search" placeholder="${getTranslation('search-department')}">
-          ${depts.map(d => `<div class="dropdown-item" data-value="${d.id}">${d.name}</div>`).join('')}
+${depts.map(d => {
+  const name = getLocalizedName(d.name);
+  return `<div class="dropdown-item" data-value="${d.id}">${name}</div>`;
+}).join('')}
+
         </div>
       </div>`;
     row.append(tdDept);
@@ -102,8 +119,42 @@ const depts = Array.isArray(resJson) ? resJson : [];
     row.append(tdSel);
 
     // خلية الحالة
-    const tdStatus = document.createElement('td');
-    tdStatus.innerHTML = `<span class="badge-pending">${getTranslation(ticket.status === 'تم الإرسال' || ticket.status === 'Sent' ? 'sent' : ticket.status === 'قيد الانتظار' || ticket.status === 'Pending' ? 'pending' : ticket.status)}</span>`;
+// خلية الحالة
+const tdStatus = document.createElement('td');
+const statusKey = (ticket.status || '').toLowerCase();
+
+let translatedStatus = '';
+let badgeClass = 'badge-default';
+
+switch (statusKey) {
+  case 'new':
+  case 'جديد':
+    translatedStatus = getTranslation('new');
+    badgeClass = 'badge-new';
+    break;
+
+  case 'sent':
+  case 'تم الإرسال':
+    translatedStatus = getTranslation('sent');
+    badgeClass = 'badge-sent';
+    break;
+
+  case 'closed':
+  case 'مغلق':
+    translatedStatus = getTranslation('closed');
+    badgeClass = 'badge-closed';
+    break;
+
+  default:
+    translatedStatus = ticket.status;
+    badgeClass = 'badge-default';
+    break;
+}
+
+tdStatus.innerHTML = `<span class="${badgeClass}">${translatedStatus}</span>`;
+row.append(tdStatus);
+
+
     row.append(tdStatus);
 
     // زر التحويل
@@ -158,7 +209,9 @@ const depts = Array.isArray(resJson) ? resJson : [];
         // فاصل بعنوان القسم
         const divider = document.createElement('div');
         divider.className = 'dropdown-divider';
-        const deptLabel = deptDrop.querySelector(`.dropdown-item[data-value="${deptVal}"]`).textContent;
+const deptObj = depts.find(d => d.id == deptVal);
+const deptLabel = deptObj ? getLocalizedName(deptObj.name) : '';
+
         divider.textContent = deptLabel;
         uList.append(divider);
 
@@ -288,31 +341,40 @@ const depts = Array.isArray(resJson) ? resJson : [];
 
     try {
       // 1) حدّث الحالة إلى "تم الإرسال"
-      await fetch(`http://localhost:3006/api/tickets/${ticketId}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type' : 'application/json'
-        },
-        body: JSON.stringify({ status: 'تم الإرسال' })
-      });
+      const statusRes = await fetch(`http://localhost:3006/api/tickets/${ticketId}`, {
+  method: 'PUT',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type' : 'application/json'
+  },
+  body: JSON.stringify({ status: 'تم الإرسال' })
+});
 
-      // 2) سجّل التحويل
-      await fetch(`http://localhost:3006/api/tickets/${ticketId}/assign`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type' : 'application/json'
-        },
-        body: JSON.stringify({ assignees })
-      });
+if (!statusRes.ok) throw new Error('Failed to update status');
+
+const assignRes = await fetch(`http://localhost:3006/api/tickets/${ticketId}/assign`, {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type' : 'application/json'
+  },
+  body: JSON.stringify({ assignees })
+});
+
+if (!assignRes.ok) throw new Error('Failed to assign ticket');
+
 
       alert(getTranslation('success-sent'));
-      row.querySelector('.badge-pending').textContent = getTranslation('sent');
-    } catch (err) {
-      // console.error(err);
-      alert(getTranslation('error-sending'));
-    }
+// تحديث خانة الحالة بشكل مرن
+const tdStatus = row.querySelector('td:nth-child(5)');
+if (tdStatus) {
+  tdStatus.innerHTML = `<span class="badge-sent">${getTranslation('sent')}</span>`;
+}
+} catch (err) {
+  console.error('❌ Error:', err);
+  alert(getTranslation('error-sending') + `\n${err.message || ''}`);
+}
+
   });
   }
 });

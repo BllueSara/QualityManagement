@@ -131,29 +131,56 @@ exports.getTicket = async (req, res) => {
 };
 
 // Update a ticket
+// controllers/ticketController.js
+
 exports.updateTicket = async (req, res) => {
-    try {
-        upload(req, res, async function (err) {
-            if (err) {
-                return res.status(400).json({ error: err.message });
-            }
+  try {
+    // نفّذ الـ upload أولاً
+    upload(req, res, async function (err) {
+      if (err) {
+        return res.status(400).json({ error: err.message });
+      }
 
-            const ticketData = {
-                ...req.body,
-                attachments: req.files ? req.files.map(file => ({
-                    filename: file.filename,
-                    path: file.path,
-                    mimetype: file.mimetype
-                })) : []
-            };
+      // 1) فك التصنيفات إلى مصفوفة
+      const classifications = Array.isArray(req.body.classification)
+        ? req.body.classification
+        : req.body.classification
+          ? [req.body.classification]
+          : [];
 
-            await Ticket.update(req.params.id, ticketData, req.user.id);
-            res.json({ message: 'تم تحديث التذكرة بنجاح' });
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+      // 2) (اختياري) فك أنواع المرضى بنفس المنطق لو تستخدم هذا الحقل
+      const patient_types = Array.isArray(req.body.patient_types)
+        ? req.body.patient_types
+        : req.body.patient_types
+          ? [req.body.patient_types]
+          : [];
+
+      // 3) جهّز بيانات التذكرة مع إضافة الحقول الجديدة
+      const ticketData = {
+        ...req.body,
+        classifications,      // هنا المصفوفة
+        patient_types,        // لو تستخدم patient_types
+        attachments: req.files
+          ? req.files.map(file => ({
+              filename: file.filename,
+              path: file.path,
+              mimetype: file.mimetype
+            }))
+          : []
+      };
+
+      // 4) نفّذ التحديث بالموديل
+      await Ticket.update(req.params.id, ticketData, req.user.id);
+
+      return res.json({ message: 'تم تحديث التذكرة بنجاح' });
+    });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: error.message });
+  }
 };
+
 
 // Delete a ticket
 exports.deleteTicket = async (req, res) => {

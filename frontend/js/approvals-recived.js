@@ -39,6 +39,15 @@ async function fetchJSON(url, opts = {}) {
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
+function getLocalizedName(name) {
+  const lang = localStorage.getItem('language') || 'ar';
+  try {
+    const parsed = typeof name === 'string' ? JSON.parse(name) : name;
+    return parsed?.[lang] || parsed?.ar || parsed?.en || name;
+  } catch {
+    return name; // إذا الاسم مو JSON
+  }
+}
 
 // عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', async () => {
@@ -186,9 +195,9 @@ function renderApprovals(items) {
     tr.innerHTML = `
       <td>
         ${item.title}
-        <div class="content-meta">(${contentType} - ${item.source_name})</div>
+<div class="content-meta">(${contentType} - ${getLocalizedName(item.source_name)})</div>
       </td>
-      <td>${item.source_name || '-'}</td>
+<td>${getLocalizedName(item.source_name) || '-'}</td>
       <td class="col-response">${statusLabel(item.approval_status)}</td>
       <td class="col-actions">${actionsHTML}</td>
     `;
@@ -416,19 +425,32 @@ async function loadDepartments() {
   try {
     const res = await fetchJSON(`${apiBase}/departments`);
     const departments = Array.isArray(res) ? res : (res.data || []);
+    const lang = localStorage.getItem('language') || 'ar';
 
     deptSelect.innerHTML = `<option value="" disabled selected>${getTranslation('select-department')}</option>`;
+
     departments.forEach(d => {
       const opt = document.createElement('option');
       opt.value = d.id;
-      opt.textContent = d.name;
+
+      let deptName;
+      try {
+        const parsed = JSON.parse(d.name);
+        deptName = parsed[lang] || parsed.ar || d.name;
+      } catch {
+        deptName = d.name;
+      }
+
+      opt.textContent = deptName;
       deptSelect.appendChild(opt);
     });
+
   } catch (err) {
     console.error('Failed to load departments:', err);
     alert(getTranslation('error-loading'));
   }
 }
+
 
 document.getElementById('delegateDept').addEventListener('change', async (e) => {
   const deptId = e.target.value;

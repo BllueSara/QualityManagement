@@ -84,47 +84,50 @@ const getUserById = async (req, res) => {
 
 // 3) إضافة مستخدم جديد
 const addUser = async (req, res) => {
-  const { name, email, departmentId, password, role } = req.body;
+  const { name, email, departmentId, password, role, employeeNumber } = req.body;
+  console.log('🪵 بيانات قادمة:', req.body);
+
   if (!name || !email || !password || !role) {
-    return res.status(400).json({ status:'error', message:'جميع الحقول مطلوبة' });
+    return res.status(400).json({ status: 'error', message: 'جميع الحقول مطلوبة' });
   }
 
   try {
-    // التحقق من عدم وجود البريد الإلكتروني
     const [existingUser] = await db.execute(
       'SELECT id FROM users WHERE email = ?',
       [email]
     );
 
     if (existingUser.length > 0) {
-      return res.status(409).json({ 
-        status: 'error', 
-        message: 'البريد الإلكتروني مستخدم بالفعل' 
+      return res.status(409).json({
+        status: 'error',
+        message: 'البريد الإلكتروني مستخدم بالفعل'
       });
     }
 
-    // تشفير كلمة المرور
     const hashed = await bcrypt.hash(password, 12);
+    const cleanDeptId = departmentId && departmentId !== '' ? departmentId : null;
 
     const [result] = await db.execute(
-      `INSERT INTO users (
-        username, 
-        email, 
-        department_id, 
-        password, 
-        role,
-        created_at,
-        updated_at
-      ) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-      [name, email, departmentId || null, hashed, role]
-    );
+  `INSERT INTO users (
+    username, 
+    email, 
+    department_id, 
+    password, 
+    role,
+    employee_number,
+    created_at,
+    updated_at
+  ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+  [name, email, cleanDeptId, hashed, role, employeeNumber]
+);
 
-    res.status(201).json({ 
-      status: 'success', 
+    res.status(201).json({
+      status: 'success',
       message: 'تم إضافة المستخدم بنجاح',
-      userId: result.insertId 
+      userId: result.insertId
     });
   } catch (error) {
+    console.error('❌ Error in addUser:', error);
     res.status(500).json({ message: 'خطأ في إضافة المستخدم' });
   }
 };

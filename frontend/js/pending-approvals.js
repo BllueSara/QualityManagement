@@ -163,7 +163,7 @@ async function loadPendingApprovals() {
     tr.innerHTML = `
       <td>
         ${item.title}
-        <div class="content-meta">(${contentType} - ${item.source_name})</div>
+<div class="content-meta">(${contentType} - ${parseLocalizedName(item.source_name)})</div>
       </td>
       <td>
         <div class="dropdown-custom" data-type="dept">
@@ -235,7 +235,15 @@ async function initDropdowns() {
       const itm = document.createElement('div');
       itm.className     = 'dropdown-item';
       itm.dataset.value = d.id;
-      itm.textContent   = d.name;
+let name = d.name;
+const lang = localStorage.getItem('language') || 'ar';
+try {
+  const parsed = typeof name === 'string' ? JSON.parse(name) : name;
+  name = parsed[lang] || parsed.ar || parsed.en || '';
+} catch {}
+
+itm.textContent = name;
+itm.dataset.label = name;
       deptList.appendChild(itm);
     });
 
@@ -351,7 +359,17 @@ async function initDropdowns() {
         selectedUsers.forEach(u => {
           const badge = document.createElement('span');
           badge.className = 'badge';
-          const deptName = selectedDepts.find(d => d.id === u.deptId)?.name || '';
+const lang = localStorage.getItem('language') || 'ar';
+const dept = selectedDepts.find(d => d.id === u.deptId);
+let deptName = dept?.name || '';
+
+try {
+  const parsed = typeof deptName === 'string' ? JSON.parse(deptName) : deptName;
+  deptName = parsed?.[lang] || parsed?.ar || parsed?.en || '';
+} catch {}
+
+badge.textContent = `${u.name} (${deptName})`;
+
           badge.textContent = `${u.name} (${deptName})`;
           selCell.appendChild(badge);
         });
@@ -402,4 +420,14 @@ async function initDropdowns() {
       }
     });
   });
+}
+
+function parseLocalizedName(name) {
+  const lang = localStorage.getItem('language') || 'ar';
+  try {
+    const parsed = typeof name === 'string' ? JSON.parse(name) : name;
+    return parsed?.[lang] || parsed?.ar || parsed?.en || '';
+  } catch {
+    return name;
+  }
 }

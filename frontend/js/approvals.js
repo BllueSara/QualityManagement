@@ -86,41 +86,68 @@ async function populateFilters() {
     const token = getToken();
     if (!token) return;
 
+    const lang = localStorage.getItem('language') || 'ar';
+
     // — Departments
     const deptRes = await fetch(`${apiBase}/departments`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     if (!deptRes.ok) throw new Error(`Departments ${deptRes.status}`);
     const deptJson = await deptRes.json();
-    // لو رجع Array خليه كذا، وإلا خذ deptJson.data
-    const depts = Array.isArray(deptJson) ? deptJson : (deptJson.data || []);
+    const deptsRaw = Array.isArray(deptJson) ? deptJson : (deptJson.data || []);
+
+    // ✨ فك الاسم حسب اللغة
+    const depts = deptsRaw.map(dept => {
+      let name;
+      try {
+        const parsed = JSON.parse(dept.name);
+        name = parsed[lang] || parsed.ar || dept.name;
+      } catch {
+        name = dept.name;
+      }
+      return { ...dept, localizedName: name };
+    });
 
     // — Committees
-    const commRes = await fetch(`${apiBase}/committees`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    if (!commRes.ok) throw new Error(`Committees ${commRes.status}`);
-    const commJson = await commRes.json();
-    const comms = Array.isArray(commJson)
-      ? commJson
-      : (commJson.data || commJson);
+const commRes = await fetch(`${apiBase}/committees`, {
+  headers: { 'Authorization': `Bearer ${token}` }
+});
+if (!commRes.ok) throw new Error(`Committees ${commRes.status}`);
+const commJson = await commRes.json();
+const commsRaw = Array.isArray(commJson)
+  ? commJson
+  : (commJson.data || []);
 
-    // امسح الخيارات القديمة وابدأ “كل الأقسام”
+// ✨ فك الاسم حسب اللغة لكل لجنة
+const comms = commsRaw.map(c => {
+  let name;
+  try {
+    const parsed = JSON.parse(c.name);
+    name = parsed[lang] || parsed.ar || c.name;
+  } catch {
+    name = c.name;
+  }
+  return { ...c, localizedName: name };
+});
+
+    // 🧹 امسح الخيارات القديمة
     filterDept.innerHTML = `<option value="all">${getTranslation('all-departments-committees')}</option>`;
 
+    // ➕ الأقسام
     depts.forEach(dept => {
       const o = document.createElement('option');
-      o.value = dept.name;
-      o.textContent = `${getTranslation('department')}: ${dept.name}`;
+      o.value = dept.localizedName;
+      o.textContent = `${getTranslation('department')}: ${dept.localizedName}`;
       filterDept.appendChild(o);
     });
 
-    comms.forEach(c => {
-      const o = document.createElement('option');
-      o.value = c.name;
-      o.textContent = `${getTranslation('committee')}: ${c.name}`;
-      filterDept.appendChild(o);
-    });
+    // ➕ اللجان
+comms.forEach(c => {
+  const o = document.createElement('option');
+  o.value = c.localizedName;
+  o.textContent = `${getTranslation('committee')}: ${c.localizedName}`;
+  filterDept.appendChild(o);
+});
 
   } catch (err) {
     console.error(err);
@@ -128,27 +155,71 @@ async function populateFilters() {
   }
 }
 
+
     // Function to fetch content uploaded by the current user
 async function fetchMyUploadedContent() {
   try {
     const token = getToken();
     if (!token) throw new Error('no token');
+    const lang = localStorage.getItem('language') || 'ar';
 
-    // مسار واحد يعيد جميع uploads (أقسام + لجان)
-    const res = await fetch(`${apiBase}/contents/my-uploads`, {
+    // 1) fetch departments
+    const deptReq = fetch(`${apiBase}/contents/my-uploads`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
-    if (!res.ok) throw new Error(`Contents uploads ${res.status}`);
+    // 2) fetch committees
+    const commReq = fetch(`${apiBase}/committees/contents/my-uploads`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
 
-    const items = await res.json();   // المفروض array من العناصر
-    // إذا الـ API يرجّع { data: […] } بدل array مباشرة:
-    const all = Array.isArray(items) ? items : (items.data || []);
+    const [deptRes, commRes] = await Promise.all([deptReq, commReq]);
+    if (!deptRes.ok) throw new Error(`Dept uploads ${deptRes.status}`);
+    if (!commRes.ok) throw new Error(`Comm uploads ${commRes.status}`);
 
-    // لو كل عنصر عنده type في السيرفر، خلاص.
-    // أما لو تبغى تضيف type يدوياً:
-    allContents = all.map(item =>
-      ({ ...item, type: item.source === 'committee' ? 'committee' : 'department' })
-    );
+    const deptJson = await deptRes.json();
+    const commJson = await commRes.json();
+
+    // normalize arrays
+    const deptArr = Array.isArray(deptJson.data ? deptJson.data : deptJson)
+      ? (deptJson.data || deptJson)
+      : [];
+    const commArr = Array.isArray(commJson.data ? commJson.data : commJson)
+      ? (commJson.data || commJson)
+      : [];
+
+    // helper لفك الاسم حسب اللغة
+// helper لفك الاسم حسب اللغة و لتوحيد is_approved
+const normalize = (item, type) => {
+  // 1) فك الاسم
+  let src = item.source_name;
+  try {
+    const p = JSON.parse(item.source_name);
+    src = p[lang] || p.ar || p.en;
+  } catch {}
+
+  // 2) حوّل is_approved إلى boolean مو فق string
+  let approved = false;
+  if (typeof item.is_approved === 'number') {
+    approved = item.is_approved === 1;
+  } else if (typeof item.is_approved === 'string') {
+    approved = item.is_approved.toLowerCase() === 'approved';
+  }
+
+  return {
+    ...item,
+    // تعيين الحقل المعدّل
+    is_approved: approved,
+    type,
+    localizedSourceName: src
+  };
+};
+
+
+    // دمج المحتويات
+    allContents = [
+      ...deptArr.map(i => normalize(i, 'department')),
+      ...commArr.map(i => normalize(i, 'committee')),
+    ];
 
     applyFilters();
     populateFolderFilter();
@@ -160,6 +231,8 @@ async function fetchMyUploadedContent() {
     applyFilters();
   }
 }
+
+
 
 
 
@@ -221,7 +294,7 @@ async function fetchMyUploadedContent() {
                     { year: 'numeric', month: 'long', day: 'numeric' });
             
             const contentType = content.type === 'committee' ? getTranslation('committee-file') : getTranslation('department-report');
-            const displaySourceName = content.source_name || '-';
+const displaySourceName = content.localizedSourceName || '-';
 
             const row = document.createElement('tr');
             row.innerHTML = `
@@ -292,7 +365,7 @@ async function fetchMyUploadedContent() {
 
         filteredContents = allContents.filter(content => {
             const contentTitle = content.title.toLowerCase();
-            const sourceName = (content.source_name || '').toLowerCase();
+             const sourceName = (content.localizedSourceName || '').toLowerCase();
             const folderName = (content.folderName || '').toLowerCase();
             const isApproved = content.is_approved ? 'approved' : 'pending';
 
