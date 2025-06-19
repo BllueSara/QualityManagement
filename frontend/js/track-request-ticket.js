@@ -71,67 +71,102 @@ const progressPercent = totalSteps > 0
     container.innerHTML = '';
 
     timeline.forEach(item => {
-let stateClass;
-if (item.status === 'رد') {
-  stateClass = 'reply'; // 🟠 هذا لونه خاص
-} else if (['معتمد', 'مغلق', 'closed'].includes(item.status)) {
-  stateClass = 'completed';
-} else if (item.status === 'قيد المراجعة' || item.status === 'تم الإرسال') {
-  stateClass = 'pending';
-} else {
-  stateClass = 'waiting';
+      console.log('📝 comment:', item.comments);
+
+  let stateClass;
+  if (item.status === 'رد') {
+    stateClass = 'reply';
+  } else if (['معتمد', 'مغلق', 'تم الإغلاق', 'closed'].includes(item.status)) {
+    stateClass = 'completed';
+  } else if (item.status === 'قيد المراجعة' || item.status === 'تم الإرسال') {
+    stateClass = 'pending';
+  } else {
+    stateClass = 'waiting';
+  }
+
+  const date = new Date(item.created_at).toLocaleDateString(
+    currentLang === 'ar' ? 'ar-SA' : 'en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    }
+  );
+
+  // 🟢 ترجمة الحالة حسب اللغة
+  const statusTranslationMap = {
+    'رد': 'reply',
+    'معتمد': 'approved',
+    'مغلق': 'closed',
+    'تم الإغلاق': 'closed',
+    'قيد المراجعة': 'pending',
+    'تم الإرسال': 'sent',
+    'جديد': 'new',
+    'تم الإنشاء': 'created'
+  };
+
+  const statusKey = statusTranslationMap[item.status] || item.status;
+  const statusText = getTranslation(statusKey);
+
+  const badgeClass =
+    stateClass === 'completed' ? 'approved-badge' :
+    stateClass === 'pending'   ? 'pending-badge' :
+    stateClass === 'reply'     ? 'reply-badge'   :
+                                 'waiting-badge';
+let translatedComment = item.comments;
+
+if (item.comments) {
+  const knownCommentsMap = {
+    'تم إنشاء التذكرة': {
+      ar: 'تم إنشاء التذكرة',
+      en: 'Ticket created'
+    },
+    'تم تحديث حالة التذكرة': {
+      ar: 'تم تحديث حالة التذكرة',
+      en: 'Status updated'
+    },
+    'تم الإرسال إلى': {
+      ar: 'تم الإرسال إلى',
+      en: 'Sent to'
+    }
+  };
+
+  for (const phrase in knownCommentsMap) {
+    if (item.comments.startsWith(phrase)) {
+      const rest = item.comments.slice(phrase.length).trim();
+      translatedComment = knownCommentsMap[phrase][currentLang] + (rest ? ` ${rest}` : '');
+      break;
+    }
+  }
 }
 
-      const date = new Date(item.created_at)
-        .toLocaleDateString(currentLang === 'ar' ? 'ar-SA' : 'en-US', { 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric' 
-        });
-
-      // Translate status text
-      let statusText = item.status;
-      if (item.status === 'رد') statusText = getTranslation('reply');
-      else if (item.status === 'معتمد') statusText = getTranslation('approved');
-      else if (item.status === 'مغلق') statusText = getTranslation('closed');
-      else if (item.status === 'قيد المراجعة') statusText = getTranslation('pending');
-      else if (item.status === 'تم الإرسال') statusText = getTranslation('sent');
-
-const badgeClass = 
-  stateClass === 'completed' ? 'approved-badge' :
-  stateClass === 'pending'   ? 'pending-badge' :
-  stateClass === 'reply'     ? 'reply-badge'   :
-                               'waiting-badge';
-
-      container.insertAdjacentHTML('beforeend', `
-        <div class="timeline-item ${stateClass}">
-          <div class="icon-wrapper">
-            <div class="icon-bg ${stateClass}-bg">
-<i class="fas ${
-  stateClass === 'completed' ? 'fa-check' :
-  stateClass === 'pending'   ? 'fa-clock' :
-  stateClass === 'reply'     ? 'fa-comment-dots' : // 🟠 أيقونة مميزة للرد
-                               'fa-circle'
-}"></i>
-
-            </div>
+  container.insertAdjacentHTML('beforeend', `
+    <div class="timeline-item ${stateClass}">
+      <div class="icon-wrapper">
+        <div class="icon-bg ${stateClass}-bg">
+          <i class="fas ${
+            stateClass === 'completed' ? 'fa-check' :
+            stateClass === 'pending'   ? 'fa-clock' :
+            stateClass === 'reply'     ? 'fa-comment-dots' :
+                                         'fa-circle'
+          }"></i>
+        </div>
+      </div>
+      <div class="timeline-content">
+        <div class="timeline-details-row">
+          <div class="timeline-author">
+            <i class="fas fa-user-circle"></i>
+            <span>${item.changed_by || '—'} - ${item.department_name || '—'}</span>
           </div>
-          <div class="timeline-content">
-            <div class="timeline-details-row">
-              <div class="timeline-author">
-                <i class="fas fa-user-circle"></i>
-                <span>${item.changed_by || '—'} - ${item.department_name || '—'}</span>
-              </div>
-              <div class="timeline-details">
-                <span class="timeline-date">${date}</span>
-                <span class="status-badge ${badgeClass}">${statusText}</span>
-              </div>
-            </div>
-            ${item.comments ? `<p class="timeline-note">${item.comments}</p>` : ''}
+          <div class="timeline-details">
+            <span class="timeline-date">${date}</span>
+            <span class="status-badge ${badgeClass}">${statusText}</span>
           </div>
         </div>
-      `);
-    });
+${translatedComment ? `<p class="timeline-note">${translatedComment}</p>` : ''}
+      </div>
+    </div>
+  `);
+});
 
     // عرض الأقسام المتوقعين
     if (!isClosed && pending.length > 1) {
@@ -162,4 +197,22 @@ const badgeClass =
     // console.error(err);
     alert(getTranslation('error-loading-data'));
   }
+  function translateComment(text) {
+  const lang = localStorage.getItem('language') || 'ar';
+  if (lang !== 'ar') return text;
+
+  const lower = text.toLowerCase();
+
+  if (lower.includes('created')) return 'تم إنشاء التذكرة';
+  if (lower.includes('status updated')) return 'تم تحديث حالة التذكرة';
+
+  const sentMatch = lower.match(/sent to (.+)/i);
+  if (sentMatch) {
+    const recipient = sentMatch[1].trim();
+    return `تم الإرسال إلى ${recipient}`;
+  }
+
+  return text;
+}
+
 });

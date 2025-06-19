@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title data-translate="main-title">الصفحة الرئيسية</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
@@ -62,11 +64,15 @@
                     <div class="card-title" data-translate="departments">الأقسام</div>
                     <div class="card-subtitle" data-translate="click-to-enter">اضغط للدخول</div>
                 </div>
-                <div class="card" data-url="/frontend/html/committees.html" data-role="admin" data-permission="view_committee">
-                    <div class="card-icon bg-orange"><img src="/frontend/images/committee.svg" alt=""></div>
-                    <div class="card-title" data-translate="committees">اللجان والواجهات</div>
-                    <div class="card-subtitle" data-translate="click-to-enter">اضغط للدخول</div>
-                </div>
+<div class="card" data-url="/frontend/html/committees.html" data-role="admin" data-permission="view_committee">
+  <div class="card-icon bg-orange icon-circle">
+    <i class="fas fa-users-cog"></i>
+  </div>
+  <div class="card-title" data-translate="committees">اللجان والواجهات</div>
+  <div class="card-subtitle" data-translate="click-to-enter">اضغط للدخول</div>
+</div>
+
+
                
              
                 <div class="card" data-url="/frontend/html/approvals-types.html">
@@ -74,7 +80,7 @@
                     <div class="card-title" data-translate="approvals">الإعتمادات</div>
                     <div class="card-subtitle" data-translate="click-to-enter">اضغط للدخول</div>
                 </div>
-                <a href="dashboard.html" class="card">
+                <a href="dashboard.html" class="card" data-role="admin" data-permission="view_dashboard">
                     <div class="card-icon bg-red"><img src="/frontend/images/dashboard.svg" alt=""></div>
                     <div class="card-title" data-translate="dashboard">لوحة التحكم</div>
                     <div class="card-subtitle" data-translate="click-to-enter">اضغط للدخول</div>

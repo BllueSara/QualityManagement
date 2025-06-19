@@ -68,6 +68,8 @@ function renderTickets() {
     const canTrack   = permissionsKeys.includes('*') || permissionsKeys.includes('track_tickets');
 
     const row = document.createElement('tr');
+    console.log('🔥 status:', ticket.current_status);
+
     row.innerHTML = `
       <td class="col-ticket">#${ticket.id}</td>
       <td class="col-status">
@@ -151,15 +153,18 @@ function renderTickets() {
     }
 
     // Helper function to get status text
-    function getStatusText(status) {
-        const statusMap = {
-            'pending': 'قيد الانتظار',
-            'in_progress': 'قيد المعالجة',
-            'completed': 'تم الرد',
-            'closed': 'مغلقة'
-        };
-        return statusMap[status] || status;
-    }
+function getStatusText(status) {
+  const lang = localStorage.getItem('language') || 'ar';
+  const statusMap = {
+    'جديد':       { ar: 'جديد',        en: 'New' },
+    'تم الإرسال': { ar: 'تم الإرسال',  en: 'Submitted' },
+    'مغلق':      { ar: 'مغلقة',       en: 'Closed' }
+  };
+
+  return statusMap[status]?.[lang] || status;
+}
+
+
 
     // Helper function to format date
     function formatDate(dateString) {

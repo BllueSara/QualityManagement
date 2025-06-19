@@ -324,6 +324,7 @@ const getLogs = async (req, res) => {
     res.status(500).json({ message: 'Error fetching logs' });
   }
 };
+
 const getNotifications = async (req, res) => {
   const userId = req.params.id;
 
@@ -340,9 +341,37 @@ const getNotifications = async (req, res) => {
 
     const isAdmin = payload.role === 'admin';
 
-    const query = isAdmin
-      ? 'SELECT id, user_id, title, message, is_read, created_at, type FROM notifications ORDER BY created_at DESC'
-      : 'SELECT id, user_id, title, message, is_read, created_at, type FROM notifications WHERE user_id = ? ORDER BY created_at DESC';
+const query = isAdmin
+  ? `
+    SELECT 
+      n.id,
+      n.user_id,
+      u.username AS user_name,
+      n.title,
+      n.message,
+      n.is_read,
+      n.created_at,
+      n.type
+    FROM notifications n
+    LEFT JOIN users u ON u.id = n.user_id
+    ORDER BY n.created_at DESC
+  `
+  : `
+    SELECT 
+      n.id,
+      n.user_id,
+      u.username AS user_name,
+      n.title,
+      n.message,
+      n.is_read,
+      n.created_at,
+      n.type
+    FROM notifications n
+    LEFT JOIN users u ON u.id = n.user_id
+    WHERE n.user_id = ?
+    ORDER BY n.created_at DESC
+  `;
+
 
     const [rows] = await db.execute(query, isAdmin ? [] : [userId]);
 
@@ -351,6 +380,7 @@ const getNotifications = async (req, res) => {
     res.status(500).json({ message: 'Error fetching notifications' });
   }
 };
+
 
 
 

@@ -444,3 +444,59 @@ input:checked + .slider:before {
 .delete-btn:hover {
   color: #c00;
 }
+
+:lang(ar) body, 
+:lang(ar) input, 
+:lang(ar) select, 
+:lang(ar) button, 
+:lang(ar) textarea, 
+:lang(ar) .header-title, 
+:lang(ar) .page-title {
+  font-family: 'Tajawal', sans-serif;
+}
+
+:lang(en) body, 
+:lang(en) input, 
+:lang(en) select, 
+:lang(en) button, 
+:lang(en) textarea, 
+:lang(en) .header-title, 
+:lang(en) .page-title {
+  font-family: Arial, sans-serif;
+}
+:lang(ar) .back-btn,
+[dir="rtl"] .back-btn {
+  right: 50px;
+  left: auto;
+  flex-direction: row;
+}
+
+:lang(en) .back-btn,
+[dir="ltr"] .back-btn {
+  left: 50px;
+  right: auto;
+  flex-direction: row-reverse;
+}
+
+/* يقلب أيقونات FA داخل back-btn في الوضع LTR */
+[dir="ltr"] .back-btn .fa-arrow-right {
+  transform: scaleX(-1);
+}
+
+/* بأي حال، لو LTR خلي الأيقونة بلا تقليب */
+[dir="ltr"] .back-btn .fa-arrow-left {
+  transform: none;
+}
+.page-title {
+  text-align: center !important;
+}
+.notifications-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* هذا يوسّط العناصر أفقياً */
+  gap: 16px; /* مسافة بين العنوان والفلاتر */
+}
+
+.page-title {
+  text-align: center;
+}

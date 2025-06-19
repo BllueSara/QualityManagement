@@ -5,12 +5,12 @@ let token, userId, isAdmin, payload;
 
 document.addEventListener('DOMContentLoaded', async () => {
   token = localStorage.getItem('token');
-  if (!token) return alert('المستخدم غير مسجل دخول.');
+  if (!token) return alert(getTranslation('notifications-not-logged-in'));
 
   try {
     payload = JSON.parse(atob(token.split('.')[1]));
   } catch {
-    return alert('توكن غير صالح.');
+    return alert(getTranslation('notifications-invalid-token'));
   }
 
   userId = payload.id;
@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   const result = await res.json();
-  if (result.status !== 'success') return alert('فشل تحميل الإشعارات');
+  if (result.status !== 'success') return alert(getTranslation('notifications-load-failed'));
 
   allNotifications = result.data || [];
 
@@ -64,7 +64,7 @@ function renderNotifications(notifications) {
   listContainer.innerHTML = '';
 
   if (notifications.length === 0) {
-    listContainer.innerHTML = `<p style="text-align:center">لا توجد إشعارات مطابقة.</p>`;
+    listContainer.innerHTML = `<p style="text-align:center">${getTranslation('notifications-no-match')}</p>`;
     return;
   }
 
@@ -78,14 +78,14 @@ function renderNotifications(notifications) {
         <i class="${iconClass}"></i>
       </div>
       <div class="notification-content">
-        <div class="notification-user">${getUserLabel(n.user_id, isAdmin, payload)}</div>
+<div class="notification-user">${n.user_name || '—'}</div>
         <div class="notification-title">${n.title}</div>
         <div class="notification-description">${n.message}</div>
       </div>
       <div class="notification-meta">
         <div class="notification-time">${timeAgo(n.created_at)}</div>
         <div class="read-indicator read"></div>
-        <button class="delete-btn" data-id="${n.id}" title="حذف"><i class="fas fa-trash"></i></button>
+        <button class="delete-btn" data-id="${n.id}" title="${getTranslation('notification-delete')}"><i class="fas fa-trash"></i></button>
       </div>
     `;
 
@@ -107,7 +107,7 @@ await fetch(`${apiBase}/users/${userId}/notifications/${id}`, {
         filterNotifications(); // نعيد التصفية حسب النوع/البحث
 
       } catch {
-        alert('فشل حذف الإشعار');
+        alert(getTranslation('notifications-delete-failed'));
       }
     });
   });
@@ -132,10 +132,16 @@ function timeAgo(dateString) {
   const now = new Date();
   const then = new Date(dateString);
   const diff = Math.floor((now - then) / 1000);
-  if (diff < 60) return 'الآن';
-  if (diff < 3600) return `منذ ${Math.floor(diff / 60)} دقيقة`;
-  if (diff < 86400) return `منذ ${Math.floor(diff / 3600)} ساعة`;
-  return then.toLocaleDateString('ar-SA');
+  const lang = localStorage.getItem('language') || document.documentElement.lang || 'ar';
+  if (diff < 60)
+    return lang === 'en' ? 'now' : 'الآن';
+  if (diff < 3600) return lang === 'en'
+    ? `${Math.floor(diff / 60)} min ago`
+    : `منذ ${Math.floor(diff / 60)} دقيقة`;
+  if (diff < 86400) return lang === 'en'
+    ? `${Math.floor(diff / 3600)} hour${Math.floor(diff / 3600) > 1 ? 's' : ''} ago`
+    : `منذ ${Math.floor(diff / 3600)} ساعة`;
+  return then.toLocaleDateString(lang === 'en' ? 'en-US' : 'ar-SA');
 }
 
 // ✅ عرض اسم المستخدم أو رقم المعرف حسب الدور
@@ -143,4 +149,12 @@ function getUserLabel(notificationUserId, isAdmin, currentUser) {
   return isAdmin && notificationUserId !== currentUser.id
     ? `#${notificationUserId}`
     : currentUser.name || '—';
+}
+
+function getTranslation(key) {
+  const lang = localStorage.getItem('language') || document.documentElement.lang || 'ar';
+  if (window.translations && window.translations[lang] && window.translations[lang][key]) {
+    return window.translations[lang][key];
+  }
+  return key;
 }
