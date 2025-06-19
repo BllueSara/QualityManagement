@@ -80,11 +80,26 @@ async function fetchDepartments() {
     }
 
     // تحديث القائمة المنسدلة
-    departmentSelect.innerHTML = '<option value="">اختر القسم</option>';
+const lang = localStorage.getItem('language') || 'ar';
+const selectText = lang === 'ar' ? 'اختر القسم' : 'Select Department';
+departmentSelect.innerHTML = `<option value="">${selectText}</option>`;
+
+
     result.forEach(dept => {
       const option = document.createElement('option');
       option.value = dept.id;
-      option.textContent = dept.name;
+let name = dept.name;
+try {
+  if (typeof name === 'string' && name.trim().startsWith('{')) {
+    name = JSON.parse(name);
+  }
+  option.textContent = typeof name === 'object'
+    ? (name[lang] || name.ar || name.en || '')
+    : name;
+} catch {
+  option.textContent = '';
+}
+
       departmentSelect.appendChild(option);
     });
   } catch (error) {
@@ -92,6 +107,7 @@ async function fetchDepartments() {
     alert('خطأ في جلب الأقسام.');
   }
 }
+
 
 
 
@@ -131,7 +147,15 @@ async function selectUser(id) {
   profileName.textContent   = u.name;
   profileStatus.textContent = u.status==='active' ? 'غير نشط' : 'نشط';
   profileStatus.classList.toggle('active', u.status==='active');
-  profileDept.textContent   = u.departmentName || '—';
+try {
+  const lang = localStorage.getItem('language') || 'ar';
+  const name = typeof u.departmentName === 'string' && u.departmentName.trim().startsWith('{')
+    ? JSON.parse(u.departmentName)[lang] || JSON.parse(u.departmentName).ar || JSON.parse(u.departmentName).en
+    : u.departmentName;
+  profileDept.textContent = name || '—';
+} catch (err) {
+  profileDept.textContent = '—';
+}
   profileRoleEl.textContent = u.role           || '—';
 document.querySelector('.user-profile-header')?.classList.add('active');
 
@@ -256,8 +280,8 @@ if (btnAdd) {
   btnAdd.addEventListener('click', () => {
     selectedUserId = null;
     document.getElementById('addUserModal').style.display = 'flex';
-    document.querySelector('.modal-title').textContent = 'إضافة مستخدم جديد';
-    ['userName','jobTitle','email','password'].forEach(id => {
+document.querySelector('.modal-title').textContent = getTranslation('add-user');
+    ['userName','email','password'].forEach(id => {
       document.getElementById(id).value = '';
         fetchDepartments(); // ✅ هنا تستدعي الأقسام وتعبئها
 
@@ -277,14 +301,20 @@ if (btnCancel) {
 const btnSaveUser = document.getElementById('saveUser');
 if (btnSaveUser) {
   btnSaveUser.addEventListener('click', async () => {
-    const data = {
-      name:         document.getElementById('userName').value,
-      jobTitle:     document.getElementById('jobTitle').value,
-      departmentId: document.getElementById('department').value,
-      email:        document.getElementById('email').value,
-      password:     document.getElementById('password').value,
-      role:         document.getElementById('role')?.value || 'user'
-    };
+
+const data = {
+  name: document.getElementById('userName').value,
+  departmentId: document.getElementById('department').value,
+  email: document.getElementById('email').value,
+  password: document.getElementById('password').value,
+  role: document.getElementById('role')?.value || 'user',
+  employeeNumber: document.getElementById('employeeNumber').value  // ✅ أضف هذا
+};
+
+console.log('🚀 departmentId:', data.departmentId);
+
+        console.log('🚀 Sending user data:', data);
+
     const method = selectedUserId ? 'PUT' : 'POST';
     const url    = selectedUserId
       ? `${apiBase}/users/${selectedUserId}`

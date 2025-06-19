@@ -656,10 +656,7 @@
 
 
 
-            <div class="bottom-action-buttons">
-          <button class="btn-primary" id="btn-export-excel"><i class="fas fa-file-excel"></i> <span data-translate="export-excel">تصدير إلى Excel</span></button>
-          <button class="btn-primary" id="btn-export-pdf"><i class="fas fa-file-pdf"></i> <span data-translate="export-pdf">تصدير إلى PDF</span></button>
-        </div>
+
 
             </div>
         </div>
@@ -670,32 +667,37 @@
         <div class="modal-content">
             <h2 class="modal-title" data-translate="add-user-title">إضافة مستخدم جديد</h2>
 
-            <div class="modal-section">
-                <h3 data-translate="user-info">معلومات المستخدم</h3>
-                <div class="form-group">
-                    <label for="userName" data-translate="user-name-label">اسم المستخدم</label>
-                    <input type="text" id="userName" data-translate-placeholder="user-name-placeholder" placeholder="أدخل اسم المستخدم">
-                </div>
-                <div class="form-group">
-                    <label for="jobTitle" data-translate="job-title-label">المسمى الوظيفي</label>
-                    <input type="text" id="jobTitle" data-translate-placeholder="job-title-placeholder" placeholder="أدخل المسمى الوظيفي">
-                </div>
-                <div class="form-group">
-                    <label for="department" data-translate="department-label">القسم</label>
-                    <select id="department">
-                        <option value="" data-translate="select-department">اختر القسم</option>
+ <div class="modal-section">
+  <h3 data-translate="user-info">معلومات المستخدم</h3>
 
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="email" data-translate="email-label">البريد الإلكتروني</label>
-                    <input type="email" id="email" data-translate-placeholder="email-placeholder" placeholder="أدخل البريد الإلكتروني">
-                </div>
-                <div class="form-group">
-                    <label for="password" data-translate="password-label">كلمة المرور</label>
-                    <input type="password" id="password" data-translate-placeholder="password-placeholder" placeholder="أدخل كلمة المرور">
-                </div>
-            </div>
+  <div class="form-group">
+    <label for="userName" data-translate="user-name-label">اسم المستخدم</label>
+    <input type="text" id="userName" data-translate-placeholder="user-name-placeholder" placeholder="أدخل اسم المستخدم">
+  </div>
+
+  <div class="form-group">
+    <label for="employeeNumber" data-translate="employee-number-label">الرقم الوظيفي</label>
+    <input type="text" id="employeeNumber" data-translate-placeholder="employee-number-placeholder" placeholder="أدخل الرقم الوظيفي">
+  </div>
+
+  <div class="form-group">
+    <label for="department" data-translate="department-label">القسم</label>
+    <select id="department">
+      <option value="" data-translate="select-department">اختر القسم</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label for="email" data-translate="email-label">البريد الإلكتروني</label>
+    <input type="email" id="email" data-translate-placeholder="email-placeholder" placeholder="أدخل البريد الإلكتروني">
+  </div>
+
+  <div class="form-group">
+    <label for="password" data-translate="password-label">كلمة المرور</label>
+    <input type="password" id="password" data-translate-placeholder="password-placeholder" placeholder="أدخل كلمة المرور">
+  </div>
+</div>
+
     <!-- Permissions section removed as per user request -->
 
             <div class="modal-actions">

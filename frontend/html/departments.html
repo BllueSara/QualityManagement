@@ -65,49 +65,59 @@
     </main>
 
     <!-- Add New Department Modal -->
-    <div id="addDepartmentModal" class="modal-overlay">
-        <div class="modal-content">
-            <h3 data-translate="add-department">إضافة قسم</h3>
-            <hr>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="departmentName" data-translate="department-name">اسم القسم</label>
-                    <input type="text" id="departmentName" data-placeholder="enter-department-name" placeholder="أدخل اسم القسم">
-                </div>
-                 <div class="form-group">
-                    <label for="departmentImage" data-translate="department-image">مسار الصورة</label>
-                    <input type="file" id="departmentImage" accept="image/*">
-                </div>
-            </div>
-            <div class="modal-buttons">
-                <button class="btn-primary" id="saveAddDepartment" data-translate="save">حفظ</button>
-                <button class="btn-secondary" id="cancelAddDepartment" data-translate="cancel">إلغاء</button>
-            </div>
-        </div>
+<div id="addDepartmentModal" class="modal-overlay">
+  <div class="modal-content">
+    <h3 data-translate="add-department">إضافة قسم</h3>
+    <hr>
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="departmentNameAr" data-translate="department-name-ar">اسم القسم (عربي)</label>
+        <input type="text" id="departmentNameAr" placeholder="أدخل الاسم بالعربية">
+      </div>
+      <div class="form-group">
+        <label for="departmentNameEn" data-translate="department-name-en">Department Name (English)</label>
+        <input type="text" id="departmentNameEn" placeholder="Enter name in English">
+      </div>
+      <div class="form-group">
+        <label for="departmentImage" data-translate="department-image">مسار الصورة</label>
+        <input type="file" id="departmentImage" accept="image/*">
+      </div>
     </div>
+    <div class="modal-buttons">
+      <button class="btn-primary" id="saveAddDepartment" data-translate="save">حفظ</button>
+      <button class="btn-secondary" id="cancelAddDepartment" data-translate="cancel">إلغاء</button>
+    </div>
+  </div>
+</div>
+
 
     <!-- Edit Department Modal -->
-    <div id="editDepartmentModal" class="modal-overlay">
-        <div class="modal-content">
-            <h3 data-translate="edit-department">تعديل اسم القسم</h3>
-            <hr>
-            <div class="modal-body">
-                <input type="hidden" id="editDepartmentId">
-                <div class="form-group">
-                    <label for="editDepartmentName" data-translate="department-name">اسم القسم الجديد</label>
-                    <input type="text" id="editDepartmentName" data-placeholder="enter-department-name" placeholder="أدخل اسم القسم الجديد">
-                </div>
-                 <div class="form-group">
-                    <label for="editDepartmentImage" data-translate="department-image">مسار الصورة</label>
-                    <input type="file" id="editDepartmentImage" accept="image/*">
-                </div>
-            </div>
-            <div class="modal-buttons">
-                <button class="btn-primary" id="saveEditDepartment" data-translate="update">تحديث</button>
-                <button class="btn-secondary" id="cancelEditDepartment" data-translate="cancel">إلغاء</button>
-            </div>
-        </div>
+<div id="editDepartmentModal" class="modal-overlay">
+  <div class="modal-content">
+    <h3 data-translate="edit-department">تعديل القسم</h3>
+    <hr>
+    <div class="modal-body">
+      <input type="hidden" id="editDepartmentId">
+      <div class="form-group">
+        <label for="editDepartmentNameAr" data-translate="department-name-ar">اسم القسم (عربي)</label>
+        <input type="text" id="editDepartmentNameAr" placeholder="أدخل الاسم بالعربية">
+      </div>
+      <div class="form-group">
+        <label for="editDepartmentNameEn" data-translate="department-name-en">Department Name (English)</label>
+        <input type="text" id="editDepartmentNameEn" placeholder="Enter name in English">
+      </div>
+      <div class="form-group">
+        <label for="editDepartmentImage" data-translate="department-image">مسار الصورة</label>
+        <input type="file" id="editDepartmentImage" accept="image/*">
+      </div>
     </div>
+    <div class="modal-buttons">
+      <button class="btn-primary" id="saveEditDepartment" data-translate="update">تحديث</button>
+      <button class="btn-secondary" id="cancelEditDepartment" data-translate="cancel">إلغاء</button>
+    </div>
+  </div>
+</div>
+
 
     <!-- Delete Department Modal -->
     <div id="deleteDepartmentModal" class="modal-overlay">

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const ticketController = require('../controllers/ticketController');
-const { authenticateToken, checkRole } = require('../controllers/authController');
+const { authenticateToken, } = require('../controllers/authController');
 
 // Get all departments
 router.get('/departments', authenticateToken, ticketController.getDepartments);
@@ -21,7 +21,7 @@ router.get('/:id', authenticateToken, ticketController.getTicket);
 router.put('/:id', authenticateToken, ticketController.updateTicket);
 
 // Delete a ticket
-router.delete('/:id', authenticateToken, checkRole(['admin']), ticketController.deleteTicket);
+router.delete('/:id', authenticateToken, ticketController.deleteTicket);
 
 // Assign a ticket
 

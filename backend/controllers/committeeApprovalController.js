@@ -4,6 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
 
+const { logAction } = require('../models/logger');
+const { insertNotification } = require('../models/notfications-utils');
 require('dotenv').config();
 
 // Create a MySQL pool

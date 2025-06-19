@@ -22,6 +22,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const grid        = document.getElementById('committeesGrid');
   const searchInput = document.querySelector('.search-bar input');
 
+  const addCommitteeNameArInput = document.getElementById('committeeNameAr');
+  const addCommitteeNameEnInput = document.getElementById('committeeNameEn');
+  const editCommitteeNameArInput = document.getElementById('editCommitteeNameAr');
+  const editCommitteeNameEnInput = document.getElementById('editCommitteeNameEn');
+
   // Auth helpers
   function getToken() {
     return localStorage.getItem('token');
@@ -133,7 +138,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (permissions.canEdit || permissions.canDelete) {
       icons = `<div class="card-icons">`;
       if (permissions.canEdit) {
-        icons += `<button class="edit-icon" data-id="${committee.id}" aria-label="${getTranslation('edit')}">
+        icons += `<button class="edit-icon" data-id="${committee.id}" data-name='${committee.name}' aria-label="${getTranslation('edit')}">
                     <img src="../images/edit.svg" alt="${getTranslation('edit')}">
                   </button>`;
       }
@@ -145,21 +150,29 @@ document.addEventListener('DOMContentLoaded', async () => {
       icons += `</div>`;
     }
 
-const imgPath = committee.image
-  ? (committee.image.startsWith('uploads/')
-      ? `http://localhost:3006/${committee.image}`
-      : committee.image)
-  : '/images/committee.svg';
+    // استخراج الاسم حسب اللغة
+    let committeeName;
+    try {
+      const parsed = JSON.parse(committee.name);
+      const lang = localStorage.getItem('language') || 'ar';
+      committeeName = parsed[lang] || parsed['ar'] || committee.name;
+    } catch {
+      committeeName = committee.name;
+    }
 
-card.innerHTML = `
-  ${icons}
-  <div class="card-icon bg-orange">
-    <img src="${imgPath}" alt="${committee.name}">
-  </div>
-  <div class="card-title">${committee.name}</div>
-`;
+    const imgPath = committee.image
+      ? (committee.image.startsWith('uploads/')
+          ? `http://localhost:3006/${committee.image}`
+          : committee.image)
+      : '/images/committee.svg';
 
-
+    card.innerHTML = `
+      ${icons}
+      <div class="card-icon bg-orange">
+        <img src="${imgPath}" alt="${committeeName}">
+      </div>
+      <div class="card-title">${committeeName}</div>
+    `;
 
     card.addEventListener('click', () => {
       window.location.href = `committee-content.html?committeeId=${committee.id}`;
@@ -171,15 +184,19 @@ card.innerHTML = `
   // event handlers
   function onEditClick(e) {
     e.stopPropagation();
-    const id = e.currentTarget.dataset.id;
-    fetch(`${apiBase}/committees/${id}`, { headers: authHeaders() })
-      .then(r => r.json())
-      .then(data => {
-        editIdInput.value = data.id;
-        editName.value    = data.name;
-        showModal(editModal);
-      })
-      .catch(() => alert(getTranslation('error-fetching-committee')));
+    const el = e.currentTarget;
+    const id = el.dataset.id;
+    const nameData = el.dataset.name;
+    editIdInput.value = id;
+    try {
+      const parsedName = JSON.parse(nameData);
+      editCommitteeNameArInput.value = parsedName.ar || '';
+      editCommitteeNameEnInput.value = parsedName.en || '';
+    } catch {
+      editCommitteeNameArInput.value = nameData || '';
+      editCommitteeNameEnInput.value = '';
+    }
+    showModal(editModal);
   }
 
   function onDeleteClick(e) {
@@ -193,31 +210,31 @@ card.innerHTML = `
   addBtn.addEventListener('click', () => showModal(addModal));
   saveAddBtn.addEventListener('click', async () => {
     if (!permissions.canAdd) return;
-    const name = document.getElementById('committeeName').value;
+    const nameAr = addCommitteeNameArInput.value.trim();
+    const nameEn = addCommitteeNameEnInput.value.trim();
     const file = document.getElementById('committeeImage').files[0];
-    if (!name) {
-      alert(getTranslation('committee-name-required'));
+    if (!nameAr || !nameEn || !file) {
+      alert('الرجاء إدخال الاسم بالعربية والإنجليزية واختيار صورة.');
       return;
     }
+    const name = JSON.stringify({ ar: nameAr, en: nameEn });
     const fd = new FormData();
     fd.append('name', name);
     if (file) fd.append('image', file);
-
     try {
       const res = await fetch(`${apiBase}/committees`, {
         method: 'POST',
-        headers: authHeaders(),
-        body: fd
+  headers: {
+    'Authorization': `Bearer ${getToken()}`
+  },        body: fd
       });
       const msg = await res.json();
       if (!res.ok) throw new Error(msg.message || getTranslation('error-adding-committee'));
-      
       alert(getTranslation('committee-added-success'));
       hideModal(addModal);
       loadCommittees();
     } catch (err) {
       console.error(err);
-      alert(getTranslation('error-adding-committee'));
     }
   });
   cancelAdd.addEventListener('click', () => hideModal(addModal));
@@ -226,30 +243,31 @@ card.innerHTML = `
   saveEditBtn.addEventListener('click', async () => {
     if (!permissions.canEdit) return;
     const id = editIdInput.value;
-    const name = editName.value;
-    if (!name) {
-      alert(getTranslation('committee-name-required'));
+    const nameAr = editCommitteeNameArInput.value.trim();
+    const nameEn = editCommitteeNameEnInput.value.trim();
+    const file = editImage.files[0];
+    if (!id || !nameAr || !nameEn) {
+      alert('الرجاء إدخال الاسم بالعربية والإنجليزية.');
       return;
     }
+    const name = JSON.stringify({ ar: nameAr, en: nameEn });
     const fd = new FormData();
     fd.append('name', name);
-    if (editImage.files[0]) fd.append('image', editImage.files[0]);
-
+    if (file) fd.append('image', file);
     try {
       const res = await fetch(`${apiBase}/committees/${id}`, {
         method: 'PUT',
-        headers: authHeaders(),
-        body: fd
+  headers: {
+    'Authorization': `Bearer ${getToken()}`
+  },        body: fd
       });
       const msg = await res.json();
       if (!res.ok) throw new Error(msg.message || getTranslation('error-updating-committee'));
-      
       alert(getTranslation('committee-updated-success'));
       hideModal(editModal);
       loadCommittees();
     } catch (err) {
       console.error(err);
-      alert(getTranslation('error-updating-committee'));
     }
   });
   cancelEdit.addEventListener('click', () => hideModal(editModal));
@@ -261,8 +279,9 @@ card.innerHTML = `
     try {
       const res = await fetch(`${apiBase}/committees/${id}`, {
         method: 'DELETE',
-        headers: authHeaders()
-      });
+  headers: {
+    'Authorization': `Bearer ${getToken()}`
+  },      });
       const msg = await res.json();
       if (!res.ok) throw new Error(msg.message || getTranslation('error-deleting-committee'));
       

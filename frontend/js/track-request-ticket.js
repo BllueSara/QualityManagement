@@ -21,12 +21,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     const isClosed = ['مغلق', 'closed'].includes((content.current_status || '').toLowerCase());
 
     // القسم التالي
-    document.querySelector('.next-dept .dept-name').textContent =
-      isClosed ? getTranslation('no-data') : (pending.length ? pending[0].department : getTranslation('no-data'));
+// القسم التالي
+document.querySelector('.next-dept .dept-name').textContent =
+  isClosed
+    ? getTranslation('no-data')
+    : (pending.length ? parseLocalizedName(pending[0].department) : getTranslation('no-data'));
 
-    // عنوان الحالة
-    const statusText = isClosed ? getTranslation('closed') : `${getTranslation('pending')} في ${content.responding_dept_name}`;
-    document.querySelector('.track-status-title').textContent = statusText;
+
+// عنوان الحالة
+const deptNameLocalized = parseLocalizedName(content.responding_dept_name);
+
+
+const statusText = isClosed
+  ? getTranslation('closed')
+: `${getTranslation('pending')} ${getTranslation('at')} ${deptNameLocalized}`;
+
+document.querySelector('.track-status-title').textContent = statusText;
+
 
     // آخر تحديث
     const updatedAt = new Date(content.created_at);
@@ -180,7 +191,7 @@ ${translatedComment ? `<p class="timeline-note">${translatedComment}</p>` : ''}
               <div class="timeline-details-row">
                 <div class="timeline-author">
                   <i class="fas fa-user-circle"></i>
-                  <span>${dept.department}</span>
+<span>${parseLocalizedName(dept.department)}</span>
                 </div>
                 <div class="timeline-details">
                   <span class="timeline-date">${getTranslation('expected')} —</span>
@@ -216,3 +227,18 @@ ${translatedComment ? `<p class="timeline-note">${translatedComment}</p>` : ''}
 }
 
 });
+function parseLocalizedName(value) {
+  const lang = localStorage.getItem('language') || 'ar';
+  try {
+    if (typeof value === 'string' && value.trim().startsWith('{')) {
+      const parsed = JSON.parse(value);
+      return parsed[lang] || parsed.ar || parsed.en || '';
+    } else if (typeof value === 'object') {
+      return value[lang] || value.ar || value.en || '';
+    } else {
+      return value || '';
+    }
+  } catch {
+    return value;
+  }
+}
