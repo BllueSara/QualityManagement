@@ -25,23 +25,22 @@
         </div>
     </header>
         <div class="header-actions">
-    <button class="back-btn" onclick="window.location.href='index.html'">
-        <i class="fas fa-arrow-left"></i>
-        <span>رجوع</span>
-  </button>
+    <button class="back-btn" id="backBtn" onclick="window.location.href='index.html'" style="right: 50px; left: auto; display: flex; align-items: center; gap: 4px;">
+     <i class="fas fa-arrow-right" id="backIcon"></i>        <span id="backBtnText" data-translate="back">رجوع</span>
+    </button>
   <button class="home-btn" onclick="window.location.href='index.html'">
     <i class="fas fa-home"></i>
-    <span>الرئيسية</span>
+    <span data-translate="home">الرئيسية</span>
   </button>
 </div>
     <main>
         <div class="container">
-            <h1>اللجان والواجهات</h1>
+            <h1 data-translate="committees">اللجان والواجهات</h1>
             <div class="controls-bar">
-                <button class="btn-primary" id="addCommitteeButton">إضافة لجنة جديدة</button>
-                <div class="search-bar">
-                    <input type="text" placeholder="ابحث عن لجنة">
-                    <img src="../images/serach.svg" alt="بحث" class="search-icon">
+                <button class="btn-primary" id="addCommitteeButton" data-translate="add-committee">إضافة لجنة جديدة</button>
+                <div class="search-bar" id="searchBarWrapper" style="display: flex; align-items: center; position: relative;">
+                    <input type="text" placeholder="ابحث عن لجنة" data-placeholder="search-committee" id="searchInput" style="width: 100%;">
+                    <img src="../images/serach.svg" alt="بحث" class="search-icon" id="searchIcon" style="position: absolute; right: 10px; left: auto; top: 50%; transform: translateY(-50%);">
                 </div>
             </div>
             <div class="cards-grid" id="committeesGrid">
@@ -52,60 +51,105 @@
     <!-- Modals (إضافة/تعديل/حذف لجنة) -->
     <div id="addCommitteeModal" class="modal-overlay">
         <div class="modal-content">
-            <h3>إضافة لجنة</h3>
+            <h3 data-translate="add-committee">إضافة لجنة</h3>
             <hr>
             <div class="modal-body">
                 <div class="form-group">
-                    <label for="committeeName">اسم اللجنة</label>
-                    <input type="text" id="committeeName" placeholder="أدخل اسم اللجنة">
+                    <label for="committeeName" data-translate="committee-name">اسم اللجنة</label>
+                    <input type="text" id="committeeName" data-placeholder="enter-committee-name" placeholder="أدخل اسم اللجنة">
                 </div>
                 <div class="form-group">
-                    <label for="committeeImage">صورة اللجنة</label>
+                    <label for="committeeImage" data-translate="committee-image">صورة اللجنة</label>
                     <input type="file" id="committeeImage" accept="image/*">
                 </div>
             </div>
             <div class="modal-buttons">
-                <button class="btn-primary" id="saveAddCommittee">حفظ</button>
-                <button class="btn-secondary" id="cancelAddCommittee">إلغاء</button>
+                <button class="btn-primary" id="saveAddCommittee" data-translate="save">حفظ</button>
+                <button class="btn-secondary" id="cancelAddCommittee" data-translate="cancel">إلغاء</button>
             </div>
         </div>
     </div>
     <div id="editCommitteeModal" class="modal-overlay">
         <div class="modal-content">
-            <h3>تعديل اللجنة</h3>
+            <h3 data-translate="edit-committee">تعديل اللجنة</h3>
             <hr>
             <div class="modal-body">
                 <input type="hidden" id="editCommitteeId">
                 <div class="form-group">
-                    <label for="editCommitteeName">اسم اللجنة الجديد</label>
-                    <input type="text" id="editCommitteeName" placeholder="أدخل اسم اللجنة الجديد">
+                    <label for="editCommitteeName" data-translate="committee-name">اسم اللجنة الجديد</label>
+                    <input type="text" id="editCommitteeName" data-placeholder="enter-committee-name" placeholder="أدخل اسم اللجنة الجديد">
                 </div>
                 <div class="form-group">
-                    <label for="editCommitteeImage">تغيير صورة اللجنة</label>
+                    <label for="editCommitteeImage" data-translate="committee-image">تغيير صورة اللجنة</label>
                     <input type="file" id="editCommitteeImage" accept="image/*">
                 </div>
             </div>
             <div class="modal-buttons">
-                <button class="btn-primary" id="saveEditCommittee">تحديث</button>
-                <button class="btn-secondary" id="cancelEditCommittee">إلغاء</button>
+                <button class="btn-primary" id="saveEditCommittee" data-translate="update">تحديث</button>
+                <button class="btn-secondary" id="cancelEditCommittee" data-translate="cancel">إلغاء</button>
             </div>
         </div>
     </div>
     <div id="deleteCommitteeModal" class="modal-overlay">
         <div class="modal-content">
-            <h3>تأكيد حذف اللجنة <img src="../images/warning.svg" alt="تحذير" style="width: 24px; height: 24px; vertical-align: middle; margin-right: 10px;"></h3>
+            <h3><span data-translate="delete-committee-title">تأكيد حذف اللجنة</span> <img src="../images/warning.svg" alt="تحذير" style="width: 24px; height: 24px; vertical-align: middle; margin-right: 10px;"></h3>
             <hr>
             <div class="modal-body" style="text-align: center;">
-                <p>هل أنت متأكد من حذف هذه اللجنة؟</p>
+                <p data-translate="delete-committee-confirm">هل أنت متأكد من حذف هذه اللجنة؟</p>
             </div>
             <div class="modal-buttons">
-                <button class="btn-danger" id="confirmDeleteCommittee">حذف نهائي</button>
-                <button class="btn-secondary" id="cancelDeleteCommittee">إلغاء</button>
+                <button class="btn-danger" id="confirmDeleteCommittee" data-translate="delete">حذف نهائي</button>
+                <button class="btn-secondary" id="cancelDeleteCommittee" data-translate="cancel">إلغاء</button>
             </div>
         </div>
     </div>
     <div id="toast-container"></div>
-    <script src="../js/committees.js"></script>
+    <script src="../js/committees.js" defer></script>
+    <script src="../js/language.js"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof setLanguage === 'function') {
+      const lang = localStorage.getItem('language') || 'ar';
+      setLanguage(lang);
+    }
+    window.addEventListener('storage', function(e) {
+      if (e.key === 'language' && typeof setLanguage === 'function') {
+        setLanguage(localStorage.getItem('language') || 'ar');
+      }
+    });
+
+    // Only swap the arrow direction for the back button, not the order
+    function updateBackBtnArrow(lang) {
+      const backIcon = document.getElementById('backIcon');
+      if (backIcon) {
+        if (lang === 'ar') {
+          backIcon.classList.remove('fa-arrow-left');
+          backIcon.classList.add('fa-arrow-right');
+        } else {
+          backIcon.classList.remove('fa-arrow-right');
+          backIcon.classList.add('fa-arrow-left');
+        }
+      }
+    }
+    // Call on load and whenever language changes
+    const lang = localStorage.getItem('language') || 'ar';
+    updateBackBtnArrow(lang);
+    window.addEventListener('storage', function(e) {
+      if (e.key === 'language') {
+        updateBackBtnArrow(localStorage.getItem('language') || 'ar');
+      }
+    });
+    // Also update after setLanguage (in case of manual switch)
+    if (typeof setLanguage === 'function') {
+      const origSetLanguage = setLanguage;
+      window.setLanguage = function(lang) {
+        origSetLanguage(lang);
+        updateBackBtnArrow(lang);
+      };
+    }
+  });
+</script>
 </body>
 
 </html> 

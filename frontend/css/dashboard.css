@@ -123,17 +123,19 @@ main h1 {
     align-items: center;
     position: relative;
     overflow: hidden;
+    gap: 20px;
+    margin-bottom: 24px;
 }
 
 .stat-icon {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-left: 20px;
     flex-shrink: 0;
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    margin-inline-end: 16px;
 }
 
 .stat-icon img {
@@ -158,19 +160,22 @@ main h1 {
 }
 
 .stat-info {
-    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .stat-label {
-    color: #666;
-    font-size: 16px;
-    margin-bottom: 5px;
+    font-size: 1.1rem;
+    color: #333;
+    margin-bottom: 4px;
 }
 
 .stat-value {
-    color: #333;
-    font-size: 32px;
-    font-weight: 700;
+    font-size: 2rem;
+    font-weight: bold;
+    color: #3a7ffb;
+    letter-spacing: 1px;
 }
 
 .stat-percentage {
@@ -230,4 +235,66 @@ main h2 {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+  margin-top: 32px;
+}
+
+.stat-card {
+  display: flex;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  overflow: hidden;
+  transition: transform 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: scale(1.02);
+}
+
+.stat-icon {
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+}
+
+.stat-info {
+  padding: 16px 12px;
+  flex: 1;
+}
+
+.stat-label {
+  font-weight: 500;
+  font-size: 15px;
+  margin-bottom: 6px;
+  color: #555;
+}
+
+.stat-value {
+  font-size: 22px;
+  font-weight: bold;
+  color: #222;
+}
+
+/* تدرجات لونية مختلفة */
+.gradient-blue-1 { background: linear-gradient(to right, #0072ff, #00c6ff); }
+.gradient-blue-2 { background: linear-gradient(to right, #2980b9, #6dd5fa); }
+.gradient-blue-3 { background: linear-gradient(to right, #2193b0, #6dd5ed); }
+.gradient-blue-4 { background: linear-gradient(to right, #1e3c72, #2a5298); }
+.gradient-blue-5 { background: linear-gradient(to right, #0052d4, #4364f7); }
+.gradient-blue-6 { background: linear-gradient(to right, #0072ff, #00c6ff); }
+.gradient-blue-7 { background: linear-gradient(to right, #0072ff, #00c6ff); }
+.gradient-blue-8 { background: linear-gradient(to right, #0072ff, #00c6ff); }
+.gradient-blue-9 { background: linear-gradient(to right, #0072ff, #00c6ff); }
+
+
+/* جعل الأيقونات بيضاء */
+.stat-icon i {
+  color: white;
 }

@@ -88,7 +88,8 @@ main {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     width: 100%;
     max-width: 500px; /* عرض أقصى لبطاقة الملف الشخصي */
-    text-align: center;
+    text-align: right;
+    direction: rtl;
 }
 
 .profile-container h2 {
@@ -103,6 +104,7 @@ main {
     margin-bottom: 15px;
     color: #555;
     text-align: right; /* محاذاة النص لليمين */
+    direction: rtl;
 }
 
 .profile-info strong {
@@ -119,6 +121,8 @@ main {
     display: flex;
     flex-direction: column; /* الأزرار عمودياً */
     gap: 15px;
+    direction: rtl;
+    text-align: right;
 }
 
 .btn-primary,
@@ -171,4 +175,35 @@ main {
     .profile-info p {
         font-size: 1em;
     }
+}
+
+/* Profile page language support */
+.profile-container[dir="ltr"] {
+  direction: ltr !important;
+  text-align: left !important;
+}
+
+.profile-info p[dir="ltr"] {
+  direction: ltr !important;
+  text-align: left !important;
+}
+
+.profile-actions[dir="ltr"] {
+  direction: ltr !important;
+  text-align: left !important;
+}
+
+/* Apply language-specific alignment */
+body[dir="ltr"] .profile-container,
+body[dir="ltr"] .profile-info p,
+body[dir="ltr"] .profile-actions {
+  direction: ltr !important;
+  text-align: left !important;
+}
+
+body[dir="rtl"] .profile-container,
+body[dir="rtl"] .profile-info p,
+body[dir="rtl"] .profile-actions {
+  direction: rtl !important;
+  text-align: right !important;
 } 

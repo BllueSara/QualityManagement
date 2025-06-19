@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>إدارة الصلاحيات</title>
+    <title data-translate="permissions-title">إدارة الصلاحيات</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
@@ -29,12 +29,11 @@
     </header>
     <div class="header-actions">
         <button class="back-btn" onclick="history.back()">
-            <i class="fas fa-arrow-left"></i>
-            <span>رجوع</span>
+     <i class="fas fa-arrow-right" id="backIcon"></i>            <span data-translate="back">رجوع</span>
         </button>
         <button class="home-btn" onclick="window.location.href='index.html'">
             <i class="fas fa-home"></i>
-            <span>الرئيسية</span>
+            <span data-translate="home">الرئيسية</span>
         </button>
     </div>
     <main>
@@ -42,10 +41,10 @@
             <!-- Users Sidebar -->
   <div class="users-sidebar">
         <div class="search-bar">
-          <input type="text" id="user-search" placeholder="بحث عن مستخدم" />
+          <input type="text" id="user-search" data-translate-placeholder="search-user" placeholder="بحث عن مستخدم" />
           <i class="fas fa-search search-icon"></i>
         </div>
-        <button class="add-user-btn" id="add-user-btn"><i class="fas fa-user-plus"></i><span>إضافة مستخدم جديد</span></button>
+        <button class="add-user-btn" id="add-user-btn"><i class="fas fa-user-plus"></i><span data-translate="add-user">إضافة مستخدم جديد</span></button>
         <div class="user-list" id="user-list">
           <!-- سيتم تحميل المستخدمين هنا ديناميكياً -->
         </div>
@@ -56,15 +55,9 @@
 <!-- قبل اختيار المستخدم -->
 <div class="user-profile-header">
   <div class="action-buttons-top">
-    <button class="btn-delete" id="btn-delete-user">
-      <i class="fas fa-trash-alt"></i> حذف
-    </button>
-    <button class="btn-primary" id="btn-reset-password">
-      <i class="fas fa-key"></i> إعادة تعيين كلمة المرور
-    </button>
-    <button class="btn-primary" id="btn-change-role">
-      <i class="fas fa-users-cog"></i> تغيير الدور
-    </button>
+    <button class="btn-delete" id="btn-delete-user"><i class="fas fa-trash-alt"></i> <span data-translate="delete">حذف</span></button>
+    <button class="btn-primary" id="btn-reset-password"><i class="fas fa-key"></i> <span data-translate="reset-password">إعادة تعيين كلمة المرور</span></button>
+    <button class="btn-primary" id="btn-change-role"><i class="fas fa-users-cog"></i> <span data-translate="change-role">تغيير الدور</span></button>
   </div>
 
   <div class="profile-extra" id="profile-extra">
@@ -76,18 +69,18 @@
 </div>
 
 
-                <h3>صلاحيات الوصول</h3>
+                <h3 data-translate="access-permissions">صلاحيات الوصول</h3>
 
 <div class="permission-section">
   <!-- الأقسام -->
      <!-- مجموعة جديدة: أجهزة التحكم العامة -->
   <div class="permission-group">
-    <h4 class="group-title">عامّ</h4>
+    <h4 class="group-title" data-translate="general-group">عامّ</h4>
 
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">منح الصلاحيات</div>
+          <div class="permission-title" data-translate="grant_permissions">منح الصلاحيات</div>
         </div>
       </div>
       <label class="switch" data-key="grant_permissions">
@@ -99,7 +92,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">عرض السجلات</div>
+          <div class="permission-title" data-translate="view_logs">عرض السجلات</div>
         </div>
       </div>
       <label class="switch" data-key="view_logs">
@@ -111,7 +104,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">عرض لوحة التحكم</div>
+          <div class="permission-title" data-translate="view_dashboard">عرض لوحة التحكم</div>
         </div>
       </div>
       <label class="switch" data-key="view_dashboard">
@@ -122,11 +115,11 @@
   </div>
 
   <div class="permission-group">
-    <h4 class="group-title">الأقسام</h4>
+    <h4 class="group-title" data-translate="departments-group">الأقسام</h4>
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">إضافة قسم</div>
+          <div class="permission-title" data-translate="add_section">إضافة قسم</div>
         </div>
       </div>
       <label class="switch"data-key="add_section">
@@ -137,7 +130,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">تعديل قسم</div>
+          <div class="permission-title" data-translate="edit_section">تعديل قسم</div>
         </div>
       </div>
       <label class="switch"data-key="edit_section">
@@ -148,7 +141,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">حذف قسم</div>
+          <div class="permission-title" data-translate="delete_section">حذف قسم</div>
         </div>
       </div>
       <label class="switch" data-key="delete_section">
@@ -160,11 +153,11 @@
 
   <!-- المحتوى -->
   <div class="permission-group">
-    <h4 class="group-title">المجلد</h4>
+    <h4 class="group-title" data-translate="folder-group">المجلد</h4>
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">إضافة مجلد</div>
+          <div class="permission-title" data-translate="add_folder">إضافة مجلد</div>
         </div>
       </div>
       <label class="switch"data-key="add_folder">
@@ -175,7 +168,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">إضافة اسم مجلد</div>
+          <div class="permission-title" data-translate="add_folder_name">إضافة اسم مجلد</div>
         </div>
       </div>
       <label class="switch"data-key="add_folder_name">
@@ -186,7 +179,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">تعديل مجلد</div>
+          <div class="permission-title" data-translate="edit_folder">تعديل مجلد</div>
         </div>
       </div>
       <label class="switch" data-key="edit_folder">
@@ -197,7 +190,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">تعديل اسم مجلد</div>
+          <div class="permission-title" data-translate="edit_folder_name">تعديل اسم مجلد</div>
         </div>
       </div>
       <label class="switch" data-key="edit_folder_name">
@@ -208,7 +201,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">حذف مجلد</div>
+          <div class="permission-title" data-translate="delete_folder">حذف مجلد</div>
         </div>
       </div>
       <label class="switch" data-key="delete_folder">
@@ -219,7 +212,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">حذف اسم مجلد</div>
+          <div class="permission-title" data-translate="delete_folder_name">حذف اسم مجلد</div>
         </div>
       </div>
       <label class="switch" data-key="delete_folder_name">
@@ -229,11 +222,11 @@
     </div>
   </div>
   <div class="permission-group">
-    <h4 class="group-title">المحتوى</h4>
+    <h4 class="group-title" data-translate="content-group">المحتوى</h4>
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">إضافة محتوى</div>
+          <div class="permission-title" data-translate="add_content">إضافة محتوى</div>
         </div>
       </div>
       <label class="switch"data-key="add_content">
@@ -244,7 +237,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">إضافة اسم محتوى</div>
+          <div class="permission-title" data-translate="add_content_name">إضافة اسم محتوى</div>
         </div>
       </div>
       <label class="switch"data-key="add_content_name">
@@ -255,7 +248,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">تعديل  محتوى</div>
+          <div class="permission-title" data-translate="edit_content">تعديل  محتوى</div>
         </div>
       </div>
       <label class="switch" data-key="edit_content">
@@ -266,7 +259,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">تعديل اسم محتوى</div>
+          <div class="permission-title" data-translate="edit_content_name">تعديل اسم محتوى</div>
         </div>
       </div>
       <label class="switch" data-key="edit_content_name">
@@ -277,7 +270,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">حذف محتوى</div>
+          <div class="permission-title" data-translate="delete_content">حذف محتوى</div>
         </div>
       </div>
       <label class="switch" data-key="delete_content">
@@ -288,7 +281,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">حذف اسم محتوى</div>
+          <div class="permission-title" data-translate="delete_content_name">حذف اسم محتوى</div>
         </div>
       </div>
       <label class="switch" data-key="delete_content_name">
@@ -299,11 +292,11 @@
   </div>
 
   <div class="permission-group">
-    <h4 class="group-title">اللجان</h4>
+    <h4 class="group-title" data-translate="committees-group">اللجان</h4>
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">عرض اللجان</div>
+          <div class="permission-title" data-translate="view_committee">عرض اللجان</div>
         </div>
       </div>
       <label class="switch"data-key="view_committee">
@@ -314,7 +307,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">إضافة لجنة</div>
+          <div class="permission-title" data-translate="add_committee">إضافة لجنة</div>
         </div>
       </div>
       <label class="switch"data-key="add_committee">
@@ -325,7 +318,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">تعديل لجنة</div>
+          <div class="permission-title" data-translate="edit_committee">تعديل لجنة</div>
         </div>
       </div>
       <label class="switch"data-key="edit_committee">
@@ -336,7 +329,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">حذف لجنة</div>
+          <div class="permission-title" data-translate="delete_committee">حذف لجنة</div>
         </div>
       </div>
       <label class="switch" data-key="delete_committee">
@@ -348,11 +341,11 @@
 
   <!-- المحتوى -->
   <div class="permission-group">
-    <h4 class="group-title">مجلدات اللجان</h4>
+    <h4 class="group-title" data-translate="committee-folders-group">مجلدات اللجان</h4>
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">  إضافة مجلد اللجان</div>
+          <div class="permission-title" data-translate="add_folder_committee">إضافة مجلد اللجان</div>
         </div>
       </div>
       <label class="switch"data-key="add_folder_committee">
@@ -363,7 +356,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title"> إضافة اسم مجلد اللجان</div>
+          <div class="permission-title" data-translate="add_folder_committee_name">إضافة اسم مجلد اللجان</div>
         </div>
       </div>
       <label class="switch"data-key="add_folder_committee_name">
@@ -374,7 +367,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">تعديل مجلد اللجان</div>
+          <div class="permission-title" data-translate="edit_folder_committee">تعديل مجلد اللجان</div>
         </div>
       </div>
       <label class="switch" data-key="edit_folder_committee">
@@ -385,7 +378,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">تعديل اسم مجلد اللجان</div>
+          <div class="permission-title" data-translate="edit_folder_committee_name">تعديل اسم مجلد اللجان</div>
         </div>
       </div>
       <label class="switch" data-key="edit_folder_committee_name">
@@ -396,7 +389,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">حذف مجلد اللجان</div>
+          <div class="permission-title" data-translate="delete_folder_committee">حذف مجلد اللجان</div>
         </div>
       </div>
       <label class="switch" data-key="delete_folder_committee">
@@ -407,7 +400,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">حذف اسم مجلد اللجان</div>
+          <div class="permission-title" data-translate="delete_folder_committee_name">حذف اسم مجلد اللجان</div>
         </div>
       </div>
       <label class="switch" data-key="delete_folder_committee_name">
@@ -417,11 +410,11 @@
     </div>
   </div>
   <div class="permission-group">
-    <h4 class="group-title">محتوى اللجان</h4>
+    <h4 class="group-title" data-translate="committee-content-group">محتوى اللجان</h4>
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">إضافة محتوى اللجان</div>
+          <div class="permission-title" data-translate="add_content_committee">إضافة محتوى اللجان</div>
         </div>
       </div>
       <label class="switch"data-key="add_content_committee">
@@ -432,7 +425,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">إضافة اسم محتوى اللجان</div>
+          <div class="permission-title" data-translate="add_content_committee_name">إضافة اسم محتوى اللجان</div>
         </div>
       </div>
       <label class="switch"data-key="add_content_committee_name">
@@ -443,7 +436,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">تعديل  محتوى اللجان</div>
+          <div class="permission-title" data-translate="edit_content_committee">تعديل  محتوى اللجان</div>
         </div>
       </div>
       <label class="switch" data-key="edit_content_committee">
@@ -454,7 +447,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">تعديل اسم محتوى اللجان</div>
+          <div class="permission-title" data-translate="edit_content_committee_name">تعديل اسم محتوى اللجان</div>
         </div>
       </div>
       <label class="switch" data-key="edit_content_committee_name">
@@ -465,7 +458,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">حذف محتوى اللجان</div>
+          <div class="permission-title" data-translate="delete_content_committee">حذف محتوى اللجان</div>
         </div>
       </div>
       <label class="switch" data-key="delete_content_committee">
@@ -476,7 +469,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">حذف اسم محتوى اللجان</div>
+          <div class="permission-title" data-translate="delete_content_committee_name">حذف اسم محتوى اللجان</div>
         </div>
       </div>
       <label class="switch" data-key="delete_content_committee_name">
@@ -488,11 +481,11 @@
 
   <!-- التذاكر -->
   <div class="permission-group">
-    <h4 class="group-title">التذاكر</h4>
+    <h4 class="group-title" data-translate="tickets-group">التذاكر</h4>
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">عرض كل التذاكر</div>
+          <div class="permission-title" data-translate="view_tickets">عرض كل التذاكر</div>
         </div>
       </div>
       <label class="switch" data-key="view_tickets">
@@ -503,7 +496,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">تحويل تذاكر</div>
+          <div class="permission-title" data-translate="transfer_tickets">تحويل تذاكر</div>
         </div>
       </div>
       <label class="switch" data-key="transfer_tickets" >
@@ -514,7 +507,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">تتبع التذاكر</div>
+          <div class="permission-title" data-translate="track_tickets">تتبع التذاكر</div>
         </div>
       </div>
       <label class="switch" data-key="track_tickets">
@@ -525,7 +518,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">حذف التذاكر</div>
+          <div class="permission-title" data-translate="delete_ticket">حذف التذاكر</div>
         </div>
       </div>
       <label class="switch" data-key="delete_ticket">
@@ -536,7 +529,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">تعديل التذاكر</div>
+          <div class="permission-title" data-translate="edit_ticket">تعديل التذاكر</div>
         </div>
       </div>
       <label class="switch" data-key="edit_ticket">
@@ -548,11 +541,11 @@
 
   <!-- الاعتمادات -->
   <div class="permission-group">
-    <h4 class="group-title">الاعتمادات</h4>
+    <h4 class="group-title" data-translate="approvals-group">الاعتمادات</h4>
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">عرض كل الاعتمادات</div>
+          <div class="permission-title" data-translate="view_credits">عرض كل الاعتمادات</div>
         </div>
       </div>
       <label class="switch" data-key="view_credits" >
@@ -563,7 +556,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">تحويل اعتمادات</div>
+          <div class="permission-title" data-translate="transfer_credits">تحويل اعتمادات</div>
         </div>
       </div>
       <label class="switch" data-key="transfer_credits">
@@ -574,7 +567,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">تتبع اعتمادات</div>
+          <div class="permission-title" data-translate="track_credits">تتبع اعتمادات</div>
         </div>
       </div>
       <label class="switch" data-key="track_credits">
@@ -586,11 +579,11 @@
 
   <!-- التوقيع -->
   <div class="permission-group">
-    <h4 class="group-title">التوقيع</h4>
+    <h4 class="group-title" data-translate="signature-group">التوقيع</h4>
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">اعتماد الكتروني</div>
+          <div class="permission-title" data-translate="sign">اعتماد الكتروني</div>
         </div>
       </div>
       <label class="switch" data-key="sign">
@@ -601,7 +594,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">توقيع بالنيابة</div>
+          <div class="permission-title" data-translate="sign_on_behalf">توقيع بالنيابة</div>
         </div>
       </div>
       <label class="switch" data-key="sign_on_behalf">
@@ -613,11 +606,11 @@
 
   <!-- الحسابات -->
   <div class="permission-group">
-    <h4 class="group-title">الحسابات</h4>
+    <h4 class="group-title" data-translate="accounts-group">الحسابات</h4>
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">إضافة مستخدم</div>
+          <div class="permission-title" data-translate="add_user">إضافة مستخدم</div>
         </div>
       </div>
       <label class="switch" data-key="add_user">
@@ -628,7 +621,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">تغيير الدور</div>
+          <div class="permission-title" data-translate="change_role">تغيير الدور</div>
         </div>
       </div>
       <label class="switch" data-key="change_role">
@@ -639,7 +632,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">حذف حساب</div>
+          <div class="permission-title" data-translate="delete_user">حذف حساب</div>
         </div>
       </div>
       <label class="switch" data-key="delete_user">
@@ -650,7 +643,7 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
-          <div class="permission-title">تغيير كلمة السر</div>
+          <div class="permission-title" data-translate="change_password">تغيير كلمة السر</div>
         </div>
       </div>
       <label class="switch"data-key="change_password">
@@ -664,8 +657,8 @@
 
 
             <div class="bottom-action-buttons">
-          <button class="btn-primary" id="btn-export-excel"><i class="fas fa-file-excel"></i> تصدير إلى Excel</button>
-          <button class="btn-primary" id="btn-export-pdf"><i class="fas fa-file-pdf"></i> تصدير إلى PDF</button>
+          <button class="btn-primary" id="btn-export-excel"><i class="fas fa-file-excel"></i> <span data-translate="export-excel">تصدير إلى Excel</span></button>
+          <button class="btn-primary" id="btn-export-pdf"><i class="fas fa-file-pdf"></i> <span data-translate="export-pdf">تصدير إلى PDF</span></button>
         </div>
 
             </div>
@@ -675,53 +668,54 @@
     <!-- Add User Modal -->
     <div id="addUserModal" class="modal">
         <div class="modal-content">
-            <h2 class="modal-title">إضافة مستخدم جديد</h2>
+            <h2 class="modal-title" data-translate="add-user-title">إضافة مستخدم جديد</h2>
 
             <div class="modal-section">
-                <h3>معلومات المستخدم</h3>
+                <h3 data-translate="user-info">معلومات المستخدم</h3>
                 <div class="form-group">
-                    <label for="userName">اسم المستخدم</label>
-                    <input type="text" id="userName" placeholder="أدخل اسم المستخدم">
+                    <label for="userName" data-translate="user-name-label">اسم المستخدم</label>
+                    <input type="text" id="userName" data-translate-placeholder="user-name-placeholder" placeholder="أدخل اسم المستخدم">
                 </div>
                 <div class="form-group">
-                    <label for="jobTitle">المسمى الوظيفي</label>
-                    <input type="text" id="jobTitle" placeholder="أدخل المسمى الوظيفي">
+                    <label for="jobTitle" data-translate="job-title-label">المسمى الوظيفي</label>
+                    <input type="text" id="jobTitle" data-translate-placeholder="job-title-placeholder" placeholder="أدخل المسمى الوظيفي">
                 </div>
                 <div class="form-group">
-                    <label for="department">القسم</label>
+                    <label for="department" data-translate="department-label">القسم</label>
                     <select id="department">
-                        <option value="">اختر القسم</option>
+                        <option value="" data-translate="select-department">اختر القسم</option>
 
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="email">البريد الإلكتروني</label>
-                    <input type="email" id="email" placeholder="أدخل البريد الإلكتروني">
+                    <label for="email" data-translate="email-label">البريد الإلكتروني</label>
+                    <input type="email" id="email" data-translate-placeholder="email-placeholder" placeholder="أدخل البريد الإلكتروني">
                 </div>
                 <div class="form-group">
-                    <label for="password">كلمة المرور</label>
-                    <input type="password" id="password" placeholder="أدخل كلمة المرور">
+                    <label for="password" data-translate="password-label">كلمة المرور</label>
+                    <input type="password" id="password" data-translate-placeholder="password-placeholder" placeholder="أدخل كلمة المرور">
                 </div>
             </div>
     <!-- Permissions section removed as per user request -->
 
             <div class="modal-actions">
-                <button class="btn-secondary" id="cancelAddUser">إلغاء</button>
-                <button class="btn-primary" id="saveUser">حفظ المستخدم</button>
+                <button class="btn-secondary" id="cancelAddUser"><span data-translate="cancel">إلغاء</span></button>
+                <button class="btn-primary" id="saveUser"><span data-translate="save-user">حفظ المستخدم</span></button>
             </div>
         </div>
     </div>
 <div id="role-popup" class="role-popup">
   <div class="role-content">
-    <h4>اختر الدور</h4>
+    <h4 data-translate="choose-role">اختر الدور</h4>
     <select id="role-select" class="role-select"></select>
     <div class="role-buttons">
-      <button class="btn-primary" id="btn-save-role">حفظ</button>
-      <button class="btn-secondary" id="btn-cancel-role">إلغاء</button>
+      <button class="btn-primary" id="btn-save-role"><span data-translate="save">حفظ</span></button>
+      <button class="btn-secondary" id="btn-cancel-role"><span data-translate="cancel">إلغاء</span></button>
     </div>
   </div>
 </div>
-        
+        <script src="/frontend/js/language.js"></script>
+
     <script src="../js/permissions.js"></script>
 </body>
 

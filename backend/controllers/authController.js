@@ -155,7 +155,12 @@ const login = async (req, res) => {
         message: 'بيانات الدخول أو كلمة المرور غير صحيحة'
       });
     }
+const [departmentRows] = await db.query(
+  'SELECT name FROM departments WHERE id = ?',
+  [user.department_id]
+);
 
+const departmentName = departmentRows[0]?.name || '';
     // إنشاء التوكن
     const token = jwt.sign(
       {
@@ -164,6 +169,8 @@ const login = async (req, res) => {
         email: user.email,
         employee_number: user.employee_number,
         department_id: user.department_id,
+            department_name: departmentName, // ✅ أضف اسم القسم هنا
+
         role: user.role
       },
       process.env.JWT_SECRET
