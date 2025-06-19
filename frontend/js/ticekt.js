@@ -47,17 +47,29 @@ respondingDeptSelect.innerHTML = `
 
 
     // أضف كل قسم للقائمتين
-    departments.forEach(dept => {
-      const opt1 = document.createElement('option');
-      opt1.value       = dept.id;
-      opt1.textContent = dept.name;
-      reportingDeptSelect.appendChild(opt1);
+const lang = localStorage.getItem('language') || 'ar';
 
-      const opt2 = document.createElement('option');
-      opt2.value       = dept.id;
-      opt2.textContent = dept.name;
-      respondingDeptSelect.appendChild(opt2);
-    });
+departments.forEach(dept => {
+let deptName = '';
+try {
+  const nameObj = typeof dept.name === 'string' ? JSON.parse(dept.name) : dept.name;
+  deptName = nameObj?.[lang] || nameObj?.ar || nameObj?.en || '';
+} catch {
+  deptName = dept.name || '';
+}
+
+
+  const opt1 = document.createElement('option');
+  opt1.value = dept.id;
+  opt1.textContent = deptName;
+  reportingDeptSelect.appendChild(opt1);
+
+  const opt2 = document.createElement('option');
+  opt2.value = dept.id;
+  opt2.textContent = deptName;
+  respondingDeptSelect.appendChild(opt2);
+});
+
 
     // تحديث الترجمات بعد إضافة الخيارات
     updateModalTexts(localStorage.getItem('language') || 'ar');

@@ -23,6 +23,15 @@ body {
 :lang(en) .page-title {
   font-family: Arial, sans-serif;
 }
+select:lang(ar) {
+  direction: rtl;
+  text-align: right;
+}
+
+select:lang(en) {
+  direction: ltr;
+  text-align: left;
+}
 
 main {
     padding: 20px;

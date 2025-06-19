@@ -36,6 +36,10 @@ const translations = {
         'search-folder': 'ابحث عن مجلد',
         'search-content': 'ابحث عن محتوى',
         'search': 'ابحث…',
+        'committee-name-ar': 'اسم اللجنة (عربي)',
+        'committee-name-en': 'اسم اللجنة (إنجليزي)',
+        'enter-ar-name': 'ادخل اسم اللجنة بالعربية',
+        'enter-en-name': 'ادخل اسم اللجنة بالانجليزية',
 
         // Login & Register
         'login': 'تسجيل الدخول',
@@ -182,7 +186,12 @@ const translations = {
         'search-department': 'ابحث عن قسم',
         'delete-department-title': 'تأكيد حذف القسم',
         'delete-department-confirm': 'أنت متأكد من حذف هذا القسم؟',
-        
+        'department-name-ar': 'اسم القسم بالعربية',
+        'department-name-en': 'اسم القسم بالانجليزية',
+        "sent": "تم الإرسال",
+"pending": "قيد الانتظار",
+"rejected": "مرفوض",
+"completed": "مكتمل",
         // Committees
         'add-committee': 'إضافة لجنة جديدة',
         'edit-committee': 'تعديل اللجنة',
@@ -586,6 +595,7 @@ const translations = {
         'gender': 'الجنس',
         'male': 'ذكر',
         'female': 'أنثى',
+        'at': 'في',
         
         'report-type': 'نوع البلاغ',
         'accident': 'حادث',
@@ -743,6 +753,10 @@ const translations = {
         'change_role': 'تغيير الدور',
         'delete_user': 'حذف حساب',
         'change_password': 'تغيير كلمة السر',
+        "new": "جديد",
+"sent": "تم الإرسال",
+"closed": "مغلق",
+'employee-number-placeholder': 'ادخل رقم الموظف',
         // Permissions Page (Export Buttons)
         'export-excel': 'تصدير إلى Excel',
         'export-pdf': 'تصدير إلى PDF',
@@ -807,6 +821,9 @@ const translations = {
         'department-label': 'القسم:',
         'employee-number-label': 'رقم الموظف:',
         'selected-file': 'تم اختيار: ',
+        'no-files-selected': 'لم يتم اختيار أي ملفات',
+        'select-classification': 'اختر تصنيفًا واحدًا على الأقل',
+        'classification-hint': 'افصل بين التصنيفات بفواصل',
     },
     en: {
         // Navigation
@@ -816,6 +833,10 @@ const translations = {
         'logs': 'Logs',
         'notifications': 'Notifications',
         'language': 'English',
+        'committee-name-ar': 'Committee Name (Arabic)',
+        'committee-name-en': 'Committee Name (English)',
+        'enter-ar-name': 'Enter committee name in Arabic',
+        'enter-en-name': 'Enter committee name in English',
         
         // Main content
         'main-title': 'Home Page',
@@ -885,6 +906,7 @@ const translations = {
         'sent': 'Sent',
         'change-role': 'Change Role',
 
+
         // Departments
         'department-list': 'Department List',
         'department-details': 'Department Details',
@@ -893,6 +915,8 @@ const translations = {
         'department-members': 'Department Members',
         'add-department': 'Add Department',
         'edit-department': 'Edit Department',
+        'employee-number-placeholder': 'Enter Employee Number',
+        'at':'at',
 
         // Approvals
         'approval-list': 'Approval List',
@@ -1083,6 +1107,9 @@ const translations = {
         'proxy-signature-desc': 'Sign documents on behalf of others',
         'approval-files': 'Approval Files',
         'approval-files-desc': 'Read approval files',
+        "new": "New",
+"sent": "Sent",
+"closed": "Closed",
 
         // Approvals page specific translations
         'all-departments-committees': 'All Departments/Committees',
@@ -1136,6 +1163,8 @@ const translations = {
         'status': 'Status',
         'no-notes': 'No notes',
         'error-loading-data': 'Error loading data',
+        'department-name-ar': 'Department Name (Arabic)',
+        'department-name-en': 'Department Name (English)',
 
         // Approvals Received Page Translations
         'approvals-received-title': 'Approvals Sent to You - Quality and Safety Management System',
@@ -1603,6 +1632,9 @@ const translations = {
         'invalid-session': 'Invalid session. Please login again.',
         'logout-success': 'Logged out successfully.',
         'selected-file': 'Selected: ',
+        'no-files-selected': 'No files selected',
+        'select-classification': 'Please select at least one classification',
+        'classification-hint': 'Separate classifications with commas',
     }
 };
 window.translations = translations;

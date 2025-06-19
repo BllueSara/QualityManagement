@@ -76,14 +76,26 @@ document.addEventListener('DOMContentLoaded', () => {
       );
 
       document.querySelector('[data-field="event-date"]').textContent = formatDate(ticket.event_date);
-      document.querySelector('[data-field="event-time"]').textContent = ticket.event_time;
+      document.querySelector('[data-field="event-time"]').textContent = getTranslation(normalizeValue(ticket.event_time));
       document.querySelector('[data-field="event-location"]').textContent = ticket.event_location;
-      document.querySelector('[data-field="reporting-dept"]').textContent = ticket.reporting_dept_name;
-      document.querySelector('[data-field="responding-dept"]').textContent = ticket.responding_dept_name;
+const lang = currentLang || 'ar';
+
+function parseDeptName(name) {
+  try {
+    const parsed = JSON.parse(name);
+    return parsed[lang] || parsed['ar'] || parsed['en'] || name;
+  } catch {
+    return name; // في حال الاسم مو بصيغة JSON
+  }
+}
+
+document.querySelector('[data-field="reporting-dept"]').textContent = parseDeptName(ticket.reporting_dept_name);
+document.querySelector('[data-field="responding-dept"]').textContent = parseDeptName(ticket.responding_dept_name);
+
       document.querySelector('[data-field="patient-name"]').textContent = ticket.patient_name || '-';
       document.querySelector('[data-field="medical-record-no"]').textContent = ticket.medical_record_no || '-';
-      document.querySelector('[data-field="gender"]').textContent = ticket.gender;
-      document.querySelector('[data-field="report-type"]').textContent = ticket.report_type;
+      document.querySelector('[data-field="gender"]').textContent = getTranslation(normalizeValue(ticket.gender));
+      document.querySelector('[data-field="report-type"]').textContent = getTranslation(normalizeValue(ticket.report_type));
       document.querySelector('[data-field="event-description"]').textContent = ticket.event_description;
 
       const attachmentsEl = document.querySelector('.attachments');
@@ -106,15 +118,19 @@ document.addEventListener('DOMContentLoaded', () => {
       const tagsContainer = document.querySelector('.tags-container');
       tagsContainer.innerHTML = '';
       ticket.classifications.forEach(cls => {
+        const key = normalizeValue(cls);
+        const translated = getTranslation(key);
+        // If translation is missing, show the original value
+        const display = translated !== key ? translated : cls;
         const span = document.createElement('span');
         span.className = 'tag';
-        span.textContent = cls;
+        span.textContent = display;
         tagsContainer.appendChild(span);
       });
 
-      document.querySelector('[data-field="had-injury"]').textContent = ticket.had_injury;
-      if (ticket.had_injury === 'نعم') {
-        document.querySelector('[data-field="injury-type"]').textContent = ticket.injury_type;
+      document.querySelector('[data-field="had-injury"]').textContent = getTranslation(normalizeValue(ticket.had_injury));
+      if (normalizeValue(ticket.had_injury) === 'yes') {
+        document.querySelector('[data-field="injury-type"]').textContent = getTranslation(normalizeValue(ticket.injury_type));
       } else {
         document.querySelector('[data-field="injury-type"]').closest('.field-value').style.display = 'none';
       }
@@ -198,3 +214,53 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+// دالة تطبيع القيم الشائعة للترجمة
+function normalizeValue(val) {
+  if (!val) return val;
+  // injury/had_injury
+  if (val === 'نعم' || val.toLowerCase() === 'yes') return 'yes';
+  if (val === 'لا' || val.toLowerCase() === 'no') return 'no';
+  // injury_type
+  if (val === 'جسدية' || val.toLowerCase() === 'physical') return 'physical';
+  if (val === 'نفسية' || val.toLowerCase() === 'psychic' || val.toLowerCase() === 'psychological') return 'psychic';
+  // gender
+  if (val === 'ذكر' || val.toLowerCase() === 'male') return 'male';
+  if (val === 'أنثى' || val.toLowerCase() === 'female') return 'female';
+  // report_type
+  if (val === 'حادث' || val.toLowerCase() === 'accident') return 'accident';
+  if (val === 'حدث قابل للتبليغ' || val.toLowerCase().includes('near')) return 'near-miss';
+  if (val === 'حدث جسيم' || val.toLowerCase().includes('serious')) return 'serious';
+  if (val === 'تنبيه خطأ' || val.toLowerCase().includes('error')) return 'error';
+  if (val === 'وضع غير آمن' || val.toLowerCase().includes('unsafe')) return 'unsafe';
+  // event time
+  if (val === 'صباحاً' || val === 'صباحا' || val.toLowerCase().includes('morning')) return 'morning';
+  if (val === 'مساءً' || val === 'مساءا' || val.toLowerCase().includes('evening')) return 'evening';
+  // التصنيفات (تصنيف الحدث)
+  if (val === 'الأجهزة الطبية' || val.toLowerCase().includes('medical equipment')) return 'medical-equipment';
+  if (val === 'البنية' || val.toLowerCase().includes('infrastructure')) return 'infrastructure';
+  if (val === 'قضايا أمنية' || val.toLowerCase().includes('security')) return 'security-issues';
+  if (val === 'النظافة' || val.toLowerCase().includes('cleaning')) return 'cleaning';
+  if (val === 'السقوط' || val.toLowerCase().includes('fall')) return 'fall';
+  if (val === 'مشكلات سلسلة الإمداد' || val.toLowerCase().includes('supply chain')) return 'supply-chain';
+  if (val === 'إدارة رعاية المرضى' || val.toLowerCase().includes('patient care')) return 'patient-care';
+  if (val === 'خدمات الطعام' || val.toLowerCase().includes('food services')) return 'food-services';
+  if (val === 'الصحة المهنية' || val.toLowerCase().includes('occupational health')) return 'occupational-health';
+  if (val === 'تكامل الجلد' || val.toLowerCase().includes('skin integrity')) return 'skin-integrity';
+  if (val === 'مشاكل التواصل' || val.toLowerCase().includes('communication')) return 'communication';
+  if (val === 'قضايا الولادة' || val.toLowerCase().includes('maternal')) return 'maternal';
+  if (val === 'أحداث جسيمة' || val.toLowerCase().includes('serious incidents')) return 'serious-incidents';
+  if (val === 'قضايا الموظفين' || val.toLowerCase().includes('staff issues')) return 'staff-issues';
+  if (val === 'إجراءات طبية' || val.toLowerCase().includes('medical procedures')) return 'medical-procedures';
+  if (val === 'البيئة / السلامة' || val.toLowerCase().includes('environment') || val.toLowerCase().includes('safety')) return 'environment-safety';
+  if (val === 'التصوير الطبي' || val.toLowerCase().includes('medical imaging')) return 'medical-imaging';
+  if (val === 'الهوية / المستندات / الموافقات' || val.toLowerCase().includes('identity') || val.toLowerCase().includes('documents') || val.toLowerCase().includes('consents')) return 'identity-docs';
+  if (val === 'قضايا مكافحة العدوى' || val.toLowerCase().includes('infection control')) return 'infection-control';
+  if (val === 'الحقن الوريدي' || val.toLowerCase().includes('iv injection')) return 'iv-injection';
+  if (val === 'الدواء' || val.toLowerCase().includes('medication')) return 'medication';
+  if (val === 'العلاج الإشعاعي' || val.toLowerCase().includes('radiation therapy')) return 'radiation-therapy';
+  if (val === 'صيانة المنشأة' || val.toLowerCase().includes('facility maintenance')) return 'facility-maintenance';
+  if (val === 'قضايا تقنية المعلومات' || val.toLowerCase().includes('it issues')) return 'it-issues';
+  if (val === 'التغذية السريرية' || val.toLowerCase().includes('clinical nutrition')) return 'clinical-nutrition';
+  return val;
+}

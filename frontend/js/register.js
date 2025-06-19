@@ -14,6 +14,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const cancelAddDepartmentBtn = document.getElementById('cancelAddDepartment');
     const departmentNameInput = document.getElementById('departmentName');
     const departmentImageInput = document.getElementById('departmentImage');
+    const departmentNameArInput = document.getElementById('departmentNameAr');
+const departmentNameEnInput = document.getElementById('departmentNameEn');
+
 
     // دالة لفتح المودال
     function openModal(modal) {
@@ -21,12 +24,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // دالة لإغلاق المودال
-    function closeModal(modal) {
-        modal.style.display = 'none';
-        // مسح حقول النموذج عند الإغلاق
-        departmentNameInput.value = '';
-        departmentImageInput.value = '';
-    }
+function closeModal(modal) {
+    modal.style.display = 'none';
+    departmentNameArInput.value = '';
+    departmentNameEnInput.value = '';
+    departmentImageInput.value = '';
+}
+
 
     // إضافة مستمع حدث لحقل اسم المستخدم
     usernameInput.addEventListener('input', function() {
@@ -42,49 +46,73 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // دالة لجلب الأقسام من الباك اند وتعبئة قائمة الاختيار
-    async function fetchDepartments() {
-        try {
-            console.log('Attempting to fetch departments...');
-            const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:3006/api/departments', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            const data = await response.json();
+async function fetchDepartments() {
+  try {
+    console.log('Attempting to fetch departments...');
+    const token = localStorage.getItem('token');
+    const response = await fetch('http://localhost:3006/api/departments', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    const data = await response.json();
 
-            console.log('Departments API response:', data);
+    console.log('Departments API response:', data);
 
-            if (response.ok) {
-                // احصل على اللغة الحالية
-                const lang = localStorage.getItem('language') || 'ar';
-                // ترجمات خيار اختر القسم
-                const selectDepartmentText = lang === 'ar' ? 'اختر القسم' : 'Select Department';
-                // مسح الخيارات الحالية باستثناء الخيار الأول (اختر القسم)
-                departmentSelect.innerHTML = `<option value="">${selectDepartmentText}</option>`;
-                // تعبئة قائمة الاختيار بالأقسام المسترجعة
-                data.forEach(department => {
-                    const option = document.createElement('option');
-                    option.value = department.id; // قيمة الخيار ستكون رقم ID القسم
-                    option.textContent = department.name; // النص الظاهر سيكون اسم القسم
-                    departmentSelect.appendChild(option);
-                });
-                // إضافة الخيار الثابت "إضافة قسم جديد" في النهاية
-                const addNewOption = document.createElement('option');
-                addNewOption.value = '__ADD_NEW_DEPARTMENT__';
-                addNewOption.textContent = lang === 'ar' ? 'إضافة قسم جديد' : 'Add New Department';
-                departmentSelect.appendChild(addNewOption);
+    if (response.ok) {
+      const lang = localStorage.getItem('language') || 'ar';
+      const selectDepartmentText = lang === 'ar' ? 'اختر القسم' : 'Select Department';
 
-                console.log('Departments dropdown populated successfully.');
-            } else {
-                console.error('فشل جلب الأقسام:', data.message);
-                alert(data.message || 'حدث خطأ أثناء جلب الأقسام.');
-            }
-        } catch (error) {
-            console.error('خطأ في الاتصال بجلب الأقسام:', error);
-            alert('حدث خطأ في الاتصال بجلب الأقسام. يرجى التأكد من تشغيل الخادم.');
-        }
+      departmentSelect.innerHTML = `<option value="">${selectDepartmentText}</option>`;
+
+data.forEach(department => {
+  const option = document.createElement('option');
+  option.value = department.id;
+
+  const lang = localStorage.getItem('language') || 'ar';
+  let label = '';
+
+  try {
+    // جرّب تفكيك JSON إذا كان الاسم string
+    const parsedName = typeof department.name === 'string'
+      ? JSON.parse(department.name)
+      : department.name;
+
+    // إذا نجح التفكيك وطلع كائن، خذ الاسم حسب اللغة
+    if (parsedName && typeof parsedName === 'object') {
+      label = parsedName[lang] || parsedName.ar || parsedName.en || '';
+    } else {
+      // إذا مو كائن، خذه كما هو
+      label = department.name;
     }
+  } catch (e) {
+    // إذا فشل JSON.parse، خذه كاسم عادي
+    label = department.name;
+  }
+
+  option.textContent = label;
+  departmentSelect.appendChild(option);
+});
+
+
+
+
+      const addNewOption = document.createElement('option');
+      addNewOption.value = '__ADD_NEW_DEPARTMENT__';
+      addNewOption.textContent = lang === 'ar' ? 'إضافة قسم جديد' : 'Add New Department';
+      departmentSelect.appendChild(addNewOption);
+
+      console.log('Departments dropdown populated successfully.');
+    } else {
+      console.error('فشل جلب الأقسام:', data.message);
+      alert(data.message || 'حدث خطأ أثناء جلب الأقسام.');
+    }
+  } catch (error) {
+    console.error('خطأ في الاتصال بجلب الأقسام:', error);
+    alert('حدث خطأ في الاتصال بجلب الأقسام. يرجى التأكد من تشغيل الخادم.');
+  }
+}
+
 
     // استدعاء الدالة عند تحميل الصفحة
     fetchDepartments();
@@ -109,48 +137,57 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // معالجة حفظ القسم الجديد من المودال
-    saveAddDepartmentBtn.addEventListener('click', async function() {
-        const name = departmentNameInput.value;
-        const imageFile = departmentImageInput.files[0];
-        const token = localStorage.getItem('token');
+saveAddDepartmentBtn.addEventListener('click', async function () {
+  const nameAr = departmentNameArInput.value.trim();
+  const nameEn = departmentNameEnInput.value.trim();
+  const imageFile = departmentImageInput.files[0];
+  const token = localStorage.getItem('token');
 
-        if (!name || !imageFile) {
-            alert('اسم القسم والصورة مطلوبان.');
-            return;
-        }
+  if (!nameAr || !nameEn || !imageFile) {
+    alert('جميع الحقول مطلوبة (الاسمين + الصورة)');
+    return;
+  }
 
-        const formData = new FormData();
-        formData.append('name', name);
-        formData.append('image', imageFile);
+const formData = new FormData();
+formData.append('name', JSON.stringify({ ar: nameAr, en: nameEn }));
+formData.append('image', imageFile);
 
-        try {
-            const response = await fetch('http://localhost:3006/api/departments', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                body: formData
-            });
 
-            const data = await response.json();
-
-            if (response.ok) {
-                alert(data.message);
-                closeModal(addDepartmentModal);
-                await fetchDepartments(); // تحديث قائمة الأقسام بعد الإضافة
-
-                // اختيار القسم الجديد في القائمة المنسدلة
-                if (data.departmentId) {
-                    departmentSelect.value = data.departmentId;
-                }
-            } else {
-                alert(data.message || 'حدث خطأ عند إضافة القسم.');
-            }
-        } catch (error) {
-            console.error('خطأ في إضافة القسم من نموذج التسجيل:', error);
-            alert('حدث خطأ في الاتصال عند إضافة القسم.');
-        }
+  try {
+    const response = await fetch('http://localhost:3006/api/departments', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
     });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      alert(data.message);
+      closeModal(addDepartmentModal);
+      await fetchDepartments();
+
+      const lang = localStorage.getItem('language') || 'ar';
+      const options = departmentSelect.options;
+      for (let i = 0; i < options.length; i++) {
+        const opt = options[i];
+        const isMatch = opt.textContent.trim() === (lang === 'ar' ? nameAr : nameEn);
+        if (isMatch) {
+          departmentSelect.selectedIndex = i;
+          break;
+        }
+      }
+    } else {
+      alert(data.message || 'حدث خطأ عند إضافة القسم.');
+    }
+  } catch (error) {
+    console.error('خطأ في إضافة القسم:', error);
+    alert('حدث خطأ في الاتصال.');
+  }
+});
+
 
     // معالجة إلغاء إضافة قسم من المودال
     cancelAddDepartmentBtn.addEventListener('click', () => {
