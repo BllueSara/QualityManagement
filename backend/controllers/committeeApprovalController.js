@@ -126,6 +126,30 @@ async function handleCommitteeApproval(req, res) {
       notes || ''
     ]);
 
+    // إشعار للمفوض له إذا تم التوقيع بالنيابة
+    if (isProxy && approverId) {
+      await insertNotification(
+        approverId,
+        'تم تفويضك للتوقيع',
+        `تم تفويضك للتوقيع بالنيابة عن مستخدم آخر على ملف لجنة رقم ${contentId}`,
+        'proxy'
+      );
+    }
+
+    // إشعار لصاحب الملف عند قبول أو رفض التوقيع
+    // جلب صاحب الملف
+    let [ownerRows] = await db.execute(`SELECT created_by, title FROM committee_contents WHERE id = ?`, [contentId]);
+    if (ownerRows.length) {
+      const ownerId = ownerRows[0].created_by;
+      const fileTitle = ownerRows[0].title || '';
+      await insertNotification(
+        ownerId,
+        approved ? 'تم اعتماد ملفك' : 'تم رفض ملفك',
+        `ملف اللجنة "${fileTitle}" ${approved ? 'تم اعتماده' : 'تم رفضه'} من قبل الإدارة.`,
+        approved ? 'approval' : 'rejected'
+      );
+    }
+
     // If proxy approval, ensure the approver is added to the approvers list
     if (approved && isProxy) {
       await db.execute(`
@@ -193,7 +217,7 @@ async function getAssignedCommitteeApprovals(req, res) {
         cc.file_path,
         cc.approval_status,
         GROUP_CONCAT(DISTINCT u2.username) AS assigned_approvers,
- com.name       AS source_name,  -- ← لفلتر “المصدر” والقائمة
+ com.name       AS source_name,  -- ← لفلتر "المصدر" والقائمة
   'committee'    AS type,         -- ← لتمييز نوع العنصر في الواجهة        u.username AS created_by,
         CAST(cc.approvers_required AS CHAR) AS approvers_required,
         cc.created_at
@@ -271,7 +295,7 @@ async function delegateCommitteeApproval(req, res) {
 }
 
 /**
- * 5. Get pending approvals where I’m the proxy
+ * 5. Get pending approvals where I'm the proxy
  */
 async function getProxyCommitteeApprovals(req, res) {
   try {
