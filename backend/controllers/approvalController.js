@@ -152,6 +152,30 @@ const handleApproval = async (req, res) => {
       notes || ''
     ]);
 
+    // إشعار للمفوض له إذا تم التوقيع بالنيابة
+    if (isProxy && approverId) {
+      await insertNotification(
+        approverId,
+        'تم تفويضك للتوقيع',
+        `تم تفويضك للتوقيع بالنيابة عن مستخدم آخر على الملف رقم ${contentId}`,
+        'proxy'
+      );
+    }
+
+    // إشعار لصاحب الملف عند قبول أو رفض التوقيع
+    // جلب صاحب الملف
+    let [ownerRows] = await db.execute(`SELECT created_by, title FROM ${contentsTable} WHERE id = ?`, [contentId]);
+    if (ownerRows.length) {
+      const ownerId = ownerRows[0].created_by;
+      const fileTitle = ownerRows[0].title || '';
+      await insertNotification(
+        ownerId,
+        approved ? 'تم اعتماد ملفك' : 'تم رفض ملفك',
+        `الملف "${fileTitle}" ${approved ? 'تم اعتماده' : 'تم رفضه'} من قبل الإدارة.`,
+        approved ? 'approval' : 'rejected'
+      );
+    }
+
     if (approved === true && isProxy) {
       await db.execute(`
         INSERT IGNORE INTO ${contentApproversTable} (content_id, user_id)

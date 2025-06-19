@@ -184,7 +184,8 @@ exports.getTicketStatusHistory = async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}; 
+};
+
 exports.addReply = async (req, res) => {
     try {
 const ticketId = req.params.id;
@@ -231,13 +232,24 @@ exports.trackTicket = async (req, res) => {
   }
 };
 
+// إشعار عند إغلاق التذكرة
 exports.closeTicket = async (req, res) => {
     try {
-        const { id } = req.params;
-        await Ticket.updateStatus(id, 'closed');
-        res.status(200).json({ message: 'Ticket closed successfully.' });
-    } catch (err) {
-        // console.error(err);
-        res.status(500).json({ message: 'Error closing ticket.' });
+        const ticketId = req.params.id;
+        // تحديث حالة التذكرة إلى مغلق
+        await Ticket.updateStatus(ticketId, 'مغلق', req.user.id);
+        // جلب صاحب التذكرة
+        const ticket = await Ticket.findById(ticketId, req.user.id, req.user.role);
+        if (ticket && ticket.created_by) {
+            await insertNotification(
+                ticket.created_by,
+                'تم إغلاق التذكرة',
+                `تم إغلاق تذكرتك رقم ${ticketId}.`,
+                'ticket'
+            );
+        }
+        res.json({ message: 'تم إغلاق التذكرة بنجاح' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 };
