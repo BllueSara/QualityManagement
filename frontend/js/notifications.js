@@ -80,7 +80,7 @@ function renderNotifications(notifications) {
       <div class="notification-content">
 <div class="notification-user">${n.user_name || '—'}</div>
         <div class="notification-title">${n.title}</div>
-        <div class="notification-description">${n.message}</div>
+        <div class="notification-description">${getNotificationTranslation(n.message)}</div>
       </div>
       <div class="notification-meta">
         <div class="notification-time">${timeAgo(n.created_at)}</div>
@@ -157,4 +157,41 @@ function getTranslation(key) {
     return window.translations[lang][key];
   }
   return key;
+}
+
+// ✅ ترجمة ذكية للإشعارات العربية للإنجليزية
+function getNotificationTranslation(text) {
+  const lang = localStorage.getItem('language') || document.documentElement.lang || 'ar';
+  if (lang === 'ar') return text;
+
+  // ترجمة الجمل التي تحتوي على اسم ملف بين علامات اقتباس
+  const fileApprovedMatch = text.match(/^الملف "(.+)" تم اعتماده من قبل الإدارة\.$/);
+  if (fileApprovedMatch) {
+    return `The file "${fileApprovedMatch[1]}" has been approved by the administration.`;
+  }
+  const fileRejectedMatch = text.match(/^الملف "(.+)" تم رفضه من قبل الإدارة\.$/);
+  if (fileRejectedMatch) {
+    return `The file "${fileRejectedMatch[1]}" has been rejected by the administration.`;
+  }
+
+  const translations = {
+    'تم تفويضك للتوقيع بالنيابة عن مستخدم آخر على الملف رقم': 'You have been delegated to sign on behalf of another user for file number',
+    'تم تفويضك للتوقيع على ملف جديد رقم': 'You have been delegated to sign a new file with number',
+    'تم تفويضك للتوقيع على ملف لجنة جديد رقم': 'You have been delegated to sign a new committee file with number',
+    'تم إغلاق تذكرتك رقم': 'Your ticket number',
+    'تم إغلاق التذكرة': 'Ticket closed',
+    'الملف': 'The file',
+    'تم اعتماده من قبل الإدارة.': 'has been approved by the administration.',
+    'تم رفضه من قبل الإدارة.': 'has been rejected by the administration.'
+  };
+
+  for (const ar in translations) {
+    if (text.startsWith(ar)) {
+      return text.replace(ar, translations[ar]);
+    }
+    if (text.includes(ar)) {
+      return text.replace(ar, translations[ar]);
+    }
+  }
+  return text;
 }
