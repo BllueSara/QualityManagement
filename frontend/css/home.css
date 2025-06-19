@@ -115,14 +115,18 @@ main h1 {
   font-size: 10px;
   font-weight: bold;
   border-radius: 50%;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  line-height: 1;
+  line-height: 18px; /* نفس الارتفاع لضمان التوسيط */
+  text-align: center;
+  padding: 1px; /* يساعد على ضبط المحاذاة داخل الدائرة */
+  box-sizing: border-box;
   z-index: 1;
 }
+
 .card-icon.icon-circle {
   background-color: #ecbb71; /* نفس اللون البرتقالي أو استخدم كلاس bg-orange */
   border-radius: 50%;
