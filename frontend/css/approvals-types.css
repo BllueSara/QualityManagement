@@ -64,7 +64,7 @@ html[lang="en"] * {
 [dir="ltr"] .back-btn {
   left: 50px;
   right: auto;
-  flex-direction: row-reverse;
+  flex-direction: row;
 }
 
 /* يقلب أيقونات FA داخل back-btn في الوضع LTR */

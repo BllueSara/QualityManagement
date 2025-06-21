@@ -34,12 +34,30 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.querySelectorAll('[data-permission], [data-role]').forEach(el => {
     const permReq = el.dataset.permission;
     const roleReq = el.dataset.role;
-
     const hasPerm = permReq && (permissionsKeys.includes('*') || permissionsKeys.includes(permReq));
     const hasRole = roleReq === 'admin' && isAdmin;
-
     el.style.display = (hasPerm || hasRole) ? '' : 'none';
   });
+
+  // 2.1) بعد إظهار/إخفاء: تمركز البطاقة الأخيرة إن كان عددها فردياً
+  function centerLastVisibleCard() {
+    const grid = document.querySelector('.cards-grid');
+    if (!grid) return;
+
+    // نزيل الكلاس من أي بطاقة مسبقاً
+    grid.querySelectorAll('.center-card').forEach(el => el.classList.remove('center-card'));
+
+    // نجمع البطاقات الظاهرة فقط
+    const visible = Array.from(grid.querySelectorAll('.card'))
+      .filter(el => window.getComputedStyle(el).display !== 'none');
+
+    // إذا عددها فردي: نعلّم الأخيرة
+    if (visible.length % 2 === 1) {
+      visible[visible.length - 1].classList.add('center-card');
+    }
+  }
+  centerLastVisibleCard();
+
 
   // 3) ربط البطاقات
   document.querySelectorAll('.cards-grid .card').forEach(card => {
@@ -49,7 +67,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // Fetch unread notifications count
+  // 4) جلب عدد الإشعارات غير المقروءة
   try {
     const notifRes = await fetch(`${apiBase}/users/${userId}/notifications/unread-count`, {
       headers: { 'Authorization': `Bearer ${token}` }

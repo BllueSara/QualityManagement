@@ -79,7 +79,7 @@ function renderNotifications(notifications) {
       </div>
       <div class="notification-content">
 <div class="notification-user">${n.user_name || '—'}</div>
-        <div class="notification-title">${n.title}</div>
+      <div class="notification-title">${getNotificationTranslation(n.title)}</div>
         <div class="notification-description">${getNotificationTranslation(n.message)}</div>
       </div>
       <div class="notification-meta">
@@ -163,7 +163,13 @@ function getTranslation(key) {
 function getNotificationTranslation(text) {
   const lang = localStorage.getItem('language') || document.documentElement.lang || 'ar';
   if (lang === 'ar') return text;
-
+  // exact-title translations
+  if (text === 'تم تفويضك للتوقيع') {
+    return 'You have been delegated to sign';
+  }
+  if (text === 'تم اعتماد ملفك') {
+    return 'Your file has been approved';
+  }
   // ترجمة الجمل التي تحتوي على اسم ملف بين علامات اقتباس
   const fileApprovedMatch = text.match(/^الملف "(.+)" تم اعتماده من قبل الإدارة\.$/);
   if (fileApprovedMatch) {
@@ -173,6 +179,13 @@ function getNotificationTranslation(text) {
   if (fileRejectedMatch) {
     return `The file "${fileRejectedMatch[1]}" has been rejected by the administration.`;
   }
+ // committee‐file approved
+ const committeeApprovedMatch = text.match(
+   /^ملف اللجنة "(.+)" تم اعتماده من قبل الإدارة\.$/
+ );
+ if (committeeApprovedMatch) {
+   return `The committee file "${committeeApprovedMatch[1]}" has been approved by the administration.`;
+ }
 
   const translations = {
     'تم تفويضك للتوقيع بالنيابة عن مستخدم آخر على الملف رقم': 'You have been delegated to sign on behalf of another user for file number',
@@ -182,7 +195,8 @@ function getNotificationTranslation(text) {
     'تم إغلاق التذكرة': 'Ticket closed',
     'الملف': 'The file',
     'تم اعتماده من قبل الإدارة.': 'has been approved by the administration.',
-    'تم رفضه من قبل الإدارة.': 'has been rejected by the administration.'
+    'تم رفضه من قبل الإدارة.': 'has been rejected by the administration.',
+    'ملف اللجنة': 'The committee file',
   };
 
   for (const ar in translations) {

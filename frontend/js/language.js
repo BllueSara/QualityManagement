@@ -595,7 +595,11 @@ const translations = {
         'gender': 'الجنس',
         'male': 'ذكر',
         'female': 'أنثى',
-        'at': 'في',
+        'at': 'في',    'add-more': 'إضافة معتمدين جدد',
+    
+    // أضف هذا السطر:
+    'no-new-approvers': 'لا يوجد معتمدين جدد لإرسالهم',
+    'add-more-success': 'تم إضافة معتمدين جدد بنجاح',
         
         'report-type': 'نوع البلاغ',
         'accident': 'حادث',
@@ -760,6 +764,7 @@ const translations = {
         // Permissions Page (Export Buttons)
         'export-excel': 'تصدير إلى Excel',
         'export-pdf': 'تصدير إلى PDF',
+        'file-id': 'رقم الملف',
         // Logs Page
         'logs-title': 'سجلات النظام',
         'logs-search': 'البحث في السجلات...',
@@ -1062,6 +1067,12 @@ const translations = {
         'content-update-success': 'Content updated successfully',
         'content-delete-success': 'Content deleted successfully',
         'content-approve-success': 'Content approved successfully',
+        'add-more': 'Add more approvers',
+        'file-id': 'File Number',
+    
+    // أضف هذا السطر:
+    'no-new-approvers': 'No new approvers to send',
+    'add-more-success': 'New approvers added successfully',
         'error-occurred': 'An error occurred',
         'please-try-again': 'Please try again',
         'no-folders': 'No folders in this committee.',
