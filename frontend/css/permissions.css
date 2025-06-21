@@ -804,3 +804,36 @@ select::placeholder {
 }
 
 /* عند اختيار مستخدم، اضف الكلاس active للحاوية */
+/* في اللغة العربية نحتفظ بالتباعد الأصلي */
+:lang(ar) .add-user-btn {
+  gap: 8px; /* كما لديك حالياً */
+}
+:lang(ar) .user-item {
+  /* نستخدم الهامش على اليسار للـ RTL */
+  gap: 0;          /* نلغي أي gap عام */
+}
+:lang(ar) .user-avatar,
+:lang(ar) .user-avatar-icon {
+  margin-left: 15px;
+  margin-right: 0;
+}
+
+/* في اللغة الإنجليزية نزيد التباعد */
+:lang(en) .add-user-btn {
+  gap: 12px;       /* مسافة أكبر بين الأيقونة والكلام */
+}
+:lang(en) .user-item {
+  gap: 12px;       /* مسافة ثابتة بين الأفاتار والنص */
+}
+/* بنفس الإسلوب نعكس الهامش للأفاتار */
+:lang(en) .user-avatar,
+:lang(en) .user-avatar-icon {
+  margin-right: 15px;
+  margin-left: 0;
+}
+
+
+/* 3) لو كانت الصفحة بالإنجليزي، نزيد المسافة */
+:lang(en) .user-profile-header.active #profile-extra {
+  gap: 15px;          /* زيّد المسافة هنا كيف ما تحب */
+}

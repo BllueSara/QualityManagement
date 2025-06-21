@@ -1,4 +1,6 @@
 // استيراد الترجمة
+const apiBase = 'http://localhost:3006/api';
+
 if (typeof getTranslation !== 'function') {
   function getTranslation(key) {
     const lang = localStorage.getItem('language') || 'ar';
@@ -80,6 +82,7 @@ const depts = Array.isArray(resJson) ? resJson : [];
   tickets.forEach(ticket => {
     const row = document.createElement('tr');
     row.dataset.id = ticket.id;
+  row.dataset.assignedNames = JSON.stringify(ticket.assignedNames || []);
 
     // خلية رقم التذكرة
     const tdId = document.createElement('td');
@@ -182,62 +185,63 @@ row.append(tdStatus);
     let selectedUsers = [];
 
     // إعادة بناء قائمة المستخدمين
-    async function rebuildUsersList() {
-      const uBtn = userDrop.querySelector('.dropdown-btn');
-      const uList = userDrop.querySelector('.dropdown-content');
-      uList.innerHTML = `<input type="text" class="dropdown-search" placeholder="${getTranslation('search-person')}">`;
+async function rebuildUsersList() {
+  const uBtn = userDrop.querySelector('.dropdown-btn');
+  const uList = userDrop.querySelector('.dropdown-content');
+  uList.innerHTML = `<input type="text" class="dropdown-search" placeholder="${getTranslation('search-person')}">`;
 
-      if (!selectedDepts.length) {
-        uBtn.disabled = true;
-        uBtn.textContent = getTranslation('select-department-first');
-        return;
-      }
-      uBtn.disabled = false;
-      uBtn.textContent = selectedUsers.length
-        ? `${selectedUsers.length} ${getTranslation('selected')}`
-        : getTranslation('select-people');
+  // اقرأ الأسماء اللي أرسلت لهم قبل
+  const existingNames = JSON.parse(row.dataset.assignedNames || '[]');
 
-      // لكل قسم، اجلب المستخدمين
-      for (const deptVal of selectedDepts) {
-        const res = await fetch(
-          `http://localhost:3006/api/users?departmentId=${deptVal}`,
-          { headers: { 'Authorization': `Bearer ${token}` } }
-        );
-        if (!res.ok) continue;
-        const { data: users } = await res.json();
+  if (!selectedDepts.length) {
+    uBtn.disabled = true;
+    uBtn.textContent = getTranslation('select-department-first');
+    return;
+  }
+  uBtn.disabled = false;
+  uBtn.textContent = selectedUsers.length
+    ? `${selectedUsers.length} ${getTranslation('selected')}`
+    : getTranslation('select-people');
 
-        // فاصل بعنوان القسم
-        const divider = document.createElement('div');
-        divider.className = 'dropdown-divider';
-const deptObj = depts.find(d => d.id == deptVal);
-const deptLabel = deptObj ? getLocalizedName(deptObj.name) : '';
+  for (const deptVal of selectedDepts) {
+    // فاصل باسم القسم
+    const divider = document.createElement('div');
+    divider.className = 'dropdown-divider';
+    divider.textContent = getLocalizedName(
+      depts.find(d => d.id == deptVal).name
+    );
+    uList.append(divider);
 
-        divider.textContent = deptLabel;
-        uList.append(divider);
+    // جلب مستخدمي القسم
+    const res = await fetch(`${apiBase}/users?departmentId=${deptVal}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) continue;
+    const { data: users } = await res.json();
 
-        // بناء عناصر المستخدمين
-        users.forEach(u => {
-          const d = document.createElement('div');
-          d.className = 'dropdown-item';
-          d.textContent = u.name;
-          d.dataset.userid = u.id;
-          d.dataset.dept   = deptVal;
-          if (selectedUsers.some(sel => sel.id === u.id)) {
-            d.classList.add('selected');
-          }
-          uList.append(d);
-        });
-      }
+    users.forEach(u => {
+      // استثنِ الأسماء اللي أرسلت لهم
+      if (existingNames.includes(u.name)) return;
 
-      // فلترة البحث
-      const search = uList.querySelector('.dropdown-search');
-      search.addEventListener('input', () => {
-        const val = search.value.trim();
-        uList.querySelectorAll('.dropdown-item').forEach(i => {
-          i.style.display = i.textContent.includes(val) ? 'block' : 'none';
-        });
-      });
-    }
+      const div = document.createElement('div');
+      div.className = 'dropdown-item';
+      div.textContent = u.name;
+      div.dataset.userid = u.id;
+      div.dataset.dept   = deptVal;
+      uList.append(div);
+    });
+  }
+
+  // فلترة البحث
+  const search = uList.querySelector('.dropdown-search');
+  search.addEventListener('input', () => {
+    const v = search.value.trim();
+    uList.querySelectorAll('.dropdown-item').forEach(i => {
+      i.style.display = i.textContent.includes(v) ? 'block' : 'none';
+    });
+  });
+}
+
 
     // ضبط dropdown الأقسام
     ;(() => {
@@ -275,7 +279,6 @@ const deptLabel = deptObj ? getLocalizedName(deptObj.name) : '';
           btn.textContent = `${selectedDepts.length} ${getTranslation('departments-count')}`;
         }
 
-        list.classList.remove('active');
         await rebuildUsersList();
         row.querySelector('.selected-cell').innerHTML = '';
       });
@@ -330,6 +333,7 @@ const deptLabel = deptObj ? getLocalizedName(deptObj.name) : '';
       });
     })();
       const sendBtn = row.querySelector('.btn-send');
+
   sendBtn.addEventListener('click', async () => {
     if (!selectedUsers.length) {
       alert(getTranslation('please-select-users'));
@@ -374,7 +378,11 @@ if (tdStatus) {
   console.error('❌ Error:', err);
   alert(getTranslation('error-sending') + `\n${err.message || ''}`);
 }
-
+    // ← إضافة هذا الجزء:
+    const newNames = selectedUsers.map(u => u.name);
+    const existingNames = JSON.parse(row.dataset.assignedNames || '[]');
+    const allNames = existingNames.concat(newNames);
+    row.dataset.assignedNames = JSON.stringify(allNames);
   });
   }
 });

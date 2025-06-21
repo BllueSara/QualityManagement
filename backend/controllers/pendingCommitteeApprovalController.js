@@ -166,8 +166,7 @@ exports.sendApprovalRequest = async (req, res) => {
     waitForConnections: true,
     connectionLimit: 10
   });
-
-  const conn = await pool.getConnection();
+ const conn = await pool.getConnection();
   try {
     // Fetch info for logging
     const [[contentDetails]] = await conn.execute(
@@ -186,25 +185,29 @@ exports.sendApprovalRequest = async (req, res) => {
 
     await conn.beginTransaction();
 
-    // 1) نحذف المعتمدين السابقين
-    await conn.execute(`DELETE FROM committee_content_approvers WHERE content_id = ?`, [contentId]);
-    // ونحذف سجلات الموافقات القديمة
-    await conn.execute(`DELETE FROM committee_approval_logs WHERE content_id = ?`, [contentId]);
+    // 1) اقرأ المعتمدين الحاليين
+    const [rows] = await conn.execute(
+      `SELECT user_id FROM committee_content_approvers WHERE content_id = ?`,
+      [contentId]
+    );
+    const existing = rows.map(r => r.user_id);
 
-    // 2) ندخل المعتمدين الجدد
-    for (const userId of approvers) {
+    // 2) احسب الجدد فقط
+    const toAdd = approvers.filter(id => !existing.includes(id));
+
+    // 3) أضف الجدد دون حذف القدم
+    for (const userId of toAdd) {
       await conn.execute(
-        `INSERT INTO committee_content_approvers (content_id, user_id, assigned_at) VALUES (?, ?, NOW())`,
+        `INSERT INTO committee_content_approvers (content_id, user_id, assigned_at)
+         VALUES (?, ?, NOW())`,
         [contentId, userId]
       );
-      // ونسجّل لهم أيضاً سجلّ موافقة جديد
       await conn.execute(
         `INSERT INTO committee_approval_logs
            (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, created_at)
          VALUES (?, ?, 'pending', NULL, 0, NULL, CURRENT_TIMESTAMP)`,
         [contentId, userId]
       );
-      // إشعار للمعتمد الجديد
       await insertNotification(
         userId,
         'تم تفويضك للتوقيع',
@@ -213,14 +216,15 @@ exports.sendApprovalRequest = async (req, res) => {
       );
     }
 
-    // 3) نحدّث حالة المحتوى
+    // 4) دمج القديم مع القادم في الحقل approvers_required
+    const merged = Array.from(new Set([...existing, ...approvers]));
     await conn.execute(
-      `UPDATE committee_contents 
-         SET approval_status = 'pending', 
-             approvers_required = ?, 
-             updated_at = CURRENT_TIMESTAMP 
+      `UPDATE committee_contents
+         SET approval_status     = 'pending',
+             approvers_required  = ?,
+             updated_at          = CURRENT_TIMESTAMP
        WHERE id = ?`,
-      [JSON.stringify(approvers), contentId]
+      [ JSON.stringify(merged), contentId ]
     );
 
     // Add to logs
@@ -231,12 +235,13 @@ exports.sendApprovalRequest = async (req, res) => {
     await logAction(userId, 'send_committee_approval_request', logMessage, 'committee_content', contentId);
 
     await conn.commit();
-    res.status(200).json({ status: 'success', message: 'تم الإرسال بنجاح' });
+    res.json({ status:'success', message:'تم الإرسال بنجاح' });
   } catch (err) {
     await conn.rollback();
-    res.status(500).json({ status: 'error', message: 'فشل إرسال طلب الاعتماد' });
+    res.status(500).json({ status:'error', message:'فشل إرسال طلب الاعتماد' });
   } finally {
     conn.release();
+    await pool.end();
   }
 };
 

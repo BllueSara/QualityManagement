@@ -321,45 +321,37 @@ const updateUser = async (req, res) => {
 
 // 5) حذف مستخدم
 const deleteUser = async (req, res) => {
-  const auth = req.headers.authorization;
-  if (!auth?.startsWith('Bearer ')) {
-    return res.status(401).json({ status: 'error', message: 'Unauthorized' });
-  }
-
-  let payload;
-  try {
-    payload = jwt.verify(auth.slice(7), process.env.JWT_SECRET);
-  } catch (err) {
-    return res.status(401).json({ status: 'error', message: 'Invalid token' });
-  }
-  const adminUserId = payload.id;
-  const userLang = getUserLang(req);
-
   const id = req.params.id;
   try {
-    // Fetch user details for logging
-    const [[userDetails]] = await db.execute(
-      `SELECT u.username, u.email, u.role, d.name as department_name
-       FROM users u
-       LEFT JOIN departments d ON u.department_id = d.id
-       WHERE u.id = ?`,
-      [id]
-    );
-
-    if (!userDetails) {
-      return res.status(404).json({ status:'error', message:'المستخدم غير موجود' });
-    }
-
     // التحقق من وجود محتويات مرتبطة بالمستخدم
     const [relatedContents] = await db.execute(
       'SELECT COUNT(*) as count FROM contents WHERE created_by = ? OR approved_by = ?',
       [id, id]
     );
 
-    if (relatedContents[0].count > 0) {
-      return res.status(400).json({ 
-        status: 'error', 
-        message: 'لا يمكن حذف المستخدم لوجود محتويات مرتبطة به' 
+    // 8) تحويل سجلات النشاط (activity_logs) لحقل user_id إلى NULL
+    await conn.execute(
+      `UPDATE activity_logs
+         SET user_id = NULL
+       WHERE user_id = ?`,
+      [userId]
+    );
+
+    // 9) حذف صلاحيات المستخدم (user_permissions) — مُعرَّفة بـ ON DELETE CASCADE،
+    //    ولكن نضمن عبر حذف المستخدم نفسه لاحقًا
+
+    // 10) حذف إشعارات المستخدم (notifications) — أيضاً CASCADE
+
+    // 11) حذف المستخدم نفسه
+    const [delResult] = await conn.execute(
+      `DELETE FROM users WHERE id = ?`,
+      [userId]
+    );
+    if (delResult.affectedRows === 0) {
+      await conn.rollback();
+      return res.status(404).json({
+        status: 'error',
+        message: 'المستخدم غير موجود'
       });
     }
 
@@ -369,21 +361,23 @@ const deleteUser = async (req, res) => {
       return res.status(404).json({ status:'error', message:'المستخدم غير موجود' });
     }
 
-    // Add to logs
-    const localizedDeptName = getLocalizedName(userDetails.department_name, userLang);
-    const logMessage = userLang === 'en' 
-      ? `Deleted user: '${userDetails.username}' (${userDetails.email}) with role '${userDetails.role}'${userDetails.department_name ? ` from department '${localizedDeptName}'` : ''}`
-      : `حذف المستخدم: '${userDetails.username}' (${userDetails.email}) بدور '${userDetails.role}'${userDetails.department_name ? ` من القسم '${localizedDeptName}'` : ''}`;
-    await logAction(adminUserId, 'delete_user', logMessage, 'user', id);
-
     res.status(200).json({ 
       status: 'success',
-      message: 'تم حذف المستخدم بنجاح'
+      message: 'تم حذف المستخدم وجميع السجلات المرتبطة به بنجاح'
     });
+
   } catch (error) {
-    res.status(500).json({ message: 'خطأ في حذف المستخدم' });
+    if (conn) await conn.rollback();
+    console.error('deleteUser error:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: error.message || 'فشل حذف المستخدم'
+    });
+  } finally {
+    if (conn) conn.release();
   }
 };
+
 
 // 6) تغيير دور المستخدم
 const changeUserRole = async (req, res) => {
