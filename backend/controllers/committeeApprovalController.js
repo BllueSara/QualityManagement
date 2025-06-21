@@ -128,6 +128,16 @@ async function handleCommitteeApproval(req, res) {
       notes || ''
     ]);
 
+
+    await logAction(
+      currentUserId,
+      approved ? 'approve_committee_content' : 'reject_committee_content',
+      `تم ${approved ? 'اعتماد' : 'رفض'} ملف لجنة رقم ${contentId}${isProxy ? ' كمفوض عن مستخدم آخر' : ''}`,
+      'committee_content',
+      contentId
+    );
+    
+
     // إشعار للمفوض له إذا تم التوقيع بالنيابة
     if (isProxy && approverId) {
       await insertNotification(
@@ -288,6 +298,16 @@ async function delegateCommitteeApproval(req, res) {
         comments          = VALUES(comments),
         created_at        = NOW();
     `, [contentId, delegateTo, currentUserId, notes || null]);
+
+
+    await logAction(
+      currentUserId,
+      'delegate_committee_signature',
+      `تفويض المستخدم ${delegateTo} للتوقيع على ملف لجنة رقم ${contentId}`,
+      'committee_content',
+      contentId
+    );
+    
 
     res.json({ status: 'success', message: '✅ تم التفويض بالنيابة بنجاح' });
   } catch (err) {
