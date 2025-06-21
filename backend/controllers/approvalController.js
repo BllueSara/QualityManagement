@@ -68,8 +68,9 @@ const getUserPendingApprovals = async (req, res) => {
 };
 
 // اعتماد/رفض ملف
+// اعتماد/رفض ملف
 const handleApproval = async (req, res) => {
-  let { contentId: originalContentId } = req.params; // Keep original ID with prefix
+  let { contentId: originalContentId } = req.params;
   const { approved, signature, notes, electronic_signature, on_behalf_of } = req.body;
 
   let contentId;
@@ -83,15 +84,12 @@ const handleApproval = async (req, res) => {
       contentId = parseInt(originalContentId.split('-')[1], 10);
       isCommitteeContent = true;
     } else {
-      // Fallback for old IDs without prefixes or if it's already an integer
       contentId = parseInt(originalContentId, 10);
-      // We'll assume it's department content if no prefix is found.
-      // This might need refinement if committee content can exist without prefix.
-      isCommitteeContent = false; 
+      isCommitteeContent = false;
     }
   } else {
     contentId = originalContentId;
-    isCommitteeContent = false; // Assume department if not string with prefix
+    isCommitteeContent = false;
   }
 
   if (typeof approved !== 'boolean') {
@@ -113,13 +111,11 @@ const handleApproval = async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'التوقيع مفقود' });
     }
 
-    // Determine which tables to use based on content type
     const approvalLogsTable = isCommitteeContent ? 'committee_approval_logs' : 'approval_logs';
     const contentApproversTable = isCommitteeContent ? 'committee_content_approvers' : 'content_approvers';
     const contentsTable = isCommitteeContent ? 'committee_contents' : 'contents';
-    const generatePdfFunction = isCommitteeContent ? generateFinalSignedCommitteePDF : generateFinalSignedPDF; // Assuming a similar function for committees
+    const generatePdfFunction = isCommitteeContent ? generateFinalSignedCommitteePDF : generateFinalSignedPDF;
 
-    // Insert/Update approval log
     await db.execute(`
       INSERT INTO ${approvalLogsTable} (
         content_id,
@@ -152,7 +148,15 @@ const handleApproval = async (req, res) => {
       notes || ''
     ]);
 
-    // إشعار للمفوض له إذا تم التوقيع بالنيابة
+    // ✅ log action
+    await logAction(
+      currentUserId,
+      approved ? 'approve_content' : 'reject_content',
+      `تم ${approved ? 'اعتماد' : 'رفض'} الملف رقم ${contentId}${isProxy ? ' كمفوض عن مستخدم آخر' : ''}`,
+      isCommitteeContent ? 'committee_content' : 'content',
+      contentId
+    );
+
     if (isProxy && approverId) {
       await insertNotification(
         approverId,
@@ -162,8 +166,6 @@ const handleApproval = async (req, res) => {
       );
     }
 
-    // إشعار لصاحب الملف عند قبول أو رفض التوقيع
-    // جلب صاحب الملف
     let [ownerRows] = await db.execute(`SELECT created_by, title FROM ${contentsTable} WHERE id = ?`, [contentId]);
     if (ownerRows.length) {
       const ownerId = ownerRows[0].created_by;
@@ -183,7 +185,6 @@ const handleApproval = async (req, res) => {
       `, [contentId, approverId]);
     }
 
-    // Check for remaining approvers and update content status
     const [remaining] = await db.execute(`
       SELECT COUNT(*) AS count
       FROM ${contentApproversTable} ca
@@ -193,7 +194,6 @@ const handleApproval = async (req, res) => {
     `, [contentId]);
 
     if (remaining[0].count === 0) {
-      // Generate final signed PDF
       await generatePdfFunction(contentId);
       await db.execute(`
         UPDATE ${contentsTable}
@@ -211,6 +211,7 @@ const handleApproval = async (req, res) => {
     res.status(500).json({ status: 'error', message: 'خطأ أثناء معالجة الاعتماد' });
   }
 };
+
 
 // توليد نسخة نهائية موقعة من PDF
 async function generateFinalSignedPDF(contentId) {
@@ -650,6 +651,14 @@ const delegateApproval = async (req, res) => {
         comments = VALUES(comments),
         created_at = NOW()
     `, [contentId, delegateTo, currentUserId, notes || null]);
+
+    await logAction(
+      currentUserId,
+      'delegate_signature',
+      `قام بتفويض المستخدم ${delegateTo} للتوقيع على الملف رقم ${contentId}`,
+      rawId.startsWith('comm-') ? 'committee_content' : 'content',
+      contentId
+    );
 
     return res.status(200).json({
       status: 'success',

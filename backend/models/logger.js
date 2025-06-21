@@ -6,6 +6,8 @@ const db = mysql.createPool({
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'Quality'
 });
+
+
 async function logAction(userId, action, description, referenceType, referenceId) {
   await db.execute(
     `INSERT INTO activity_logs 

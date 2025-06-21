@@ -101,6 +101,16 @@ const register = async (req, res) => {
       process.env.JWT_SECRET
     );
 
+
+    await logAction(
+      userId,
+      'register_user',
+      `تم تسجيل مستخدم جديد: ${username}`,
+      'user',
+      userId
+    );
+    
+
     // 10) ردّ العميل
     res.status(201).json({
       status: 'success',
@@ -175,6 +185,16 @@ const departmentName = departmentRows[0]?.name || '';
       },
       process.env.JWT_SECRET
     );
+
+
+    await logAction(
+      user.id,
+      'login',
+      `تسجيل دخول المستخدم: ${user.username}`,
+      'user',
+      user.id
+    );
+    
 
     res.status(200).json({
       status: 'success',

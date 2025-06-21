@@ -1,4 +1,5 @@
 const mysql = require('mysql2/promise');
+const jwt = require('jsonwebtoken');
 
 const db = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
@@ -8,6 +9,32 @@ const db = mysql.createPool({
 });
 const { logAction } = require('../models/logger');
 const { insertNotification } = require('../models/notfications-utils');
+
+// دالة مساعدة لاستخراج اسم القسم باللغة المناسبة
+function getDepartmentNameByLanguage(departmentNameData, userLanguage = 'ar') {
+    try {
+        // إذا كان الاسم JSON يحتوي على اللغتين
+        if (typeof departmentNameData === 'string' && departmentNameData.startsWith('{')) {
+            const parsed = JSON.parse(departmentNameData);
+            return parsed[userLanguage] || parsed['ar'] || departmentNameData;
+        }
+        // إذا كان نص عادي
+        return departmentNameData || 'غير معروف';
+    } catch (error) {
+        // في حالة فشل التحليل، إرجاع النص كما هو
+        return departmentNameData || 'غير معروف';
+    }
+}
+
+// دالة مساعدة لاستخراج لغة المستخدم من التوكن
+function getUserLanguageFromToken(token) {
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        return decoded.language || 'ar'; // افتراضي عربي
+    } catch (error) {
+        return 'ar'; // افتراضي عربي
+    }
+}
 
 const getDepartments = async (req, res) => {
     try {
@@ -48,6 +75,28 @@ const addDepartment = async (req, res) => {
             [name, imagePath]
         );
 
+        // ✅ تسجيل اللوق بعد نجاح إضافة القسم
+        const token = req.headers.authorization?.split(' ')[1];
+        if (token) {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const userId = decoded.id;
+            
+            try {
+                const userLanguage = getUserLanguageFromToken(token);
+                const departmentName = getDepartmentNameByLanguage(name, userLanguage);
+                
+                await logAction(
+                    userId,
+                    'add_department',
+                    `تمت إضافة قسم جديد: ${departmentName}`,
+                    'department',
+                    result.insertId
+                );
+            } catch (logErr) {
+                console.error('logAction error:', logErr);
+            }
+        }
+
         res.status(201).json({
             status: 'success',
             message: 'تم إضافة القسم بنجاح',
@@ -72,6 +121,21 @@ const updateDepartment = async (req, res) => {
             });
         }
 
+        // جلب الاسم القديم قبل التحديث
+        const [oldDepartment] = await db.execute(
+            'SELECT name FROM departments WHERE id = ?',
+            [id]
+        );
+
+        if (oldDepartment.length === 0) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'القسم غير موجود'
+            });
+        }
+
+        const oldName = oldDepartment[0].name;
+
         let query = 'UPDATE departments SET name = ?, updated_at = CURRENT_TIMESTAMP';
         let params = [name];
 
@@ -92,6 +156,29 @@ const updateDepartment = async (req, res) => {
             });
         }
 
+        // ✅ تسجيل اللوق بعد نجاح تعديل القسم
+        const token = req.headers.authorization?.split(' ')[1];
+        if (token) {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const userId = decoded.id;
+            
+            try {
+                const userLanguage = getUserLanguageFromToken(token);
+                const oldDepartmentName = getDepartmentNameByLanguage(oldName, userLanguage);
+                const newDepartmentName = getDepartmentNameByLanguage(name, userLanguage);
+                
+                await logAction(
+                    userId,
+                    'update_department',
+                    `تم تعديل قسم من: ${oldDepartmentName} إلى: ${newDepartmentName}`,
+                    'department',
+                    id
+                );
+            } catch (logErr) {
+                console.error('logAction error:', logErr);
+            }
+        }
+
         res.status(200).json({
             status: 'success',
             message: 'تم تعديل القسم بنجاح'
@@ -105,6 +192,21 @@ const updateDepartment = async (req, res) => {
 const deleteDepartment = async (req, res) => {
     try {
         const { id } = req.params;
+
+        // جلب اسم القسم قبل الحذف
+        const [department] = await db.execute(
+            'SELECT name FROM departments WHERE id = ?',
+            [id]
+        );
+
+        if (department.length === 0) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'القسم غير موجود'
+            });
+        }
+
+        const departmentName = department[0].name;
 
         // التحقق من وجود محتويات مرتبطة بالقسم
         const [relatedContents] = await db.execute(
@@ -129,6 +231,28 @@ const deleteDepartment = async (req, res) => {
                 status: 'error',
                 message: 'القسم غير موجود'
             });
+        }
+
+        // ✅ تسجيل اللوق بعد نجاح حذف القسم
+        const token = req.headers.authorization?.split(' ')[1];
+        if (token) {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const userId = decoded.id;
+            
+            try {
+                const userLanguage = getUserLanguageFromToken(token);
+                const departmentNameLocalized = getDepartmentNameByLanguage(departmentName, userLanguage);
+                
+                await logAction(
+                    userId,
+                    'delete_department',
+                    `تم حذف قسم: ${departmentNameLocalized}`,
+                    'department',
+                    id
+                );
+            } catch (logErr) {
+                console.error('logAction error:', logErr);
+            }
         }
 
         res.status(200).json({
