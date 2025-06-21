@@ -128,7 +128,7 @@ main h1 {
 }
 
 .card-icon.icon-circle {
-  background-color: #ecbb71; /* نفس اللون البرتقالي أو استخدم كلاس bg-orange */
+  background-color: #e1f5fe; /* نفس اللون البرتقالي أو استخدم كلاس bg-orange */
   border-radius: 50%;
   width: 70px;
   height: 70px;
@@ -138,6 +138,13 @@ main h1 {
 }
 
 .card-icon.icon-circle i {
-  color: rgb(187, 78, 53);
+  color: #0288d1;           /* Blue 600 */
   font-size: 28px;
+}
+/* تمركز البطاقة الوحيدة في الصف الأخير */
+.cards-grid .center-card {
+  grid-column: 1 / -1;    /* تمتد على العمودين */
+  justify-self: center;   /* تتموضع في الوسط */
+  max-width: 400px;       /* اختياري */
+  width: 100%;
 }

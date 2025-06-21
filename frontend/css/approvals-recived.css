@@ -101,7 +101,7 @@ body {
 
 /* ===== المحتوى الرئيسي ===== */
 .content-wrapper {
-  max-width: 1100px;  /* زيادنا الحد الأقصى لحاوية المحتوى لتناسب الشاشات الكبيرة */
+  max-width: 1500px;  /* زيادنا الحد الأقصى لحاوية المحتوى لتناسب الشاشات الكبيرة */
   margin: 40px auto;
   padding: 0 20px;
 }
@@ -676,4 +676,57 @@ body {
     font-size: 0.85rem;
     margin-bottom: 6px;
   }
+}
+.pagination {
+  text-align: center;
+  margin: 16px 0;
+}
+.page-btn {
+  margin: 0 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.page-btn[disabled] {
+  opacity: 0.5;
+  cursor: default;
+}
+.page-number {
+  margin: 0 2px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.page-number.active {
+  font-weight: bold;
+  text-decoration: underline;
+}
+/* تصميم لطيف لزر المعاينة */
+.btn-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #86a5e9;      /* أزرق رئيسي */
+  color: #ffffff;                /* نص أبيض */
+  border: none;
+  border-radius: 6px;            /* زوايا مستديرة */
+  padding: 8px 12px;             /* مسافة داخلية مريحة */
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn-preview i {
+  font-size: 1rem;
+}
+
+/* تأثير عند المرور بالفأرة */
+.btn-preview:hover {
+  background-color: #1e40af;     /* أزرق أغمق */
+  transform: translateY(-1px);
+}
+
+/* تأثير ضغط الزر */
+.btn-preview:active {
+  transform: translateY(0);
+  opacity: 0.9;
 }
