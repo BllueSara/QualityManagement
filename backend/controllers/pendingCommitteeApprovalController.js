@@ -3,6 +3,40 @@ const jwt   = require('jsonwebtoken');
 const { logAction } = require('../models/logger');
 const { insertNotification } = require('../models/notfications-utils');
 
+function getUserLang(req) {
+  const auth = req.headers.authorization;
+  if (auth?.startsWith('Bearer ')) {
+    try {
+      const token = auth.slice(7);
+      const payload = jwt.verify(token, process.env.JWT_SECRET);
+      return payload.lang || 'ar';
+    } catch (err) {
+      return 'ar';
+    }
+  }
+  return 'ar';
+}
+
+function getLocalizedName(nameField, lang) {
+  if (!nameField) return '';
+  // Check if it's already a parsed object
+  if (typeof nameField === 'object' && nameField !== null) {
+    return nameField[lang] || nameField['ar'] || '';
+  }
+  if (typeof nameField === 'string') {
+    try {
+      // Try to parse it as JSON
+      const nameObj = JSON.parse(nameField);
+      return nameObj[lang] || nameObj['ar'] || nameField;
+    } catch (e) {
+      // If parsing fails, return the original string
+      return nameField;
+    }
+  }
+  // For any other type, convert to string and return
+  return String(nameField);
+}
+
 async function getUserPerms(pool, userId) {
   const [rows] = await pool.execute(`
     SELECT p.permission_key
@@ -99,6 +133,20 @@ exports.getPendingApprovals = async (req, res) => {
 };
 
 exports.sendApprovalRequest = async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith('Bearer ')) {
+    return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+  }
+
+  let payload;
+  try {
+    payload = jwt.verify(auth.slice(7), process.env.JWT_SECRET);
+  } catch (err) {
+    return res.status(401).json({ status: 'error', message: 'Invalid token' });
+  }
+  const userId = payload.id;
+  const userLang = getUserLang(req);
+
   let { contentId, approvers } = req.body;
 
   // إذا كان contentId يحتوي على بادئة (مثل 'comm-' أو 'dept-')، قم بإزالتها للحصول على الرقم الأصلي
@@ -121,6 +169,21 @@ exports.sendApprovalRequest = async (req, res) => {
 
   const conn = await pool.getConnection();
   try {
+    // Fetch info for logging
+    const [[contentDetails]] = await conn.execute(
+        `SELECT cc.title, com.name as committee_name FROM committee_contents cc
+         JOIN committee_folders cf ON cc.folder_id = cf.id
+         JOIN committees com ON cf.committee_id = com.id
+         WHERE cc.id = ?`,
+        [contentId]
+    );
+
+    const [approverUsers] = await conn.execute(
+      `SELECT username FROM users WHERE id IN (?)`,
+      [approvers]
+    );
+    const approverNames = approverUsers.map(u => u.username).join(', ');
+
     await conn.beginTransaction();
 
     // 1) نحذف المعتمدين السابقين
@@ -160,6 +223,13 @@ exports.sendApprovalRequest = async (req, res) => {
       [JSON.stringify(approvers), contentId]
     );
 
+    // Add to logs
+    const localizedCommitteeName = getLocalizedName(contentDetails.committee_name, userLang);
+    const logMessage = userLang === 'en' 
+      ? `Sent committee content '${contentDetails.title}' in committee '${localizedCommitteeName}' for approval to: ${approverNames}`
+      : `أرسل محتوى اللجنة '${contentDetails.title}' في اللجنة '${localizedCommitteeName}' للموافقة إلى: ${approverNames}`;
+    await logAction(userId, 'send_committee_approval_request', logMessage, 'committee_content', contentId);
+
     await conn.commit();
     res.status(200).json({ status: 'success', message: 'تم الإرسال بنجاح' });
   } catch (err) {
@@ -184,6 +254,7 @@ exports.delegateCommitteeApproval = async (req, res) => {
         return res.status(401).json({ status: 'error', message: 'Invalid token' });
     }
     const currentUserId = payload.id;
+    const userLang = getUserLang(req);
 
     if (!contentId || !delegateTo) {
         return res.status(400).json({ status: 'error', message: 'البيانات غير صالحة' });
@@ -201,6 +272,20 @@ exports.delegateCommitteeApproval = async (req, res) => {
     const conn = await pool.getConnection();
 
     try {
+        // Fetch info for logging
+        const [[contentDetails]] = await conn.execute(
+            `SELECT cc.title, com.name as committee_name FROM committee_contents cc
+             JOIN committee_folders cf ON cc.folder_id = cf.id
+             JOIN committees com ON cf.committee_id = com.id
+             WHERE cc.id = ?`,
+            [contentId]
+        );
+
+        const [[delegateeUser]] = await conn.execute(
+            `SELECT username FROM users WHERE id = ?`,
+            [delegateTo]
+        );
+
         await conn.beginTransaction();
 
         // Mark the current approver as delegated in committee_approval_logs
@@ -227,6 +312,13 @@ exports.delegateCommitteeApproval = async (req, res) => {
              ON DUPLICATE KEY UPDATE status = 'pending', created_at = CURRENT_TIMESTAMP`,
             [contentId, delegateTo]
         );
+
+        // Add to logs
+        const localizedCommitteeName = getLocalizedName(contentDetails.committee_name, userLang);
+        const logMessage = userLang === 'en' 
+          ? `Delegated approval for committee content '${contentDetails.title}' in committee '${localizedCommitteeName}' to: ${delegateeUser.username}`
+          : `فوض الموافقة على محتوى اللجنة '${contentDetails.title}' في اللجنة '${localizedCommitteeName}' إلى: ${delegateeUser.username}`;
+        await logAction(currentUserId, 'delegate_committee_approval', logMessage, 'committee_content', contentId);
 
         await conn.commit();
         res.status(200).json({ status: 'success', message: 'تم تفويض الاعتماد بنجاح' });

@@ -15,6 +15,32 @@ const pool = mysql.createPool({
 const { logAction } = require('../models/logger');
 const { insertNotification } = require('../models/notfications-utils');
 
+// دالة مساعدة لاستخراج اسم القسم باللغة المناسبة
+function getDepartmentNameByLanguage(departmentNameData, userLanguage = 'ar') {
+    try {
+        // إذا كان الاسم JSON يحتوي على اللغتين
+        if (typeof departmentNameData === 'string' && departmentNameData.startsWith('{')) {
+            const parsed = JSON.parse(departmentNameData);
+            return parsed[userLanguage] || parsed['ar'] || departmentNameData;
+        }
+        // إذا كان نص عادي
+        return departmentNameData || 'غير معروف';
+    } catch (error) {
+        // في حالة فشل التحليل، إرجاع النص كما هو
+        return departmentNameData || 'غير معروف';
+    }
+}
+
+// دالة مساعدة لاستخراج لغة المستخدم من التوكن
+function getUserLanguageFromToken(token) {
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        return decoded.language || 'ar'; // افتراضي عربي
+    } catch (error) {
+        return 'ar'; // افتراضي عربي
+    }
+}
+
 /**
  * GET /api/departments/:departmentId/folders
  */
@@ -90,13 +116,17 @@ const createFolder = async (req, res) => {
 
     // تحقق من القسم
     const [dept] = await conn.execute(
-      'SELECT id FROM departments WHERE id = ?', 
+      'SELECT id, name FROM departments WHERE id = ?', 
       [departmentId]
     );
     if (!dept.length) {
       conn.release();
       return res.status(404).json({ message: 'القسم غير موجود.' });
     }
+
+    // جلب اسم القسم باللغة المناسبة
+    const userLanguage = getUserLanguageFromToken(h.split(' ')[1]);
+    const departmentName = getDepartmentNameByLanguage(dept[0].name, userLanguage);
 
     // تحقق عدم التكرار
     const [exists] = await conn.execute(
@@ -117,8 +147,16 @@ const createFolder = async (req, res) => {
     );
 
     conn.release();
-    await logAction(decoded.id, 'create_folder', `تم إنشاء مجلد باسم: ${name}`, 'folder', result.insertId);
-await insertNotification(
+    
+    // ✅ تسجيل اللوق بعد نجاح إضافة المجلد
+    try {
+      const logDescription = `تم إنشاء مجلد باسم: ${name} في قسم: ${departmentName}`;
+      await logAction(decoded.id, 'create_folder', logDescription, 'folder', result.insertId);
+    } catch (logErr) {
+      console.error('logAction error:', logErr);
+    }
+    
+    await insertNotification(
       decoded.id,
       'مجلد جديد',
       `تم إنشاء مجلد جديد باسم "${name}" في القسم`,
@@ -134,7 +172,9 @@ await insertNotification(
   }
 };
 
-// الدوال التالية تبقى كما هي:
+/**
+ * PUT /api/folders/:folderId
+ */
 const updateFolder = async (req, res) => {
   try {
     const h = req.headers.authorization;
@@ -155,11 +195,22 @@ const updateFolder = async (req, res) => {
 
     const conn = await pool.getConnection();
 
-    const [rows] = await conn.execute('SELECT * FROM folders WHERE id = ?', [folderId]);
+    // جلب المجلد القديم مع اسم القسم
+    const [rows] = await conn.execute(
+      'SELECT f.*, d.name as department_name FROM folders f JOIN departments d ON f.department_id = d.id WHERE f.id = ?', 
+      [folderId]
+    );
     if (!rows.length) {
       conn.release();
       return res.status(404).json({ message: 'المجلد غير موجود.' });
     }
+
+    const oldName = rows[0].name;
+    const departmentId = rows[0].department_id;
+
+    // جلب اسم القسم باللغة المناسبة
+    const userLanguage = getUserLanguageFromToken(h.split(' ')[1]);
+    const departmentName = getDepartmentNameByLanguage(rows[0].department_name, userLanguage);
 
     await conn.execute(
       `UPDATE folders 
@@ -169,7 +220,14 @@ const updateFolder = async (req, res) => {
     );
 
     conn.release();
-    await logAction(decoded.id, 'update_folder', `تعديل اسم المجلد إلى: ${name}`, 'folder', folderId);
+    
+    // ✅ تسجيل اللوق بعد نجاح تعديل المجلد
+    try {
+      const logDescription = `تم تعديل مجلد من: ${oldName} إلى: ${name} في قسم: ${departmentName}`;
+      await logAction(decoded.id, 'update_folder', logDescription, 'folder', folderId);
+    } catch (logErr) {
+      console.error('logAction error:', logErr);
+    }
 
     res.json({ message: 'تم تحديث اسم المجلد بنجاح.' });
   } catch (err) {
@@ -229,12 +287,21 @@ const deleteFolder = async (req, res) => {
 
     const conn = await pool.getConnection();
 
-    // تحقق من وجود المجلد
-    const [folder] = await conn.execute('SELECT * FROM folders WHERE id = ?', [folderId]);
+    // تحقق من وجود المجلد مع اسم القسم
+    const [folder] = await conn.execute(
+      'SELECT f.*, d.name as department_name FROM folders f JOIN departments d ON f.department_id = d.id WHERE f.id = ?', 
+      [folderId]
+    );
     if (!folder.length) {
       conn.release();
       return res.status(404).json({ message: 'المجلد غير موجود.' });
     }
+
+    const folderName = folder[0].name;
+    
+    // جلب اسم القسم باللغة المناسبة
+    const userLanguage = getUserLanguageFromToken(h.split(' ')[1]);
+    const departmentName = getDepartmentNameByLanguage(folder[0].department_name, userLanguage);
 
     // حذف كل المحتويات المرتبطة أولاً
     await conn.execute('DELETE FROM contents WHERE folder_id = ?', [folderId]);
@@ -243,7 +310,14 @@ const deleteFolder = async (req, res) => {
     await conn.execute('DELETE FROM folders WHERE id = ?', [folderId]);
 
     conn.release();
-    await logAction(decoded.id, 'delete_folder', `تم حذف مجلد: ${folder[0].name}`, 'folder', folderId);
+    
+    // ✅ تسجيل اللوق بعد نجاح حذف المجلد
+    try {
+      const logDescription = `تم حذف مجلد: ${folderName} من قسم: ${departmentName}`;
+      await logAction(decoded.id, 'delete_folder', logDescription, 'folder', folderId);
+    } catch (logErr) {
+      console.error('logAction error:', logErr);
+    }
 
     return res.json({ message: 'تم حذف المجلد بنجاح.' });
   } catch (err) {
@@ -275,6 +349,26 @@ const addFolderName = async (req, res) => {
       'INSERT INTO folder_names (name) VALUES (?)',
       [name]
     );
+    
+    // ✅ تسجيل اللوق بعد نجاح إضافة اسم المجلد
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token) {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const userId = decoded.id;
+      
+      try {
+        await logAction(
+          userId,
+          'add_folder_name',
+          `تمت إضافة اسم مجلد جديد للأقسام: ${name}`,
+          'folder_name',
+          result.insertId
+        );
+      } catch (logErr) {
+        console.error('logAction error:', logErr);
+      }
+    }
+    
     conn.release();
 
     return res.status(201).json({
@@ -321,6 +415,25 @@ const updateFolderName = async (req, res) => {
       [name, oldName]
     );
 
+    // ✅ تسجيل اللوق بعد نجاح تعديل اسم المجلد
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token) {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const userId = decoded.id;
+      
+      try {
+        await logAction(
+          userId,
+          'update_folder_name',
+          `تم تعديل اسم مجلد للأقسام من: ${oldName} إلى: ${name}`,
+          'folder_name',
+          id
+        );
+      } catch (logErr) {
+        console.error('logAction error:', logErr);
+      }
+    }
+
     conn.release();
     return res.json({
       status: 'success',
@@ -338,10 +451,35 @@ const deleteFolderName = async (req, res) => {
 
   try {
     const conn = await pool.getConnection();
+    
+    // جلب الاسم قبل الحذف لتسجيله في اللوق
+    const [nameRows] = await conn.execute('SELECT name FROM folder_names WHERE id = ?', [id]);
+    const folderName = nameRows.length > 0 ? nameRows[0].name : 'غير معروف';
+    
     const [result] = await conn.execute(
       'DELETE FROM folder_names WHERE id = ?',
       [id]
     );
+    
+    // ✅ تسجيل اللوق بعد نجاح حذف اسم المجلد
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token) {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const userId = decoded.id;
+      
+      try {
+        await logAction(
+          userId,
+          'delete_folder_name',
+          `تم حذف اسم مجلد للأقسام: ${folderName}`,
+          'folder_name',
+          id
+        );
+      } catch (logErr) {
+        console.error('logAction error:', logErr);
+      }
+    }
+    
     conn.release();
 
     if (result.affectedRows === 0) {

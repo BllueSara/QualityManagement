@@ -182,7 +182,7 @@ const addContent = async (req, res) => {
         });
       }
   
-      // التحقق من وجود المجلد
+      // التحقق من وجود المجلد وجلب اسم القسم
       const [folder] = await connection.execute(
         'SELECT id, department_id FROM folders WHERE id = ?',
         [folderId]
@@ -195,9 +195,16 @@ const addContent = async (req, res) => {
           message: 'المجلد غير موجود' 
         });
       }
-  
-      // التحقق من عدم وجود محتوى بنفس العنوان
 
+      // جلب اسم القسم باللغة المناسبة
+      let departmentName = '';
+      if (folder[0].department_id) {
+        const [deptRows] = await connection.execute('SELECT name FROM departments WHERE id = ?', [folder[0].department_id]);
+        if (deptRows.length > 0) {
+          const userLanguage = getUserLanguageFromToken(token);
+          departmentName = getDepartmentNameByLanguage(deptRows[0].name, userLanguage);
+        }
+      }
   
       // 1) إضافة المحتوى
       const [result] = await connection.execute(
@@ -244,6 +251,23 @@ const addContent = async (req, res) => {
         }
       }
   
+      // ✅ تسجيل اللوق بعد نجاح إضافة المحتوى
+      try {
+        const logDescription = departmentName 
+          ? `تمت إضافة محتوى بعنوان: ${title} في قسم: ${departmentName}`
+          : `تمت إضافة محتوى بعنوان: ${title}`;
+          
+        await logAction(
+          decodedToken.id,
+          'add_content',
+          logDescription,
+          'content',
+          contentId
+        );
+      } catch (logErr) {
+        console.error('logAction error:', logErr);
+      }
+  
       connection.release();
   
       res.status(201).json({
@@ -277,9 +301,9 @@ const updateContent = async (req, res) => {
   
       const connection = await db.getConnection();
   
-      // جلب المحتوى القديم (بما في ذلك approvers_required)
+      // جلب المحتوى القديم (بما في ذلك approvers_required وfolder_id)
       const [oldContent] = await connection.execute(
-        'SELECT folder_id, approvers_required FROM contents WHERE id = ?',
+        'SELECT folder_id, approvers_required, title FROM contents WHERE id = ?',
         [originalId]
       );
       if (!oldContent.length) {
@@ -287,7 +311,21 @@ const updateContent = async (req, res) => {
       }
   
       const folderId = oldContent[0].folder_id;
-      const originalApproversRequired = oldContent[0].approvers_required; // جلب الموافقين المطلوبين من المحتوى القديم
+      const originalApproversRequired = oldContent[0].approvers_required;
+      const oldTitle = oldContent[0].title;
+
+      // جلب اسم القسم باللغة المناسبة
+      let departmentName = '';
+      if (folderId) {
+        const [folderRows] = await connection.execute('SELECT department_id FROM folders WHERE id = ?', [folderId]);
+        if (folderRows.length > 0 && folderRows[0].department_id) {
+          const [deptRows] = await connection.execute('SELECT name FROM departments WHERE id = ?', [folderRows[0].department_id]);
+          if (deptRows.length > 0) {
+            const userLanguage = getUserLanguageFromToken(token);
+            departmentName = getDepartmentNameByLanguage(deptRows[0].name, userLanguage);
+          }
+        }
+      }
   
       // ✅ تجاهل التحقق من التكرار إذا كان التعديل على نفس العنوان
       const [duplicateCheck] = await connection.execute(
@@ -318,6 +356,23 @@ const updateContent = async (req, res) => {
       );
   
       const newContentId = insertResult.insertId;
+  
+      // ✅ تسجيل اللوق بعد نجاح تحديث المحتوى
+      try {
+        const logDescription = departmentName 
+          ? `تم تحديث محتوى من: ${oldTitle} إلى: ${title} في قسم: ${departmentName}`
+          : `تم تحديث محتوى من: ${oldTitle} إلى: ${title}`;
+          
+        await logAction(
+          userId,
+          'update_content',
+          logDescription,
+          'content',
+          newContentId
+        );
+      } catch (logErr) {
+        console.error('logAction error:', logErr);
+      }
   
       connection.release();
   
@@ -363,7 +418,7 @@ const deleteContent = async (req, res) => {
 
         // التحقق من صلاحيات المستخدم
         const [content] = await connection.execute(
-            'SELECT file_path, created_by, is_approved FROM contents WHERE id = ?',
+            'SELECT file_path, created_by, is_approved, title, folder_id FROM contents WHERE id = ?',
             [contentId]
         );
 
@@ -393,6 +448,19 @@ const deleteContent = async (req, res) => {
             });
         }
 
+        // جلب اسم القسم باللغة المناسبة
+        let departmentName = '';
+        if (content[0].folder_id) {
+            const [folderRows] = await connection.execute('SELECT department_id FROM folders WHERE id = ?', [content[0].folder_id]);
+            if (folderRows.length > 0 && folderRows[0].department_id) {
+                const [deptRows] = await connection.execute('SELECT name FROM departments WHERE id = ?', [folderRows[0].department_id]);
+                if (deptRows.length > 0) {
+                    const userLanguage = getUserLanguageFromToken(token);
+                    departmentName = getDepartmentNameByLanguage(deptRows[0].name, userLanguage);
+                }
+            }
+        }
+
         // حذف الملف
         const filePath = path.join('./uploads', content[0].file_path);
         if (fs.existsSync(filePath)) {
@@ -401,6 +469,23 @@ const deleteContent = async (req, res) => {
 
         // حذف المحتوى من قاعدة البيانات
         await connection.execute('DELETE FROM contents WHERE id = ?', [contentId]);
+
+        // ✅ تسجيل اللوق بعد نجاح حذف المحتوى
+        try {
+            const logDescription = departmentName 
+                ? `تم حذف محتوى: ${content[0].title} من قسم: ${departmentName}`
+                : `تم حذف محتوى: ${content[0].title}`;
+                
+            await logAction(
+                decodedToken.id,
+                'delete_content',
+                logDescription,
+                'content',
+                contentId
+            );
+        } catch (logErr) {
+            console.error('logAction error:', logErr);
+        }
 
         connection.release();
         res.json({
@@ -512,7 +597,7 @@ const approveContent = async (req, res) => {
 
         // التحقق من وجود المحتوى
         const [content] = await connection.execute(
-            'SELECT * FROM contents WHERE id = ?',
+            'SELECT c.*, f.department_id FROM contents c JOIN folders f ON c.folder_id = f.id WHERE c.id = ?',
             [contentId]
         );
 
@@ -522,6 +607,16 @@ const approveContent = async (req, res) => {
                 status: 'error',
                 message: 'المحتوى غير موجود.' 
             });
+        }
+
+        // جلب اسم القسم باللغة المناسبة
+        let departmentName = '';
+        if (content[0].department_id) {
+            const [deptRows] = await connection.execute('SELECT name FROM departments WHERE id = ?', [content[0].department_id]);
+            if (deptRows.length > 0) {
+                const userLanguage = getUserLanguageFromToken(token);
+                departmentName = getDepartmentNameByLanguage(deptRows[0].name, userLanguage);
+            }
         }
 
         // التحقق من أن المستخدم لم يعتمد مسبقاً
@@ -582,6 +677,23 @@ const approveContent = async (req, res) => {
                 contentId
             ]
         );
+
+        // ✅ تسجيل اللوق بعد نجاح اعتماد المحتوى
+        try {
+            const logDescription = departmentName 
+                ? `تم ${isApproved ? 'اعتماد' : 'تسجيل موافقة على'} محتوى: ${content[0].title} في قسم: ${departmentName}`
+                : `تم ${isApproved ? 'اعتماد' : 'تسجيل موافقة على'} محتوى: ${content[0].title}`;
+                
+            await logAction(
+                decodedToken.id,
+                isApproved ? 'approve_content' : 'partial_approve_content',
+                logDescription,
+                'content',
+                contentId
+            );
+        } catch (logErr) {
+            console.error('logAction error:', logErr);
+        }
 
         connection.release();
 
@@ -693,6 +805,26 @@ const addContentName = async (req, res) => {
       'INSERT INTO content_names (name) VALUES (?)',
       [name]
     );
+    
+    // ✅ تسجيل اللوق بعد نجاح إضافة اسم المحتوى
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token) {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const userId = decoded.id;
+      
+      try {
+        await logAction(
+          userId,
+          'add_content_name',
+          `تمت إضافة اسم محتوى جديد للأقسام: ${name}`,
+          'content_name',
+          result.insertId
+        );
+      } catch (logErr) {
+        console.error('logAction error:', logErr);
+      }
+    }
+    
     conn.release();
     return res.status(201).json({
       status: 'success',
@@ -742,6 +874,25 @@ const updateContentName = async (req, res) => {
       [name, oldName]
     );
 
+    // ✅ تسجيل اللوق بعد نجاح تعديل اسم المحتوى
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token) {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const userId = decoded.id;
+      
+      try {
+        await logAction(
+          userId,
+          'update_content_name',
+          `تم تعديل اسم محتوى للأقسام من: ${oldName} إلى: ${name}`,
+          'content_name',
+          id
+        );
+      } catch (logErr) {
+        console.error('logAction error:', logErr);
+      }
+    }
+
     conn.release();
     return res.json({
       status: 'success',
@@ -762,10 +913,35 @@ const deleteContentName = async (req, res) => {
   const { id } = req.params;
   try {
     const conn = await db.getConnection();
+    
+    // جلب الاسم قبل الحذف لتسجيله في اللوق
+    const [nameRows] = await conn.execute('SELECT name FROM content_names WHERE id = ?', [id]);
+    const contentName = nameRows.length > 0 ? nameRows[0].name : 'غير معروف';
+    
     const [result] = await conn.execute(
       'DELETE FROM content_names WHERE id = ?',
       [id]
     );
+    
+    // ✅ تسجيل اللوق بعد نجاح حذف اسم المحتوى
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token) {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const userId = decoded.id;
+      
+      try {
+        await logAction(
+          userId,
+          'delete_content_name',
+          `تم حذف اسم محتوى للأقسام: ${contentName}`,
+          'content_name',
+          id
+        );
+      } catch (logErr) {
+        console.error('logAction error:', logErr);
+      }
+    }
+    
     conn.release();
     if (result.affectedRows === 0) {
       return res.status(404).json({ message: '❌ اسم المحتوى غير موجود أو تم حذفه مسبقاً.' });
@@ -776,6 +952,32 @@ const deleteContentName = async (req, res) => {
     return res.status(500).json({ message: '❌ فشل في حذف اسم المحتوى.' });
   }
 };
+
+// دالة مساعدة لاستخراج اسم القسم باللغة المناسبة
+function getDepartmentNameByLanguage(departmentNameData, userLanguage = 'ar') {
+    try {
+        // إذا كان الاسم JSON يحتوي على اللغتين
+        if (typeof departmentNameData === 'string' && departmentNameData.startsWith('{')) {
+            const parsed = JSON.parse(departmentNameData);
+            return parsed[userLanguage] || parsed['ar'] || departmentNameData;
+        }
+        // إذا كان نص عادي
+        return departmentNameData || 'غير معروف';
+    } catch (error) {
+        // في حالة فشل التحليل، إرجاع النص كما هو
+        return departmentNameData || 'غير معروف';
+    }
+}
+
+// دالة مساعدة لاستخراج لغة المستخدم من التوكن
+function getUserLanguageFromToken(token) {
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        return decoded.language || 'ar'; // افتراضي عربي
+    } catch (error) {
+        return 'ar'; // افتراضي عربي
+    }
+}
 
   
   module.exports = {

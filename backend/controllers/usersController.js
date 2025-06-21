@@ -11,6 +11,40 @@ const db = mysql.createPool({
 const { logAction } = require('../models/logger');
 const { insertNotification } = require('../models/notfications-utils');
 
+function getUserLang(req) {
+  const auth = req.headers.authorization;
+  if (auth?.startsWith('Bearer ')) {
+    try {
+      const token = auth.slice(7);
+      const payload = jwt.verify(token, process.env.JWT_SECRET);
+      return payload.lang || 'ar';
+    } catch (err) {
+      return 'ar';
+    }
+  }
+  return 'ar';
+}
+
+function getLocalizedName(nameField, lang) {
+  if (!nameField) return '';
+  // Check if it's already a parsed object
+  if (typeof nameField === 'object' && nameField !== null) {
+    return nameField[lang] || nameField['ar'] || '';
+  }
+  if (typeof nameField === 'string') {
+    try {
+      // Try to parse it as JSON
+      const nameObj = JSON.parse(nameField);
+      return nameObj[lang] || nameObj['ar'] || nameField;
+    } catch (e) {
+      // If parsing fails, return the original string
+      return nameField;
+    }
+  }
+  // For any other type, convert to string and return
+  return String(nameField);
+}
+
 // 1) جلب كل المستخدمين
 const getUsers = async (req, res) => {
   const departmentId = req.query.departmentId;
@@ -84,6 +118,20 @@ const getUserById = async (req, res) => {
 
 // 3) إضافة مستخدم جديد
 const addUser = async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith('Bearer ')) {
+    return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+  }
+
+  let payload;
+  try {
+    payload = jwt.verify(auth.slice(7), process.env.JWT_SECRET);
+  } catch (err) {
+    return res.status(401).json({ status: 'error', message: 'Invalid token' });
+  }
+  const adminUserId = payload.id;
+  const userLang = getUserLang(req);
+
   const { name, email, departmentId, password, role, employeeNumber } = req.body;
   console.log('🪵 بيانات قادمة:', req.body);
 
@@ -104,6 +152,16 @@ const addUser = async (req, res) => {
       });
     }
 
+    // Fetch department details for logging
+    let departmentName = null;
+    if (departmentId) {
+      const [[deptDetails]] = await db.execute(
+        'SELECT name FROM departments WHERE id = ?',
+        [departmentId]
+      );
+      departmentName = deptDetails ? deptDetails.name : null;
+    }
+
     const hashed = await bcrypt.hash(password, 12);
     const cleanDeptId = departmentId && departmentId !== '' ? departmentId : null;
 
@@ -121,6 +179,13 @@ const addUser = async (req, res) => {
   [name, email, cleanDeptId, hashed, role, employeeNumber]
 );
 
+    // Add to logs
+    const localizedDeptName = getLocalizedName(departmentName, userLang);
+    const logMessage = userLang === 'en' 
+      ? `Added new user: '${name}' (${email}) with role '${role}'${departmentName ? ` in department '${localizedDeptName}'` : ''}`
+      : `أضاف مستخدم جديد: '${name}' (${email}) بدور '${role}'${departmentName ? ` في القسم '${localizedDeptName}'` : ''}`;
+    await logAction(adminUserId, 'add_user', logMessage, 'user', result.insertId);
+
     res.status(201).json({
       status: 'success',
       message: 'تم إضافة المستخدم بنجاح',
@@ -134,6 +199,20 @@ const addUser = async (req, res) => {
 
 // 4) تعديل مستخدم
 const updateUser = async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith('Bearer ')) {
+    return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+  }
+
+  let payload;
+  try {
+    payload = jwt.verify(auth.slice(7), process.env.JWT_SECRET);
+  } catch (err) {
+    return res.status(401).json({ status: 'error', message: 'Invalid token' });
+  }
+  const adminUserId = payload.id;
+  const userLang = getUserLang(req);
+
   const id = req.params.id;
   const { name, email, departmentId, role } = req.body;
 
@@ -142,6 +221,19 @@ const updateUser = async (req, res) => {
   }
 
   try {
+    // Fetch old user details for logging
+    const [[oldUser]] = await db.execute(
+      `SELECT u.username, u.email, u.role, u.department_id, d.name as department_name
+       FROM users u
+       LEFT JOIN departments d ON u.department_id = d.id
+       WHERE u.id = ?`,
+      [id]
+    );
+
+    if (!oldUser) {
+      return res.status(404).json({ status:'error', message:'المستخدم غير موجود' });
+    }
+
     // التحقق من عدم وجود البريد الإلكتروني مع مستخدم آخر
     const [existingUser] = await db.execute(
       'SELECT id FROM users WHERE email = ? AND id != ?',
@@ -153,6 +245,16 @@ const updateUser = async (req, res) => {
         status: 'error', 
         message: 'البريد الإلكتروني مستخدم بالفعل' 
       });
+    }
+
+    // Fetch new department details for logging
+    let newDepartmentName = null;
+    if (departmentId) {
+      const [[deptDetails]] = await db.execute(
+        'SELECT name FROM departments WHERE id = ?',
+        [departmentId]
+      );
+      newDepartmentName = deptDetails ? deptDetails.name : null;
     }
 
     const [result] = await db.execute(
@@ -170,6 +272,44 @@ const updateUser = async (req, res) => {
       return res.status(404).json({ status:'error', message:'المستخدم غير موجود' });
     }
 
+    // Add to logs
+    const changes = [];
+    if (name !== oldUser.username) {
+      changes.push(userLang === 'en' 
+        ? `name: '${oldUser.username}' → '${name}'`
+        : `الاسم: '${oldUser.username}' → '${name}'`);
+    }
+    if (email !== oldUser.email) {
+      changes.push(userLang === 'en' 
+        ? `email: '${oldUser.email}' → '${email}'`
+        : `البريد الإلكتروني: '${oldUser.email}' → '${email}'`);
+    }
+    if (role !== oldUser.role) {
+      changes.push(userLang === 'en' 
+        ? `role: '${oldUser.role}' → '${role}'`
+        : `الدور: '${oldUser.role}' → '${role}'`);
+    }
+    if (departmentId !== oldUser.department_id) {
+      const oldDeptName = getLocalizedName(oldUser.department_name, userLang);
+      const newDeptName = getLocalizedName(newDepartmentName, userLang);
+      changes.push(userLang === 'en' 
+        ? `department: '${oldDeptName || 'None'}' → '${newDeptName || 'None'}'`
+        : `القسم: '${oldDeptName || 'لا يوجد'}' → '${newDeptName || 'لا يوجد'}'`);
+    }
+
+    let logMessage;
+    if (changes.length > 0) {
+      logMessage = userLang === 'en' 
+        ? `Updated user '${oldUser.username}': ${changes.join(', ')}`
+        : `حدث المستخدم '${oldUser.username}': ${changes.join(', ')}`;
+    } else {
+      logMessage = userLang === 'en' 
+        ? `Updated user '${oldUser.username}' (no changes)`
+        : `حدث المستخدم '${oldUser.username}' (لا توجد تغييرات)`;
+    }
+    
+    await logAction(adminUserId, 'update_user', logMessage, 'user', id);
+
     res.status(200).json({ 
       status: 'success',
       message: 'تم تحديث بيانات المستخدم بنجاح'
@@ -181,8 +321,35 @@ const updateUser = async (req, res) => {
 
 // 5) حذف مستخدم
 const deleteUser = async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith('Bearer ')) {
+    return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+  }
+
+  let payload;
+  try {
+    payload = jwt.verify(auth.slice(7), process.env.JWT_SECRET);
+  } catch (err) {
+    return res.status(401).json({ status: 'error', message: 'Invalid token' });
+  }
+  const adminUserId = payload.id;
+  const userLang = getUserLang(req);
+
   const id = req.params.id;
   try {
+    // Fetch user details for logging
+    const [[userDetails]] = await db.execute(
+      `SELECT u.username, u.email, u.role, d.name as department_name
+       FROM users u
+       LEFT JOIN departments d ON u.department_id = d.id
+       WHERE u.id = ?`,
+      [id]
+    );
+
+    if (!userDetails) {
+      return res.status(404).json({ status:'error', message:'المستخدم غير موجود' });
+    }
+
     // التحقق من وجود محتويات مرتبطة بالمستخدم
     const [relatedContents] = await db.execute(
       'SELECT COUNT(*) as count FROM contents WHERE created_by = ? OR approved_by = ?',
@@ -202,6 +369,13 @@ const deleteUser = async (req, res) => {
       return res.status(404).json({ status:'error', message:'المستخدم غير موجود' });
     }
 
+    // Add to logs
+    const localizedDeptName = getLocalizedName(userDetails.department_name, userLang);
+    const logMessage = userLang === 'en' 
+      ? `Deleted user: '${userDetails.username}' (${userDetails.email}) with role '${userDetails.role}'${userDetails.department_name ? ` from department '${localizedDeptName}'` : ''}`
+      : `حذف المستخدم: '${userDetails.username}' (${userDetails.email}) بدور '${userDetails.role}'${userDetails.department_name ? ` من القسم '${localizedDeptName}'` : ''}`;
+    await logAction(adminUserId, 'delete_user', logMessage, 'user', id);
+
     res.status(200).json({ 
       status: 'success',
       message: 'تم حذف المستخدم بنجاح'
@@ -213,6 +387,20 @@ const deleteUser = async (req, res) => {
 
 // 6) تغيير دور المستخدم
 const changeUserRole = async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith('Bearer ')) {
+    return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+  }
+
+  let payload;
+  try {
+    payload = jwt.verify(auth.slice(7), process.env.JWT_SECRET);
+  } catch (err) {
+    return res.status(401).json({ status: 'error', message: 'Invalid token' });
+  }
+  const adminUserId = payload.id;
+  const userLang = getUserLang(req);
+
   const id = req.params.id;
   const { role } = req.body;
 
@@ -221,6 +409,16 @@ const changeUserRole = async (req, res) => {
   }
 
   try {
+    // Fetch user details for logging
+    const [[userDetails]] = await db.execute(
+      'SELECT username, role as old_role FROM users WHERE id = ?',
+      [id]
+    );
+
+    if (!userDetails) {
+      return res.status(404).json({ status:'error', message:'المستخدم غير موجود' });
+    }
+
     const [result] = await db.execute(
       'UPDATE users SET role = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
       [role, id]
@@ -229,6 +427,12 @@ const changeUserRole = async (req, res) => {
     if (!result.affectedRows) {
       return res.status(404).json({ status:'error', message:'المستخدم غير موجود' });
     }
+
+    // Add to logs
+    const logMessage = userLang === 'en' 
+      ? `Changed user role for '${userDetails.username}': '${userDetails.old_role}' → '${role}'`
+      : `غير دور المستخدم '${userDetails.username}': '${userDetails.old_role}' → '${role}'`;
+    await logAction(adminUserId, 'change_user_role', logMessage, 'user', id);
 
     res.status(200).json({ 
       status: 'success',
@@ -241,6 +445,20 @@ const changeUserRole = async (req, res) => {
 
 // 7) إعادة تعيين كلمة مرور (admin)
 const adminResetPassword = async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith('Bearer ')) {
+    return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+  }
+
+  let payload;
+  try {
+    payload = jwt.verify(auth.slice(7), process.env.JWT_SECRET);
+  } catch (err) {
+    return res.status(401).json({ status: 'error', message: 'Invalid token' });
+  }
+  const adminUserId = payload.id;
+  const userLang = getUserLang(req);
+
   const id = req.params.id;
   const { newPassword } = req.body;
 
@@ -249,6 +467,16 @@ const adminResetPassword = async (req, res) => {
   }
 
   try {
+    // Fetch user details for logging
+    const [[userDetails]] = await db.execute(
+      'SELECT username FROM users WHERE id = ?',
+      [id]
+    );
+
+    if (!userDetails) {
+      return res.status(404).json({ status:'error', message:'المستخدم غير موجود' });
+    }
+
     const hashed = await bcrypt.hash(newPassword, 12);
     const [result] = await db.execute(
       'UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
@@ -258,6 +486,12 @@ const adminResetPassword = async (req, res) => {
     if (!result.affectedRows) {
       return res.status(404).json({ status:'error', message:'المستخدم غير موجود' });
     }
+
+    // Add to logs
+    const logMessage = userLang === 'en' 
+      ? `Reset password for user: '${userDetails.username}'`
+      : `أعاد تعيين كلمة المرور للمستخدم: '${userDetails.username}'`;
+    await logAction(adminUserId, 'reset_user_password', logMessage, 'user', id);
 
     res.status(200).json({ 
       status: 'success',

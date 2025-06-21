@@ -1,8 +1,43 @@
 // controllers/permissionsController.js
 const mysql = require('mysql2/promise');
 require('dotenv').config();
+const jwt = require('jsonwebtoken');
 const { logAction } = require('../models/logger');
 const { insertNotification } = require('../models/notfications-utils');
+
+function getUserLang(req) {
+  const auth = req.headers.authorization;
+  if (auth?.startsWith('Bearer ')) {
+    try {
+      const token = auth.slice(7);
+      const payload = jwt.verify(token, process.env.JWT_SECRET);
+      return payload.lang || 'ar';
+    } catch (err) {
+      return 'ar';
+    }
+  }
+  return 'ar';
+}
+
+function getLocalizedName(nameField, lang) {
+  if (!nameField) return '';
+  // Check if it's already a parsed object
+  if (typeof nameField === 'object' && nameField !== null) {
+    return nameField[lang] || nameField['ar'] || '';
+  }
+  if (typeof nameField === 'string') {
+    try {
+      // Try to parse it as JSON
+      const nameObj = JSON.parse(nameField);
+      return nameObj[lang] || nameObj['ar'] || nameField;
+    } catch (e) {
+      // If parsing fails, return the original string
+      return nameField;
+    }
+  }
+  // For any other type, convert to string and return
+  return String(nameField);
+}
 
 const db = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
@@ -40,6 +75,20 @@ const getUserPermissions = async (req, res) => {
 
 // 2) تحديث صلاحيات مستخدم
 const updateUserPermissions = async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith('Bearer ')) {
+    return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+  }
+
+  let payload;
+  try {
+    payload = jwt.verify(auth.slice(7), process.env.JWT_SECRET);
+  } catch (err) {
+    return res.status(401).json({ status: 'error', message: 'Invalid token' });
+  }
+  const adminUserId = payload.id;
+  const userLang = getUserLang(req);
+
   const userId = parseInt(req.params.id, 10);
   if (Number.isNaN(userId)) {
     return res.status(400).json({ status: 'error', message: 'معرّف المستخدم غير صالح' });
@@ -49,6 +98,22 @@ const updateUserPermissions = async (req, res) => {
   const conn = await db.getConnection();
 
   try {
+    // Fetch user details for logging
+    const [[userDetails]] = await conn.execute(
+      'SELECT username FROM users WHERE id = ?',
+      [userId]
+    );
+
+    // Fetch old permissions for comparison
+    const [oldPermsRows] = await conn.execute(
+      `SELECT p.permission_key
+       FROM permissions p
+       JOIN user_permissions up ON p.id = up.permission_id
+       WHERE up.user_id = ?`,
+      [userId]
+    );
+    const oldPerms = oldPermsRows.map(r => r.permission_key);
+
     await conn.beginTransaction();
 
     // حذف القديم
@@ -69,6 +134,31 @@ const updateUserPermissions = async (req, res) => {
       }
     }
 
+    // Add to logs
+    const addedPerms = keys.filter(k => !oldPerms.includes(k));
+    const removedPerms = oldPerms.filter(k => !keys.includes(k));
+    
+    let logMessage;
+    if (addedPerms.length > 0 && removedPerms.length > 0) {
+      logMessage = userLang === 'en' 
+        ? `Updated permissions for user '${userDetails.username}': added [${addedPerms.join(', ')}], removed [${removedPerms.join(', ')}]`
+        : `حدث صلاحيات المستخدم '${userDetails.username}': أضاف [${addedPerms.join(', ')}], أزال [${removedPerms.join(', ')}]`;
+    } else if (addedPerms.length > 0) {
+      logMessage = userLang === 'en' 
+        ? `Added permissions to user '${userDetails.username}': [${addedPerms.join(', ')}]`
+        : `أضاف صلاحيات للمستخدم '${userDetails.username}': [${addedPerms.join(', ')}]`;
+    } else if (removedPerms.length > 0) {
+      logMessage = userLang === 'en' 
+        ? `Removed permissions from user '${userDetails.username}': [${removedPerms.join(', ')}]`
+        : `أزال صلاحيات من المستخدم '${userDetails.username}': [${removedPerms.join(', ')}]`;
+    } else {
+      logMessage = userLang === 'en' 
+        ? `Updated permissions for user '${userDetails.username}' (no changes)`
+        : `حدث صلاحيات المستخدم '${userDetails.username}' (لا توجد تغييرات)`;
+    }
+    
+    await logAction(adminUserId, 'update_user_permissions', logMessage, 'user', userId);
+
     await conn.commit();
     return res.json({ status: 'success', message: 'تم تحديث الصلاحيات بنجاح' });
   } catch (error) {
@@ -81,6 +171,20 @@ const updateUserPermissions = async (req, res) => {
 
 // 3) إضافة صلاحية واحدة
 const addUserPermission = async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith('Bearer ')) {
+    return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+  }
+
+  let payload;
+  try {
+    payload = jwt.verify(auth.slice(7), process.env.JWT_SECRET);
+  } catch (err) {
+    return res.status(401).json({ status: 'error', message: 'Invalid token' });
+  }
+  const adminUserId = payload.id;
+  const userLang = getUserLang(req);
+
   const userId = parseInt(req.params.id, 10);
   const key    = req.params.key;
 
@@ -98,10 +202,32 @@ const addUserPermission = async (req, res) => {
       return res.status(404).json({ status: 'error', message: 'صلاحية غير موجودة' });
     }
 
+    // Check if permission already exists
+    const [[existing]] = await db.execute(
+      'SELECT 1 FROM user_permissions WHERE user_id = ? AND permission_id = ?',
+      [userId, perm.id]
+    );
+
+    if (existing) {
+      return res.status(400).json({ status: 'error', message: 'الصلاحية موجودة بالفعل' });
+    }
+
+    // Fetch user details for logging
+    const [[userDetails]] = await db.execute(
+      'SELECT username FROM users WHERE id = ?',
+      [userId]
+    );
+
     await db.execute(
       'INSERT IGNORE INTO user_permissions (user_id, permission_id) VALUES (?, ?)',
       [userId, perm.id]
     );
+
+    // Add to logs
+    const logMessage = userLang === 'en' 
+      ? `Added permission '${key}' to user '${userDetails.username}'`
+      : `أضاف صلاحية '${key}' للمستخدم '${userDetails.username}'`;
+    await logAction(adminUserId, 'add_user_permission', logMessage, 'user', userId);
 
     return res.json({ status: 'success', message: 'تم إضافة الصلاحية' });
   } catch (error) {
@@ -111,6 +237,20 @@ const addUserPermission = async (req, res) => {
 
 // 4) إزالة صلاحية واحدة
 const removeUserPermission = async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith('Bearer ')) {
+    return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+  }
+
+  let payload;
+  try {
+    payload = jwt.verify(auth.slice(7), process.env.JWT_SECRET);
+  } catch (err) {
+    return res.status(401).json({ status: 'error', message: 'Invalid token' });
+  }
+  const adminUserId = payload.id;
+  const userLang = getUserLang(req);
+
   const userId = parseInt(req.params.id, 10);
   const key    = req.params.key;
 
@@ -128,6 +268,12 @@ const removeUserPermission = async (req, res) => {
       return res.status(404).json({ status: 'error', message: 'صلاحية غير موجودة' });
     }
 
+    // Fetch user details for logging
+    const [[userDetails]] = await db.execute(
+      'SELECT username FROM users WHERE id = ?',
+      [userId]
+    );
+
     const [result] = await db.execute(
       'DELETE FROM user_permissions WHERE user_id = ? AND permission_id = ?',
       [userId, perm.id]
@@ -136,6 +282,12 @@ const removeUserPermission = async (req, res) => {
     if (!result.affectedRows) {
       return res.status(404).json({ status: 'error', message: 'لم تُمنح هذه الصلاحية للمستخدم' });
     }
+
+    // Add to logs
+    const logMessage = userLang === 'en' 
+      ? `Removed permission '${key}' from user '${userDetails.username}'`
+      : `أزال صلاحية '${key}' من المستخدم '${userDetails.username}'`;
+    await logAction(adminUserId, 'remove_user_permission', logMessage, 'user', userId);
 
     return res.json({ status: 'success', message: 'تم إزالة الصلاحية' });
   } catch (error) {

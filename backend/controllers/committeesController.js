@@ -11,7 +11,33 @@ const db = mysql.createPool({
 
 // Helper for notifications, logs, etc. (implement as needed)
 // const { insertNotification } = require('../models/notfications-utils');
-// const { logAction } = require('../models/logger');
+ const { logAction } = require('../models/logger');
+
+// دالة مساعدة لاستخراج اسم اللجنة باللغة المناسبة
+function getCommitteeNameByLanguage(committeeNameData, userLanguage = 'ar') {
+    try {
+        // إذا كان الاسم JSON يحتوي على اللغتين
+        if (typeof committeeNameData === 'string' && committeeNameData.startsWith('{')) {
+            const parsed = JSON.parse(committeeNameData);
+            return parsed[userLanguage] || parsed['ar'] || committeeNameData;
+        }
+        // إذا كان نص عادي
+        return committeeNameData || 'غير معروف';
+    } catch (error) {
+        // في حالة فشل التحليل، إرجاع النص كما هو
+        return committeeNameData || 'غير معروف';
+    }
+}
+
+// دالة مساعدة لاستخراج لغة المستخدم من التوكن
+function getUserLanguageFromToken(token) {
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        return decoded.language || 'ar'; // افتراضي عربي
+    } catch (error) {
+        return 'ar'; // افتراضي عربي
+    }
+}
 
 // ========== Committees CRUD ==========
 exports.getCommittees = async (req, res) => {
@@ -35,39 +61,100 @@ exports.getCommittee = async (req, res) => {
 
 exports.addCommittee = async (req, res) => {
     try {
-        const { name } = req.body;
-        const imagePath = req.file ? req.file.path.replace(/\\/g, '/') : null;
-        if (!name || !imagePath) return res.status(400).json({ message: 'اسم اللجنة والصورة مطلوبان' });
-        const [exists] = await db.execute('SELECT id FROM committees WHERE name = ?', [name]);
-        if (exists.length > 0) return res.status(409).json({ message: 'هذه اللجنة موجودة بالفعل' });
-        const [result] = await db.execute('INSERT INTO committees (name, image) VALUES (?, ?)', [name, imagePath]);
-        res.status(201).json({ message: 'تم إضافة اللجنة بنجاح', committeeId: result.insertId });
+      const { name } = req.body;
+      const imagePath = req.file ? req.file.path.replace(/\\/g, '/') : null;
+  
+      if (!name || !imagePath) {
+        return res.status(400).json({ message: 'اسم اللجنة والصورة مطلوبان' });
+      }
+  
+      const [exists] = await db.execute('SELECT id FROM committees WHERE name = ?', [name]);
+      if (exists.length > 0) {
+        return res.status(409).json({ message: 'هذه اللجنة موجودة بالفعل' });
+      }
+  
+      const [result] = await db.execute('INSERT INTO committees (name, image) VALUES (?, ?)', [name, imagePath]);
+      const committeeId = result.insertId;
+  
+      // ✅ استخراج userId من التوكن
+      const token = req.headers.authorization?.split(' ')[1];
+      if (token) {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = decoded.id;
+  
+        // ✅ تسجيل اللوق قبل الرد
+        await logAction(
+          userId,
+          'add_committee',
+          `تمت إضافة لجنة جديدة: ${name}`,
+          'committee',
+          committeeId
+        );
+      }
+  
+      // ✅ الآن نرد على العميل
+      res.status(201).json({ message: 'تم إضافة اللجنة بنجاح', committeeId });
+  
     } catch (error) {
-        res.status(500).json({ message: 'خطأ في إضافة اللجنة', error });
+      console.error('Error in addCommittee:', error);
+      res.status(500).json({ message: 'خطأ في إضافة اللجنة' });
     }
-};
+  };
+  
 
-exports.updateCommittee = async (req, res) => {
+  exports.updateCommittee = async (req, res) => {
     try {
-        const { id } = req.params;
-        const { name } = req.body;
-        const imagePath = req.file ? req.file.path.replace(/\\/g, '/') : null;
-        if (!name) return res.status(400).json({ message: 'اسم اللجنة مطلوب' });
-        let query = 'UPDATE committees SET name = ?';
-        let params = [name];
-        if (imagePath) {
-            query += ', image = ?';
-            params.push(imagePath);
+      const { id } = req.params;
+      const { name } = req.body;
+      const imagePath = req.file ? req.file.path.replace(/\\/g, '/') : null;
+  
+      if (!name) {
+        return res.status(400).json({ message: 'اسم اللجنة مطلوب' });
+      }
+  
+      let query = 'UPDATE committees SET name = ?';
+      let params = [name];
+  
+      if (imagePath) {
+        query += ', image = ?';
+        params.push(imagePath);
+      }
+  
+      query += ', updated_at = CURRENT_TIMESTAMP WHERE id = ?';
+      params.push(id);
+  
+      const [result] = await db.execute(query, params);
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: 'اللجنة غير موجودة' });
+      }
+  
+      // استخراج userId من التوكن
+      const token = req.headers.authorization?.split(' ')[1];
+      if (token) {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = decoded.id;
+  
+        try {
+          await logAction(
+            userId,
+            'update_committee',
+            `تم تعديل اللجنة: ${name}`,
+            'committee',
+            id
+          );
+        } catch (logErr) {
+          console.error('logAction error:', logErr);
         }
-        query += ', updated_at = CURRENT_TIMESTAMP WHERE id = ?';
-        params.push(id);
-        const [result] = await db.execute(query, params);
-        if (result.affectedRows === 0) return res.status(404).json({ message: 'اللجنة غير موجودة' });
-        res.status(200).json({ message: 'تم تعديل اللجنة بنجاح' });
+      }
+  
+      res.status(200).json({ message: 'تم تعديل اللجنة بنجاح' });
+  
     } catch (error) {
-        res.status(500).json({ message: 'خطأ في تعديل اللجنة', error });
+      console.error('updateCommittee error:', error);
+      res.status(500).json({ message: 'خطأ في تعديل اللجنة', error });
     }
-};
+  };
+  
 
 exports.deleteCommittee = async (req, res) => {
     try {
@@ -115,7 +202,34 @@ exports.addFolder = async (req, res) => {
         const created_by = decoded.id;
 
         if (!name || !created_by) return res.status(400).json({ message: 'اسم المجلد ومعرّف المنشئ مطلوبان' });
+        
+        // جلب اسم اللجنة باللغة المناسبة
+        let committeeName = '';
+        const [comRows] = await db.execute('SELECT name FROM committees WHERE id = ?', [committeeId]);
+        if (comRows.length > 0) {
+            const userLanguage = getUserLanguageFromToken(token);
+            committeeName = getCommitteeNameByLanguage(comRows[0].name, userLanguage);
+        }
+        
         const [result] = await db.execute('INSERT INTO committee_folders (name, committee_id, created_by) VALUES (?, ?, ?)', [name, committeeId, created_by]);
+        
+        // ✅ تسجيل اللوق بعد نجاح إضافة المجلد
+        try {
+            const logDescription = committeeName 
+                ? `تمت إضافة مجلد جديد: ${name} في لجنة: ${committeeName}`
+                : `تمت إضافة مجلد جديد: ${name}`;
+                
+            await logAction(
+                created_by,
+                'add_folder',
+                logDescription,
+                'folder',
+                result.insertId
+            );
+        } catch (logErr) {
+            console.error('logAction error:', logErr);
+        }
+        
         res.status(201).json({ message: 'تم إضافة المجلد بنجاح', folderId: result.insertId });
     } catch (error) {
         res.status(500).json({ message: 'خطأ في إضافة المجلد', error });
@@ -127,8 +241,50 @@ exports.updateFolder = async (req, res) => {
         const { id } = req.params;
         const { name } = req.body;
         if (!name) return res.status(400).json({ message: 'اسم المجلد مطلوب' });
+        
+        // جلب الاسم القديم وcommittee_id قبل التحديث
+        const [oldNameRows] = await db.execute('SELECT name, committee_id FROM committee_folders WHERE id = ?', [id]);
+        if (oldNameRows.length === 0) return res.status(404).json({ message: 'المجلد غير موجود' });
+        const oldName = oldNameRows[0].name;
+        const committeeId = oldNameRows[0].committee_id;
+        
+        // جلب اسم اللجنة باللغة المناسبة
+        let committeeName = '';
+        if (committeeId) {
+            const [comRows] = await db.execute('SELECT name FROM committees WHERE id = ?', [committeeId]);
+            if (comRows.length > 0) {
+                const token = req.headers.authorization?.split(' ')[1];
+                const userLanguage = token ? getUserLanguageFromToken(token) : 'ar';
+                committeeName = getCommitteeNameByLanguage(comRows[0].name, userLanguage);
+            }
+        }
+        
         const [result] = await db.execute('UPDATE committee_folders SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [name, id]);
         if (result.affectedRows === 0) return res.status(404).json({ message: 'المجلد غير موجود' });
+        
+        // ✅ تسجيل اللوق بعد نجاح تعديل المجلد
+        const token = req.headers.authorization?.split(' ')[1];
+        if (token) {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const userId = decoded.id;
+            
+            try {
+                const logDescription = committeeName 
+                    ? `تم تعديل مجلد من: ${oldName} إلى: ${name} في لجنة: ${committeeName}`
+                    : `تم تعديل مجلد من: ${oldName} إلى: ${name}`;
+                
+                await logAction(
+                    userId,
+                    'update_folder',
+                    logDescription,
+                    'folder',
+                    id
+                );
+            } catch (logErr) {
+                console.error('logAction error:', logErr);
+            }
+        }
+        
         res.status(200).json({ message: 'تم تعديل المجلد بنجاح' });
     } catch (error) {
         res.status(500).json({ message: 'خطأ في تعديل المجلد', error });
@@ -137,14 +293,54 @@ exports.updateFolder = async (req, res) => {
 
 exports.deleteFolder = async (req, res) => {
     try {
-        const { id } = req.params;
-        const [result] = await db.execute('DELETE FROM committee_folders WHERE id = ?', [id]);
-        if (result.affectedRows === 0) return res.status(404).json({ message: 'المجلد غير موجود' });
-        res.status(200).json({ message: 'تم حذف المجلد بنجاح' });
+      const { id } = req.params;
+      // جلب اسم المجلد وcommittee_id قبل الحذف
+      const [nameRows] = await db.execute('SELECT name, committee_id FROM committee_folders WHERE id = ?', [id]);
+      const folderName = nameRows.length > 0 ? nameRows[0].name : 'غير معروف';
+      const committeeId = nameRows.length > 0 ? nameRows[0].committee_id : null;
+      
+      // جلب اسم اللجنة باللغة المناسبة
+      let committeeName = '';
+      if (committeeId) {
+        const [comRows] = await db.execute('SELECT name FROM committees WHERE id = ?', [committeeId]);
+        if (comRows.length > 0) {
+          const token = req.headers.authorization?.split(' ')[1];
+          const userLanguage = token ? getUserLanguageFromToken(token) : 'ar';
+          committeeName = getCommitteeNameByLanguage(comRows[0].name, userLanguage);
+        }
+      }
+
+      const [result] = await db.execute('DELETE FROM committee_folders WHERE id = ?', [id]);
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: 'المجلد غير موجود' });
+      }
+  
+      // استخراج userId من التوكن
+      const token = req.headers.authorization?.split(' ')[1];
+      if (token) {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = decoded.id;
+  
+        try {
+          await logAction(
+            userId,
+            'delete_folder',
+            `تم حذف المجلد: ${folderName} من لجنة: ${committeeName}`,
+            'folder',
+            id
+          );
+        } catch (logErr) {
+          console.error('logAction error:', logErr);
+        }
+      }
+  
+      res.status(200).json({ message: 'تم حذف المجلد بنجاح' });
     } catch (error) {
-        res.status(500).json({ message: 'خطأ في حذف المجلد', error });
+      console.error('deleteFolder error:', error);
+      res.status(500).json({ message: 'خطأ في حذف المجلد', error });
     }
-};
+  };
+  
 
 // ========== Contents CRUD ==========
 exports.getContents = async (req, res) => {
@@ -195,54 +391,186 @@ exports.getContent = async (req, res) => {
 
 exports.addContent = async (req, res) => {
     try {
-        const { title, notes, approvers_required } = req.body;
-        const { folderId } = req.params;
-        const filePath = req.file ? req.file.path.replace(/\\/g, '/') : null;
-        // استخرج userId من التوكن
-        const authHeader = req.headers.authorization;
-        if (!authHeader) return res.status(401).json({ message: 'مطلوب تسجيل الدخول' });
-        const token = authHeader.split(' ')[1];
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const created_by = decoded.id;
-        if (!title || !filePath || !created_by) return res.status(400).json({ message: 'العنوان والملف ومعرّف المنشئ مطلوبة' });
-        const [result] = await db.execute('INSERT INTO committee_contents (title, file_path, notes, folder_id, created_by, approvers_required) VALUES (?, ?, ?, ?, ?, ?)', [title, filePath, notes, folderId, created_by, approvers_required]);
-        res.status(201).json({ message: 'تم إضافة المحتوى بنجاح', contentId: result.insertId });
+      const { title, notes, approvers_required } = req.body;
+      const { folderId } = req.params;
+      const filePath = req.file ? req.file.path.replace(/\\/g, '/') : null;
+  
+      const authHeader = req.headers.authorization;
+      if (!authHeader) return res.status(401).json({ message: 'مطلوب تسجيل الدخول' });
+      const token = authHeader.split(' ')[1];
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const created_by = decoded.id;
+  
+      if (!title || !filePath || !created_by) {
+        return res.status(400).json({ message: 'العنوان والملف ومعرّف المنشئ مطلوبة' });
+      }
+  
+      // جلب اسم اللجنة باللغة المناسبة
+      let committeeName = '';
+      const [comRows] = await db.execute('SELECT com.name FROM committees com JOIN committee_folders cf ON com.id = cf.committee_id WHERE cf.id = ?', [folderId]);
+      if (comRows.length > 0) {
+        const userLanguage = getUserLanguageFromToken(token);
+        committeeName = getCommitteeNameByLanguage(comRows[0].name, userLanguage);
+      }
+  
+      const [result] = await db.execute(
+        'INSERT INTO committee_contents (title, file_path, notes, folder_id, created_by, approvers_required) VALUES (?, ?, ?, ?, ?, ?)',
+        [title, filePath, notes, folderId, created_by, approvers_required]
+      );
+  
+      const contentId = result.insertId;
+  
+      // 🔹 تسجيل اللوق
+      try {
+        const logDescription = committeeName 
+          ? `تمت إضافة محتوى بعنوان: ${title} في لجنة: ${committeeName}`
+          : `تمت إضافة محتوى بعنوان: ${title}`;
+          
+        await logAction(
+          created_by,
+          'add_content',
+          logDescription,
+          'content',
+          contentId
+        );
+      } catch (logErr) {
+        console.error('logAction error:', logErr);
+      }
+  
+      res.status(201).json({ message: 'تم إضافة المحتوى بنجاح', contentId });
+  
     } catch (error) {
-        res.status(500).json({ message: 'خطأ في إضافة المحتوى', error });
+      console.error('addContent error:', error);
+      res.status(500).json({ message: 'خطأ في إضافة المحتوى', error });
     }
-};
+  };
+  
 
-exports.updateContent = async (req, res) => {
+  exports.updateContent = async (req, res) => {
     try {
-        const { id } = req.params;
-        const { title, notes } = req.body;
-        const filePath = req.file ? req.file.path.replace(/\\/g, '/') : null;
-        let query = 'UPDATE committee_contents SET title = ?, notes = ?';
-        let params = [title, notes];
-        if (filePath) {
-            query += ', file_path = ?';
-            params.push(filePath);
+      const { id } = req.params;
+      const { title, notes } = req.body;
+      const filePath = req.file ? req.file.path.replace(/\\/g, '/') : null;
+
+      // جلب العنوان القديم وfolder_id قبل التحديث
+      const [oldRows] = await db.execute('SELECT title, folder_id FROM committee_contents WHERE id = ?', [id]);
+      if (!oldRows.length) {
+        return res.status(404).json({ message: 'المحتوى غير موجود' });
+      }
+      const oldTitle = oldRows[0].title;
+      const folderId = oldRows[0].folder_id;
+      
+      // جلب اسم اللجنة باللغة المناسبة
+      let committeeName = '';
+      if (folderId) {
+        const [comRows] = await db.execute('SELECT com.name FROM committees com JOIN committee_folders cf ON com.id = cf.committee_id WHERE cf.id = ?', [folderId]);
+        if (comRows.length > 0) {
+          const token = req.headers.authorization?.split(' ')[1];
+          const userLanguage = token ? getUserLanguageFromToken(token) : 'ar';
+          committeeName = getCommitteeNameByLanguage(comRows[0].name, userLanguage);
         }
-        query += ', updated_at = CURRENT_TIMESTAMP WHERE id = ?';
-        params.push(id);
-        const [result] = await db.execute(query, params);
-        if (result.affectedRows === 0) return res.status(404).json({ message: 'المحتوى غير موجود' });
-        res.status(200).json({ message: 'تم تعديل المحتوى بنجاح' });
+      }
+
+      let query = 'UPDATE committee_contents SET title = ?, notes = ?';
+      let params = [title, notes];
+      if (filePath) {
+        query += ', file_path = ?';
+        params.push(filePath);
+      }
+      query += ', updated_at = CURRENT_TIMESTAMP WHERE id = ?';
+      params.push(id);
+
+      const [result] = await db.execute(query, params);
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: 'المحتوى غير موجود' });
+      }
+
+      // استخراج userId من التوكن
+      const token = req.headers.authorization?.split(' ')[1];
+      if (token) {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = decoded.id;
+
+        try {
+          const logDescription = committeeName 
+            ? `تم تعديل محتوى من: ${oldTitle} إلى: ${title} في لجنة: ${committeeName}`
+            : `تم تعديل محتوى من: ${oldTitle} إلى: ${title}`;
+            
+          await logAction(
+            userId,
+            'update_content',
+            logDescription,
+            'content',
+            id
+          );
+        } catch (logErr) {
+          console.error('logAction error:', logErr);
+        }
+      }
+
+      res.status(200).json({ message: 'تم تعديل المحتوى بنجاح' });
     } catch (error) {
-        res.status(500).json({ message: 'خطأ في تعديل المحتوى', error });
+      console.error('updateContent error:', error);
+      res.status(500).json({ message: 'خطأ في تعديل المحتوى', error });
     }
-};
+  };
+  
 
 exports.deleteContent = async (req, res) => {
     try {
-        const { id } = req.params;
-        const [result] = await db.execute('DELETE FROM committee_contents WHERE id = ?', [id]);
-        if (result.affectedRows === 0) return res.status(404).json({ message: 'المحتوى غير موجود' });
-        res.status(200).json({ message: 'تم حذف المحتوى بنجاح' });
+      const { id } = req.params;
+
+      // جلب العنوان وfolder_id قبل الحذف
+      const [nameRows] = await db.execute('SELECT title, folder_id FROM committee_contents WHERE id = ?', [id]);
+      const contentTitle = nameRows.length > 0 ? nameRows[0].title : 'غير معروف';
+      const folderId = nameRows.length > 0 ? nameRows[0].folder_id : null;
+      
+      // جلب اسم اللجنة باللغة المناسبة
+      let committeeName = '';
+      if (folderId) {
+        const [comRows] = await db.execute('SELECT com.name FROM committees com JOIN committee_folders cf ON com.id = cf.committee_id WHERE cf.id = ?', [folderId]);
+        if (comRows.length > 0) {
+          const token = req.headers.authorization?.split(' ')[1];
+          const userLanguage = token ? getUserLanguageFromToken(token) : 'ar';
+          committeeName = getCommitteeNameByLanguage(comRows[0].name, userLanguage);
+        }
+      }
+  
+      const [result] = await db.execute('DELETE FROM committee_contents WHERE id = ?', [id]);
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: 'المحتوى غير موجود' });
+      }
+  
+      // استخراج userId من التوكن
+      const token = req.headers.authorization?.split(' ')[1];
+      if (token) {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = decoded.id;
+  
+        try {
+          const logDescription = committeeName 
+            ? `تم حذف محتوى: ${contentTitle} من لجنة: ${committeeName}`
+            : `تم حذف محتوى: ${contentTitle}`;
+            
+          await logAction(
+            userId,
+            'delete_content',
+            logDescription,
+            'content',
+            id
+          );
+        } catch (logErr) {
+          console.error('logAction error:', logErr);
+        }
+      }
+  
+      res.status(200).json({ message: 'تم حذف المحتوى بنجاح' });
     } catch (error) {
-        res.status(500).json({ message: 'خطأ في حذف المحتوى', error });
+      console.error('deleteContent error:', error);
+      res.status(500).json({ message: 'خطأ في حذف المحتوى', error });
     }
-};
+  };
+  
 
 // New function to get content uploaded by the current user
 exports.getMyUploadedCommitteeContents = async (req, res) => {
@@ -295,6 +623,7 @@ exports.approveContent = async (req, res) => {
     try {
         const { contentId } = req.params;
         const { approver_id, status, comments, signature, signed_as_proxy, electronic_signature, delegated_by } = req.body;
+        
         // تحقق من وجود السجل
         const [exists] = await db.execute('SELECT * FROM committee_approval_logs WHERE content_id = ? AND approver_id = ?', [contentId, approver_id]);
         if (exists.length > 0) {
@@ -304,8 +633,29 @@ exports.approveContent = async (req, res) => {
             // إضافة سجل جديد
             await db.execute('INSERT INTO committee_approval_logs (content_id, approver_id, status, comments, signature, signed_as_proxy, electronic_signature, delegated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [contentId, approver_id, status, comments, signature, signed_as_proxy, electronic_signature, delegated_by]);
         }
+        
         // تحديث حالة الموافقة في المحتوى
         await db.execute('UPDATE committee_contents SET approval_status = ? WHERE id = ?', [status, contentId]);
+        
+        // ✅ تسجيل اللوق بعد نجاح الاعتماد أو الرفض
+        const token = req.headers.authorization?.split(' ')[1];
+        if (token) {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const userId = decoded.id;
+            
+            try {
+                await logAction(
+                    userId,
+                    status === 'approved' ? 'approve_content' : 'reject_content',
+                    `تم ${status === 'approved' ? 'اعتماد' : 'رفض'} المحتوى من قبل ${decoded.id}`,
+                    'committee_content',
+                    contentId
+                );
+            } catch (logErr) {
+                console.error('logAction error:', logErr);
+            }
+        }
+        
         res.status(200).json({ message: 'تم تحديث الاعتماد بنجاح' });
     } catch (error) {
         res.status(500).json({ message: 'خطأ في تحديث الاعتماد', error });
@@ -403,6 +753,26 @@ exports.addFolderName = async (req, res) => {
       'INSERT INTO committee_folder_names (name) VALUES (?)',
       [name]
     );
+    
+    // ✅ تسجيل اللوق بعد نجاح إضافة اسم المجلد
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token) {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const userId = decoded.id;
+      
+      try {
+        await logAction(
+          userId,
+          'add_folder_name',
+          `تمت إضافة اسم مجلد جديد للجان: ${name}`,
+          'folder_name',
+          result.insertId
+        );
+      } catch (logErr) {
+        console.error('logAction error:', logErr);
+      }
+    }
+    
     res.status(201).json({ id: result.insertId, name });
   } catch (err) {
     res.status(500).json({ message: 'فشل في إضافة اسم المجلد', error: err });
@@ -416,7 +786,7 @@ const { id }   = req.params;
 
   if (!name) return res.status(400).json({ message: '❌ الاسم الجديد مطلوب.' });
 
-  const conn = await pool.getConnection();
+  const conn = await db.getConnection();
   try {
     // 1) جلب الاسم القديم من جدول committee_folder_names
     const [rows] = await conn.execute(
@@ -445,6 +815,25 @@ const { id }   = req.params;
       [name, oldName]
     );
 
+    // ✅ تسجيل اللوق بعد نجاح تعديل اسم المجلد
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token) {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const userId = decoded.id;
+      
+      try {
+        await logAction(
+          userId,
+          'update_folder_name',
+          `تم تعديل اسم مجلد للجان من: ${oldName} إلى: ${name}`,
+          'folder_name',
+          id
+        );
+      } catch (logErr) {
+        console.error('logAction error:', logErr);
+      }
+    }
+
     conn.release();
     return res.json({
       status: 'success',
@@ -461,7 +850,32 @@ const { id }   = req.params;
 exports.deleteFolderName = async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // جلب الاسم قبل الحذف لتسجيله في اللوق
+    const [nameRows] = await db.execute('SELECT name FROM committee_folder_names WHERE id = ?', [id]);
+    const folderName = nameRows.length > 0 ? nameRows[0].name : 'غير معروف';
+    
     await db.execute('DELETE FROM committee_folder_names WHERE id = ?', [id]);
+    
+    // ✅ تسجيل اللوق بعد نجاح حذف اسم المجلد
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token) {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const userId = decoded.id;
+      
+      try {
+        await logAction(
+          userId,
+          'delete_folder_name',
+          `تم حذف اسم مجلد للجان: ${folderName}`,
+          'folder_name',
+          id
+        );
+      } catch (logErr) {
+        console.error('logAction error:', logErr);
+      }
+    }
+    
     res.status(200).json({ message: 'تم الحذف بنجاح' });
   } catch (err) {
     res.status(500).json({ message: 'فشل في حذف الاسم', error: err });
@@ -487,6 +901,26 @@ exports.addContentTitle = async (req, res) => {
     if (!name) return res.status(400).json({ message: 'الاسم مطلوب' });
 
     const [result] = await db.execute('INSERT INTO committee_content_titles (name) VALUES (?)', [name]);
+    
+    // ✅ تسجيل اللوق بعد نجاح إضافة عنوان المحتوى
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token) {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const userId = decoded.id;
+      
+      try {
+        await logAction(
+          userId,
+          'add_content_title',
+          `تمت إضافة عنوان محتوى جديد للجان: ${name}`,
+          'content_title',
+          result.insertId
+        );
+      } catch (logErr) {
+        console.error('logAction error:', logErr);
+      }
+    }
+    
     res.status(201).json({ id: result.insertId, name });
   } catch (err) {
     console.error('❌ addContentTitle error:', err);
@@ -522,6 +956,25 @@ exports.updateContentTitle = async (req, res) => {
       [name, oldName]
     );
 
+    // ✅ تسجيل اللوق بعد نجاح تعديل عنوان المحتوى
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token) {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const userId = decoded.id;
+      
+      try {
+        await logAction(
+          userId,
+          'update_content_title',
+          `تم تعديل عنوان محتوى للجان من: ${oldName} إلى: ${name}`,
+          'content_title',
+          id
+        );
+      } catch (logErr) {
+        console.error('logAction error:', logErr);
+      }
+    }
+
     res.json({
       status: 'success',
       message: '✅ تم تحديث العنوان وكل المحتويات المرتبطة به',
@@ -540,8 +993,31 @@ exports.deleteContentTitle = async (req, res) => {
   try {
     const { id } = req.params;
 
+    // جلب الاسم قبل الحذف لتسجيله في اللوق
+    const [nameRows] = await db.execute('SELECT name FROM committee_content_titles WHERE id = ?', [id]);
+    const contentTitle = nameRows.length > 0 ? nameRows[0].name : 'غير معروف';
+
     const [result] = await db.execute('DELETE FROM committee_content_titles WHERE id = ?', [id]);
     if (result.affectedRows === 0) return res.status(404).json({ message: 'العنوان غير موجود' });
+
+    // ✅ تسجيل اللوق بعد نجاح حذف عنوان المحتوى
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token) {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const userId = decoded.id;
+      
+      try {
+        await logAction(
+          userId,
+          'delete_content_title',
+          `تم حذف عنوان محتوى للجان: ${contentTitle}`,
+          'content_title',
+          id
+        );
+      } catch (logErr) {
+        console.error('logAction error:', logErr);
+      }
+    }
 
     res.json({ message: 'تم الحذف بنجاح' });
   } catch (err) {

@@ -4,6 +4,40 @@ const jwt   = require('jsonwebtoken');
 const { logAction } = require('../models/logger');
 const { insertNotification } = require('../models/notfications-utils');
 
+function getUserLang(req) {
+  const auth = req.headers.authorization;
+  if (auth?.startsWith('Bearer ')) {
+    try {
+      const token = auth.slice(7);
+      const payload = jwt.verify(token, process.env.JWT_SECRET);
+      return payload.lang || 'ar';
+    } catch (err) {
+      return 'ar';
+    }
+  }
+  return 'ar';
+}
+
+function getLocalizedName(nameField, lang) {
+  if (!nameField) return '';
+  // Check if it's already a parsed object
+  if (typeof nameField === 'object' && nameField !== null) {
+    return nameField[lang] || nameField['ar'] || '';
+  }
+  if (typeof nameField === 'string') {
+    try {
+      // Try to parse it as JSON
+      const nameObj = JSON.parse(nameField);
+      return nameObj[lang] || nameObj['ar'] || nameField;
+    } catch (e) {
+      // If parsing fails, return the original string
+      return nameField;
+    }
+  }
+  // For any other type, convert to string and return
+  return String(nameField);
+}
+
 async function getUserPerms(pool, userId) {
   const [rows] = await pool.execute(`
     SELECT p.permission_key
@@ -98,6 +132,20 @@ exports.getPendingApprovals = async (req, res) => {
 
 
 exports.sendApprovalRequest = async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith('Bearer ')) {
+    return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+  }
+
+  let payload;
+  try {
+    payload = jwt.verify(auth.slice(7), process.env.JWT_SECRET);
+  } catch (err) {
+    return res.status(401).json({ status: 'error', message: 'Invalid token' });
+  }
+  const userId = payload.id;
+  const userLang = getUserLang(req);
+
   const { contentId, approvers } = req.body;
   if (!contentId || !Array.isArray(approvers) || approvers.length === 0) {
     return res.status(400).json({ status: 'error', message: 'البيانات غير صالحة' });
@@ -114,6 +162,22 @@ exports.sendApprovalRequest = async (req, res) => {
 
   const conn = await pool.getConnection();
   try {
+    // Fetch info for logging
+    const [[contentDetails]] = await conn.execute(
+        `SELECT c.title, d.name as department_name FROM contents c
+         JOIN folders f ON c.folder_id = f.id
+         JOIN departments d ON f.department_id = d.id
+         WHERE c.id = ?`,
+        [contentId]
+    );
+
+    const [approverUsers] = await conn.execute(
+      `SELECT username FROM users WHERE id IN (?)`,
+      [approvers]
+    );
+    const approverNames = approverUsers.map(u => u.username).join(', ');
+
+
     await conn.beginTransaction();
 
     // 1) نحذف المعتمدين السابقين
@@ -152,6 +216,13 @@ exports.sendApprovalRequest = async (req, res) => {
        WHERE id = ?`,
       [JSON.stringify(approvers), contentId]
     );
+
+    // Add to logs
+    const localizedDeptName = getLocalizedName(contentDetails.department_name, userLang);
+    const logMessage = userLang === 'en' 
+      ? `Sent content '${contentDetails.title}' in department '${localizedDeptName}' for approval to: ${approverNames}`
+      : `أرسل المحتوى '${contentDetails.title}' في القسم '${localizedDeptName}' للموافقة إلى: ${approverNames}`;
+    await logAction(userId, 'send_approval_request', logMessage, 'content', contentId);
 
     await conn.commit();
     res.status(200).json({ status: 'success', message: 'تم الإرسال بنجاح' });
