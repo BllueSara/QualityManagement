@@ -1,22 +1,28 @@
+// approvals-recived.js
+let filteredItems = [];
+
 const apiBase = 'http://localhost:3006/api';
 const token = localStorage.getItem('token');
 let permissionsKeys = [];
 let selectedContentId = null;
 let canvas, ctx;
 const currentLang = localStorage.getItem('language') || 'ar';
+let currentPage   = 1;
+const itemsPerPage = 5;
+let allItems = [];
+// بعد تعريف itemsPerPage …
+const statusList = ['pending', 'approved', 'rejected'];
+let currentGroupIndex = 0;
 
 // جلب صلاحيات المستخدم
 async function fetchPermissions() {
   if (!token) return;
   const payload = JSON.parse(atob(token.split('.')[1] || '{}'));
-  const userId = payload.id;
-  const role = payload.role;
-
+  const userId = payload.id, role = payload.role;
   if (role === 'admin') {
     permissionsKeys = ['*'];
     return;
   }
-
   try {
     const res = await fetch(`${apiBase}/users/${userId}/permissions`, {
       headers: { 'Authorization': `Bearer ${token}` }
@@ -39,112 +45,129 @@ async function fetchJSON(url, opts = {}) {
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
+
 function getLocalizedName(name) {
   const lang = localStorage.getItem('language') || 'ar';
   try {
     const parsed = typeof name === 'string' ? JSON.parse(name) : name;
     return parsed?.[lang] || parsed?.ar || parsed?.en || name;
   } catch {
-    return name; // إذا الاسم مو JSON
+    return name;
   }
 }
+function closeModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) modal.style.display = 'none';
+}
 
-// عند تحميل الصفحة
+function setupCloseButtons() {
+  document.querySelectorAll('.modal-close').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const modalId = btn.dataset.modal 
+        || btn.closest('.modal-overlay')?.id;
+      if (modalId) closeModal(modalId);
+    });
+  });
+}
 document.addEventListener('DOMContentLoaded', async () => {
   if (!token) return alert(getTranslation('please-login'));
 
   await fetchPermissions();
 
   try {
-    const deptResponse = await fetchJSON(`${apiBase}/approvals/assigned-to-me`);
-    const committeeResponse = await fetchJSON(`${apiBase}/committee-approvals/assigned-to-me`);
-
-    let allCombinedItems = [
-      ...(deptResponse.data || []),
-      ...(committeeResponse.data || []),
-    ];
-
-    const uniqueItemsMap = new Map();
-    allCombinedItems.forEach(item => {
-      uniqueItemsMap.set(item.id, item);
-    });
-
-    allItems = Array.from(uniqueItemsMap.values());
+    const deptResp      = await fetchJSON(`${apiBase}/approvals/assigned-to-me`);
+    const commResp      = await fetchJSON(`${apiBase}/committee-approvals/assigned-to-me`);
+    const combined      = [...(deptResp.data||[]), ...(commResp.data||[])];
+    const uniqueMap     = new Map();
+    combined.forEach(item => uniqueMap.set(item.id, item));
+    allItems = Array.from(uniqueMap.values());
+    filteredItems = allItems;
 
     await setupFilters(allItems);
-    renderApprovals(allItems);
+    renderApprovals(filteredItems);
   } catch (err) {
     console.error("Error loading approvals:", err);
     alert(getTranslation('error-loading'));
   }
+document.getElementById("prevPage").addEventListener("click", () => {
+  if (currentPage > 1) {
+    currentPage--;
+    renderApprovals(filteredItems);
+  }
+});
 
+document.getElementById("nextPage").addEventListener("click", () => {
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+  if (currentPage < totalPages) {
+    currentPage++;
+    renderApprovals(filteredItems);
+  }
+});
   setupSignatureModal();
   setupCloseButtons();
 
+  // ربط زر إرسال سبب الرفض
   const btnSendReason = document.getElementById('btnSendReason');
   if (btnSendReason) {
     btnSendReason.addEventListener('click', async () => {
       const reason = document.getElementById('rejectReason').value.trim();
       if (!reason) return alert(getTranslation('please-enter-reason'));
-
-      const contentType = document.querySelector(`tr[data-id="${selectedContentId}"]`).dataset.type;
-      const endpoint = contentType === 'committee' ? 'committee-approvals' : 'approvals';
-
+      const type     = document.querySelector(`tr[data-id="${selectedContentId}"]`).dataset.type;
+      const endpoint = type === 'committee' ? 'committee-approvals' : 'approvals';
       try {
         await fetchJSON(`${apiBase}/${endpoint}/${selectedContentId}/approve`, {
           method: 'POST',
-          body: JSON.stringify({
-            approved: false,
-            signature: null,
-            notes: reason
-          })
+          body: JSON.stringify({ approved: false, signature: null, notes: reason })
         });
-
         alert(getTranslation('success-rejected'));
         closeModal('rejectModal');
-
         updateApprovalStatusInUI(selectedContentId, 'rejected');
-      } catch (err) {
-        console.error('Failed to send rejection:', err);
+      } catch (e) {
+        console.error('Failed to send rejection:', e);
         alert(getTranslation('error-sending'));
       }
     });
   }
+
+  // **رابط أزرار الباجينشن خارج أي شرط**
+
+
+// وفي رقم الصفحة:
+
+
 });
 
 async function setupFilters(items) {
-  const deptSet = new Set(items.map(i => i.source_name).filter(Boolean));
   const deptFilter = document.getElementById('deptFilter');
+  const deptSet    = new Set(items.map(i => i.source_name).filter(Boolean));
   deptFilter.innerHTML = `<option value="all">${getTranslation('all-departments')}</option>`;
   deptSet.forEach(name => {
     const opt = document.createElement('option');
-    opt.value = name;
-    opt.textContent = name;
+    opt.value       = name;
+    opt.textContent = getLocalizedName(name);
     deptFilter.appendChild(opt);
   });
-
   deptFilter.addEventListener('change', applyFilters);
   document.getElementById('statusFilter').addEventListener('change', applyFilters);
   document.getElementById('searchInput').addEventListener('input', applyFilters);
 }
 
-let allItems = [];
-
 function applyFilters() {
-  const dept = document.getElementById('deptFilter').value;
-  const status = document.getElementById('statusFilter').value;
+  currentPage = 1;  // ترجع للصفحة الأولى عند كل فلتر
+  const dept       = document.getElementById('deptFilter').value;
+  const status     = document.getElementById('statusFilter').value;
   const searchText = document.getElementById('searchInput').value.trim().toLowerCase();
 
-  const filtered = allItems.filter(i => {
-    const matchesDept = dept === 'all' || i.source_name === dept;
-    const matchesStatus = status === 'all' || i.approval_status === status;
-    const matchesSearch = i.title.toLowerCase().includes(searchText);
-    return matchesDept && matchesStatus && matchesSearch;
+  // خزّن النتيجة في filteredItems
+  filteredItems = allItems.filter(i => {
+    const okDept   = dept === 'all' || i.source_name === dept;
+    const okStatus = status === 'all' || i.approval_status === status;
+    const okSearch = i.title.toLowerCase().includes(searchText);
+    return okDept && okStatus && okSearch;
   });
 
-  renderApprovals(filtered);
+  renderApprovals(filteredItems);
 }
-
 function openModal(modalId) {
   document.getElementById(modalId).style.display = 'flex';
 }
@@ -166,53 +189,65 @@ function renderApprovals(items) {
   const tbody = document.getElementById("approvalsBody");
   tbody.innerHTML = "";
 
-  const canSign = permissionsKeys.includes('*') || permissionsKeys.includes('sign');
-  const canDelegate = permissionsKeys.includes('*') || permissionsKeys.includes('sign_on_behalf');
+  // 1) إجمالي العناصر والفهارس
+  const totalItems = items.length;
+  const startIdx   = (currentPage - 1) * itemsPerPage;
+  const endIdx     = Math.min(startIdx + itemsPerPage, totalItems);
 
-  items.sort((a, b) => {
+  // 2) فرز وحساب القطع
+  const sorted    = items.slice().sort((a, b) => {
     const order = { pending: 0, rejected: 1, approved: 2 };
     return order[a.approval_status] - order[b.approval_status];
   });
+  const pageItems = sorted.slice(startIdx, endIdx);
 
-  items.forEach(item => {
+  // 3) إنشاء الصفوف
+  const canSign = permissionsKeys.includes('*') || permissionsKeys.includes('sign');
+  const canDel  = permissionsKeys.includes('*') || permissionsKeys.includes('sign_on_behalf');
+
+  pageItems.forEach(item => {
     const tr = document.createElement("tr");
-    tr.dataset.id = item.id;
+    tr.dataset.id     = item.id;
     tr.dataset.status = item.approval_status;
     tr.dataset.source = item.source_name;
-    tr.dataset.type = item.type;
+    tr.dataset.type   = item.type;
 
-    let actionsHTML = '';
+    let actions = "";
     if (item.approval_status === 'pending') {
-      actionsHTML += `<button class="btn-sign"><i class="fas fa-user-check"></i> ${getTranslation('sign')}</button>`;
-      actionsHTML += `<button class="btn-delegate"><i class="fas fa-user-friends"></i> ${getTranslation('delegate')}</button>`;
-      actionsHTML += `<button class="btn-qr"><i class="fas fa-qrcode"></i> ${getTranslation('electronic')}</button>`;
-      actionsHTML += `<button class="btn-reject"><i class="fas fa-times"></i> ${getTranslation('reject')}</button>`;
-      actionsHTML += `<button class="btn-preview"><i class="fas fa-eye"></i> ${getTranslation('preview')}</button>`;
+      actions += `<button class="btn-sign"><i class="fas fa-user-check"></i> ${getTranslation('sign')}</button>`;
+      actions += `<button class="btn-delegate"><i class="fas fa-user-friends"></i> ${getTranslation('delegate')}</button>`;
+      actions += `<button class="btn-qr"><i class="fas fa-qrcode"></i> ${getTranslation('electronic')}</button>`;
+      actions += `<button class="btn-reject"><i class="fas fa-times"></i> ${getTranslation('reject')}</button>`;
+      actions += `<button class="btn-preview"><i class="fas fa-eye"></i> ${getTranslation('preview')}</button>`;
     }
 
-    const contentType = item.type === 'committee' ? getTranslation('committee-file') : getTranslation('department-report');
+    const contentType = item.type === 'committee'
+      ? getTranslation('committee-file')
+      : getTranslation('department-report');
 
     tr.innerHTML = `
+      <td class="col-id">${item.id}</td>
       <td>
         ${item.title}
-<div class="content-meta">(${contentType} - ${getLocalizedName(item.source_name)})</div>
+        <div class="content-meta">(${contentType} - ${getLocalizedName(item.source_name)})</div>
       </td>
-<td>${getLocalizedName(item.source_name) || '-'}</td>
+      <td>${getLocalizedName(item.source_name) || '-'}</td>
       <td class="col-response">${statusLabel(item.approval_status)}</td>
-      <td class="col-actions">${actionsHTML}</td>
+      <td class="col-actions">${actions}</td>
     `;
     tbody.appendChild(tr);
 
-    if (!canDelegate) {
-      const btn = tr.querySelector('.btn-delegate');
-      if (btn) btn.style.display = 'none';
-    }
-    if (!canSign) {
-      const btn = tr.querySelector('.btn-qr');
-      if (btn) btn.style.display = 'none';
-    }
+    if (!canDel) tr.querySelector('.btn-delegate')?.remove();
+    if (!canSign) tr.querySelector('.btn-qr')?.remove();
   });
 
+  // 4) حدّث الباجينج
+  renderPagination(totalItems);
+
+  // 5) حدّث نص العدّادة
+  updateRecordsInfo(totalItems, startIdx, endIdx);
+
+  // 6) أربط الأزرار
   initActions();
 }
 
@@ -223,13 +258,35 @@ function updateApprovalStatusInUI(id, newStatus) {
   applyFilters();
 }
 
-function statusLabel(status) {
-  switch (status) {
-    case 'approved': return getTranslation('approved');
-    case 'rejected': return getTranslation('rejected');
-    default: return getTranslation('pending');
+function renderPagination(totalItems) {
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  document.getElementById("prevPage").disabled = currentPage === 1;
+  document.getElementById("nextPage").disabled = currentPage === totalPages;
+
+  const container = document.getElementById("pageNumbers");
+  container.innerHTML = "";
+  for (let i = 1; i <= totalPages; i++) {
+    const span = document.createElement("span");
+    span.textContent = i;
+    span.className   = "page-number" + (i === currentPage ? " active" : "");
+    span.addEventListener("click", () => {
+      currentPage = i;
+      renderApprovals(filteredItems);
+    });
+    container.appendChild(span);
   }
 }
+
+function statusLabel(status) {
+  switch (status) {
+    case 'approved':  return getTranslation('approved');
+    case 'rejected':  return getTranslation('rejected');
+    default:          return getTranslation('pending');
+  }
+}
+
+// (بقية دوال initActions و signature modal و delegate تبقى كما كانت)
+
 
 function initActions() {
   document.querySelectorAll('.btn-sign').forEach(btn => {
@@ -508,4 +565,9 @@ function disableActionsFor(contentId) {
   if (!row) return;
   const actionsCell = row.querySelector('.col-actions');
   if (actionsCell) actionsCell.innerHTML = '';
+}
+function updateRecordsInfo(totalItems, startIdx, endIdx) {
+  document.getElementById('startRecord').textContent = totalItems === 0 ? 0 : startIdx + 1;
+  document.getElementById('endRecord').textContent   = endIdx;
+  document.getElementById('totalCount').textContent  = totalItems;
 }

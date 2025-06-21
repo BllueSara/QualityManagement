@@ -130,7 +130,6 @@ exports.getPendingApprovals = async (req, res) => {
   }
 };
 
-
 exports.sendApprovalRequest = async (req, res) => {
   const auth = req.headers.authorization;
   if (!auth?.startsWith('Bearer ')) {
@@ -159,7 +158,6 @@ exports.sendApprovalRequest = async (req, res) => {
     waitForConnections: true,
     connectionLimit: 10
   });
-
   const conn = await pool.getConnection();
   try {
     // Fetch info for logging
@@ -180,25 +178,28 @@ exports.sendApprovalRequest = async (req, res) => {
 
     await conn.beginTransaction();
 
-    // 1) نحذف المعتمدين السابقين
-    await conn.execute(`DELETE FROM content_approvers WHERE content_id = ?`, [contentId]);
-    // ونحذف سجلات الموافقات القديمة
-    await conn.execute(`DELETE FROM approval_logs WHERE content_id = ?`, [contentId]);
+    // 1) اقرأ المعتمدين الحاليين (IDs) من content_approvers
+    const [rows] = await conn.execute(
+      `SELECT user_id FROM content_approvers WHERE content_id = ?`,
+      [contentId]
+    );
+    const existing = rows.map(r => r.user_id);
 
-    // 2) ندخل المعتمدين الجدد
-    for (const userId of approvers) {
+    // 2) احسب الجدد فقط
+    const toAdd = approvers.filter(id => !existing.includes(id));
+
+    // 3) أدخل الجدد فقط، وسجّل لهم سجلّ اعتماد
+    for (const userId of toAdd) {
       await conn.execute(
         `INSERT INTO content_approvers (content_id, user_id) VALUES (?, ?)`,
         [contentId, userId]
       );
-      // ونسجّل لهم أيضاً سجلّ موافقة جديد
       await conn.execute(
         `INSERT INTO approval_logs
            (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, created_at)
          VALUES (?, ?, 'pending', NULL, 0, NULL, CURRENT_TIMESTAMP)`,
         [contentId, userId]
       );
-      // إشعار للمعتمد الجديد
       await insertNotification(
         userId,
         'تم تفويضك للتوقيع',
@@ -207,14 +208,15 @@ exports.sendApprovalRequest = async (req, res) => {
       );
     }
 
-    // 3) نحدّث حالة المحتوى
+    // 4) دمج القديم مع القادم في الحقل approvers_required
+    const merged = Array.from(new Set([...existing, ...approvers]));
     await conn.execute(
       `UPDATE contents 
-         SET approval_status      = 'pending', 
+         SET approval_status     = 'pending', 
              approvers_required  = ?, 
              updated_at          = CURRENT_TIMESTAMP 
        WHERE id = ?`,
-      [JSON.stringify(approvers), contentId]
+      [JSON.stringify(merged), contentId]
     );
 
     // Add to logs
@@ -227,7 +229,6 @@ exports.sendApprovalRequest = async (req, res) => {
     await conn.commit();
     res.status(200).json({ status: 'success', message: 'تم الإرسال بنجاح' });
   } catch (err) {
-    // console.error('sendApprovalRequest Error:', err);
     await conn.rollback();
     res.status(500).json({ status: 'error', message: 'فشل إرسال طلب الاعتماد' });
   } finally {
@@ -235,7 +236,3 @@ exports.sendApprovalRequest = async (req, res) => {
     await pool.end();
   }
 };
-
-  
-  
-  

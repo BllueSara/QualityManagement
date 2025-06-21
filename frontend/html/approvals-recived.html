@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
         crossorigin="anonymous" />
   <link rel="stylesheet" href="../css/shared.css"/>
+  <link rel="stylesheet" href="/frontend/css/approvals.css" />
 
     <!-- ربط ملف التنسيقات -->
     <link rel="stylesheet" href="/frontend/css/approvals-recived.css" />
@@ -76,6 +77,8 @@
             <table class="approvals-table">
                 <thead>
                     <tr>
+                            <th class="col-id" data-translate="file-id">رقم الملف</th>
+
                         <th class="col-file" data-translate="file-name">اسم الملف</th>
                         <th class="col-dept" data-translate="department">القسم</th>
                         <th class="col-response" data-translate="response">الرد</th>
@@ -85,6 +88,27 @@
                 <tbody id="approvalsBody">
                 </tbody>
             </table>
+            <!-- نص يوضّح عدد السجلات -->
+<div class="records-info">
+  <span data-translate="showing">عرض</span>
+  <span id="startRecord">0</span>-
+  <span id="endRecord">0</span>
+  <span data-translate="of">من</span>
+  <span id="totalCount">0</span>
+  <span data-translate="requests">طلب</span>
+</div>
+
+    <div class="pagination">
+      <button class="page-btn" id="prevPage" disabled>
+        <i class="fas fa-chevron-right"></i>
+      </button>
+      <div id="pageNumbers" class="page-numbers-container">
+        <!-- Page numbers will be dynamically loaded here -->
+      </div>
+      <button class="page-btn" id="nextPage">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+    </div>
         </div>
     </main>
 
