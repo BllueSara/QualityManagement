@@ -181,35 +181,113 @@ const updateUser = async (req, res) => {
 
 // 5) حذف مستخدم
 const deleteUser = async (req, res) => {
-  const id = req.params.id;
+  const userId = req.params.id;
+  let conn;
+
   try {
-    // التحقق من وجود محتويات مرتبطة بالمستخدم
-    const [relatedContents] = await db.execute(
-      'SELECT COUNT(*) as count FROM contents WHERE created_by = ? OR approved_by = ?',
-      [id, id]
+    // 1) افتح معاملة
+    conn = await db.getConnection();
+    await conn.beginTransaction();
+
+    // 2) حذف تسجيلات التذاكر المعلقة في ticket_assignments
+    await conn.execute(
+      `DELETE FROM ticket_assignments
+        WHERE assigned_to = ? OR assigned_by = ?`,
+      [userId, userId]
     );
 
-    if (relatedContents[0].count > 0) {
-      return res.status(400).json({ 
-        status: 'error', 
-        message: 'لا يمكن حذف المستخدم لوجود محتويات مرتبطة به' 
+    // 3) فك ارتباط التذاكر الرئيسية (tickets)
+    //    نجعل الحقول created_by و assigned_to فارغة (NULL)
+    await conn.execute(
+      `UPDATE tickets
+         SET created_by = NULL
+       WHERE created_by = ?`,
+      [userId]
+    );
+    await conn.execute(
+      `UPDATE tickets
+         SET assigned_to = NULL
+       WHERE assigned_to = ?`,
+      [userId]
+    );
+
+    // 4) فك ارتباط الردود على التذاكر (ticket_replies)
+    await conn.execute(
+      `UPDATE ticket_replies
+         SET author_id = NULL
+       WHERE author_id = ?`,
+      [userId]
+    );
+
+    // 5) فك ارتباط المحتويات (contents) حقول approved_by
+    await conn.execute(
+      `UPDATE contents
+         SET approved_by = NULL
+       WHERE approved_by = ?`,
+      [userId]
+    );
+
+    // 6) فك ارتباط محتويات اللجان (committee_contents) حقول approved_by
+    await conn.execute(
+      `UPDATE committee_contents
+         SET approved_by = NULL
+       WHERE approved_by = ?`,
+      [userId]
+    );
+
+    // 7) فك ارتباط التفويض بالنيابة (committee_approval_logs) حقول delegated_by
+    await conn.execute(
+      `UPDATE committee_approval_logs
+         SET delegated_by = NULL
+       WHERE delegated_by = ?`,
+      [userId]
+    );
+
+    // 8) تحويل سجلات النشاط (activity_logs) لحقل user_id إلى NULL
+    await conn.execute(
+      `UPDATE activity_logs
+         SET user_id = NULL
+       WHERE user_id = ?`,
+      [userId]
+    );
+
+    // 9) حذف صلاحيات المستخدم (user_permissions) — مُعرَّفة بـ ON DELETE CASCADE،
+    //    ولكن نضمن عبر حذف المستخدم نفسه لاحقًا
+
+    // 10) حذف إشعارات المستخدم (notifications) — أيضاً CASCADE
+
+    // 11) حذف المستخدم نفسه
+    const [delResult] = await conn.execute(
+      `DELETE FROM users WHERE id = ?`,
+      [userId]
+    );
+    if (delResult.affectedRows === 0) {
+      await conn.rollback();
+      return res.status(404).json({
+        status: 'error',
+        message: 'المستخدم غير موجود'
       });
     }
 
-    const [result] = await db.execute('DELETE FROM users WHERE id = ?', [id]);
-    
-    if (!result.affectedRows) {
-      return res.status(404).json({ status:'error', message:'المستخدم غير موجود' });
-    }
-
-    res.status(200).json({ 
+    // 12) التزام المعاملة
+    await conn.commit();
+    return res.json({
       status: 'success',
-      message: 'تم حذف المستخدم بنجاح'
+      message: 'تم حذف المستخدم وجميع السجلات المرتبطة به بنجاح'
     });
+
   } catch (error) {
-    res.status(500).json({ message: 'خطأ في حذف المستخدم' });
+    if (conn) await conn.rollback();
+    console.error('deleteUser error:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: error.message || 'فشل حذف المستخدم'
+    });
+  } finally {
+    if (conn) conn.release();
   }
 };
+
 
 // 6) تغيير دور المستخدم
 const changeUserRole = async (req, res) => {

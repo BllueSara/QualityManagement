@@ -37,13 +37,32 @@ async function fetchJSON(url, opts = {}) {
     ...(opts.headers || {}),
     ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
   };
+
   const res = await fetch(url, opts);
-  const json = await res.json();
-  if (!res.ok) {
-    if (res.status === 401) alert('غير مسموح: يرجى تسجيل الدخول مجدداً');
-    throw new Error(`HTTP ${res.status}`);
+
+  // حاول نقرأ الـ JSON حتى لو كان خطأ
+  let body;
+  try {
+    body = await res.json();
+  } catch {
+    body = {};
   }
-  return json.data || json;
+
+  // لو غير OK، خُذ الرسالة من body أو fallback على status
+  if (!res.ok) {
+    const msg = body.message || body.error || `حدث خطأ (رمز ${res.status})`;
+
+    if (res.status === 401) {
+      alert('غير مسموح: يرجى تسجيل الدخول مجدداً');
+    } else {
+      alert(msg);
+    }
+
+    throw new Error(msg);
+  }
+
+  // لو OK، رجع data أو الجسم كله
+  return body.data ?? body;
 }
 
 // =====================
@@ -241,11 +260,26 @@ btnSaveRole.addEventListener('click', async () => {
 
 // Delete User
 btnDeleteUser.addEventListener('click', async () => {
-  if (!selectedUserId) return alert('اختر مستخدماً أولاً');
-  if (!confirm('هل أنت متأكد؟')) return;
-  await fetchJSON(`${apiBase}/users/${selectedUserId}`, { method: 'DELETE' });
-  loadUsers();
+  if (!selectedUserId) {
+    return alert('اختر مستخدماً أولاً');
+  }
+  if (!confirm('هل أنت متأكد من حذف هذا المستخدم؟')) {
+    return;
+  }
+
+  try {
+    const result = await fetchJSON(`${apiBase}/users/${selectedUserId}`, {
+      method: 'DELETE'
+    });
+    alert(result.message || 'تم حذف المستخدم بنجاح');
+    loadUsers();
+  } catch (err) {
+    console.error('خطأ في حذف المستخدم:', err);
+    // err.message هنا يحمل "خطأ في حذف المستخدم" أو الرسالة الخاصة من السيرفر
+    alert(err.message);
+  }
 });
+
 
 // Reset Password
 btnResetPwd.addEventListener('click', async () => {
