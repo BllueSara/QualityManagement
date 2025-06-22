@@ -196,6 +196,18 @@ const departmentName = departmentRows[0]?.name || '';
     );
     
 
+    // ✅ تسجيل اللوق بعد نجاح تسجيل الدخول
+    try {
+        const logDescription = {
+            ar: 'تم تسجيل الدخول',
+            en: 'User logged in'
+        };
+        
+        await logAction(user.id, 'login', JSON.stringify(logDescription), 'auth', user.id);
+    } catch (logErr) {
+        console.error('logAction error:', logErr);
+    }
+
     res.status(200).json({
       status: 'success',
       message: 'تم تسجيل الدخول بنجاح',

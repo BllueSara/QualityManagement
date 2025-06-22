@@ -236,3 +236,111 @@ exports.sendApprovalRequest = async (req, res) => {
     await pool.end();
   }
 };
+
+exports.delegateApproval = async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith('Bearer ')) {
+    return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+  }
+
+  let payload;
+  try {
+    payload = jwt.verify(auth.slice(7), process.env.JWT_SECRET);
+  } catch (err) {
+    return res.status(401).json({ status: 'error', message: 'Invalid token' });
+  }
+  const currentUserId = payload.id;
+  const userLang = getUserLang(req);
+
+  const { contentId, delegateeUserId } = req.body;
+  if (!contentId || !delegateeUserId) {
+    return res.status(400).json({ status: 'error', message: 'البيانات غير صالحة' });
+  }
+
+  const pool = mysql.createPool({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    waitForConnections: true,
+    connectionLimit: 10
+  });
+  const conn = await pool.getConnection();
+  try {
+    // Fetch info for logging
+    const [[contentDetails]] = await conn.execute(
+        `SELECT c.title, d.name as department_name FROM contents c
+         JOIN folders f ON c.folder_id = f.id
+         JOIN departments d ON f.department_id = d.id
+         WHERE c.id = ?`,
+        [contentId]
+    );
+
+    const [delegateeUser] = await conn.execute(
+      `SELECT username FROM users WHERE id = ?`,
+      [delegateeUserId]
+    );
+    const delegateeUsername = delegateeUser.map(u => u.username)[0] || '';
+
+    await conn.beginTransaction();
+
+    // 1) اقرأ المعتمدين الحاليين (IDs) من content_approvers
+    const [rows] = await conn.execute(
+      `SELECT user_id FROM content_approvers WHERE content_id = ?`,
+      [contentId]
+    );
+    const existingApprovers = rows.map(r => r.user_id);
+
+    // 2) احسب الجدد فقط
+    const toAdd = [delegateeUserId].filter(id => !existingApprovers.includes(id));
+
+    // 3) أدخل الجدد فقط، وسجّل لهم سجلّ اعتماد
+    for (const userId of toAdd) {
+      await conn.execute(
+        `INSERT INTO content_approvers (content_id, user_id) VALUES (?, ?)`,
+        [contentId, userId]
+      );
+      await conn.execute(
+        `INSERT INTO approval_logs
+           (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, created_at)
+         VALUES (?, ?, 'pending', NULL, 0, NULL, CURRENT_TIMESTAMP)`,
+        [contentId, userId]
+      );
+      await insertNotification(
+        userId,
+        'تم تفويضك للتوقيع',
+        `تم تفويضك للتوقيع على ملف جديد رقم ${contentId}`,
+        'proxy'
+      );
+    }
+
+    // 4) دمج القديم مع القادم في الحقل approvers_required
+    const merged = Array.from(new Set([...existingApprovers, ...toAdd]));
+    await conn.execute(
+      `UPDATE contents 
+         SET approval_status     = 'pending', 
+             approvers_required  = ?, 
+             updated_at          = CURRENT_TIMESTAMP 
+       WHERE id = ?`,
+      [JSON.stringify(merged), contentId]
+    );
+
+    // Add to logs
+    const localizedDepartmentName = getLocalizedName(contentDetails.department_name, userLang);
+    const logDescription = {
+      ar: `تم تفويض الموافقة على المحتوى: ${contentDetails.title} في القسم: ${localizedDepartmentName} إلى: ${delegateeUsername}`,
+      en: `Delegated approval for content: ${contentDetails.title} in department: ${localizedDepartmentName} to: ${delegateeUsername}`
+    };
+    
+    await logAction(currentUserId, 'delegate_approval', JSON.stringify(logDescription), 'content', contentId);
+
+    await conn.commit();
+    res.status(200).json({ status: 'success', message: 'تم الإرسال بنجاح' });
+  } catch (err) {
+    await conn.rollback();
+    res.status(500).json({ status: 'error', message: 'فشل إرسال طلب الاعتماد' });
+  } finally {
+    conn.release();
+    await pool.end();
+  }
+};

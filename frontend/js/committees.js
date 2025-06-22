@@ -160,16 +160,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       committeeName = committee.name;
     }
 
-    const imgPath = committee.image
-      ? (committee.image.startsWith('uploads/')
-          ? `http://localhost:3006/${committee.image}`
-          : committee.image)
-      : '/images/committee.svg';
+const imgSrc = `http://localhost:3006/${committee.image}`;
+
 
     card.innerHTML = `
       ${icons}
       <div class="card-icon bg-orange">
-        <img src="${imgPath}" alt="${committeeName}">
+        <img src="${imgSrc}" alt="${committeeName}">
       </div>
       <div class="card-title">${committeeName}</div>
     `;

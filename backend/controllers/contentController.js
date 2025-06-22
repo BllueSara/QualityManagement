@@ -255,16 +255,20 @@ const addContent = async (req, res) => {
       try {
         const userLanguage = getUserLanguageFromToken(token);
         const contentNameInLanguage = getContentNameByLanguage(title, userLanguage);
-        const logDescription = departmentName 
-          ? `تمت إضافة محتوى بعنوان: ${contentNameInLanguage} في قسم: ${departmentName}`
-          : `تمت إضافة محتوى بعنوان: ${contentNameInLanguage}`;
-          
+        const departmentNameInLanguage = getDepartmentNameByLanguage(departmentName, userLanguage);
+        
+        // إنشاء النص ثنائي اللغة
+        const logDescription = {
+            ar: `تم إضافة محتوى: ${getContentNameByLanguage(title, 'ar')} في قسم: ${getDepartmentNameByLanguage(departmentName, 'ar')}`,
+            en: `Added content: ${getContentNameByLanguage(title, 'en')} in department: ${getDepartmentNameByLanguage(departmentName, 'en')}`
+        };
+        
         await logAction(
-          decodedToken.id,
-          'add_content',
-          logDescription,
-          'content',
-          contentId
+            decodedToken.id,
+            'add_content',
+            JSON.stringify(logDescription),
+            'content',
+            contentId
         );
       } catch (logErr) {
         console.error('logAction error:', logErr);
@@ -362,16 +366,17 @@ const updateContent = async (req, res) => {
       // ✅ تسجيل اللوق بعد نجاح تحديث المحتوى
       try {
         const userLanguage = getUserLanguageFromToken(token);
-        const oldContentNameInLanguage = getContentNameByLanguage(oldTitle, userLanguage);
-        const newContentNameInLanguage = getContentNameByLanguage(title, userLanguage);
-        const logDescription = departmentName 
-          ? `تم تحديث محتوى من: ${oldContentNameInLanguage} إلى: ${newContentNameInLanguage} في قسم: ${departmentName}`
-          : `تم تحديث محتوى من: ${oldContentNameInLanguage} إلى: ${newContentNameInLanguage}`;
-          
+        
+        // إنشاء النص ثنائي اللغة
+        const logDescription = {
+          ar: `تم تحديث محتوى من: ${getContentNameByLanguage(oldTitle, 'ar')} إلى: ${getContentNameByLanguage(title, 'ar')} في قسم: ${getDepartmentNameByLanguage(departmentName, 'ar')}`,
+          en: `Updated content from: ${getContentNameByLanguage(oldTitle, 'en')} to: ${getContentNameByLanguage(title, 'en')} in department: ${getDepartmentNameByLanguage(departmentName, 'en')}`
+        };
+        
         await logAction(
           userId,
           'update_content',
-          logDescription,
+          JSON.stringify(logDescription),
           'content',
           newContentId
         );
@@ -478,15 +483,17 @@ const deleteContent = async (req, res) => {
         // ✅ تسجيل اللوق بعد نجاح حذف المحتوى
         try {
             const userLanguage = getUserLanguageFromToken(token);
-            const contentNameInLanguage = getContentNameByLanguage(content[0].title, userLanguage);
-            const logDescription = departmentName 
-                ? `تم حذف محتوى: ${contentNameInLanguage} من قسم: ${departmentName}`
-                : `تم حذف محتوى: ${contentNameInLanguage}`;
-                
+            
+            // إنشاء النص ثنائي اللغة
+            const logDescription = {
+                ar: `تم حذف محتوى: ${getContentNameByLanguage(content[0].title, 'ar')} من قسم: ${getDepartmentNameByLanguage(departmentName, 'ar')}`,
+                en: `Deleted content: ${getContentNameByLanguage(content[0].title, 'en')} from department: ${getDepartmentNameByLanguage(departmentName, 'en')}`
+            };
+            
             await logAction(
                 decodedToken.id,
                 'delete_content',
-                logDescription,
+                JSON.stringify(logDescription),
                 'content',
                 contentId
             );
@@ -689,14 +696,18 @@ const approveContent = async (req, res) => {
         try {
             const userLanguage = getUserLanguageFromToken(token);
             const contentNameInLanguage = getContentNameByLanguage(content[0].title, userLanguage);
-            const logDescription = departmentName 
-                ? `تم ${isApproved ? 'اعتماد' : 'تسجيل موافقة على'} محتوى: ${contentNameInLanguage} في قسم: ${departmentName}`
-                : `تم ${isApproved ? 'اعتماد' : 'تسجيل موافقة على'} محتوى: ${contentNameInLanguage}`;
-                
+            const departmentNameInLanguage = getDepartmentNameByLanguage(content[0].department_name, userLanguage);
+            
+            // إنشاء النص ثنائي اللغة
+            const logDescription = {
+                ar: `تم ${isApproved ? 'اعتماد' : 'تسجيل موافقة على'} محتوى: ${getContentNameByLanguage(content[0].title, 'ar')} في قسم: ${getDepartmentNameByLanguage(content[0].department_name, 'ar')}`,
+                en: `${isApproved ? 'Approved' : 'Partially approved'} content: ${getContentNameByLanguage(content[0].title, 'en')} in department: ${getDepartmentNameByLanguage(content[0].department_name, 'en')}`
+            };
+            
             await logAction(
                 decodedToken.id,
                 isApproved ? 'approve_content' : 'partial_approve_content',
-                logDescription,
+                JSON.stringify(logDescription),
                 'content',
                 contentId
             );
@@ -827,7 +838,7 @@ const addContentName = async (req, res) => {
         await logAction(
           userId,
           'add_content_name',
-          `تمت إضافة اسم محتوى جديد للأقسام: ${contentNameInLanguage}`,
+          `تمت إضافة اسم محتوى جديد: ${contentNameInLanguage}`,
           'content',
           result.insertId
         );
