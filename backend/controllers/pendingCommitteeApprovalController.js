@@ -320,10 +320,12 @@ exports.delegateCommitteeApproval = async (req, res) => {
 
         // Add to logs
         const localizedCommitteeName = getLocalizedName(contentDetails.committee_name, userLang);
-        const logMessage = userLang === 'en' 
-          ? `Delegated approval for committee content '${contentDetails.title}' in committee '${localizedCommitteeName}' to: ${delegateeUser.username}`
-          : `فوض الموافقة على محتوى اللجنة '${contentDetails.title}' في اللجنة '${localizedCommitteeName}' إلى: ${delegateeUser.username}`;
-        await logAction(currentUserId, 'delegate_committee_approval', logMessage, 'committee_content', contentId);
+        const logDescription = {
+          ar: `تم تفويض الموافقة على محتوى اللجنة: ${contentDetails.title} في اللجنة: ${localizedCommitteeName} إلى: ${delegateeUser.username}`,
+          en: `Delegated approval for committee content: ${contentDetails.title} in committee: ${localizedCommitteeName} to: ${delegateeUser.username}`
+        };
+        
+        await logAction(currentUserId, 'delegate_committee_approval', JSON.stringify(logDescription), 'committee_content', contentId);
 
         await conn.commit();
         res.status(200).json({ status: 'success', message: 'تم تفويض الاعتماد بنجاح' });

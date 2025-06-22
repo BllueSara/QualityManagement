@@ -83,13 +83,18 @@ const addDepartment = async (req, res) => {
             
             try {
                 const userLanguage = getUserLanguageFromToken(token);
-                const departmentName = getDepartmentNameByLanguage(name, userLanguage);
+                
+                // إنشاء النص ثنائي اللغة
+                const logDescription = {
+                    ar: `تم إضافة قسم جديد: ${getDepartmentNameByLanguage(name, 'ar')}`,
+                    en: `Added new department: ${getDepartmentNameByLanguage(name, 'en')}`
+                };
                 
                 await logAction(
                     userId,
                     'add_department',
-                    `تمت إضافة قسم جديد: ${departmentName}`,
-                    'Add',
+                    JSON.stringify(logDescription),
+                    'department',
                     result.insertId
                 );
             } catch (logErr) {
@@ -164,13 +169,17 @@ const updateDepartment = async (req, res) => {
             
             try {
                 const userLanguage = getUserLanguageFromToken(token);
-                const oldDepartmentName = getDepartmentNameByLanguage(oldName, userLanguage);
-                const newDepartmentName = getDepartmentNameByLanguage(name, userLanguage);
+                
+                // إنشاء النص ثنائي اللغة
+                const logDescription = {
+                    ar: `تم تعديل قسم من: ${getDepartmentNameByLanguage(oldName, 'ar')} إلى: ${getDepartmentNameByLanguage(name, 'ar')}`,
+                    en: `Updated department from: ${getDepartmentNameByLanguage(oldName, 'en')} to: ${getDepartmentNameByLanguage(name, 'en')}`
+                };
                 
                 await logAction(
                     userId,
                     'update_department',
-                    `تم تعديل قسم من: ${oldDepartmentName} إلى: ${newDepartmentName}`,
+                    JSON.stringify(logDescription),
                     'department',
                     id
                 );
@@ -241,12 +250,17 @@ const deleteDepartment = async (req, res) => {
             
             try {
                 const userLanguage = getUserLanguageFromToken(token);
-                const departmentNameLocalized = getDepartmentNameByLanguage(departmentName, userLanguage);
+                
+                // إنشاء النص ثنائي اللغة
+                const logDescription = {
+                    ar: `تم حذف قسم: ${getDepartmentNameByLanguage(departmentName, 'ar')}`,
+                    en: `Deleted department: ${getDepartmentNameByLanguage(departmentName, 'en')}`
+                };
                 
                 await logAction(
                     userId,
                     'delete_department',
-                    `تم حذف قسم: ${departmentNameLocalized}`,
+                    JSON.stringify(logDescription),
                     'department',
                     id
                 );

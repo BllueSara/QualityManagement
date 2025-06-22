@@ -18,14 +18,29 @@ const { insertNotification } = require('../models/notfications-utils');
 // دالة مساعدة لاستخراج اسم القسم باللغة المناسبة
 function getDepartmentNameByLanguage(departmentNameData, userLanguage = 'ar') {
     try {
+        console.log('DEBUG: getDepartmentNameByLanguage input:', departmentNameData);
+        console.log('DEBUG: getDepartmentNameByLanguage userLanguage:', userLanguage);
+        
         // إذا كان الاسم JSON يحتوي على اللغتين
         if (typeof departmentNameData === 'string' && departmentNameData.startsWith('{')) {
             const parsed = JSON.parse(departmentNameData);
-            return parsed[userLanguage] || parsed['ar'] || departmentNameData;
+            console.log('DEBUG: Parsed JSON:', parsed);
+            const result = parsed[userLanguage] || parsed['ar'] || parsed['en'] || departmentNameData;
+            console.log('DEBUG: JSON result:', result);
+            return result;
+        }
+        // إذا كان object بالفعل
+        if (typeof departmentNameData === 'object' && departmentNameData !== null) {
+            console.log('DEBUG: Object input:', departmentNameData);
+            const result = departmentNameData[userLanguage] || departmentNameData['ar'] || departmentNameData['en'] || JSON.stringify(departmentNameData);
+            console.log('DEBUG: Object result:', result);
+            return result;
         }
         // إذا كان نص عادي
+        console.log('DEBUG: Plain text result:', departmentNameData);
         return departmentNameData || 'غير معروف';
     } catch (error) {
+        console.error('DEBUG: Error in getDepartmentNameByLanguage:', error);
         // في حالة فشل التحليل، إرجاع النص كما هو
         return departmentNameData || 'غير معروف';
     }
@@ -193,10 +208,20 @@ const createFolder = async (req, res) => {
     // ✅ تسجيل اللوق بعد نجاح إضافة المجلد
     try {
       const folderNameInLanguage = getFolderNameByLanguage(name, userLanguage);
-      console.log('DEBUG: folderNameInLanguage final result:', folderNameInLanguage);
-      const logDescription = `تم إنشاء مجلد باسم: ${folderNameInLanguage} في قسم: ${departmentName}`;
+      const departmentNameInLanguage = getDepartmentNameByLanguage(dept[0].name, userLanguage);
+      
+      console.log('DEBUG: dept[0].name type:', typeof dept[0].name);
+      console.log('DEBUG: dept[0].name value:', dept[0].name);
+      console.log('DEBUG: dept[0].name JSON.stringify:', JSON.stringify(dept[0].name));
+      
+      // إنشاء النص ثنائي اللغة
+      const logDescription = {
+        ar: `تم إنشاء مجلد باسم: ${getFolderNameByLanguage(name, 'ar')} في قسم: ${getDepartmentNameByLanguage(dept[0].name, 'ar')}`,
+        en: `Created folder: ${getFolderNameByLanguage(name, 'en')} in department: ${getDepartmentNameByLanguage(dept[0].name, 'en')}`
+      };
+      
       console.log('DEBUG: Final log description:', logDescription);
-      await logAction(decoded.id, 'create_folder', logDescription, 'folder', result.insertId);
+      await logAction(decoded.id, 'create_folder', JSON.stringify(logDescription), 'folder', result.insertId);
     } catch (logErr) {
       console.error('logAction error:', logErr);
     }
@@ -265,8 +290,14 @@ const updateFolder = async (req, res) => {
     try {
       const oldFolderNameInLanguage = getFolderNameByLanguage(oldName, userLanguage);
       const newFolderNameInLanguage = getFolderNameByLanguage(name, userLanguage);
-      const logDescription = `تم تعديل مجلد من: ${oldFolderNameInLanguage} إلى: ${newFolderNameInLanguage} في قسم: ${departmentName}`;
-      await logAction(decoded.id, 'update_folder', logDescription, 'folder', folderId);
+      
+      // إنشاء النص ثنائي اللغة
+      const logDescription = {
+        ar: `تم تعديل مجلد من: ${getFolderNameByLanguage(oldName, 'ar')} إلى: ${getFolderNameByLanguage(name, 'ar')} في قسم: ${getDepartmentNameByLanguage(rows[0].department_name, 'ar')}`,
+        en: `Updated folder from: ${getFolderNameByLanguage(oldName, 'en')} to: ${getFolderNameByLanguage(name, 'en')} in department: ${getDepartmentNameByLanguage(rows[0].department_name, 'en')}`
+      };
+      
+      await logAction(decoded.id, 'update_folder', JSON.stringify(logDescription), 'folder', folderId);
     } catch (logErr) {
       console.error('logAction error:', logErr);
     }
@@ -356,8 +387,14 @@ const deleteFolder = async (req, res) => {
     // ✅ تسجيل اللوق بعد نجاح حذف المجلد
     try {
       const folderNameInLanguage = getFolderNameByLanguage(folderName, userLanguage);
-      const logDescription = `تم حذف مجلد: ${folderNameInLanguage} من قسم: ${departmentName}`;
-      await logAction(decoded.id, 'delete_folder', logDescription, 'folder', folderId);
+      
+      // إنشاء النص ثنائي اللغة
+      const logDescription = {
+        ar: `تم حذف مجلد: ${getFolderNameByLanguage(folderName, 'ar')} من قسم: ${getDepartmentNameByLanguage(folder[0].department_name, 'ar')}`,
+        en: `Deleted folder: ${getFolderNameByLanguage(folderName, 'en')} from department: ${getDepartmentNameByLanguage(folder[0].department_name, 'en')}`
+      };
+      
+      await logAction(decoded.id, 'delete_folder', JSON.stringify(logDescription), 'folder', folderId);
     } catch (logErr) {
       console.error('logAction error:', logErr);
     }
@@ -402,10 +439,17 @@ const addFolderName = async (req, res) => {
       try {
         const userLanguage = getUserLanguageFromToken(token);
         const folderNameInLanguage = getFolderNameByLanguage(name, userLanguage);
+        
+        // إنشاء النص ثنائي اللغة
+        const logDescription = {
+          ar: `تمت إضافة اسم مجلد جديد للأقسام: ${getFolderNameByLanguage(name, 'ar')}`,
+          en: `Added new folder name for departments: ${getFolderNameByLanguage(name, 'en')}`
+        };
+        
         await logAction(
           userId,
           'add_folder_name',
-          `تمت إضافة اسم مجلد جديد للأقسام: ${folderNameInLanguage}`,
+          JSON.stringify(logDescription),
           'folder',
           result.insertId
         );
@@ -442,23 +486,6 @@ const updateFolderName = async (req, res) => {
       conn.release();
       return res.status(404).json({ message: '❌ لم يتم العثور على اسم المجلد.' });
     }
-    const oldName = rows[0].name;
-
-    // 2) حدّث اسم الـ folder_names
-    const [result] = await conn.execute(
-      'UPDATE folder_names SET name = ? WHERE id = ?',
-      [name, id]
-    );
-    if (result.affectedRows === 0) {
-      conn.release();
-      return res.status(404).json({ message: '❌ لم يتم تحديث اسم المجلد.' });
-    }
-
-    // 3) حدّث أسماء المجلدات في جدول folders اللي كانت بنفس الاسم القديم
-    await conn.execute(
-      'UPDATE folders SET name = ? WHERE name = ?',
-      [name, oldName]
-    );
 
     // ✅ تسجيل اللوق بعد نجاح تعديل اسم المجلد
     const token = req.headers.authorization?.split(' ')[1];
@@ -468,12 +495,19 @@ const updateFolderName = async (req, res) => {
       
       try {
         const userLanguage = getUserLanguageFromToken(token);
-        const oldFolderNameInLanguage = getFolderNameByLanguage(oldName, userLanguage);
+        const oldFolderNameInLanguage = getFolderNameByLanguage(rows[0].name, userLanguage);
         const newFolderNameInLanguage = getFolderNameByLanguage(name, userLanguage);
+        
+        // إنشاء النص ثنائي اللغة
+        const logDescription = {
+          ar: `تم تعديل اسم مجلد للأقسام من: ${getFolderNameByLanguage(oldFolderNameInLanguage, 'ar')} إلى: ${getFolderNameByLanguage(newFolderNameInLanguage, 'ar')}`,
+          en: `Updated folder name for departments from: ${getFolderNameByLanguage(oldFolderNameInLanguage, 'en')} to: ${getFolderNameByLanguage(newFolderNameInLanguage, 'en')}`
+        };
+        
         await logAction(
           userId,
           'update_folder_name',
-          `تم تعديل اسم مجلد للأقسام من: ${oldFolderNameInLanguage} إلى: ${newFolderNameInLanguage}`,
+          JSON.stringify(logDescription),
           'folder',
           id
         );
@@ -518,10 +552,17 @@ const deleteFolderName = async (req, res) => {
       try {
         const userLanguage = getUserLanguageFromToken(token);
         const folderNameInLanguage = getFolderNameByLanguage(folderName, userLanguage);
+        
+        // إنشاء النص ثنائي اللغة
+        const logDescription = {
+          ar: `تم حذف اسم مجلد للأقسام: ${getFolderNameByLanguage(folderName, 'ar')}`,
+          en: `Deleted folder name for departments: ${getFolderNameByLanguage(folderName, 'en')}`
+        };
+        
         await logAction(
           userId,
           'delete_folder_name',
-          `تم حذف اسم مجلد للأقسام: ${folderNameInLanguage}`,
+          JSON.stringify(logDescription),
           'folder',
           id
         );

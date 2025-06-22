@@ -121,6 +121,18 @@ exports.createTicket = async (req, res) => {
         : `أنشأ تذكرة جديدة: '${req.body.title}' في القسم '${req.body.department}'`;
       await logAction(req.user.id, 'create_ticket', logMessage, 'ticket', ticketId);
 
+      // ✅ تسجيل اللوق بعد نجاح إنشاء التذكرة
+      try {
+        const logDescription = {
+          ar: `تم إنشاء تذكرة جديدة: ${req.body.title}`,
+          en: `Created new ticket: ${req.body.title}`
+        };
+        
+        await logAction(req.user.id, 'create_ticket', JSON.stringify(logDescription), 'ticket', ticketId);
+      } catch (logErr) {
+        console.error('logAction error:', logErr);
+      }
+
       // 5) أعِد الاستجابة
       res.status(201).json({
         status: 'success',
@@ -348,10 +360,12 @@ exports.addReply = async (req, res) => {
         
         // Add to logs
         const userLang = getUserLang(req);
-        const logMessage = userLang === 'en' 
-          ? `Added reply to ticket: '${ticket ? ticket.title : `ID ${ticketId}`}'`
-          : `أضاف رد على التذكرة: '${ticket ? ticket.title : `رقم ${ticketId}`}'`;
-        await logAction(userId, 'add_ticket_reply', logMessage, 'ticket', ticketId);
+        const logDescription = {
+            ar: `تم إضافة رد على التذكرة: ${ticket ? ticket.title : `رقم ${ticketId}`}`,
+            en: `Added reply to ticket: ${ticket ? ticket.title : `ID ${ticketId}`}`
+        };
+        
+        await logAction(userId, 'add_reply', JSON.stringify(logDescription), 'ticket', ticketId);
         
         res.status(201).json({ message: 'Reply added successfully.' });
     } catch (err) {

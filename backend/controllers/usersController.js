@@ -181,10 +181,12 @@ const addUser = async (req, res) => {
 
     // Add to logs
     const localizedDeptName = getLocalizedName(departmentName, userLang);
-    const logMessage = userLang === 'en' 
-      ? `Added new user: '${name}' (${email}) with role '${role}'${departmentName ? ` in department '${localizedDeptName}'` : ''}`
-      : `أضاف مستخدم جديد: '${name}' (${email}) بدور '${role}'${departmentName ? ` في القسم '${localizedDeptName}'` : ''}`;
-    await logAction(adminUserId, 'add_user', logMessage, 'user', result.insertId);
+    const logDescription = {
+      ar: `تم إضافة مستخدم جديد: ${name}`,
+      en: `Added new user: ${name}`
+    };
+    
+    await logAction(adminUserId, 'add_user', JSON.stringify(logDescription), 'user', result.insertId);
 
     res.status(201).json({
       status: 'success',
@@ -308,7 +310,17 @@ const updateUser = async (req, res) => {
         : `حدث المستخدم '${oldUser.username}' (لا توجد تغييرات)`;
     }
     
-    await logAction(adminUserId, 'update_user', logMessage, 'user', id);
+    // ✅ تسجيل اللوق بعد نجاح تعديل المستخدم
+    try {
+        const logDescription = {
+            ar: `تم تعديل مستخدم: ${oldUser.username}`,
+            en: `Updated user: ${oldUser.username}`
+        };
+        
+        await logAction(adminUserId, 'update_user', JSON.stringify(logDescription), 'user', id);
+    } catch (logErr) {
+        console.error('logAction error:', logErr);
+    }
 
     res.status(200).json({ 
       status: 'success',
@@ -359,6 +371,18 @@ const deleteUser = async (req, res) => {
     
     if (!result.affectedRows) {
       return res.status(404).json({ status:'error', message:'المستخدم غير موجود' });
+    }
+
+    // ✅ تسجيل اللوق بعد نجاح حذف المستخدم
+    try {
+        const logDescription = {
+            ar: `تم حذف مستخدم: ${username}`,
+            en: `Deleted user: ${username}`
+        };
+        
+        await logAction(adminUserId, 'delete_user', JSON.stringify(logDescription), 'user', id);
+    } catch (logErr) {
+        console.error('logAction error:', logErr);
     }
 
     res.status(200).json({ 
@@ -423,10 +447,12 @@ const changeUserRole = async (req, res) => {
     }
 
     // Add to logs
-    const logMessage = userLang === 'en' 
-      ? `Changed user role for '${userDetails.username}': '${userDetails.old_role}' → '${role}'`
-      : `غير دور المستخدم '${userDetails.username}': '${userDetails.old_role}' → '${role}'`;
-    await logAction(adminUserId, 'change_user_role', logMessage, 'user', id);
+    const logDescription = {
+        ar: `تم تغيير دور المستخدم: ${userDetails.username} إلى: ${role}`,
+        en: `Changed user role: ${userDetails.username} to: ${role}`
+    };
+    
+    await logAction(adminUserId, 'change_role', JSON.stringify(logDescription), 'user', id);
 
     res.status(200).json({ 
       status: 'success',
@@ -506,7 +532,7 @@ const getRoles = async (req, res) => {
 };
 const getLogs = async (req, res) => {
   try {
-    const { from, to, action, user, search } = req.query;
+    const { from, to, action, user, search, lang } = req.query;
     const conditions = [];
     const params = [];
 
@@ -551,6 +577,73 @@ const getLogs = async (req, res) => {
 
     const [rows] = await db.execute(sql, params);
     
+    // دالة لمعالجة النصوص ثنائية اللغة
+    function processBilingualText(text, userLanguage) {
+      if (typeof text !== 'string') return text;
+      
+      // إذا كان النص يحتوي على JSON، حاول تحليله أولاً
+      if (text.trim().startsWith('{') && text.trim().endsWith('}')) {
+        try {
+          const parsed = JSON.parse(text);
+          return parsed[userLanguage] || parsed['ar'] || parsed['en'] || text;
+        } catch (e) {
+          // إذا فشل التحليل، استمر مع المعالجة العادية
+        }
+      }
+      
+      // البحث عن أنماط JSON مختلفة في النص
+      const jsonPatterns = [
+        /\{[^{}]*"ar"[^{}]*"en"[^{}]*\}/g,
+        /\{[^{}]*"en"[^{}]*"ar"[^{}]*\}/g,
+        /\{[^{}]*"ar"[^{}]*\}/g,
+        /\{[^{}]*"en"[^{}]*\}/g
+      ];
+      
+      let processedText = text;
+      
+      jsonPatterns.forEach(pattern => {
+        const matches = processedText.match(pattern);
+        if (matches) {
+          matches.forEach(match => {
+            try {
+              const parsed = JSON.parse(match);
+              const translatedText = parsed[userLanguage] || parsed['ar'] || parsed['en'] || match;
+              processedText = processedText.replace(match, translatedText);
+            } catch (e) {
+              // إذا فشل التحليل، اترك النص كما هو
+              console.log('DEBUG: Failed to parse JSON in backend:', match, e);
+            }
+          });
+        }
+      });
+      
+      return processedText;
+    }
+    
+    // إضافة لغة المستخدم لكل سجل ومعالجة النصوص ثنائية اللغة
+    const userLanguage = lang || 'ar';
+    const logsWithLanguage = rows.map(log => {
+      // معالجة النصوص ثنائية اللغة
+      const processedUser = processBilingualText(log.user, userLanguage);
+      const processedDescription = processBilingualText(log.description, userLanguage);
+      
+      // استخراج المعلومات من الوصف ومعالجتها
+      const extractedInfo = extractInfoFromDescription(processedDescription);
+      Object.keys(extractedInfo).forEach(key => {
+        if (extractedInfo[key]) {
+          extractedInfo[key] = processBilingualText(extractedInfo[key], userLanguage);
+        }
+      });
+      
+      return {
+        ...log,
+        user_language: userLanguage,
+        user: processedUser,
+        description: processedDescription,
+        extracted_info: extractedInfo
+      };
+    });
+    
     // Debug logging
     if (rows.length > 0) {
       console.log('DEBUG: First log description type:', typeof rows[0].description);
@@ -559,11 +652,28 @@ const getLogs = async (req, res) => {
       console.log('DEBUG: First log action value:', rows[0].action);
       console.log('DEBUG: First log user type:', typeof rows[0].user);
       console.log('DEBUG: First log user value:', rows[0].user);
+      console.log('DEBUG: User language:', userLanguage);
     }
+    
+    res.status(200).json({ status: 'success', data: logsWithLanguage });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching logs' });
+  }
+};
+
+const getActionTypes = async (req, res) => {
+  try {
+    const sql = `
+      SELECT DISTINCT action
+      FROM activity_logs
+      ORDER BY action ASC
+    `;
+
+    const [rows] = await db.execute(sql);
     
     res.status(200).json({ status: 'success', data: rows });
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching logs' });
+    res.status(500).json({ message: 'Error fetching action types' });
   }
 };
 
@@ -713,7 +823,94 @@ const getUnreadCount = async (req, res) => {
   }
 };
 
+// دالة لاستخراج المعلومات من الوصف
+function extractInfoFromDescription(description) {
+  const info = {
+    folderName: '',
+    departmentName: '',
+    oldName: '',
+    newName: '',
+    userName: '',
+    newRole: '',
+    contentName: ''
+  };
 
+  // استخراج اسم المجلد (عربي)
+  const folderMatchAr = description.match(/مجلد باسم: ([^،]+)/);
+  if (folderMatchAr) {
+    info.folderName = folderMatchAr[1];
+  }
+
+  // استخراج اسم المجلد (إنجليزي)
+  const folderMatchEn = description.match(/folder: ([^،]+)/i);
+  if (folderMatchEn && !info.folderName) {
+    info.folderName = folderMatchEn[1];
+  }
+
+  // استخراج اسم القسم (عربي)
+  const deptMatchAr = description.match(/في قسم: ([^،]+)/);
+  if (deptMatchAr) {
+    info.departmentName = deptMatchAr[1];
+  }
+
+  // استخراج اسم القسم (إنجليزي)
+  const deptMatchEn = description.match(/department: ([^،]+)/i);
+  if (deptMatchEn && !info.departmentName) {
+    info.departmentName = deptMatchEn[1];
+  }
+
+  // استخراج الأسماء القديمة والجديدة (للتعديل) - عربي
+  const oldNewMatchAr = description.match(/من: ([^إ]+) إلى: ([^،]+)/);
+  if (oldNewMatchAr) {
+    info.oldName = oldNewMatchAr[1].trim();
+    info.newName = oldNewMatchAr[2].trim();
+  }
+
+  // استخراج الأسماء القديمة والجديدة (للتعديل) - إنجليزي
+  const oldNewMatchEn = description.match(/from: ([^t]+) to: ([^،]+)/i);
+  if (oldNewMatchEn && !info.oldName) {
+    info.oldName = oldNewMatchEn[1].trim();
+    info.newName = oldNewMatchEn[2].trim();
+  }
+
+  // استخراج اسم المستخدم (عربي)
+  const userMatchAr = description.match(/للمستخدم: ([^،]+)/);
+  if (userMatchAr) {
+    info.userName = userMatchAr[1];
+  }
+
+  // استخراج اسم المستخدم (إنجليزي)
+  const userMatchEn = description.match(/user: ([^،]+)/i);
+  if (userMatchEn && !info.userName) {
+    info.userName = userMatchEn[1];
+  }
+
+  // استخراج الدور الجديد (عربي)
+  const roleMatchAr = description.match(/إلى: ([^،]+)/);
+  if (roleMatchAr) {
+    info.newRole = roleMatchAr[1];
+  }
+
+  // استخراج الدور الجديد (إنجليزي)
+  const roleMatchEn = description.match(/to: ([^،]+)/i);
+  if (roleMatchEn && !info.newRole) {
+    info.newRole = roleMatchEn[1];
+  }
+
+  // استخراج اسم المحتوى (عربي)
+  const contentMatchAr = description.match(/محتوى: ([^،]+)/);
+  if (contentMatchAr) {
+    info.contentName = contentMatchAr[1];
+  }
+
+  // استخراج اسم المحتوى (إنجليزي)
+  const contentMatchEn = description.match(/content: ([^،]+)/i);
+  if (contentMatchEn && !info.contentName) {
+    info.contentName = contentMatchEn[1];
+  }
+
+  return info;
+}
 
 module.exports = {
   getUsers,
@@ -728,5 +925,6 @@ module.exports = {
   getNotifications,
   deleteNotification,
   markAllAsRead,
-  getUnreadCount
+  getUnreadCount,
+  getActionTypes
 };

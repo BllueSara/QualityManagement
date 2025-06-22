@@ -655,7 +655,10 @@ const delegateApproval = async (req, res) => {
     await logAction(
       currentUserId,
       'delegate_signature',
-      `قام بتفويض المستخدم ${delegateTo} للتوقيع على الملف رقم ${contentId}`,
+      JSON.stringify({
+        ar: `تم تفويض التوقيع للمستخدم: ${delegateTo} على الملف رقم: ${contentId}`,
+        en: `Delegated signature to user: ${delegateTo} for file ID: ${contentId}`
+      }),
       rawId.startsWith('comm-') ? 'committee_content' : 'content',
       contentId
     );

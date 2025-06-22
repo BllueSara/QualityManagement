@@ -157,7 +157,18 @@ const updateUserPermissions = async (req, res) => {
         : `حدث صلاحيات المستخدم '${userDetails.username}' (لا توجد تغييرات)`;
     }
     
-    await logAction(adminUserId, 'update_user_permissions', logMessage, 'user', userId);
+    // ✅ تسجيل اللوق بعد نجاح تحديث الصلاحيات
+    try {
+        const userLanguage = getUserLang(req);
+        const logDescription = {
+            ar: `تم تحديث صلاحيات المستخدم: ${userDetails.username}`,
+            en: `Updated permissions for user: ${userDetails.username}`
+        };
+        
+        await logAction(adminUserId, 'update_user_permissions', JSON.stringify(logDescription), 'user', userId);
+    } catch (logErr) {
+        console.error('logAction error:', logErr);
+    }
 
     await conn.commit();
     return res.json({ status: 'success', message: 'تم تحديث الصلاحيات بنجاح' });

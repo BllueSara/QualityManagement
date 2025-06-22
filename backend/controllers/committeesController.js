@@ -510,15 +510,17 @@ exports.addContent = async (req, res) => {
       // 🔹 تسجيل اللوق
       try {
         const userLanguage = getUserLanguageFromToken(token);
-        const contentNameInLanguage = getContentNameByLanguage(title, userLanguage);
-        const logDescription = committeeName 
-          ? `تمت إضافة محتوى بعنوان: ${contentNameInLanguage} في لجنة: ${committeeName}`
-          : `تمت إضافة محتوى بعنوان: ${contentNameInLanguage}`;
-          
+        
+        // إنشاء النص ثنائي اللغة
+        const logDescription = {
+          ar: `تمت إضافة محتوى بعنوان: ${getContentNameByLanguage(title, 'ar')} في لجنة: ${getCommitteeNameByLanguage(committeeName, 'ar')}`,
+          en: `Added content with title: ${getContentNameByLanguage(title, 'en')} in committee: ${getCommitteeNameByLanguage(committeeName, 'en')}`
+        };
+        
         await logAction(
           created_by,
           'add_content',
-          logDescription,
+          JSON.stringify(logDescription),
           'content',
           contentId
         );
@@ -584,14 +586,15 @@ exports.addContent = async (req, res) => {
         try {
           const oldContentNameInLanguage = getContentNameByLanguage(oldTitle, userLanguage);
           const newContentNameInLanguage = getContentNameByLanguage(title, userLanguage);
-          const logDescription = committeeName 
-            ? `تم تعديل محتوى من: ${oldContentNameInLanguage} إلى: ${newContentNameInLanguage} في لجنة: ${committeeName}`
-            : `تم تعديل محتوى من: ${oldContentNameInLanguage} إلى: ${newContentNameInLanguage}`;
-            
+          const logDescription = {
+            ar: `تم تعديل محتوى من: ${oldContentNameInLanguage} إلى: ${newContentNameInLanguage} في لجنة: ${getCommitteeNameByLanguage(committeeName, 'ar')}`,
+            en: `Updated content from: ${oldContentNameInLanguage} to: ${newContentNameInLanguage} in committee: ${getCommitteeNameByLanguage(committeeName, 'en')}`
+          };
+          
           await logAction(
             userId,
             'update_content',
-            logDescription,
+            JSON.stringify(logDescription),
             'content',
             id
           );
@@ -641,15 +644,18 @@ exports.deleteContent = async (req, res) => {
         const userLanguage = getUserLanguageFromToken(token);
   
         try {
-          const contentNameInLanguage = getContentNameByLanguage(contentTitle, userLanguage);
-          const logDescription = committeeName 
-            ? `تم حذف محتوى: ${contentNameInLanguage} من لجنة: ${committeeName}`
-            : `تم حذف محتوى: ${contentNameInLanguage}`;
-            
+          const userLanguage = getUserLanguageFromToken(token);
+
+          // إنشاء النص ثنائي اللغة
+          const logDescription = {
+            ar: `تم حذف محتوى: ${getContentNameByLanguage(contentTitle, 'ar')} من لجنة: ${getCommitteeNameByLanguage(committeeName, 'ar')}`,
+            en: `Deleted content: ${getContentNameByLanguage(contentTitle, 'en')} from committee: ${getCommitteeNameByLanguage(committeeName, 'en')}`
+          };
+          
           await logAction(
             userId,
             'delete_content',
-            logDescription,
+            JSON.stringify(logDescription),
             'content',
             id
           );
