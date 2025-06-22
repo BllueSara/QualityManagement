@@ -170,6 +170,9 @@ function getNotificationTranslation(text) {
   if (text === 'تم اعتماد ملفك') {
     return 'Your file has been approved';
   }
+  if (text === 'تم رفض ملفك') {
+    return 'Your file has been rejected';
+  }
   // ترجمة الجمل التي تحتوي على اسم ملف بين علامات اقتباس
   const fileApprovedMatch = text.match(/^الملف "(.+)" تم اعتماده من قبل الإدارة\.$/);
   if (fileApprovedMatch) {

@@ -253,9 +253,11 @@ const addContent = async (req, res) => {
   
       // ✅ تسجيل اللوق بعد نجاح إضافة المحتوى
       try {
+        const userLanguage = getUserLanguageFromToken(token);
+        const contentNameInLanguage = getContentNameByLanguage(title, userLanguage);
         const logDescription = departmentName 
-          ? `تمت إضافة محتوى بعنوان: ${title} في قسم: ${departmentName}`
-          : `تمت إضافة محتوى بعنوان: ${title}`;
+          ? `تمت إضافة محتوى بعنوان: ${contentNameInLanguage} في قسم: ${departmentName}`
+          : `تمت إضافة محتوى بعنوان: ${contentNameInLanguage}`;
           
         await logAction(
           decodedToken.id,
@@ -359,9 +361,12 @@ const updateContent = async (req, res) => {
   
       // ✅ تسجيل اللوق بعد نجاح تحديث المحتوى
       try {
+        const userLanguage = getUserLanguageFromToken(token);
+        const oldContentNameInLanguage = getContentNameByLanguage(oldTitle, userLanguage);
+        const newContentNameInLanguage = getContentNameByLanguage(title, userLanguage);
         const logDescription = departmentName 
-          ? `تم تحديث محتوى من: ${oldTitle} إلى: ${title} في قسم: ${departmentName}`
-          : `تم تحديث محتوى من: ${oldTitle} إلى: ${title}`;
+          ? `تم تحديث محتوى من: ${oldContentNameInLanguage} إلى: ${newContentNameInLanguage} في قسم: ${departmentName}`
+          : `تم تحديث محتوى من: ${oldContentNameInLanguage} إلى: ${newContentNameInLanguage}`;
           
         await logAction(
           userId,
@@ -472,9 +477,11 @@ const deleteContent = async (req, res) => {
 
         // ✅ تسجيل اللوق بعد نجاح حذف المحتوى
         try {
+            const userLanguage = getUserLanguageFromToken(token);
+            const contentNameInLanguage = getContentNameByLanguage(content[0].title, userLanguage);
             const logDescription = departmentName 
-                ? `تم حذف محتوى: ${content[0].title} من قسم: ${departmentName}`
-                : `تم حذف محتوى: ${content[0].title}`;
+                ? `تم حذف محتوى: ${contentNameInLanguage} من قسم: ${departmentName}`
+                : `تم حذف محتوى: ${contentNameInLanguage}`;
                 
             await logAction(
                 decodedToken.id,
@@ -680,9 +687,11 @@ const approveContent = async (req, res) => {
 
         // ✅ تسجيل اللوق بعد نجاح اعتماد المحتوى
         try {
+            const userLanguage = getUserLanguageFromToken(token);
+            const contentNameInLanguage = getContentNameByLanguage(content[0].title, userLanguage);
             const logDescription = departmentName 
-                ? `تم ${isApproved ? 'اعتماد' : 'تسجيل موافقة على'} محتوى: ${content[0].title} في قسم: ${departmentName}`
-                : `تم ${isApproved ? 'اعتماد' : 'تسجيل موافقة على'} محتوى: ${content[0].title}`;
+                ? `تم ${isApproved ? 'اعتماد' : 'تسجيل موافقة على'} محتوى: ${contentNameInLanguage} في قسم: ${departmentName}`
+                : `تم ${isApproved ? 'اعتماد' : 'تسجيل موافقة على'} محتوى: ${contentNameInLanguage}`;
                 
             await logAction(
                 decodedToken.id,
@@ -811,13 +820,15 @@ const addContentName = async (req, res) => {
     if (token) {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const userId = decoded.id;
+      const userLanguage = getUserLanguageFromToken(token);
       
       try {
+        const contentNameInLanguage = getContentNameByLanguage(name, userLanguage);
         await logAction(
           userId,
           'add_content_name',
-          `تمت إضافة اسم محتوى جديد للأقسام: ${name}`,
-          'content_name',
+          `تمت إضافة اسم محتوى جديد للأقسام: ${contentNameInLanguage}`,
+          'content',
           result.insertId
         );
       } catch (logErr) {
@@ -870,7 +881,7 @@ const updateContentName = async (req, res) => {
     }
 
     await conn.execute(
-      'UPDATE contents SET name = ? WHERE name = ?',
+      'UPDATE contents SET title = ? WHERE title = ?',
       [name, oldName]
     );
 
@@ -879,13 +890,16 @@ const updateContentName = async (req, res) => {
     if (token) {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const userId = decoded.id;
+      const userLanguage = getUserLanguageFromToken(token);
       
       try {
+        const oldContentNameInLanguage = getContentNameByLanguage(oldName, userLanguage);
+        const newContentNameInLanguage = getContentNameByLanguage(name, userLanguage);
         await logAction(
           userId,
           'update_content_name',
-          `تم تعديل اسم محتوى للأقسام من: ${oldName} إلى: ${name}`,
-          'content_name',
+          `تم تعديل اسم محتوى للأقسام من: ${oldContentNameInLanguage} إلى: ${newContentNameInLanguage}`,
+          'content',
           id
         );
       } catch (logErr) {
@@ -928,13 +942,15 @@ const deleteContentName = async (req, res) => {
     if (token) {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const userId = decoded.id;
+      const userLanguage = getUserLanguageFromToken(token);
       
       try {
+        const contentNameInLanguage = getContentNameByLanguage(contentName, userLanguage);
         await logAction(
           userId,
           'delete_content_name',
-          `تم حذف اسم محتوى للأقسام: ${contentName}`,
-          'content_name',
+          `تم حذف اسم محتوى للأقسام: ${contentNameInLanguage}`,
+          'content',
           id
         );
       } catch (logErr) {
@@ -966,6 +982,22 @@ function getDepartmentNameByLanguage(departmentNameData, userLanguage = 'ar') {
     } catch (error) {
         // في حالة فشل التحليل، إرجاع النص كما هو
         return departmentNameData || 'غير معروف';
+    }
+}
+
+// دالة مساعدة لاستخراج اسم المحتوى باللغة المناسبة
+function getContentNameByLanguage(contentNameData, userLanguage = 'ar') {
+    try {
+        // إذا كان الاسم JSON يحتوي على اللغتين
+        if (typeof contentNameData === 'string' && contentNameData.startsWith('{')) {
+            const parsed = JSON.parse(contentNameData);
+            return parsed[userLanguage] || parsed['ar'] || contentNameData;
+        }
+        // إذا كان نص عادي
+        return contentNameData || 'غير معروف';
+    } catch (error) {
+        // في حالة فشل التحليل، إرجاع النص كما هو
+        return contentNameData || 'غير معروف';
     }
 }
 

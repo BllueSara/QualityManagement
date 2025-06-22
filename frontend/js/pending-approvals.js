@@ -173,7 +173,7 @@ tr.dataset.assignedIds = JSON.stringify(assignedApproverIds);
   // 4) الغِ innerHTML القديمة أو أضف فوقها
   tr.innerHTML = `
     <td>
-      ${item.title}
+${parseLocalizedName(item.title)}
       <div class="content-meta">(${contentType} - ${parseLocalizedName(item.source_name)})</div>
     </td>
     <td>
