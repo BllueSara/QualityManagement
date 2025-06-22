@@ -56,6 +56,7 @@ const getUsers = async (req, res) => {
         u.username AS name,
         u.email,
         u.role,
+        u.status,  
         u.department_id AS departmentId,
         d.name AS departmentName,
         u.created_at,
@@ -95,6 +96,7 @@ const getUserById = async (req, res) => {
          u.username AS name,
          u.email,
          u.role,
+         u.status,  
          u.department_id AS departmentId,
          d.name AS departmentName,
          u.created_at,
@@ -912,6 +914,46 @@ function extractInfoFromDescription(description) {
   return info;
 }
 
+//  … في أعلى الملف أضف هذه الدالة:
+const updateUserStatus = async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith('Bearer ')) {
+    return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+  }
+
+  let payload;
+  try {
+    payload = jwt.verify(auth.slice(7), process.env.JWT_SECRET);
+  } catch {
+    return res.status(401).json({ status: 'error', message: 'Invalid token' });
+  }
+
+  // فقط الـ admin يمكنه تغيير الحالة
+  if (payload.role !== 'admin') {
+    return res.status(403).json({ status: 'error', message: 'Forbidden' });
+  }
+
+  const id = req.params.id;
+  const { status } = req.body;  // نتوقع 'active' أو 'inactive'
+  if (!['active','inactive'].includes(status)) {
+    return res.status(400).json({ status: 'error', message: 'حالة غير صحيحة' });
+  }
+
+  try {
+    const [result] = await db.execute(
+      'UPDATE users SET status = ? WHERE id = ?',
+      [status, id]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ status: 'error', message: 'المستخدم غير موجود' });
+    }
+    res.json({ status: 'success', message: 'تم تحديث الحالة بنجاح' });
+  } catch (err) {
+    console.error('updateUserStatus error:', err);
+    res.status(500).json({ status: 'error', message: 'خطأ في تحديث الحالة' });
+  }
+};
+
 module.exports = {
   getUsers,
   getUserById,
@@ -926,5 +968,6 @@ module.exports = {
   deleteNotification,
   markAllAsRead,
   getUnreadCount,
-  getActionTypes
+  getActionTypes,
+  updateUserStatus
 };

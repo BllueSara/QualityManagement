@@ -32,10 +32,10 @@ const register = async (req, res) => {
     const { username, email, password, department_id, role, employee_number } = req.body;
 
     // 1) الحقول الأساسية
-    if (!username || !email || !password || !employee_number) {
+    if (!username || !email || !password ) {
       return res.status(400).json({
         status: 'error',
-        message: 'اسم المستخدم، البريد الإلكتروني، كلمة المرور والرقم الوظيفي مطلوبة'
+        message: 'اسم المستخدم، البريد الإلكتروني، كلمة المرور   '
       });
     }
 
@@ -101,12 +101,15 @@ const register = async (req, res) => {
       process.env.JWT_SECRET
     );
 
-
+     const logDescription = {
+            ar: 'تم تسجيل مستخدم جديد: ' + username,
+            en: 'Registered new user: ' + username
+        };
+        
     await logAction(
       userId,
       'register_user',
-      `تم تسجيل مستخدم جديد: ${username}`,
-      'user',
+JSON.stringify(logDescription),      'user',
       userId
     );
     
@@ -143,6 +146,7 @@ const login = async (req, res) => {
          u.id, u.username, u.email, u.password,
          u.employee_number,
          u.department_id, u.role,
+         u.status,
          d.name AS department_name
        FROM users u
        LEFT JOIN departments d ON u.department_id = d.id
@@ -156,7 +160,13 @@ const login = async (req, res) => {
         message: 'بيانات الدخول أو كلمة المرور غير صحيحة'
       });
     }
-
+    // **منع تسجيل الدخول إذا كانت الحالة غير نشطة**
+    if (user.status !== 'active') {
+      return res.status(403).json({
+        status: 'error',
+        message: 'حسابك معطل، لا يمكنك تسجيل الدخول'
+      });
+    }
     // تحقق من كلمة المرور
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
@@ -187,13 +197,7 @@ const departmentName = departmentRows[0]?.name || '';
     );
 
 
-    await logAction(
-      user.id,
-      'login',
-      `تسجيل دخول المستخدم: ${user.username}`,
-      'user',
-      user.id
-    );
+
     
 
     // ✅ تسجيل اللوق بعد نجاح تسجيل الدخول
@@ -203,7 +207,7 @@ const departmentName = departmentRows[0]?.name || '';
             en: 'User logged in'
         };
         
-        await logAction(user.id, 'login', JSON.stringify(logDescription), 'auth', user.id);
+        await logAction(user.id, 'login', JSON.stringify(logDescription), 'user', user.id);
     } catch (logErr) {
         console.error('logAction error:', logErr);
     }

@@ -6,12 +6,18 @@ const committeesController = require('../controllers/committeesController');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, './uploads/images');
-    },
-    filename: function (req, file, cb) {
-        cb(null, Date.now() + '-' + file.originalname);
+  destination: (req, file, cb) => {
+    if (file.fieldname === 'image') {
+      cb(null, './uploads/images');
+    } else if (file.fieldname === 'file') {
+      cb(null, './uploads/content_files');
+    } else {
+      cb(new Error('Unrecognized field'), null);
     }
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + '-' + file.originalname);
+  }
 });
 const upload = multer({ storage: storage });
 

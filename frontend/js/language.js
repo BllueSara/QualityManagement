@@ -153,6 +153,10 @@ const translations = {
         'permission-description': 'وصف الصلاحية',
         'assign-permission': 'تعيين صلاحية',
         'remove-permission': 'إزالة صلاحية',
+        'disable_tickets': 'اخفاء التذاكر',
+        'disable_departments': 'اخفاء الاقسام',
+        'disable_approvals': 'اخفاء الاعتمادات',
+        'disable_comittees': 'اخفاء اللجان',
 
         // Register specific
         'employee-number': 'الرقم الوظيفي',
@@ -567,7 +571,7 @@ const translations = {
         'delete': 'حذف',
         'showing': 'عرض',
         'of': 'من',
-        'tickets': 'تذكرة',
+        'tickets': 'التذاكر',
         'previous': 'السابق',
         'next': 'التالي',
         'back': 'رجوع',
@@ -702,6 +706,7 @@ const translations = {
         'save': 'حفظ',
         'content-name-ar': 'اسم المحتوى (عربي)',
         'content-name-en': 'اسم المحتوى (انجليزي)',
+        'enter-username-only': 'ادخل اسم المستخدم ',
         // Permissions Page (Groups)
         'general-group': 'عامّ',
         'departments-group': 'الأقسام',
@@ -836,6 +841,13 @@ const translations = {
         'no-files-selected': 'لم يتم اختيار أي ملفات',
         'select-classification': 'اختر تصنيفًا واحدًا على الأقل',
         'classification-hint': 'افصل بين التصنيفات بفواصل',
+          "status_active": "نشط",
+  "status_inactive": "غير نشط",
+  "status_confirm_active": "نشط",
+  "status_confirm_inactive": "غير نشط",
+  "confirm_status_change": "هل تريد حقاً تغيير الحالة إلى",
+  "logout_due_to_deactivation": "تم تعطيل حسابك، سيتم تسجيل الخروج.",
+  "status_change_failed": "فشل تغيير الحالة."
     },
     en: {
         // Navigation
@@ -849,7 +861,13 @@ const translations = {
         'committee-name-en': 'Committee Name (English)',
         'enter-ar-name': 'Enter committee name in Arabic',
         'enter-en-name': 'Enter committee name in English',
-        
+         "status_active": "Active",
+  "status_inactive": "Inactive",
+  "status_confirm_active": "activate",
+  "status_confirm_inactive": "deactivate",
+  "confirm_status_change": "Are you sure you want to change status to",
+  "logout_due_to_deactivation": "Your account has been deactivated. You will be logged out.",
+  "status_change_failed": "Failed to change status.",
         // Main content
         'main-title': 'Home Page',
         'tickets': 'OVR',
@@ -1031,6 +1049,7 @@ const translations = {
         'error-adding-committee': 'Error adding committee',
         'error-updating-committee': 'Error updating committee',
         'error-deleting-committee': 'Error deleting committee',
+        'enter-username-only': 'Enter username ',
 
         // Department content page and modals
         'department-content-title': 'Department Content',
@@ -1291,6 +1310,11 @@ const translations = {
         'transfer-tickets-title': 'Transfer OVR',
         'transfer-tickets-desc': 'Manage and transfer current OVR smoothly',
         'start-transfer': 'Start Transfer Process',
+
+        'disable_approvals': 'Disable Approvals',
+        'disable_tickets': 'Disable Tickets',
+        'disable_comittees': 'Disable Committees',
+        'disable_departments': 'Disable Departments',
 
         // Ticket Creation Page Translations
         'create-ticket-page-title': 'Quality and Safety Management System - Create OVR',

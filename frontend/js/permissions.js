@@ -146,7 +146,7 @@ async function loadUsers() {
         <div class=\"user-name\">${u.name}</div>
         <div class=\"user-email\">${u.email}</div>
       </div>
-      <span class=\"user-status ${u.status==='active'?'active':''}\"></span>
+      <span class=\"user-status ${u.status}\"></span>
     `;
     div.addEventListener('click', () => selectUser(u.id));
     userList.append(div);
@@ -157,15 +157,72 @@ async function loadUsers() {
 // 2) Select User
 // =====================
 async function selectUser(id) {
+  const authToken = localStorage.getItem('token') || '';
+  const jwtPayload = JSON.parse(atob(authToken.split('.')[1] || '{}'));
+
+  // 2) فعل العرض للمستخدم المحدد
   selectedUserId = id;
   document.querySelectorAll('.user-item')
     .forEach(el => el.classList.toggle('active', el.dataset.id == id));
 
-  // بيانات المستخدم
+  // 3) جلب بيانات المستخدم وتحديث الواجهة
   const u = await fetchJSON(`${apiBase}/users/${id}`);
-  profileName.textContent   = u.name;
-  profileStatus.textContent = u.status==='active' ? 'غير نشط' : 'نشط';
-  profileStatus.classList.toggle('active', u.status==='active');
+profileName.textContent = u.name;
+
+// 1) عرض الحالة مع الترجمة
+const isActive = u.status === 'active';
+profileStatus.textContent = getTranslation(
+  isActive ? 'status_active' : 'status_inactive'
+);
+profileStatus.classList.toggle('active',   isActive);
+profileStatus.classList.toggle('inactive', !isActive);
+profileStatus.style.cursor = 'pointer';
+profileStatus.title = getTranslation(
+  isActive ? 'status_confirm_inactive' : 'status_confirm_active'
+);
+
+// 2) ربط حدث التغيير مع التأكيد المترجم
+profileStatus.onclick = async () => {
+  const newStatus = profileStatus.classList.contains('active')
+    ? 'inactive'
+    : 'active';
+
+  // جملة التأكيد المترجمة
+  const confirmMsg = `${getTranslation('confirm_status_change')} "` +
+    `${getTranslation(newStatus === 'active' ? 'status_active' : 'status_inactive')}"؟`;
+
+  if (!confirm(confirmMsg)) return;
+
+  try {
+    await fetchJSON(`${apiBase}/users/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: newStatus })
+    });
+
+    // 3) حدّث الواجهة بعد التغيير
+    const nowActive = newStatus === 'active';
+    profileStatus.textContent = getTranslation(
+      nowActive ? 'status_active' : 'status_inactive'
+    );
+    profileStatus.classList.toggle('active',   nowActive);
+    profileStatus.classList.toggle('inactive', !nowActive);
+    profileStatus.title = getTranslation(
+      nowActive ? 'status_confirm_inactive' : 'status_confirm_active'
+    );
+
+    // 4) طرد نفسك لو عطّلت حسابك
+    if (Number(id) === jwtPayload.id && newStatus === 'inactive') {
+      alert(getTranslation('logout_due_to_deactivation'));
+      localStorage.removeItem('token');
+      window.location.href = '/frontend/html/login.html';
+    }
+  } catch {
+    alert(getTranslation('status_change_failed'));
+  }
+};
+
+
+
 try {
   const lang = localStorage.getItem('language') || 'ar';
   const name = typeof u.departmentName === 'string' && u.departmentName.trim().startsWith('{')
@@ -242,6 +299,7 @@ document.querySelector('.user-profile-header')?.classList.add('active');
     };
   });
 }
+
 
 // handlers role popup
 btnCancelRole.addEventListener('click', () => rolePopup.classList.remove('show'));
