@@ -14,7 +14,8 @@ const {
   getNotifications,
   markAllAsRead,
   getUnreadCount,
-  deleteNotification
+  deleteNotification,
+  updateUserStatus
 } = require('../controllers/usersController');
 
 const router = express.Router();
@@ -38,5 +39,11 @@ router.put('/:id', authenticateToken, updateUser);
 router.delete('/:id', authenticateToken, deleteUser);
 router.put('/:id/role', authenticateToken, changeUserRole);
 router.put('/:id/reset-password', authenticateToken, adminResetPassword);
+// بعد راوت /:id/reset-password
+router.patch(
+  '/:id/status',
+  authenticateToken,
+  updateUserStatus
+);
 
 module.exports = router;

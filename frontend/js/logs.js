@@ -177,6 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'delete_user': `تم حذف مستخدم: ${info.userName}`,
         'change_role': `تم تغيير دور المستخدم: ${info.userName} إلى: ${info.newRole}`,
         'login': 'تم تسجيل الدخول',
+        
         'create_ticket': 'تم إنشاء تذكرة جديدة',
         'update_ticket': 'تم تعديل التذكرة',
         'delete_ticket': 'تم حذف التذكرة',
@@ -255,6 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'delete_user': 'حذف مستخدم',
         'change_role': 'تغيير دور',
         'login': 'تسجيل دخول',
+        'register_user': 'تسجيل مستخدم جديد',
         'create_ticket': 'إنشاء تذكرة',
         'update_ticket': 'تعديل تذكرة',
         'delete_ticket': 'حذف تذكرة',
@@ -282,6 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'delete_user': 'Delete User',
         'change_role': 'Change Role',
         'login': 'Login',
+        'register_user': 'Register User',
         'create_ticket': 'Create Ticket',
         'update_ticket': 'Update Ticket',
         'delete_ticket': 'Delete Ticket',
