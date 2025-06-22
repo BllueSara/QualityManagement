@@ -31,6 +31,39 @@ function getDepartmentNameByLanguage(departmentNameData, userLanguage = 'ar') {
     }
 }
 
+// دالة مساعدة لاستخراج اسم المجلد باللغة المناسبة
+function getFolderNameByLanguage(folderNameData, userLanguage = 'ar') {
+  try {
+    // 1) لو جاي كـ object بالفعل (ثنائي اللغة)
+    if (typeof folderNameData === 'object' && folderNameData !== null) {
+      return folderNameData[userLanguage]
+        || folderNameData.ar
+        || folderNameData.en
+        || 'غير معروف';
+    }
+
+    // 2) لو جاي كنص JSON مسلسَل
+    if (typeof folderNameData === 'string' && folderNameData.trim().startsWith('{')) {
+      const parsed = JSON.parse(folderNameData);
+      return parsed[userLanguage]
+        || parsed.ar
+        || parsed.en
+        || 'غير معروف';
+    }
+
+    // 3) أي نص عادي
+    return folderNameData || 'غير معروف';
+  } catch (error) {
+    // لو صار خطأ في التحليل
+    return typeof folderNameData === 'string'
+      ? folderNameData
+      : 'غير معروف';
+  }
+}
+
+
+
+
 // دالة مساعدة لاستخراج لغة المستخدم من التوكن
 function getUserLanguageFromToken(token) {
     try {
@@ -109,6 +142,11 @@ const createFolder = async (req, res) => {
     // اقرأ departmentId من params
     const departmentId = req.params.departmentId;
     const { name }     = req.body;
+    
+    console.log('DEBUG: folder name type:', typeof name);
+    console.log('DEBUG: folder name value:', name);
+    console.log('DEBUG: folder name JSON.stringify:', JSON.stringify(name));
+    
     if (!departmentId || !name) 
       return res.status(400).json({ message: 'معرف القسم واسم المجلد مطلوبان.' });
 
@@ -126,7 +164,11 @@ const createFolder = async (req, res) => {
 
     // جلب اسم القسم باللغة المناسبة
     const userLanguage = getUserLanguageFromToken(h.split(' ')[1]);
+    console.log('DEBUG: userLanguage from token:', userLanguage);
+    console.log('DEBUG: departmentNameData type:', typeof dept[0].name);
+    console.log('DEBUG: departmentNameData value:', dept[0].name);
     const departmentName = getDepartmentNameByLanguage(dept[0].name, userLanguage);
+    console.log('DEBUG: departmentName result:', departmentName);
 
     // تحقق عدم التكرار
     const [exists] = await conn.execute(
@@ -150,18 +192,16 @@ const createFolder = async (req, res) => {
     
     // ✅ تسجيل اللوق بعد نجاح إضافة المجلد
     try {
-      const logDescription = `تم إنشاء مجلد باسم: ${name} في قسم: ${departmentName}`;
+      const folderNameInLanguage = getFolderNameByLanguage(name, userLanguage);
+      console.log('DEBUG: folderNameInLanguage final result:', folderNameInLanguage);
+      const logDescription = `تم إنشاء مجلد باسم: ${folderNameInLanguage} في قسم: ${departmentName}`;
+      console.log('DEBUG: Final log description:', logDescription);
       await logAction(decoded.id, 'create_folder', logDescription, 'folder', result.insertId);
     } catch (logErr) {
       console.error('logAction error:', logErr);
     }
     
-    await insertNotification(
-      decoded.id,
-      'مجلد جديد',
-      `تم إنشاء مجلد جديد باسم "${name}" في القسم`,
-      'add'
-    );
+
     return res.status(201).json({
       message: 'تم إضافة المجلد بنجاح',
       folderId: result.insertId
@@ -223,7 +263,9 @@ const updateFolder = async (req, res) => {
     
     // ✅ تسجيل اللوق بعد نجاح تعديل المجلد
     try {
-      const logDescription = `تم تعديل مجلد من: ${oldName} إلى: ${name} في قسم: ${departmentName}`;
+      const oldFolderNameInLanguage = getFolderNameByLanguage(oldName, userLanguage);
+      const newFolderNameInLanguage = getFolderNameByLanguage(name, userLanguage);
+      const logDescription = `تم تعديل مجلد من: ${oldFolderNameInLanguage} إلى: ${newFolderNameInLanguage} في قسم: ${departmentName}`;
       await logAction(decoded.id, 'update_folder', logDescription, 'folder', folderId);
     } catch (logErr) {
       console.error('logAction error:', logErr);
@@ -313,7 +355,8 @@ const deleteFolder = async (req, res) => {
     
     // ✅ تسجيل اللوق بعد نجاح حذف المجلد
     try {
-      const logDescription = `تم حذف مجلد: ${folderName} من قسم: ${departmentName}`;
+      const folderNameInLanguage = getFolderNameByLanguage(folderName, userLanguage);
+      const logDescription = `تم حذف مجلد: ${folderNameInLanguage} من قسم: ${departmentName}`;
       await logAction(decoded.id, 'delete_folder', logDescription, 'folder', folderId);
     } catch (logErr) {
       console.error('logAction error:', logErr);
@@ -357,11 +400,13 @@ const addFolderName = async (req, res) => {
       const userId = decoded.id;
       
       try {
+        const userLanguage = getUserLanguageFromToken(token);
+        const folderNameInLanguage = getFolderNameByLanguage(name, userLanguage);
         await logAction(
           userId,
           'add_folder_name',
-          `تمت إضافة اسم مجلد جديد للأقسام: ${name}`,
-          'folder_name',
+          `تمت إضافة اسم مجلد جديد للأقسام: ${folderNameInLanguage}`,
+          'folder',
           result.insertId
         );
       } catch (logErr) {
@@ -422,11 +467,14 @@ const updateFolderName = async (req, res) => {
       const userId = decoded.id;
       
       try {
+        const userLanguage = getUserLanguageFromToken(token);
+        const oldFolderNameInLanguage = getFolderNameByLanguage(oldName, userLanguage);
+        const newFolderNameInLanguage = getFolderNameByLanguage(name, userLanguage);
         await logAction(
           userId,
           'update_folder_name',
-          `تم تعديل اسم مجلد للأقسام من: ${oldName} إلى: ${name}`,
-          'folder_name',
+          `تم تعديل اسم مجلد للأقسام من: ${oldFolderNameInLanguage} إلى: ${newFolderNameInLanguage}`,
+          'folder',
           id
         );
       } catch (logErr) {
@@ -468,16 +516,26 @@ const deleteFolderName = async (req, res) => {
       const userId = decoded.id;
       
       try {
+        const userLanguage = getUserLanguageFromToken(token);
+        const folderNameInLanguage = getFolderNameByLanguage(folderName, userLanguage);
         await logAction(
           userId,
           'delete_folder_name',
-          `تم حذف اسم مجلد للأقسام: ${folderName}`,
-          'folder_name',
+          `تم حذف اسم مجلد للأقسام: ${folderNameInLanguage}`,
+          'folder',
           id
         );
       } catch (logErr) {
         console.error('logAction error:', logErr);
       }
+
+      // ✅ إرسال إشعار بحذف اسم المجلد
+      await insertNotification(
+        userId,
+        'حذف اسم مجلد',
+        `تم حذف اسم مجلد للأقسام: ${folderNameInLanguage}`,
+        'delete'
+      );
     }
     
     conn.release();

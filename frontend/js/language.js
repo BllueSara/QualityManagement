@@ -7,6 +7,9 @@ const translations = {
         'logs': 'السجلات',
         'notifications': 'الإشعارات',
         'language': 'عربي',
+        'add-folder-name"': 'اضافة اسم المجلد',
+        'folder-name-ar': 'اسم المجلد بالعربية',
+        'folder-name-en': 'اسم المجلد بالانجليزية',
         
         // Main content
         'main-title': 'الصفحة الرئيسية',
@@ -697,6 +700,8 @@ const translations = {
         'save-user': 'حفظ المستخدم',
         'choose-role': 'اختر الدور',
         'save': 'حفظ',
+        'content-name-ar': 'اسم المحتوى (عربي)',
+        'content-name-en': 'اسم المحتوى (انجليزي)',
         // Permissions Page (Groups)
         'general-group': 'عامّ',
         'departments-group': 'الأقسام',
@@ -783,6 +788,8 @@ const translations = {
         'all-users': 'جميع المستخدمين',
         'logs-description': 'وصف مختصر',
         'logs-date': 'التاريخ والوقت',
+        'no-logs-found': 'لا توجد سجلات',
+        'error-loading-logs': 'خطأ في تحميل السجلات',
         // Notifications Page
         'notifications-title': 'الإشعارات',
         'notifications-search': 'البحث في الإشعارات...',
@@ -1217,6 +1224,12 @@ const translations = {
         'please-login': 'Please login first',
         'please-select-user': 'Please select a user',
         'please-enter-reason': 'Please enter rejection reason',
+        'folder-name-en': 'Folder Name (English)',
+        'folder-name-ar': 'Folder Name (Arabic)',
+        'content-name-ar': 'Content Name (Arabic)',
+        'content-name-en': 'Content Name (English)',
+
+
 
         // Sign page translations
         'sign-title': 'Proxy Signature - Quality and Safety Management System',
@@ -1602,6 +1615,8 @@ const translations = {
         'all-users': 'All Users',
         'logs-description': 'Description',
         'logs-date': 'Date & Time',
+        'no-logs-found': 'No logs found',
+        'error-loading-logs': 'Error loading logs',
         // Notifications Page
         'notifications-title': 'Notifications',
         'notifications-search': 'Search notifications...',
@@ -1810,6 +1825,9 @@ function setLanguage(lang) {
     
     // Save language preference
     localStorage.setItem('language', lang);
+
+    // إرسال حدث تغيير اللغة
+    window.dispatchEvent(new CustomEvent('languageChanged', { detail: { language: lang } }));
 
     // زر الرجوع في صفحة الأقسام
     const backBtn = document.getElementById('backBtn');
