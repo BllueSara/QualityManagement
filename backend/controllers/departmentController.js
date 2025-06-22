@@ -89,7 +89,7 @@ const addDepartment = async (req, res) => {
                     userId,
                     'add_department',
                     `تمت إضافة قسم جديد: ${departmentName}`,
-                    'department',
+                    'Add',
                     result.insertId
                 );
             } catch (logErr) {

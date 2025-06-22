@@ -159,12 +159,15 @@ function applyFilters() {
   const searchText = document.getElementById('searchInput').value.trim().toLowerCase();
 
   // خزّن النتيجة في filteredItems
-  filteredItems = allItems.filter(i => {
-    const okDept   = dept === 'all' || i.source_name === dept;
-    const okStatus = status === 'all' || i.approval_status === status;
-    const okSearch = i.title.toLowerCase().includes(searchText);
-    return okDept && okStatus && okSearch;
-  });
+filteredItems = allItems.filter(i => {
+  const localizedTitle = getLocalizedName(i.title).toLowerCase();
+  const localizedSource = getLocalizedName(i.source_name).toLowerCase();
+  const okDept   = dept === 'all' || i.source_name === dept;
+  const okStatus = status === 'all' || i.approval_status === status;
+  const okSearch = localizedTitle.includes(searchText) || localizedSource.includes(searchText);
+  return okDept && okStatus && okSearch;
+});
+
 
   renderApprovals(filteredItems);
 }
@@ -228,7 +231,7 @@ function renderApprovals(items) {
     tr.innerHTML = `
       <td class="col-id">${item.id}</td>
       <td>
-        ${item.title}
+${getLocalizedName(item.title)}
         <div class="content-meta">(${contentType} - ${getLocalizedName(item.source_name)})</div>
       </td>
       <td>${getLocalizedName(item.source_name) || '-'}</td>

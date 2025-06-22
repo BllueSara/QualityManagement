@@ -214,6 +214,8 @@
     <div class="modal-body">
       <!-- حقل مخفي للايدي -->
       <input type="hidden" id="editFolderId">
+      <!-- حقل مخفي للاسم المختار -->
+      <input type="hidden" id="editSelectedFolderNameId">
       <!-- بدل إدخال نص عادي، نعوّضه بالدروبدَاون -->
       <div class="form-group">
         <label data-translate="choose-folder-name"></label>
@@ -326,6 +328,146 @@
         <div class="modal-buttons">
             <button class="btn-danger" id="confirmDeleteContentBtn" data-translate="delete"></button>
             <button class="btn-secondary" id="cancelDeleteContentBtn" data-translate="cancel"></button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Folder Name Modal -->
+<div id="addFolderNameModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 data-translate="add-folder-name">إضافة اسم مجلد</h3>
+      <span class="close-button">&times;</span>
+    </div>
+    <hr>
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="folderNameAr" data-translate="folder-name-ar">اسم المجلد (عربي)</label>
+        <input type="text" id="folderNameAr" data-translate-placeholder="enter-arabic-name" placeholder="أدخل الاسم بالعربية">
+      </div>
+      <div class="form-group">
+        <label for="folderNameEn" data-translate="folder-name-en">اسم المجلد (إنجليزي)</label>
+        <input type="text" id="folderNameEn" data-translate-placeholder="enter-english-name" placeholder="Enter name in English">
+      </div>
+    </div>
+    <div class="modal-buttons">
+      <button class="btn-primary" id="saveAddFolderName" data-translate="save">حفظ</button>
+      <button class="btn-secondary" id="cancelAddFolderName" data-translate="cancel">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Folder Name Modal -->
+<div id="editFolderNameModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 data-translate="edit-folder-name">تعديل اسم المجلد</h3>
+      <span class="close-button">&times;</span>
+    </div>
+    <hr>
+    <div class="modal-body">
+      <input type="hidden" id="editFolderNameId">
+      <div class="form-group">
+        <label for="editFolderNameAr" data-translate="folder-name-ar">اسم المجلد (عربي)</label>
+        <input type="text" id="editFolderNameAr" data-translate-placeholder="enter-arabic-name" placeholder="أدخل الاسم بالعربية">
+      </div>
+      <div class="form-group">
+        <label for="editFolderNameEn" data-translate="folder-name-en">اسم المجلد (إنجليزي)</label>
+        <input type="text" id="editFolderNameEn" data-translate-placeholder="enter-english-name" placeholder="Enter name in English">
+      </div>
+    </div>
+    <div class="modal-buttons">
+      <button class="btn-primary" id="saveEditFolderName" data-translate="update">تحديث</button>
+      <button class="btn-secondary" id="cancelEditFolderName" data-translate="cancel">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Folder Name Modal -->
+<div id="deleteFolderNameModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 data-translate="delete-folder-name-title">تأكيد حذف اسم المجلد</h3>
+            <span class="close-button">&times;</span>
+        </div>
+        <hr>
+        <div class="modal-body">
+            <input type="hidden" id="deleteFolderNameId">
+            <p data-translate="delete-folder-name-confirm">هل أنت متأكد من حذف اسم هذا المجلد؟ سيؤدي هذا إلى إزالة الاسم من القائمة فقط ولن يؤثر على المجلدات الموجودة التي تستخدم هذا الاسم.</p>
+        </div>
+        <div class="modal-buttons">
+            <button class="btn-danger" id="confirmDeleteFolderNameBtn" data-translate="delete">حذف</button>
+            <button class="btn-secondary" id="cancelDeleteFolderNameBtn" data-translate="cancel">إلغاء</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Content Name Modal -->
+<div id="addContentNameModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 data-translate="add-content-name">إضافة اسم محتوى</h3>
+      <span class="close-button">&times;</span>
+    </div>
+    <hr>
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="contentNameAr" data-translate="content-name-ar">اسم المحتوى (عربي)</label>
+        <input type="text" id="contentNameAr" data-translate-placeholder="enter-arabic-name" placeholder="أدخل الاسم بالعربية">
+      </div>
+      <div class="form-group">
+        <label for="contentNameEn" data-translate="content-name-en">اسم المحتوى (إنجليزي)</label>
+        <input type="text" id="contentNameEn" data-translate-placeholder="enter-english-name" placeholder="Enter name in English">
+      </div>
+    </div>
+    <div class="modal-buttons">
+      <button class="btn-primary" id="saveAddContentName" data-translate="save">حفظ</button>
+      <button class="btn-secondary" id="cancelAddContentName" data-translate="cancel">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Content Name Modal -->
+<div id="editContentNameModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 data-translate="edit-content-name">تعديل اسم المحتوى</h3>
+      <span class="close-button">&times;</span>
+    </div>
+    <hr>
+    <div class="modal-body">
+      <input type="hidden" id="editContentNameId">
+      <div class="form-group">
+        <label for="editContentNameAr" data-translate="content-name-ar">اسم المحتوى (عربي)</label>
+        <input type="text" id="editContentNameAr" data-translate-placeholder="enter-arabic-name" placeholder="أدخل الاسم بالعربية">
+      </div>
+      <div class="form-group">
+        <label for="editContentNameEn" data-translate="content-name-en">اسم المحتوى (إنجليزي)</label>
+        <input type="text" id="editContentNameEn" data-translate-placeholder="enter-english-name" placeholder="Enter name in English">
+      </div>
+    </div>
+    <div class="modal-buttons">
+      <button class="btn-primary" id="saveEditContentName" data-translate="update">تحديث</button>
+      <button class="btn-secondary" id="cancelEditContentName" data-translate="cancel">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Content Name Modal -->
+<div id="deleteContentNameModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 data-translate="delete-content-name-title">تأكيد حذف اسم المحتوى</h3>
+            <span class="close-button">&times;</span>
+        </div>
+        <hr>
+        <div class="modal-body">
+            <input type="hidden" id="deleteContentNameId">
+            <p data-translate="delete-content-name-confirm">هل أنت متأكد من حذف اسم هذا المحتوى؟ سيؤدي هذا إلى إزالة الاسم من القائمة فقط ولن يؤثر على المحتويات الموجودة التي تستخدم هذا الاسم.</p>
+        </div>
+        <div class="modal-buttons">
+            <button class="btn-danger" id="confirmDeleteContentNameBtn" data-translate="delete">حذف</button>
+            <button class="btn-secondary" id="cancelDeleteContentNameBtn" data-translate="cancel">إلغاء</button>
         </div>
     </div>
 </div>

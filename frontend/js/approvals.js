@@ -190,14 +190,29 @@ async function fetchMyUploadedContent() {
     // helper لفك الاسم حسب اللغة
 // helper لفك الاسم حسب اللغة و لتوحيد is_approved
 const normalize = (item, type) => {
-  // 1) فك الاسم
+  const lang = localStorage.getItem('language') || 'ar';
+
+  // فك الاسم
   let src = item.source_name;
   try {
     const p = JSON.parse(item.source_name);
     src = p[lang] || p.ar || p.en;
   } catch {}
 
-  // 2) حوّل is_approved إلى boolean مو فق string
+  // فك عنوان الملف
+  let localizedTitle = item.title;
+  try {
+    const t = JSON.parse(item.title);
+    localizedTitle = t[lang] || t.ar || t.en || item.title;
+  } catch {}
+
+  // فك اسم الفولدر
+  let localizedFolder = item.folderName;
+  try {
+    const f = JSON.parse(item.folderName);
+    localizedFolder = f[lang] || f.ar || f.en || item.folderName;
+  } catch {}
+
   let approved = false;
   if (typeof item.is_approved === 'number') {
     approved = item.is_approved === 1;
@@ -207,12 +222,14 @@ const normalize = (item, type) => {
 
   return {
     ...item,
-    // تعيين الحقل المعدّل
     is_approved: approved,
     type,
-    localizedSourceName: src
+    localizedSourceName: src,
+    localizedTitle,
+    localizedFolderName: localizedFolder
   };
 };
+
 
 
     // دمج المحتويات
@@ -239,7 +256,7 @@ const normalize = (item, type) => {
     // Populate folder filter based on `allContents`
     function populateFolderFilter() {
         filterFolder.innerHTML = `<option value="all">${getTranslation('all-folders')}</option>`;
-        const uniqueFolders = [...new Set(allContents.map(content => content.folderName))];
+        const uniqueFolders = [...new Set(allContents.map(content => content.localizedFolderName))];
         uniqueFolders.forEach(folderName => {
             const option = document.createElement('option');
             option.value = folderName;
@@ -299,10 +316,10 @@ const displaySourceName = content.localizedSourceName || '-';
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td class="col-file">
-                    ${content.title}
+                    ${content.localizedTitle}
                     <div class="content-meta">(${contentType} - ${displaySourceName})</div>
                 </td>
-                <td class="col-folder">${content.folderName || '-'}</td>
+                <td class="col-folder">${content.localizedFolderName  || '-'}</td>
                 <td class="col-dept">${displaySourceName}</td>
                 <td class="col-status"><span class="badge ${approvalStatusClass}">${approvalStatusText}</span></td>
                 <td class="col-date">${dateText}</td>
@@ -364,9 +381,9 @@ const displaySourceName = content.localizedSourceName || '-';
         const selectedFolder = filterFolder.value;
 
         filteredContents = allContents.filter(content => {
-            const contentTitle = content.title.toLowerCase();
+             const contentTitle = (content.localizedTitle || '').toLowerCase();
              const sourceName = (content.localizedSourceName || '').toLowerCase();
-            const folderName = (content.folderName || '').toLowerCase();
+            const folderName = (content.localizedFolderName  || '').toLowerCase();
             const isApproved = content.is_approved ? 'approved' : 'pending';
 
             const matchesSearch =

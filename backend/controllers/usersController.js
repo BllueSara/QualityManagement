@@ -550,6 +550,17 @@ const getLogs = async (req, res) => {
     `;
 
     const [rows] = await db.execute(sql, params);
+    
+    // Debug logging
+    if (rows.length > 0) {
+      console.log('DEBUG: First log description type:', typeof rows[0].description);
+      console.log('DEBUG: First log description value:', rows[0].description);
+      console.log('DEBUG: First log action type:', typeof rows[0].action);
+      console.log('DEBUG: First log action value:', rows[0].action);
+      console.log('DEBUG: First log user type:', typeof rows[0].user);
+      console.log('DEBUG: First log user value:', rows[0].user);
+    }
+    
     res.status(200).json({ status: 'success', data: rows });
   } catch (error) {
     res.status(500).json({ message: 'Error fetching logs' });

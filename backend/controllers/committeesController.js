@@ -16,16 +16,92 @@ const db = mysql.createPool({
 // دالة مساعدة لاستخراج اسم اللجنة باللغة المناسبة
 function getCommitteeNameByLanguage(committeeNameData, userLanguage = 'ar') {
     try {
-        // إذا كان الاسم JSON يحتوي على اللغتين
+        // إذا كان الاسم object يحتوي على اللغتين
+        if (typeof committeeNameData === 'object' && committeeNameData !== null) {
+            // إذا كان object يحتوي على خصائص اللغة
+            if (committeeNameData[userLanguage]) {
+                return committeeNameData[userLanguage];
+            }
+            if (committeeNameData['ar']) {
+                return committeeNameData['ar'];
+            }
+            if (committeeNameData['en']) {
+                return committeeNameData['en'];
+            }
+            // إذا لم تكن هناك خصائص لغة، جرب الخصائص الأخرى
+            if (committeeNameData.name) {
+                return committeeNameData.name;
+            }
+            if (committeeNameData.title) {
+                return committeeNameData.title;
+            }
+            if (committeeNameData.text) {
+                return committeeNameData.text;
+            }
+            if (committeeNameData.value) {
+                return committeeNameData.value;
+            }
+            // كحل أخير، إرجاع string representation
+            const result = JSON.stringify(committeeNameData);
+            return result;
+        }
+        // إذا كان الاسم JSON string يحتوي على اللغتين
         if (typeof committeeNameData === 'string' && committeeNameData.startsWith('{')) {
             const parsed = JSON.parse(committeeNameData);
-            return parsed[userLanguage] || parsed['ar'] || committeeNameData;
+            return parsed[userLanguage] || parsed['ar'] || parsed['en'] || committeeNameData;
         }
         // إذا كان نص عادي
         return committeeNameData || 'غير معروف';
     } catch (error) {
+        console.error('Error in getCommitteeNameByLanguage:', error);
         // في حالة فشل التحليل، إرجاع النص كما هو
-        return committeeNameData || 'غير معروف';
+        return String(committeeNameData) || 'غير معروف';
+    }
+}
+
+// دالة مساعدة لاستخراج اسم المحتوى باللغة المناسبة
+function getContentNameByLanguage(contentNameData, userLanguage = 'ar') {
+    try {
+        // إذا كان الاسم object يحتوي على اللغتين
+        if (typeof contentNameData === 'object' && contentNameData !== null) {
+            // إذا كان object يحتوي على خصائص اللغة
+            if (contentNameData[userLanguage]) {
+                return contentNameData[userLanguage];
+            }
+            if (contentNameData['ar']) {
+                return contentNameData['ar'];
+            }
+            if (contentNameData['en']) {
+                return contentNameData['en'];
+            }
+            // إذا لم تكن هناك خصائص لغة، جرب الخصائص الأخرى
+            if (contentNameData.name) {
+                return contentNameData.name;
+            }
+            if (contentNameData.title) {
+                return contentNameData.title;
+            }
+            if (contentNameData.text) {
+                return contentNameData.text;
+            }
+            if (contentNameData.value) {
+                return contentNameData.value;
+            }
+            // كحل أخير، إرجاع string representation
+            const result = JSON.stringify(contentNameData);
+            return result;
+        }
+        // إذا كان الاسم JSON string يحتوي على اللغتين
+        if (typeof contentNameData === 'string' && contentNameData.startsWith('{')) {
+            const parsed = JSON.parse(contentNameData);
+            return parsed[userLanguage] || parsed['ar'] || parsed['en'] || contentNameData;
+        }
+        // إذا كان نص عادي
+        return contentNameData || 'غير معروف';
+    } catch (error) {
+        console.error('Error in getContentNameByLanguage:', error);
+        // في حالة فشل التحليل، إرجاع النص كما هو
+        return String(contentNameData) || 'غير معروف';
     }
 }
 
@@ -81,12 +157,14 @@ exports.addCommittee = async (req, res) => {
       if (token) {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const userId = decoded.id;
+        const userLanguage = getUserLanguageFromToken(token);
   
         // ✅ تسجيل اللوق قبل الرد
+        const committeeNameInLanguage = getCommitteeNameByLanguage(name, userLanguage);
         await logAction(
           userId,
           'add_committee',
-          `تمت إضافة لجنة جديدة: ${name}`,
+          `تمت إضافة لجنة جديدة: ${committeeNameInLanguage}`,
           'committee',
           committeeId
         );
@@ -133,12 +211,14 @@ exports.addCommittee = async (req, res) => {
       if (token) {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const userId = decoded.id;
+        const userLanguage = getUserLanguageFromToken(token);
   
         try {
+          const committeeNameInLanguage = getCommitteeNameByLanguage(name, userLanguage);
           await logAction(
             userId,
             'update_committee',
-            `تم تعديل اللجنة: ${name}`,
+            `تم تعديل اللجنة: ${committeeNameInLanguage}`,
             'committee',
             id
           );
@@ -215,9 +295,11 @@ exports.addFolder = async (req, res) => {
         
         // ✅ تسجيل اللوق بعد نجاح إضافة المجلد
         try {
+            const userLanguage = getUserLanguageFromToken(token);
+            const folderNameInLanguage = getContentNameByLanguage(name, userLanguage);
             const logDescription = committeeName 
-                ? `تمت إضافة مجلد جديد: ${name} في لجنة: ${committeeName}`
-                : `تمت إضافة مجلد جديد: ${name}`;
+                ? `تمت إضافة مجلد جديد: ${folderNameInLanguage} في لجنة: ${committeeName}`
+                : `تمت إضافة مجلد جديد: ${folderNameInLanguage}`;
                 
             await logAction(
                 created_by,
@@ -267,11 +349,14 @@ exports.updateFolder = async (req, res) => {
         if (token) {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             const userId = decoded.id;
+            const userLanguage = getUserLanguageFromToken(token);
             
             try {
+                const oldFolderNameInLanguage = getContentNameByLanguage(oldName, userLanguage);
+                const newFolderNameInLanguage = getContentNameByLanguage(name, userLanguage);
                 const logDescription = committeeName 
-                    ? `تم تعديل مجلد من: ${oldName} إلى: ${name} في لجنة: ${committeeName}`
-                    : `تم تعديل مجلد من: ${oldName} إلى: ${name}`;
+                    ? `تم تعديل مجلد من: ${oldFolderNameInLanguage} إلى: ${newFolderNameInLanguage} في لجنة: ${committeeName}`
+                    : `تم تعديل مجلد من: ${oldFolderNameInLanguage} إلى: ${newFolderNameInLanguage}`;
                 
                 await logAction(
                     userId,
@@ -320,12 +405,14 @@ exports.deleteFolder = async (req, res) => {
       if (token) {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const userId = decoded.id;
+        const userLanguage = getUserLanguageFromToken(token);
   
         try {
+          const folderNameInLanguage = getContentNameByLanguage(folderName, userLanguage);
           await logAction(
             userId,
             'delete_folder',
-            `تم حذف المجلد: ${folderName} من لجنة: ${committeeName}`,
+            `تم حذف المجلد: ${folderNameInLanguage} من لجنة: ${committeeName}`,
             'folder',
             id
           );
@@ -422,9 +509,11 @@ exports.addContent = async (req, res) => {
   
       // 🔹 تسجيل اللوق
       try {
+        const userLanguage = getUserLanguageFromToken(token);
+        const contentNameInLanguage = getContentNameByLanguage(title, userLanguage);
         const logDescription = committeeName 
-          ? `تمت إضافة محتوى بعنوان: ${title} في لجنة: ${committeeName}`
-          : `تمت إضافة محتوى بعنوان: ${title}`;
+          ? `تمت إضافة محتوى بعنوان: ${contentNameInLanguage} في لجنة: ${committeeName}`
+          : `تمت إضافة محتوى بعنوان: ${contentNameInLanguage}`;
           
         await logAction(
           created_by,
@@ -490,11 +579,14 @@ exports.addContent = async (req, res) => {
       if (token) {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const userId = decoded.id;
+        const userLanguage = getUserLanguageFromToken(token);
 
         try {
+          const oldContentNameInLanguage = getContentNameByLanguage(oldTitle, userLanguage);
+          const newContentNameInLanguage = getContentNameByLanguage(title, userLanguage);
           const logDescription = committeeName 
-            ? `تم تعديل محتوى من: ${oldTitle} إلى: ${title} في لجنة: ${committeeName}`
-            : `تم تعديل محتوى من: ${oldTitle} إلى: ${title}`;
+            ? `تم تعديل محتوى من: ${oldContentNameInLanguage} إلى: ${newContentNameInLanguage} في لجنة: ${committeeName}`
+            : `تم تعديل محتوى من: ${oldContentNameInLanguage} إلى: ${newContentNameInLanguage}`;
             
           await logAction(
             userId,
@@ -546,11 +638,13 @@ exports.deleteContent = async (req, res) => {
       if (token) {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const userId = decoded.id;
+        const userLanguage = getUserLanguageFromToken(token);
   
         try {
+          const contentNameInLanguage = getContentNameByLanguage(contentTitle, userLanguage);
           const logDescription = committeeName 
-            ? `تم حذف محتوى: ${contentTitle} من لجنة: ${committeeName}`
-            : `تم حذف محتوى: ${contentTitle}`;
+            ? `تم حذف محتوى: ${contentNameInLanguage} من لجنة: ${committeeName}`
+            : `تم حذف محتوى: ${contentNameInLanguage}`;
             
           await logAction(
             userId,
@@ -759,12 +853,14 @@ exports.addFolderName = async (req, res) => {
     if (token) {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const userId = decoded.id;
+      const userLanguage = getUserLanguageFromToken(token);
       
       try {
+        const folderNameInLanguage = getContentNameByLanguage(name, userLanguage);
         await logAction(
           userId,
           'add_folder_name',
-          `تمت إضافة اسم مجلد جديد للجان: ${name}`,
+          `تمت إضافة اسم مجلد جديد للجان: ${folderNameInLanguage}`,
           'folder_name',
           result.insertId
         );
@@ -820,12 +916,15 @@ const { id }   = req.params;
     if (token) {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const userId = decoded.id;
+      const userLanguage = getUserLanguageFromToken(token);
       
       try {
+        const oldFolderNameInLanguage = getContentNameByLanguage(oldName, userLanguage);
+        const newFolderNameInLanguage = getContentNameByLanguage(name, userLanguage);
         await logAction(
           userId,
           'update_folder_name',
-          `تم تعديل اسم مجلد للجان من: ${oldName} إلى: ${name}`,
+          `تم تعديل اسم مجلد للجان من: ${oldFolderNameInLanguage} إلى: ${newFolderNameInLanguage}`,
           'folder_name',
           id
         );
@@ -864,10 +963,11 @@ exports.deleteFolderName = async (req, res) => {
       const userId = decoded.id;
       
       try {
+        const folderNameInLanguage = getContentNameByLanguage(folderName, userLanguage);
         await logAction(
           userId,
           'delete_folder_name',
-          `تم حذف اسم مجلد للجان: ${folderName}`,
+          `تم حذف اسم مجلد للجان: ${folderNameInLanguage}`,
           'folder_name',
           id
         );
@@ -907,12 +1007,14 @@ exports.addContentTitle = async (req, res) => {
     if (token) {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const userId = decoded.id;
+      const userLanguage = getUserLanguageFromToken(token);
       
       try {
+        const contentTitleInLanguage = getContentNameByLanguage(name, userLanguage);
         await logAction(
           userId,
           'add_content_title',
-          `تمت إضافة عنوان محتوى جديد للجان: ${name}`,
+          `تمت إضافة عنوان محتوى جديد للجان: ${contentTitleInLanguage}`,
           'content_title',
           result.insertId
         );
@@ -961,12 +1063,15 @@ exports.updateContentTitle = async (req, res) => {
     if (token) {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const userId = decoded.id;
+      const userLanguage = getUserLanguageFromToken(token);
       
       try {
+        const oldContentTitleInLanguage = getContentNameByLanguage(oldName, userLanguage);
+        const newContentTitleInLanguage = getContentNameByLanguage(name, userLanguage);
         await logAction(
           userId,
           'update_content_title',
-          `تم تعديل عنوان محتوى للجان من: ${oldName} إلى: ${name}`,
+          `تم تعديل عنوان محتوى للجان من: ${oldContentTitleInLanguage} إلى: ${newContentTitleInLanguage}`,
           'content_title',
           id
         );
@@ -1005,12 +1110,14 @@ exports.deleteContentTitle = async (req, res) => {
     if (token) {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const userId = decoded.id;
+      const userLanguage = getUserLanguageFromToken(token);
       
       try {
+        const contentTitleInLanguage = getContentNameByLanguage(contentTitle, userLanguage);
         await logAction(
           userId,
           'delete_content_title',
-          `تم حذف عنوان محتوى للجان: ${contentTitle}`,
+          `تم حذف عنوان محتوى للجان: ${contentTitleInLanguage}`,
           'content_title',
           id
         );

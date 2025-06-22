@@ -277,6 +277,140 @@
             </div>
         </div>
     </div>
+    <!-- Add Folder Name Modal -->
+    <div id="addFolderNameModal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 data-translate="add-folder-name">إضافة اسم مجلد</h3>
+          <span class="close-button">&times;</span>
+        </div>
+        <hr>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="folderNameAr" data-translate="folder-name-ar">اسم المجلد (عربي)</label>
+            <input type="text" id="folderNameAr" data-translate-placeholder="enter-arabic-name" placeholder="مثال: التقارير" required>
+          </div>
+          <div class="form-group">
+            <label for="folderNameEn" data-translate="folder-name-en">اسم المجلد (إنجليزي)</label>
+            <input type="text" id="folderNameEn" data-translate-placeholder="enter-english-name" placeholder="e.g. Reports" required>
+          </div>
+        </div>
+        <div class="modal-buttons">
+          <button class="btn-primary" id="saveAddFolderName" data-translate="save">حفظ</button>
+          <button class="btn-secondary" id="cancelAddFolderName" data-translate="cancel">إلغاء</button>
+        </div>
+      </div>
+    </div>
+    <!-- Edit Folder Name Modal -->
+    <div id="editFolderNameModal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 data-translate="edit-folder-name">تعديل اسم مجلد</h3>
+          <span class="close-button">&times;</span>
+        </div>
+        <hr>
+        <div class="modal-body">
+          <input type="hidden" id="editFolderNameId">
+          <div class="form-group">
+            <label for="editFolderNameAr" data-translate="folder-name-ar">اسم المجلد (عربي)</label>
+            <input type="text" id="editFolderNameAr" data-translate-placeholder="enter-arabic-name" required>
+          </div>
+          <div class="form-group">
+            <label for="editFolderNameEn" data-translate="folder-name-en">اسم المجلد (إنجليزي)</label>
+            <input type="text" id="editFolderNameEn" data-translate-placeholder="enter-english-name" required>
+          </div>
+        </div>
+        <div class="modal-buttons">
+          <button class="btn-primary" id="saveEditFolderName" data-translate="update">تحديث</button>
+          <button class="btn-secondary" id="cancelEditFolderName" data-translate="cancel">إلغاء</button>
+        </div>
+      </div>
+    </div>
+    <!-- Delete Folder Name Modal -->
+    <div id="deleteFolderNameModal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 data-translate="delete-folder-name">حذف اسم مجلد</h3>
+          <span class="close-button">&times;</span>
+        </div>
+        <hr>
+        <div class="modal-body">
+          <input type="hidden" id="deleteFolderNameId">
+          <p data-translate="delete-folder-name-confirm">هل أنت متأكد أنك تريد حذف اسم المجلد؟</p>
+        </div>
+        <div class="modal-buttons">
+          <button class="btn-danger" id="confirmDeleteFolderNameBtn" data-translate="delete">حذف</button>
+          <button class="btn-secondary" id="cancelDeleteFolderNameBtn" data-translate="cancel">إلغاء</button>
+        </div>
+      </div>
+    </div>
+    <!-- Add Content Title Modal -->
+    <div id="addContentTitleModal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 data-translate="add-content-name">إضافة عنوان محتوى</h3>
+          <span class="close-button">&times;</span>
+        </div>
+        <hr>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="contentTitleAr" data-translate="content-name-ar">عنوان المحتوى (عربي)</label>
+            <input type="text" id="contentTitleAr" data-translate-placeholder="enter-arabic-name" placeholder="مثال: تقرير سنوي" required>
+          </div>
+          <div class="form-group">
+            <label for="contentTitleEn" data-translate="content-name-en">عنوان المحتوى (إنجليزي)</label>
+            <input type="text" id="contentTitleEn" data-translate-placeholder="enter-english-name" placeholder="e.g. Annual Report" required>
+          </div>
+        </div>
+        <div class="modal-buttons">
+          <button class="btn-primary" id="saveAddContentTitle" data-translate="save">حفظ</button>
+          <button class="btn-secondary" id="cancelAddContentTitle" data-translate="cancel">إلغاء</button>
+        </div>
+      </div>
+    </div>
+    <!-- Edit Content Title Modal -->
+    <div id="editContentTitleModal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 data-translate="edit-content-name">تعديل عنوان محتوى</h3>
+          <span class="close-button">&times;</span>
+        </div>
+        <hr>
+        <div class="modal-body">
+          <input type="hidden" id="editContentTitleId">
+          <div class="form-group">
+            <label for="editContentTitleAr" data-translate="content-name-ar">عنوان المحتوى (عربي)</label>
+            <input type="text" id="editContentTitleAr" data-translate-placeholder="enter-arabic-name" required>
+          </div>
+          <div class="form-group">
+            <label for="editContentTitleEn" data-translate="content-name-en">عنوان المحتوى (إنجليزي)</label>
+            <input type="text" id="editContentTitleEn" data-translate-placeholder="enter-english-name" required>
+          </div>
+        </div>
+        <div class="modal-buttons">
+          <button class="btn-primary" id="saveEditContentTitle" data-translate="update">تحديث</button>
+          <button class="btn-secondary" id="cancelEditContentTitle" data-translate="cancel">إلغاء</button>
+        </div>
+      </div>
+    </div>
+    <!-- Delete Content Title Modal -->
+    <div id="deleteContentTitleModal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 data-translate="delete-content-name">حذف عنوان محتوى</h3>
+          <span class="close-button">&times;</span>
+        </div>
+        <hr>
+        <div class="modal-body">
+          <input type="hidden" id="deleteContentTitleId">
+          <p data-translate="delete-content-name-confirm">هل أنت متأكد أنك تريد حذف عنوان المحتوى؟</p>
+        </div>
+        <div class="modal-buttons">
+          <button class="btn-danger" id="confirmDeleteContentTitleBtn" data-translate="delete">حذف</button>
+          <button class="btn-secondary" id="cancelDeleteContentTitleBtn" data-translate="cancel">إلغاء</button>
+        </div>
+      </div>
+    </div>
     <div id="toast-container"></div>
     <script src="../js/language.js"></script>
     <script src="../js/committee-content.js"></script>
