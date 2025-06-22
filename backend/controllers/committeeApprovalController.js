@@ -207,61 +207,96 @@ async function handleCommitteeApproval(req, res) {
 async function getAssignedCommitteeApprovals(req, res) {
   try {
     const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ status: 'error', message: 'لا يوجد توكن' });
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const userId  = decoded.id;
-    const userRole = decoded.role;
+    if (!token) 
+      return res.status(401).json({ status: 'error', message: 'لا يوجد توكن' });
 
-    // check admin
+    const decoded   = jwt.verify(token, process.env.JWT_SECRET);
+    const userId    = decoded.id;
+    const userRole  = decoded.role;
+
+    // 1) جلب صلاحيات المستخدم
     const [permRows] = await db.execute(`
-      SELECT permission_key
+      SELECT p.permission_key
       FROM user_permissions up
       JOIN permissions p ON up.permission_id = p.id
       WHERE up.user_id = ?
     `, [userId]);
     const perms = new Set(permRows.map(r => r.permission_key));
-    const canViewAll = userRole === 'admin' || perms.has('transfer_credits');
+    const canViewAll = (userRole === 'admin' || perms.has('transfer_credits'));
 
+    // 2) قاعدة الاستعلام
     let baseQuery = `
       SELECT 
-        CONCAT('comm-', cc.id) AS id,
+        CONCAT('comm-', cc.id)                AS id,
         cc.title,
         cc.file_path,
         cc.approval_status,
-        GROUP_CONCAT(DISTINCT u2.username) AS assigned_approvers,
- com.name       AS source_name,  -- ← لفلتر "المصدر" والقائمة
-  'committee'    AS type,         -- ← لتمييز نوع العنصر في الواجهة        u.username AS created_by,
-        CAST(cc.approvers_required AS CHAR) AS approvers_required,
+        GROUP_CONCAT(DISTINCT u2.username)    AS assigned_approvers,
+        com.name                              AS source_name,
+        u.username                            AS created_by_username,
+        'committee'                           AS type,
+        CAST(cc.approvers_required AS CHAR)   AS approvers_required,
         cc.created_at
       FROM committee_contents cc
-      JOIN committee_folders cf ON cc.folder_id = cf.id
-      JOIN committees com         ON cf.committee_id = com.id
-      JOIN users u                ON cc.created_by = u.id
-      LEFT JOIN committee_content_approvers cca ON cca.content_id = cc.id
-      LEFT JOIN users u2           ON cca.user_id = u2.id
-      WHERE 1=1
+      JOIN committee_folders cf       ON cc.folder_id = cf.id
+      JOIN committees com             ON cf.committee_id = com.id
+      JOIN users u                    ON cc.created_by = u.id
     `;
 
     const params = [];
+
     if (!canViewAll) {
-      baseQuery += ` AND ( EXISTS(
-          SELECT 1 FROM committee_content_approvers WHERE content_id = cc.id AND user_id = ?
-        ) OR cc.created_by = ? )`;
+      // 3) لو ما عنده صلاحية عرض الكل: نضيق عبر INNER JOIN
+      baseQuery += `
+        -- ربط الموافقات بحيث يجلب فقط الصفوف المعينة للمستخدم
+        JOIN committee_content_approvers cca 
+          ON cca.content_id = cc.id 
+         AND cca.user_id = ?
+
+        LEFT JOIN users u2 
+          ON u2.id = cca.user_id
+
+        WHERE 
+          cc.approval_status = 'pending'
+          OR cc.created_by = ?
+      `;
       params.push(userId, userId);
+
+    } else {
+      // 4) للمفوّضين/المسؤولين نستخدم LEFT JOIN عادي لعرض كل الصفوف المعلقة
+      baseQuery += `
+        LEFT JOIN committee_content_approvers cca 
+          ON cca.content_id = cc.id
+
+        LEFT JOIN users u2 
+          ON u2.id = cca.user_id
+
+        WHERE cc.approval_status = 'pending'
+      `;
     }
 
-    baseQuery += ` GROUP BY cc.id ORDER BY cc.created_at DESC`;
+    // 5) تجميع وترتيب
+    baseQuery += `
+      GROUP BY cc.id
+      ORDER BY cc.created_at DESC
+    `;
 
+    // 6) تنفيذ الاستعلام
     const [rows] = await db.execute(baseQuery, params);
+
+    // 7) تحويل الحقل من JSON نصي إلى مصفوفة
     rows.forEach(r => {
-      try { r.approvers_required = JSON.parse(r.approvers_required); }
-      catch { r.approvers_required = []; }
+      try {
+        r.approvers_required = JSON.parse(r.approvers_required);
+      } catch {
+        r.approvers_required = [];
+      }
     });
 
-    res.json({ status: 'success', data: rows });
+    return res.json({ status: 'success', data: rows });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    console.error('Error in getAssignedCommitteeApprovals:', err);
+    return res.status(500).json({ status: 'error', message: 'Internal Server Error' });
   }
 }
 

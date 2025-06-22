@@ -531,58 +531,102 @@ const getAssignedApprovals = async (req, res) => {
     const permsSet = await getUserPermissions(userId);
     const canViewAll = userRole === 'admin' || permsSet.has('transfer_credits');
 
-    let departmentContentQuery = `
-      SELECT
-        CONCAT('dept-', c.id) AS id,
-        c.title,
-        c.file_path,
-        c.approval_status,
-        GROUP_CONCAT(DISTINCT u2.username) AS assigned_approvers,
-        d.name AS source_name,
-        u.username AS created_by_username,
-        'department' AS type,
-        CAST(c.approvers_required AS CHAR) AS approvers_required,
-        c.created_at
-      FROM contents c
-      JOIN folders f ON c.folder_id = f.id
-      JOIN departments d ON f.department_id = d.id
-      JOIN users u ON c.created_by = u.id
-      LEFT JOIN content_approvers ca ON ca.content_id = c.id
-      LEFT JOIN users u2 ON ca.user_id = u2.id
-      WHERE c.approval_status = 'pending'
-    `;
+    // لو الكيان ليس admin أو لا يملك الصلاحية، نبني استعلام محدود
+    const departmentContentQuery = canViewAll
+      ? `
+        SELECT
+          CONCAT('dept-', c.id) AS id,
+          c.title,
+          c.file_path,
+          c.approval_status,
+          GROUP_CONCAT(DISTINCT u2.username) AS assigned_approvers,
+          d.name AS source_name,
+          u.username AS created_by_username,
+          'department' AS type,
+          CAST(c.approvers_required AS CHAR) AS approvers_required,
+          c.created_at
+        FROM contents c
+        JOIN folders f        ON c.folder_id = f.id
+        JOIN departments d    ON f.department_id = d.id
+        JOIN users u          ON c.created_by = u.id
+        LEFT JOIN content_approvers ca ON ca.content_id = c.id
+        LEFT JOIN users u2     ON ca.user_id = u2.id
+        WHERE c.approval_status = 'pending'
+        GROUP BY c.id
+      `
+      : `
+        SELECT
+          CONCAT('dept-', c.id) AS id,
+          c.title,
+          c.file_path,
+          c.approval_status,
+          GROUP_CONCAT(DISTINCT u2.username) AS assigned_approvers,
+          d.name AS source_name,
+          u.username AS created_by_username,
+          'department' AS type,
+          CAST(c.approvers_required AS CHAR) AS approvers_required,
+          c.created_at
+        FROM contents c
+        JOIN folders f        ON c.folder_id = f.id
+        JOIN departments d    ON f.department_id = d.id
+        JOIN users u          ON c.created_by = u.id
+        -- هنا نضمن أن الصف موجود فقط لو هو من المعينين أو منشئه
+        JOIN content_approvers ca ON ca.content_id = c.id AND ca.user_id = ?
+        LEFT JOIN users u2     ON ca.user_id = u2.id
+        WHERE c.approval_status = 'pending'
+          OR c.created_by = ?
+        GROUP BY c.id
+      `;
 
-    let committeeContentQuery = `
-      SELECT
-        CONCAT('comm-', cc.id) AS id,
-        cc.title,
-        cc.file_path,
-        cc.approval_status,
-        GROUP_CONCAT(DISTINCT u2.username) AS assigned_approvers,
-        com.name AS source_name,
-        u.username AS created_by_username,
-        'committee' AS type,
-        CAST(cc.approvers_required AS CHAR) AS approvers_required,
-        cc.created_at
-      FROM committee_contents cc
-      JOIN committee_folders cf ON cc.folder_id = cf.id
-      JOIN committees com ON cf.committee_id = com.id
-      JOIN users u ON cc.created_by = u.id
-      LEFT JOIN committee_content_approvers cca ON cca.content_id = cc.id
-      LEFT JOIN users u2 ON cca.user_id = u2.id
-      WHERE cc.approval_status = 'pending'
-    `;
+    const committeeContentQuery = canViewAll
+      ? `
+        SELECT
+          CONCAT('comm-', cc.id) AS id,
+          cc.title,
+          cc.file_path,
+          cc.approval_status,
+          GROUP_CONCAT(DISTINCT u2.username) AS assigned_approvers,
+          com.name AS source_name,
+          u.username AS created_by_username,
+          'committee' AS type,
+          CAST(cc.approvers_required AS CHAR) AS approvers_required,
+          cc.created_at
+        FROM committee_contents cc
+        JOIN committee_folders cf      ON cc.folder_id = cf.id
+        JOIN committees com            ON cf.committee_id = com.id
+        JOIN users u                   ON cc.created_by = u.id
+        LEFT JOIN committee_content_approvers cca ON cca.content_id = cc.id
+        LEFT JOIN users u2             ON cca.user_id = u2.id
+        WHERE cc.approval_status = 'pending'
+        GROUP BY cc.id
+      `
+      : `
+        SELECT
+          CONCAT('comm-', cc.id) AS id,
+          cc.title,
+          cc.file_path,
+          cc.approval_status,
+          GROUP_CONCAT(DISTINCT u2.username) AS assigned_approvers,
+          com.name AS source_name,
+          u.username AS created_by_username,
+          'committee' AS type,
+          CAST(cc.approvers_required AS CHAR) AS approvers_required,
+          cc.created_at
+        FROM committee_contents cc
+        JOIN committee_folders cf      ON cc.folder_id = cf.id
+        JOIN committees com            ON cf.committee_id = com.id
+        JOIN users u                   ON cc.created_by = u.id
+        JOIN committee_content_approvers cca ON cca.content_id = cc.id AND cca.user_id = ?
+        LEFT JOIN users u2             ON cca.user_id = u2.id
+        WHERE cc.approval_status = 'pending'
+          OR cc.created_by = ?
+        GROUP BY cc.id
+      `;
 
-    let params = [];
-
-    if (!canViewAll) {
-      departmentContentQuery += ` AND (EXISTS (SELECT 1 FROM content_approvers WHERE content_id = c.id AND user_id = ?) OR c.created_by = ?)`;
-      committeeContentQuery += ` AND (EXISTS (SELECT 1 FROM committee_content_approvers WHERE content_id = cc.id AND user_id = ?) OR cc.created_by = ?)`;
-      params.push(userId, userId, userId, userId);
-    }
-
-    departmentContentQuery += ` GROUP BY c.id`;
-    committeeContentQuery += ` GROUP BY cc.id`;
+    // إذا كان مفوّض محدود نمرر userId مرتين لكل جزء
+    const params = canViewAll
+      ? []
+      : [userId, userId, userId, userId];
 
     const finalQuery = `
       ${departmentContentQuery}
@@ -593,25 +637,22 @@ const getAssignedApprovals = async (req, res) => {
 
     const [rows] = await db.execute(finalQuery, params);
 
+    // تحويل الحقل من نص JSON إلى مصفوفة
     rows.forEach(row => {
-      if (typeof row.approvers_required === 'string') {
-        try {
-          row.approvers_required = JSON.parse(row.approvers_required);
-        } catch (e) {
-          console.error('Failed to parse approvers_required JSON string for item ID:', row.id, 'Raw string:', row.approvers_required, 'Error:', e);
-          row.approvers_required = [];
-        }
-      } else if (row.approvers_required === null || !Array.isArray(row.approvers_required)) {
+      try {
+        row.approvers_required = JSON.parse(row.approvers_required);
+      } catch {
         row.approvers_required = [];
       }
     });
 
-    res.json({ status: 'success', data: rows });
+    return res.json({ status: 'success', data: rows });
   } catch (err) {
     console.error('Error in getAssignedApprovals:', err);
-    res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+    return res.status(500).json({ status: 'error', message: 'Internal Server Error' });
   }
 };
+
 
 const delegateApproval = async (req, res) => {
   // 1) فكّ الـ prefix وخذ الرقم فقط

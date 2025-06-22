@@ -5,6 +5,18 @@ function getTranslation(key) {
     }
     return key;
 }
+// في أعلى الملف، بعد parseJwt:
+function parseLocalized(text) {
+  try {
+    const obj = typeof text==='string' && text.trim().startsWith('{')
+      ? JSON.parse(text)
+      : text;
+    const lang = localStorage.getItem('language') || document.documentElement.lang || 'ar';
+    return (obj && obj[lang]) || (obj && obj.ar) || '';
+  } catch {
+    return text;
+  }
+}
 
 document.addEventListener('DOMContentLoaded', function() {
     const usernameSpan = document.getElementById('profile-username');
@@ -42,7 +54,7 @@ const employeeNumberSpan = document.getElementById('profile-employee-number');
             // usernameSpan.textContent = user.username || getTranslation('not-available');
             // بما أن الفورم لا يرسل username، سنعرض الإيميل كاسم مستخدم مؤقتاً أو نتركه فارغاً إذا لم يكن مطلوباً
             usernameSpan.textContent = user.username || getTranslation('not-available');
-            departmentSpan.textContent = user.department_name || getTranslation('not-available');
+            departmentSpan.textContent = parseLocalized(user.department_name) || getTranslation('not-available');
 employeeNumberSpan.textContent = user.employee_number || getTranslation('not-available');
 
         } else {

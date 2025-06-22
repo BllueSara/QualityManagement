@@ -321,21 +321,35 @@ function initActions() {
     });
   });
 
-  document.querySelectorAll('.btn-preview').forEach(btn => {
-    btn.addEventListener('click', e => {
-      const tr = e.target.closest('tr');
-      const itemId = tr.dataset.id;
-      const item = allItems.find(i => i.id == itemId);
+// لو عندك apiBase من قبل:
+const serverUrl   = apiBase.replace('/api', '');        // مثال: "http://localhost:3006"
+// أو بدل هذا استخدم origin ديناميكي:
+// const serverUrl = window.location.origin;
 
-      if (!item || !item.file_path) {
-        alert(getTranslation('no-content'));
-        return;
-      }
+const previewBase = `${serverUrl}/uploads`;
 
-      const url = `http://localhost:3006/uploads/${item.file_path}`;
-      window.open(url, '_blank');
-    });
+document.querySelectorAll('.btn-preview').forEach(btn => {
+  btn.addEventListener('click', e => {
+    const tr     = e.target.closest('tr');
+    const itemId = tr.dataset.id;
+    const item   = allItems.find(i => i.id == itemId);
+
+    if (!item || !item.file_path) {
+      alert(getTranslation('no-content'));
+      return;
+    }
+
+    // شيل بادئة 'uploads/' لو موجودة
+    let filePath = item.file_path;
+    if (filePath.startsWith('uploads/')) {
+      filePath = filePath.replace(/^uploads\//, '');
+    }
+
+    const url = `${previewBase}/${filePath}`;
+    window.open(url, '_blank');
   });
+});
+
 }
 
 document.getElementById('btnElectronicApprove')?.addEventListener('click', async () => {

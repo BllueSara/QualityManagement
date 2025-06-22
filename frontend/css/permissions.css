@@ -837,3 +837,12 @@ select::placeholder {
 :lang(en) .user-profile-header.active #profile-extra {
   gap: 15px;          /* زيّد المسافة هنا كيف ما تحب */
 }
+.user-status {
+  cursor: pointer;
+}
+.user-status.active {
+  background-color: green;
+}
+.user-status.inactive {
+  background-color: red;
+}

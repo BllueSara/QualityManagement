@@ -4,9 +4,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const departmentSelect = document.getElementById('reg-department');
     const usernameInput = document.getElementById('reg-username');
     const departmentGroup = departmentSelect.closest('.form-group');
-    console.log('departmentSelect element:', departmentSelect);
-    console.log('usernameInput element:', usernameInput);
-    console.log('departmentGroup element:', departmentGroup);
+  const employeeInput   = document.getElementById('reg-employee');
+    const employeeGroup   = employeeInput.closest('.form-group');
 
     // عناصر النموذج المنبثق لإضافة قسم
     const addDepartmentModal = document.getElementById('addDepartmentModal');
@@ -32,86 +31,70 @@ function closeModal(modal) {
 }
 
 
-    // إضافة مستمع حدث لحقل اسم المستخدم
-    usernameInput.addEventListener('input', function() {
-        const username = this.value.toLowerCase();
-        if (username === 'admin') {
-            departmentGroup.style.display = 'none'; // إخفاء مجموعة القسم
-            departmentSelect.removeAttribute('required'); // إزالة السمة المطلوبة
-            departmentSelect.value = ''; // مسح القيمة لضمان عدم إرسال department_id
-        } else {
-            departmentGroup.style.display = 'block'; // إظهار مجموعة القسم
-            departmentSelect.setAttribute('required', 'required'); // إعادة السمة المطلوبة
-        }
-    });
+  usernameInput.addEventListener('input', function() {
+    const username = this.value.trim().toLowerCase();
+    if (username === 'admin') {
+      // أخفِ القسم والموظف
+      departmentGroup.style.display = 'none';
+      departmentSelect.removeAttribute('required');
+      departmentSelect.value = '';
+
+      employeeGroup.style.display = 'none';
+      employeeInput.removeAttribute('required');
+      employeeInput.value = '';
+    } else {
+      // أعِد ظهورهما
+      departmentGroup.style.display = 'block';
+      departmentSelect.setAttribute('required', 'required');
+
+      employeeGroup.style.display = 'block';
+      employeeInput.setAttribute('required', 'required');
+    }
+  });
 
     // دالة لجلب الأقسام من الباك اند وتعبئة قائمة الاختيار
 async function fetchDepartments() {
   try {
-    console.log('Attempting to fetch departments...');
-    const token = localStorage.getItem('token');
+    const token    = localStorage.getItem('token');
     const response = await fetch('http://localhost:3006/api/departments', {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+      headers: { 'Authorization': `Bearer ${token}` }
     });
-    const data = await response.json();
+    const data     = await response.json();
+    if (!response.ok) throw new Error(data.message || 'فشل جلب الأقسام');
 
-    console.log('Departments API response:', data);
+    // حدّد اللغة الحالية:
+    const lang = localStorage.getItem('language') || 'ar';
+    // نص الخيار الافتراضي:
+    const defaultText = lang === 'ar' ? 'اختر القسم' : 'Select Department';
+    departmentSelect.innerHTML = `<option value="">${defaultText}</option>`;
 
-    if (response.ok) {
-      const lang = localStorage.getItem('language') || 'ar';
-      const selectDepartmentText = lang === 'ar' ? 'اختر القسم' : 'Select Department';
+    data.forEach(dept => {
+      let parsed;
+      try {
+        // تأكد من تحويل الاسم من string JSON إلى كائن دائماً
+        parsed = JSON.parse(dept.name);
+      } catch {
+        // لو فشل الـ parse خذ الاسم كنص وحضّره لكائن
+        parsed = { ar: dept.name, en: dept.name };
+      }
+      // اختر التسمية بناءً على اللغة، أو احتياطياً العربي ثم الإنجليزي
+      const label = parsed[lang] ?? parsed.ar ?? parsed.en;
 
-      departmentSelect.innerHTML = `<option value="">${selectDepartmentText}</option>`;
+      const opt = document.createElement('option');
+      opt.value       = dept.id;
+      opt.textContent = label;
+      departmentSelect.appendChild(opt);
+    });
 
-data.forEach(department => {
-  const option = document.createElement('option');
-  option.value = department.id;
-
-  const lang = localStorage.getItem('language') || 'ar';
-  let label = '';
-
-  try {
-    // جرّب تفكيك JSON إذا كان الاسم string
-    const parsedName = typeof department.name === 'string'
-      ? JSON.parse(department.name)
-      : department.name;
-
-    // إذا نجح التفكيك وطلع كائن، خذ الاسم حسب اللغة
-    if (parsedName && typeof parsedName === 'object') {
-      label = parsedName[lang] || parsedName.ar || parsedName.en || '';
-    } else {
-      // إذا مو كائن، خذه كما هو
-      label = department.name;
-    }
-  } catch (e) {
-    // إذا فشل JSON.parse، خذه كاسم عادي
-    label = department.name;
-  }
-
-  option.textContent = label;
-  departmentSelect.appendChild(option);
-});
+    // خيار "إضافة جديد"
 
 
-
-
-      const addNewOption = document.createElement('option');
-      addNewOption.value = '__ADD_NEW_DEPARTMENT__';
-      addNewOption.textContent = lang === 'ar' ? 'إضافة قسم جديد' : 'Add New Department';
-      departmentSelect.appendChild(addNewOption);
-
-      console.log('Departments dropdown populated successfully.');
-    } else {
-      console.error('فشل جلب الأقسام:', data.message);
-      alert(data.message || 'حدث خطأ أثناء جلب الأقسام.');
-    }
-  } catch (error) {
-    console.error('خطأ في الاتصال بجلب الأقسام:', error);
-    alert('حدث خطأ في الاتصال بجلب الأقسام. يرجى التأكد من تشغيل الخادم.');
+  } catch (err) {
+    console.error(err);
+    alert(err.message || 'حدث خطأ أثناء جلب الأقسام');
   }
 }
+
 
 
     // استدعاء الدالة عند تحميل الصفحة
@@ -239,10 +222,10 @@ registerForm.addEventListener('submit', async function(e) {
   }
 
   // **تحقق من وجود الرقم الوظيفي**
-  if (!formData.employee_number) {
-    alert('الرجاء إدخال الرقم الوظيفي.');
-    return;
-  }
+if (username !== 'admin' && !formData.employee_number) {
+  alert('الرجاء إدخال الرقم الوظيفي.');
+  return;
+}
 
   try {
     const response = await fetch('http://localhost:3006/api/auth/register', {

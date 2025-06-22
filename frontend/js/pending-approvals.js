@@ -216,15 +216,22 @@ ${parseLocalizedName(item.title)}
   // 5) زوّد مستمع للعرض إذا لزم الأمر
   const viewButton = tr.querySelector('.btn-view');
   if (viewButton) {
-    viewButton.addEventListener('click', e => {
-      e.stopPropagation();
-      const filePath = e.currentTarget.dataset.filePath;
-      if (filePath) {
-        window.open(`${baseUrl}/${filePath}`, '_blank');
-      } else {
-        showToast(getTranslation('file-link-unavailable'), 'error');
-      }
-    });
+viewButton.addEventListener('click', e => {
+  e.stopPropagation();
+
+  // خذ المسار من الداتا
+  let filePath = e.currentTarget.dataset.filePath; 
+  // لو كان يبدأ بـ "uploads/" شيلها
+  if (filePath.startsWith('uploads/')) {
+    filePath = filePath.replace(/^uploads\//, '');
+  }
+
+  if (filePath) {
+    window.open(`${baseUrl}/${filePath}`, '_blank');
+  } else {
+    showToast(getTranslation('file-link-unavailable'), 'error');
+  }
+});
   }
 });
 }
