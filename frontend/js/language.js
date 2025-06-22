@@ -30,8 +30,8 @@ const translations = {
         'choose-content-name': 'اختر عنوان المحتوى',
         'folder-name': 'اسم المجلد',
         'content-name': 'عنوان المحتوى',
-        'add-folder-name': '+ إضافة اسم جديد',
-        'add-content-name': '+ إضافة عنوان جديد',
+        'add-folder-name': ' إضافة اسم جديد',
+        'add-content-name': ' إضافة عنوان جديد',
         'choose-file': 'اختر ملف لإرفاقه',
         'choose-new-file': 'اختر ملف جديد لإرفاقه',
         'notes': 'الملاحظات',
@@ -217,7 +217,7 @@ const translations = {
    'submit-ticket': 'ارسال التذكرة',
         // Department content page and modals
         'department-content-title': 'محتويات القسم',
-        'add-folder': 'إضافة مجلد+',
+        'add-folder': 'إضافة مجلد',
         'choose-folder-name': 'اختر اسم المجلد',
         'create': 'إنشاء',
         'add-content': 'إضافة محتوى للمجلد',
@@ -225,7 +225,7 @@ const translations = {
         'search-folder': 'ابحث عن مجلد',
         'search-content': 'ابحث عن محتوى',
         'search-content-name': 'ابحث عن اسم…',
-        'add-content-name': '+ إضافة اسم جديد',
+        'add-content-name': ' إضافة اسم جديد',
         'choose-file': 'اختر ملف لإرفاقه',
         'pdf-only': 'ملفات PDF فقط',
         'add': 'إضافة',
@@ -1008,7 +1008,6 @@ const translations = {
         'placeholder-event-description': 'Write a detailed description of the event here',
         'placeholder-actions': 'Describe the actions taken',
         'placeholder-short-desc': 'Any brief details about the event',
-
         // Departments modals and search
         'search-department': 'Search department',
         'delete-department-title': 'Delete Department Confirmation',
@@ -1036,13 +1035,13 @@ const translations = {
         // Department content page and modals
         'department-content-title': 'Department Content',
         'committee-content-title': 'Committee Content',
-        'add-folder': 'Add Folder+',
+        'add-folder': 'Add Folder',
         'choose-folder-name': 'Choose folder name',
         'choose-content-name': 'Choose content title',
         'folder-name': 'Folder Name',
         'content-name': 'Content Title',
-        'add-folder-name': '+ Add New Name',
-        'add-content-name': '+ Add New Title',
+        'add-folder-name': ' Add New Name',
+        'add-content-name': ' Add New Title',
         'choose-file': 'Choose file to attach',
         'choose-new-file': 'Choose new file to attach',
         'notes': 'Notes',
@@ -2048,3 +2047,4 @@ function getTranslation(key) {
   }
   return key;
 } 
+
