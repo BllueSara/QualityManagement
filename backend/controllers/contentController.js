@@ -201,8 +201,7 @@ const addContent = async (req, res) => {
       if (folder[0].department_id) {
         const [deptRows] = await connection.execute('SELECT name FROM departments WHERE id = ?', [folder[0].department_id]);
         if (deptRows.length > 0) {
-          const userLanguage = getUserLanguageFromToken(token);
-          departmentName = getDepartmentNameByLanguage(deptRows[0].name, userLanguage);
+          departmentName = deptRows[0].name; // استخدام النص الأصلي من قاعدة البيانات
         }
       }
   
@@ -254,8 +253,6 @@ const addContent = async (req, res) => {
       // ✅ تسجيل اللوق بعد نجاح إضافة المحتوى
       try {
         const userLanguage = getUserLanguageFromToken(token);
-        const contentNameInLanguage = getContentNameByLanguage(title, userLanguage);
-        const departmentNameInLanguage = getDepartmentNameByLanguage(departmentName, userLanguage);
         
         // إنشاء النص ثنائي اللغة
         const logDescription = {
@@ -327,8 +324,7 @@ const updateContent = async (req, res) => {
         if (folderRows.length > 0 && folderRows[0].department_id) {
           const [deptRows] = await connection.execute('SELECT name FROM departments WHERE id = ?', [folderRows[0].department_id]);
           if (deptRows.length > 0) {
-            const userLanguage = getUserLanguageFromToken(token);
-            departmentName = getDepartmentNameByLanguage(deptRows[0].name, userLanguage);
+            departmentName = deptRows[0].name; // استخدام النص الأصلي من قاعدة البيانات
           }
         }
       }
@@ -465,8 +461,7 @@ const deleteContent = async (req, res) => {
             if (folderRows.length > 0 && folderRows[0].department_id) {
                 const [deptRows] = await connection.execute('SELECT name FROM departments WHERE id = ?', [folderRows[0].department_id]);
                 if (deptRows.length > 0) {
-                    const userLanguage = getUserLanguageFromToken(token);
-                    departmentName = getDepartmentNameByLanguage(deptRows[0].name, userLanguage);
+                    departmentName = deptRows[0].name; // استخدام النص الأصلي من قاعدة البيانات
                 }
             }
         }
@@ -628,8 +623,7 @@ const approveContent = async (req, res) => {
         if (content[0].department_id) {
             const [deptRows] = await connection.execute('SELECT name FROM departments WHERE id = ?', [content[0].department_id]);
             if (deptRows.length > 0) {
-                const userLanguage = getUserLanguageFromToken(token);
-                departmentName = getDepartmentNameByLanguage(deptRows[0].name, userLanguage);
+                departmentName = deptRows[0].name; // استخدام النص الأصلي من قاعدة البيانات
             }
         }
 
@@ -696,12 +690,12 @@ const approveContent = async (req, res) => {
         try {
             const userLanguage = getUserLanguageFromToken(token);
             const contentNameInLanguage = getContentNameByLanguage(content[0].title, userLanguage);
-            const departmentNameInLanguage = getDepartmentNameByLanguage(content[0].department_name, userLanguage);
+            const departmentNameInLanguage = getDepartmentNameByLanguage(departmentName, userLanguage);
             
             // إنشاء النص ثنائي اللغة
             const logDescription = {
-                ar: `تم ${isApproved ? 'اعتماد' : 'تسجيل موافقة على'} محتوى: ${getContentNameByLanguage(content[0].title, 'ar')} في قسم: ${getDepartmentNameByLanguage(content[0].department_name, 'ar')}`,
-                en: `${isApproved ? 'Approved' : 'Partially approved'} content: ${getContentNameByLanguage(content[0].title, 'en')} in department: ${getDepartmentNameByLanguage(content[0].department_name, 'en')}`
+                ar: `تم ${isApproved ? 'اعتماد' : 'تسجيل موافقة على'} محتوى: ${getContentNameByLanguage(content[0].title, 'ar')} في قسم: ${getDepartmentNameByLanguage(departmentName, 'ar')}`,
+                en: `${isApproved ? 'Approved' : 'Partially approved'} content: ${getContentNameByLanguage(content[0].title, 'en')} in department: ${getDepartmentNameByLanguage(departmentName, 'en')}`
             };
             
             await logAction(
@@ -834,11 +828,16 @@ const addContentName = async (req, res) => {
       const userLanguage = getUserLanguageFromToken(token);
       
       try {
-        const contentNameInLanguage = getContentNameByLanguage(name, userLanguage);
+        // إنشاء النص ثنائي اللغة
+        const logDescription = {
+          ar: `تمت إضافة اسم محتوى جديد: ${getContentNameByLanguage(name, 'ar')}`,
+          en: `Added new content name: ${getContentNameByLanguage(name, 'en')}`
+        };
+        
         await logAction(
           userId,
           'add_content_name',
-          `تمت إضافة اسم محتوى جديد: ${contentNameInLanguage}`,
+          JSON.stringify(logDescription),
           'content',
           result.insertId
         );
@@ -904,12 +903,16 @@ const updateContentName = async (req, res) => {
       const userLanguage = getUserLanguageFromToken(token);
       
       try {
-        const oldContentNameInLanguage = getContentNameByLanguage(oldName, userLanguage);
-        const newContentNameInLanguage = getContentNameByLanguage(name, userLanguage);
+        // إنشاء النص ثنائي اللغة
+        const logDescription = {
+          ar: `تم تعديل اسم محتوى للأقسام من: ${getContentNameByLanguage(oldName, 'ar')} إلى: ${getContentNameByLanguage(name, 'ar')}`,
+          en: `Updated content name for departments from: ${getContentNameByLanguage(oldName, 'en')} to: ${getContentNameByLanguage(name, 'en')}`
+        };
+        
         await logAction(
           userId,
           'update_content_name',
-          `تم تعديل اسم محتوى للأقسام من: ${oldContentNameInLanguage} إلى: ${newContentNameInLanguage}`,
+          JSON.stringify(logDescription),
           'content',
           id
         );
@@ -956,11 +959,16 @@ const deleteContentName = async (req, res) => {
       const userLanguage = getUserLanguageFromToken(token);
       
       try {
-        const contentNameInLanguage = getContentNameByLanguage(contentName, userLanguage);
+        // إنشاء النص ثنائي اللغة
+        const logDescription = {
+          ar: `تم حذف اسم محتوى للأقسام: ${getContentNameByLanguage(contentName, 'ar')}`,
+          en: `Deleted content name for departments: ${getContentNameByLanguage(contentName, 'en')}`
+        };
+        
         await logAction(
           userId,
           'delete_content_name',
-          `تم حذف اسم محتوى للأقسام: ${contentNameInLanguage}`,
+          JSON.stringify(logDescription),
           'content',
           id
         );

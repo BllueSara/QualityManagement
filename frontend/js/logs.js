@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const parsed = JSON.parse(text);
         return parsed[lang] || parsed['ar'] || parsed['en'] || text;
       } catch (e) {
-        // إذا فشل التحليل، استمر مع المعالجة العادية
+        // إذا فشل التحليل، اترك النص كما هو
       }
     }
     
@@ -76,7 +76,6 @@ document.addEventListener('DOMContentLoaded', () => {
             processedText = processedText.replace(match, translatedText);
           } catch (e) {
             // إذا فشل التحليل، اترك النص كما هو
-            console.log('DEBUG: Failed to parse JSON:', match, e);
           }
         });
       }
@@ -141,78 +140,17 @@ document.addEventListener('DOMContentLoaded', () => {
   function translateLogMessage(description, action, info) {
     const lang = localStorage.getItem('language') || 'ar';
     
-    // Debug logging للمعلومات المستخرجة
-    console.log('DEBUG: Original description:', description);
-    console.log('DEBUG: Action:', action);
-    console.log('DEBUG: Extracted info:', info);
-    
-    // تنظيف الوصف من النصوص المكررة
-    let cleanDescription = description;
-    if (typeof description === 'string') {
-      // إزالة النصوص المكررة مثل "in department: قسم" أو "قسم in department"
-      cleanDescription = description
-        .replace(/in department:\s*([^،]+)/g, '') // إزالة "in department: قسم"
-        .replace(/([^،]+)\s*in department/g, '') // إزالة "قسم in department"
-        .replace(/\s+/g, ' ') // إزالة المسافات الزائدة
-        .trim();
-    }
-    
     // ترجمة الرسائل حسب نوع الإجراء مع إضافة المعلومات المستخرجة
     const translations = {
       ar: {
-        'create_folder': `تم إنشاء مجلد: ${info.folderName} في قسم: ${info.departmentName}`,
-        'update_folder': `تم تعديل مجلد من: ${info.oldName} إلى: ${info.newName} في قسم: ${info.departmentName}`,
-        'delete_folder': `تم حذف مجلد: ${info.folderName} من قسم: ${info.departmentName}`,
-        'add_folder_name': `تمت إضافة اسم مجلد جديد للأقسام: ${info.folderName}`,
-        'update_folder_name': `تم تعديل اسم مجلد للأقسام من: ${info.oldName} إلى: ${info.newName}`,
-        'delete_folder_name': `تم حذف اسم مجلد للأقسام: ${info.folderName}`,
-        'add_content': `تم إضافة محتوى: ${info.contentName} في مجلد: ${info.folderName}`,
-        'update_content': `تم تعديل محتوى من: ${info.oldName} إلى: ${info.newName} في مجلد: ${info.folderName}`,
-        'delete_content': `تم حذف محتوى: ${info.contentName} من مجلد: ${info.folderName}`,
-        'add_department': `تم إضافة قسم جديد: ${info.departmentName}`,
-        'update_department': `تم تعديل قسم من: ${info.oldName} إلى: ${info.newName}`,
-        'delete_department': `تم حذف قسم: ${info.departmentName}`,
-        'add_user': `تم إضافة مستخدم جديد: ${info.userName}`,
-        'update_user': `تم تعديل مستخدم: ${info.userName}`,
-        'delete_user': `تم حذف مستخدم: ${info.userName}`,
-        'change_role': `تم تغيير دور المستخدم: ${info.userName} إلى: ${info.newRole}`,
-        'login': 'تم تسجيل الدخول',
-        
-        'create_ticket': 'تم إنشاء تذكرة جديدة',
-        'update_ticket': 'تم تعديل التذكرة',
-        'delete_ticket': 'تم حذف التذكرة',
-        'add_reply': 'تم إضافة رد على التذكرة',
         'approve_content': `تم اعتماد المحتوى: ${info.contentName}`,
         'reject_content': `تم رفض المحتوى: ${info.contentName}`,
-        'sign_document': 'تم توقيع المستند',
-        'delegate_signature': `تم تفويض التوقيع للمستخدم: ${info.userName}`
+        'sign_document': 'تم توقيع المستند'
       },
       en: {
-        'create_folder': `Created folder: ${info.folderName} in department: ${info.departmentName}`,
-        'update_folder': `Updated folder from: ${info.oldName} to: ${info.newName} in department: ${info.departmentName}`,
-        'delete_folder': `Deleted folder: ${info.folderName} from department: ${info.departmentName}`,
-        'add_folder_name': `Added new folder name for departments: ${info.folderName}`,
-        'update_folder_name': `Updated folder name for departments from: ${info.oldName} to: ${info.newName}`,
-        'delete_folder_name': `Deleted folder name for departments: ${info.folderName}`,
-        'add_content': `Added content: ${info.contentName} in folder: ${info.folderName}`,
-        'update_content': `Updated content from: ${info.oldName} to: ${info.newName} in folder: ${info.folderName}`,
-        'delete_content': `Deleted content: ${info.contentName} from folder: ${info.folderName}`,
-        'add_department': `Added new department: ${info.departmentName}`,
-        'update_department': `Updated department from: ${info.oldName} to: ${info.newName}`,
-        'delete_department': `Deleted department: ${info.departmentName}`,
-        'add_user': `Added new user: ${info.userName}`,
-        'update_user': `Updated user: ${info.userName}`,
-        'delete_user': `Deleted user: ${info.userName}`,
-        'change_role': `Changed user role: ${info.userName} to: ${info.newRole}`,
-        'login': 'User logged in',
-        'create_ticket': 'Created new ticket',
-        'update_ticket': 'Updated ticket',
-        'delete_ticket': 'Deleted ticket',
-        'add_reply': 'Added reply to ticket',
         'approve_content': `Approved content: ${info.contentName}`,
         'reject_content': `Rejected content: ${info.contentName}`,
-        'sign_document': 'Signed document',
-        'delegate_signature': `Delegated signature to user: ${info.userName}`
+        'sign_document': 'Signed document'
       }
     };
 
@@ -223,14 +161,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (hasRequiredInfo) {
         return translations[lang][action];
       } else {
-        // إذا لم تكن هناك معلومات كافية، استخدم الوصف الأصلي المنظف
-        console.log('DEBUG: No sufficient info for translation, using cleaned original description');
-        return cleanDescription;
+        // إذا لم تكن هناك معلومات كافية، استخدم الوصف الأصلي
+        return description;
       }
     }
 
-    // إذا لم يكن معروف، استخدم الوصف الأصلي المنظف
-    return cleanDescription;
+    // إذا لم يكن معروف، استخدم الوصف الأصلي
+    return description;
   }
 
   // دالة لترجمة أسماء الإجراءات
@@ -246,6 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'update_folder_name': 'تعديل اسم مجلد',
         'delete_folder_name': 'حذف اسم مجلد',
         'add_content': 'إضافة محتوى',
+        'add_folder': 'إضافة مجلد',
         'update_content': 'تعديل محتوى',
         'delete_content': 'حذف محتوى',
         'add_department': 'إضافة قسم',
@@ -264,10 +202,29 @@ document.addEventListener('DOMContentLoaded', () => {
         'approve_content': 'اعتماد محتوى',
         'reject_content': 'رفض محتوى',
         'sign_document': 'توقيع مستند',
-        'delegate_signature': 'تفويض توقيع'
+        'delegate_committee_signature': 'تفويض توقيع اللجنة',
+        'delegate_signature': 'تفويض توقيع',
+        'approve_committee_content': 'اعتماد محتوى اللجنة',
+        'reject_committee_content': 'رفض محتوى اللجنة',
+        'send_committee_approval_request': 'ارسال طلب اعتماد للجنة',
+        'send_approval_request': 'ارسال طلب اعتماد',
+        'add_user_permission': 'اضافة صلاحية للمستخدم',
+        'update_user_permissions': 'تعديل صلاحيات المستخدم',
+        'remove_user_permission': 'حذف صلاحية المستخدم',
+        'assign_ticket_multiple': 'تعيين تذكرة لعدة مستخدمين',
       },
       en: {
         'create_folder': 'Create Folder',
+        'assign_ticket_multiple': 'Assign Ticket to Multiple Users',
+        'delegate_committee_signature': 'Delegate Committee Signature',
+        'approve_committee_content': 'Approve Committee Content',
+        'reject_committee_content': 'Reject Committee Content',
+        'send_committee_approval_request': 'Send Committee Approval Request',
+        'send_approval_request': 'Send Approval Request',
+        'add_user_permission': 'Add User Permission',
+        'update_user_permissions': 'Update User Permissions',
+        'remove_user_permission': 'Remove User Permission',
+        'add_folder': 'Add Folder',
         'update_folder': 'Update Folder',
         'delete_folder': 'Delete Folder',
         'add_folder_name': 'Add Folder Name',
@@ -415,6 +372,29 @@ document.addEventListener('DOMContentLoaded', () => {
     translateActionTypes();
   }
 
+  // دالة لتنسيق سجلات الصلاحيات
+  function formatPermissionLog(description, lang) {
+    try {
+      const logData = JSON.parse(description);
+      let parts = [logData[lang] || logData.ar];
+      
+      if (logData.details) {
+        if (logData.details.added && logData.details.added.length > 0) {
+          const addedPerms = logData.details.added.map(p => `"${getTranslation(p)}"`).join(', ');
+          parts.push(` ${addedPerms}`);
+        }
+        if (logData.details.removed && logData.details.removed.length > 0) {
+          const removedPerms = logData.details.removed.map(p => `"${getTranslation(p)}"`).join(', ');
+          parts.push(`${removedPerms}`);
+        }
+      }
+      return parts.join(' - ');
+    } catch (e) {
+      return description; // Fallback to raw description
+    }
+  }
+
+  // تحميل وعرض السجلات
   async function loadLogs() {
     const params = new URLSearchParams();
     if (fromDateInput.value)    params.append('from', fromDateInput.value);
@@ -452,21 +432,19 @@ document.addEventListener('DOMContentLoaded', () => {
           const locale = lang === 'en' ? 'en-US' : 'ar-SA';
 
           // معالجة البيانات باستخدام الدالة الجديدة
-          const user = extractTextFromData(log.user) || '-';
-          let description = extractTextFromData(log.description) || '';
-          const action = extractTextFromData(log.action) || '';
+          const user = log.user || '-';
+          let description = log.description || '';
+          const action = log.action || '';
 
-          // معالجة النصوص ثنائية اللغة
-          const processedUser = processBilingualText(user);
-          let processedDescription = processBilingualText(description);
-
-          // تنظيف الوصف من النصوص المكررة
-          if (typeof processedDescription === 'string') {
-            processedDescription = processedDescription
-              .replace(/in department:\s*([^،]+)/g, '') // إزالة "in department: قسم"
-              .replace(/([^،]+)\s*in department/g, '') // إزالة "قسم in department"
-              .replace(/\s+/g, ' ') // إزالة المسافات الزائدة
-              .trim();
+          // معالجة النصوص ثنائية اللغة فقط إذا لم تكن معالجة بالفعل
+          const processedUser = typeof user === 'string' ? user : extractTextFromData(user);
+          let processedDescription = typeof description === 'string' ? description : extractTextFromData(description);
+          
+          // معالجة النصوص ثنائية اللغة في الوصف
+          if (log.action.includes('permission')) {
+            processedDescription = formatPermissionLog(log.description, lang);
+          } else {
+            processedDescription = processBilingualText(processedDescription);
           }
 
           // استخدام المعلومات المستخرجة من الباك اند إذا كانت متوفرة
@@ -477,14 +455,8 @@ document.addEventListener('DOMContentLoaded', () => {
             Object.keys(info).forEach(key => {
               if (info[key] && typeof info[key] === 'string') {
                 info[key] = processBilingualText(info[key]);
-                info[key] = info[key]
-                  .replace(/in department:\s*([^،]+)/g, '')
-                  .replace(/([^،]+)\s*in department/g, '')
-                  .replace(/\s+/g, ' ')
-                  .trim();
               }
             });
-            console.log('DEBUG: Using backend extracted info:', info);
           } else {
             // استخراج المعلومات من الوصف إذا لم تكن متوفرة من الباك اند
             info = extractInfoFromDescription(processedDescription);
@@ -492,16 +464,8 @@ document.addEventListener('DOMContentLoaded', () => {
             Object.keys(info).forEach(key => {
               if (info[key]) {
                 info[key] = processBilingualText(info[key]);
-                if (typeof info[key] === 'string') {
-                  info[key] = info[key]
-                    .replace(/in department:\s*([^،]+)/g, '')
-                    .replace(/([^،]+)\s*in department/g, '')
-                    .replace(/\s+/g, ' ')
-                    .trim();
-                }
               }
             });
-            console.log('DEBUG: Using frontend extracted info:', info);
           }
 
           // التحقق من صحة المعلومات المستخرجة
@@ -513,7 +477,6 @@ document.addEventListener('DOMContentLoaded', () => {
           );
           
           if (!hasValidInfo) {
-            console.log('DEBUG: No valid info extracted, using original description');
             info = {};
           }
 
@@ -521,19 +484,11 @@ document.addEventListener('DOMContentLoaded', () => {
           if (processedDescription.includes('[object Object]') || 
               processedDescription.includes('undefined') ||
               processedDescription.trim() === '') {
-            console.log('DEBUG: Invalid original description, using fallback');
-            processedDescription = getTranslation('log-' + action) || action;
           }
 
           // ترجمة رسالة السجل واسم الإجراء
           const translatedDescription = translateLogMessage(processedDescription, action, info);
           const translatedAction = translateActionName(action);
-
-          // Debug logging
-          if (description.includes('[object Object]')) {
-            console.log('DEBUG: Original description:', log.description);
-            console.log('DEBUG: Extracted description:', description);
-          }
 
           tr.innerHTML = `
             <td>${processedUser}</td>

@@ -128,16 +128,31 @@ async function handleCommitteeApproval(req, res) {
       notes || ''
     ]);
 
+    // Fetch details for logging
+    const [contentDetails] = await db.execute(`
+        SELECT cc.title, com.name as committee_name
+        FROM committee_contents cc
+        JOIN committee_folders cf ON cc.folder_id = cf.id
+        JOIN committees com ON cf.committee_id = com.id
+        WHERE cc.id = ?
+    `, [contentId]);
+
+    const title = contentDetails.length ? contentDetails[0].title : `ID ${contentId}`;
+    const committeeName = contentDetails.length ? contentDetails[0].committee_name : '';
+
+    const logDescription = {
+        ar: `تم ${approved ? 'اعتماد' : 'رفض'} ملف اللجنة: "${getContentNameByLanguage(title, 'ar')}" في لجنة: "${getCommitteeNameByLanguage(committeeName, 'ar')}"${isProxy ? ' كمفوض عن مستخدم آخر' : ''}`,
+        en: `${approved ? 'Approved' : 'Rejected'} committee content: "${getContentNameByLanguage(title, 'en')}" in committee: "${getCommitteeNameByLanguage(committeeName, 'en')}"${isProxy ? ' as a proxy' : ''}`
+    };
 
     await logAction(
       currentUserId,
       approved ? 'approve_committee_content' : 'reject_committee_content',
-      `تم ${approved ? 'اعتماد' : 'رفض'} ملف لجنة رقم ${contentId}${isProxy ? ' كمفوض عن مستخدم آخر' : ''}`,
+      JSON.stringify(logDescription),
       'committee_content',
       contentId
     );
     
-
     // إشعار للمفوض له إذا تم التوقيع بالنيابة
     if (isProxy && approverId) {
       await insertNotification(
@@ -303,53 +318,99 @@ async function getAssignedCommitteeApprovals(req, res) {
 /**
  * 4. Delegate my committee approval to someone else
  */
+// دالة مساعدة لتحويل title من JSON أو إعادته كما هو
+function parseTitleByLang(jsonOrString, lang = 'ar') {
+  if (!jsonOrString) return '';
+  try {
+    const obj = JSON.parse(jsonOrString);
+    return obj[lang] || obj.ar || obj.en || '';
+  } catch {
+    return jsonOrString;
+  }
+}
+
 async function delegateCommitteeApproval(req, res) {
+  // 1) احصل على الرقم من "comm-<id>"
   const contentId = parseInt(req.params.id.replace(/^comm-/, ''), 10);
   const { delegateTo, notes } = req.body;
 
   if (!contentId || !delegateTo) {
-    return res.status(400).json({ status: 'error', message: 'بيانات مفقودة للتفويض' });
+    return res.status(400).json({
+      status: 'error',
+      message: 'بيانات مفقودة للتفويض'
+    });
   }
 
   try {
+    // 2) فكّ التوكن
     const token = req.headers.authorization?.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const currentUserId = decoded.id;
 
+    // 3) سجّل التفويض في جدول اللجان
     await db.execute(`
       INSERT INTO committee_approval_logs (
-        content_id,
-        approver_id,
-        delegated_by,
-        signed_as_proxy,
-        status,
-        comments,
-        created_at
+        content_id, approver_id, delegated_by,
+        signed_as_proxy, status, comments, created_at
       ) VALUES (?, ?, ?, 1, 'pending', ?, NOW())
       ON DUPLICATE KEY UPDATE
-        delegated_by      = VALUES(delegated_by),
-        signed_as_proxy   = 1,
-        status            = 'pending',
-        comments          = VALUES(comments),
-        created_at        = NOW();
+        delegated_by    = VALUES(delegated_by),
+        signed_as_proxy = 1,
+        status          = 'pending',
+        comments        = VALUES(comments),
+        created_at      = NOW()
     `, [contentId, delegateTo, currentUserId, notes || null]);
 
+    // 4) جلب اسم المفوَّض
+    const [delegateeRows] = await db.execute(
+      'SELECT username FROM users WHERE id = ?', 
+      [delegateTo]
+    );
+    const delegateeUsername = delegateeRows.length
+      ? delegateeRows[0].username
+      : String(delegateTo);
 
+    // 5) جلب عنوان المحتوى من جدول committee_contents
+    const [contentRows] = await db.execute(
+      'SELECT title FROM committee_contents WHERE id = ?', 
+      [contentId]
+    );
+    const rawTitle = contentRows.length
+      ? contentRows[0].title
+      : '';
+
+    // 6) تحويل العنوان إلى نصوص عربية وإنجليزية
+    const titleAr = parseTitleByLang(rawTitle, 'ar') || 'غير معروف';
+    const titleEn = parseTitleByLang(rawTitle, 'en') || 'Unknown';
+
+    // 7) سجل الحركة (باستخدام reference_type = 'approval' لأنه ضمن enum)
+    const logDescription = {
+      ar: `تم تفويض التوقيع للمستخدم: ${delegateeUsername} على ملف اللجنة: "${titleAr}"`,
+      en: `Delegated signature to user: ${delegateeUsername} for committee file: "${titleEn}"`
+    };
     await logAction(
       currentUserId,
       'delegate_committee_signature',
-      `تفويض المستخدم ${delegateTo} للتوقيع على ملف لجنة رقم ${contentId}`,
-      'committee_content',
+      JSON.stringify(logDescription),
+      'approval',      // تأكد أن 'approval' موجودة في enum
       contentId
     );
-    
 
-    res.json({ status: 'success', message: '✅ تم التفويض بالنيابة بنجاح' });
+    // 8) أرسل رد بنجاح
+    return res.json({
+      status: 'success',
+      message: '✅ تم التفويض بالنيابة بنجاح'
+    });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ status: 'error', message: 'فشل التفويض بالنيابة' });
+    console.error('خطأ في delegateCommitteeApproval:', err);
+    return res.status(500).json({
+      status: 'error',
+      message: 'فشل التفويض بالنيابة'
+    });
   }
 }
+
 
 /**
  * 5. Get pending approvals where I'm the proxy
@@ -450,6 +511,32 @@ async function generateFinalSignedCommitteePDF(contentId) {
   const finalBytes = await pdfDoc.save();
   fs.writeFileSync(fullPath, finalBytes);
   console.log('✅ Committee signature page added:', fullPath);
+}
+
+// Helper function to get committee name by language
+function getCommitteeNameByLanguage(committeeNameData, userLanguage = 'ar') {
+    try {
+        if (typeof committeeNameData === 'string' && committeeNameData.startsWith('{')) {
+            const parsed = JSON.parse(committeeNameData);
+            return parsed[userLanguage] || parsed['ar'] || committeeNameData;
+        }
+        return committeeNameData || 'غير معروف';
+    } catch (error) {
+        return committeeNameData || 'غير معروف';
+    }
+}
+
+// Helper function to get content title by language
+function getContentNameByLanguage(contentNameData, userLanguage = 'ar') {
+    try {
+        if (typeof contentNameData === 'string' && contentNameData.startsWith('{')) {
+            const parsed = JSON.parse(contentNameData);
+            return parsed[userLanguage] || parsed['ar'] || contentNameData;
+        }
+        return contentNameData || 'غير معروف';
+    } catch (error) {
+        return contentNameData || 'غير معروف';
+    }
 }
 
 module.exports = {

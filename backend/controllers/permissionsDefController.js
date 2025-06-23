@@ -100,11 +100,17 @@ const addPermissionDef = async (req, res) => {
       [key, description]
     );
 
-    // Add to logs
-    const logMessage = userLang === 'en' 
-      ? `Added new permission definition: '${key}' - ${description}`
-      : `أضاف تعريف صلاحية جديد: '${key}' - ${description}`;
-    await logAction(adminUserId, 'add_permission_definition', logMessage, 'permission', result.insertId);
+    // ✅ تسجيل اللوق بعد نجاح إضافة تعريف الصلاحية
+    try {
+      const logDescription = {
+        ar: `تم إضافة تعريف صلاحية جديد: ${key}`,
+        en: `Added new permission definition: ${key}`
+      };
+      
+      await logAction(adminUserId, 'add_permission_definition', JSON.stringify(logDescription), 'permission', result.insertId);
+    } catch (logErr) {
+      console.error('logAction error:', logErr);
+    }
 
     return res.status(201).json({ status: 'success', message: 'تم إضافة الصلاحية بنجاح', id: result.insertId });
   } catch (error) {
@@ -163,11 +169,17 @@ const updatePermissionDef = async (req, res) => {
       return res.status(404).json({ status: 'error', message: 'الصلاحية غير موجودة' });
     }
 
-    // Add to logs
-    const logMessage = userLang === 'en' 
-      ? `Updated permission definition from '${oldPermission.permission_key}' to '${key}', description: '${oldPermission.description}' → '${description}'`
-      : `حدث تعريف الصلاحية من '${oldPermission.permission_key}' إلى '${key}'، الوصف: '${oldPermission.description}' → '${description}'`;
-    await logAction(adminUserId, 'update_permission_definition', logMessage, 'permission', id);
+    // ✅ تسجيل اللوق بعد نجاح تحديث تعريف الصلاحية
+    try {
+      const logDescription = {
+        ar: `تم تحديث تعريف الصلاحية: ${oldPermission.permission_key} إلى ${key}`,
+        en: `Updated permission definition: ${oldPermission.permission_key} to ${key}`
+      };
+      
+      await logAction(adminUserId, 'update_permission_definition', JSON.stringify(logDescription), 'permission', id);
+    } catch (logErr) {
+      console.error('logAction error:', logErr);
+    }
 
     return res.status(200).json({ status: 'success', message: 'تم تحديث الصلاحية بنجاح' });
   } catch (error) {
@@ -222,11 +234,17 @@ const deletePermissionDef = async (req, res) => {
       return res.status(404).json({ status: 'error', message: 'الصلاحية غير موجودة' });
     }
 
-    // Add to logs
-    const logMessage = userLang === 'en' 
-      ? `Deleted permission definition: '${permissionDetails.permission_key}' - ${permissionDetails.description}`
-      : `حذف تعريف الصلاحية: '${permissionDetails.permission_key}' - ${permissionDetails.description}`;
-    await logAction(adminUserId, 'delete_permission_definition', logMessage, 'permission', id);
+    // ✅ تسجيل اللوق بعد نجاح حذف تعريف الصلاحية
+    try {
+      const logDescription = {
+        ar: `تم حذف تعريف الصلاحية: ${permissionDetails.permission_key}`,
+        en: `Deleted permission definition: ${permissionDetails.permission_key}`
+      };
+      
+      await logAction(adminUserId, 'delete_permission_definition', JSON.stringify(logDescription), 'permission', id);
+    } catch (logErr) {
+      console.error('logAction error:', logErr);
+    }
 
     return res.status(200).json({ status: 'success', message: 'تم حذف الصلاحية بنجاح' });
   } catch (error) {

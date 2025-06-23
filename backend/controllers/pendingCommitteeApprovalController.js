@@ -177,7 +177,7 @@ exports.sendApprovalRequest = async (req, res) => {
         [contentId]
     );
 
-    const [approverUsers] = await conn.execute(
+    const [approverUsers] = await conn.query(
       `SELECT username FROM users WHERE id IN (?)`,
       [approvers]
     );
@@ -228,11 +228,16 @@ exports.sendApprovalRequest = async (req, res) => {
     );
 
     // Add to logs
-    const localizedCommitteeName = getLocalizedName(contentDetails.committee_name, userLang);
-    const logMessage = userLang === 'en' 
-      ? `Sent committee content '${contentDetails.title}' in committee '${localizedCommitteeName}' for approval to: ${approverNames}`
-      : `أرسل محتوى اللجنة '${contentDetails.title}' في اللجنة '${localizedCommitteeName}' للموافقة إلى: ${approverNames}`;
-    await logAction(userId, 'send_committee_approval_request', logMessage, 'committee_content', contentId);
+    const committeeNameAR = getLocalizedName(contentDetails.committee_name, 'ar');
+    const committeeNameEN = getLocalizedName(contentDetails.committee_name, 'en');
+    const titleAR = getLocalizedName(contentDetails.title, 'ar');
+    const titleEN = getLocalizedName(contentDetails.title, 'en');
+    
+    const logDescription = {
+        ar: `أرسل محتوى اللجنة '${titleAR}' في اللجنة '${committeeNameAR}' للموافقة إلى: ${approverNames}`,
+        en: `Sent committee content '${titleEN}' in committee '${committeeNameEN}' for approval to: ${approverNames}`
+    };
+    await logAction(userId, 'send_committee_approval_request', JSON.stringify(logDescription), 'committee_content', contentId);
 
     await conn.commit();
     res.json({ status:'success', message:'تم الإرسال بنجاح' });
@@ -319,10 +324,14 @@ exports.delegateCommitteeApproval = async (req, res) => {
         );
 
         // Add to logs
-        const localizedCommitteeName = getLocalizedName(contentDetails.committee_name, userLang);
+        const committeeNameAR = getLocalizedName(contentDetails.committee_name, 'ar');
+        const committeeNameEN = getLocalizedName(contentDetails.committee_name, 'en');
+        const titleAR = getLocalizedName(contentDetails.title, 'ar');
+        const titleEN = getLocalizedName(contentDetails.title, 'en');
+
         const logDescription = {
-          ar: `تم تفويض الموافقة على محتوى اللجنة: ${contentDetails.title} في اللجنة: ${localizedCommitteeName} إلى: ${delegateeUser.username}`,
-          en: `Delegated approval for committee content: ${contentDetails.title} in committee: ${localizedCommitteeName} to: ${delegateeUser.username}`
+          ar: `تم تفويض الموافقة على محتوى اللجنة: '${titleAR}' في اللجنة: '${committeeNameAR}' إلى: ${delegateeUser.username}`,
+          en: `Delegated approval for committee content: '${titleEN}' in committee: '${committeeNameEN}' to: ${delegateeUser.username}`
         };
         
         await logAction(currentUserId, 'delegate_committee_approval', JSON.stringify(logDescription), 'committee_content', contentId);

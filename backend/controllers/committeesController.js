@@ -159,15 +159,23 @@ exports.addCommittee = async (req, res) => {
         const userId = decoded.id;
         const userLanguage = getUserLanguageFromToken(token);
   
-        // ✅ تسجيل اللوق قبل الرد
-        const committeeNameInLanguage = getCommitteeNameByLanguage(name, userLanguage);
-        await logAction(
-          userId,
-          'add_committee',
-          `تمت إضافة لجنة جديدة: ${committeeNameInLanguage}`,
-          'committee',
-          committeeId
-        );
+        // ✅ تسجيل اللوق بعد نجاح إضافة اللجنة
+        try {
+          const logDescription = {
+            ar: `تمت إضافة لجنة جديدة: ${getCommitteeNameByLanguage(name, 'ar')}`,
+            en: `Added new committee: ${getCommitteeNameByLanguage(name, 'en')}`
+          };
+          
+          await logAction(
+            userId,
+            'add_committee',
+            JSON.stringify(logDescription),
+            'committee',
+            committeeId
+          );
+        } catch (logErr) {
+          console.error('logAction error:', logErr);
+        }
       }
   
       // ✅ الآن نرد على العميل
@@ -214,11 +222,15 @@ exports.addCommittee = async (req, res) => {
         const userLanguage = getUserLanguageFromToken(token);
   
         try {
-          const committeeNameInLanguage = getCommitteeNameByLanguage(name, userLanguage);
+          const logDescription = {
+            ar: `تم تعديل اللجنة: ${getCommitteeNameByLanguage(name, 'ar')}`,
+            en: `Updated committee: ${getCommitteeNameByLanguage(name, 'en')}`
+          };
+          
           await logAction(
             userId,
             'update_committee',
-            `تم تعديل اللجنة: ${committeeNameInLanguage}`,
+            JSON.stringify(logDescription),
             'committee',
             id
           );
@@ -239,11 +251,38 @@ exports.addCommittee = async (req, res) => {
 exports.deleteCommittee = async (req, res) => {
     try {
         const { id } = req.params;
+        
+        // جلب اسم اللجنة قبل الحذف للتسجيل
+        const [[committeeDetails]] = await db.execute('SELECT name FROM committees WHERE id = ?', [id]);
+        if (!committeeDetails) {
+            return res.status(404).json({ message: 'اللجنة غير موجودة' });
+        }
+        
         // Check for related folders/contents
         const [related] = await db.execute('SELECT COUNT(*) as count FROM committee_folders f JOIN committee_contents c ON f.id = c.folder_id WHERE f.committee_id = ?', [id]);
         if (related[0].count > 0) return res.status(400).json({ message: 'لا يمكن حذف اللجنة لوجود محتويات مرتبطة بها' });
+        
         const [result] = await db.execute('DELETE FROM committees WHERE id = ?', [id]);
         if (result.affectedRows === 0) return res.status(404).json({ message: 'اللجنة غير موجودة' });
+        
+        // ✅ تسجيل اللوق بعد نجاح حذف اللجنة
+        try {
+            const token = req.headers.authorization?.split(' ')[1];
+            if (token) {
+                const decoded = jwt.verify(token, process.env.JWT_SECRET);
+                const userId = decoded.id;
+                
+                const logDescription = {
+                    ar: `تم حذف اللجنة: ${getCommitteeNameByLanguage(committeeDetails.name, 'ar')}`,
+                    en: `Deleted committee: ${getCommitteeNameByLanguage(committeeDetails.name, 'en')}`
+                };
+                
+                await logAction(userId, 'delete_committee', JSON.stringify(logDescription), 'committee', id);
+            }
+        } catch (logErr) {
+            console.error('logAction error:', logErr);
+        }
+        
         res.status(200).json({ message: 'تم حذف اللجنة بنجاح' });
     } catch (error) {
         res.status(500).json({ message: 'خطأ في حذف اللجنة', error });
@@ -295,16 +334,15 @@ exports.addFolder = async (req, res) => {
         
         // ✅ تسجيل اللوق بعد نجاح إضافة المجلد
         try {
-            const userLanguage = getUserLanguageFromToken(token);
-            const folderNameInLanguage = getContentNameByLanguage(name, userLanguage);
-            const logDescription = committeeName 
-                ? `تمت إضافة مجلد جديد: ${folderNameInLanguage} في لجنة: ${committeeName}`
-                : `تمت إضافة مجلد جديد: ${folderNameInLanguage}`;
-                
+            const logDescription = {
+                ar: `تمت إضافة مجلد جديد: ${getContentNameByLanguage(name, 'ar')} في لجنة: ${getCommitteeNameByLanguage(comRows[0].name, 'ar')}`,
+                en: `Added new folder: ${getContentNameByLanguage(name, 'en')} in committee: ${getCommitteeNameByLanguage(comRows[0].name, 'en')}`
+            };
+            
             await logAction(
                 created_by,
                 'add_folder',
-                logDescription,
+                JSON.stringify(logDescription),
                 'folder',
                 result.insertId
             );
@@ -352,16 +390,15 @@ exports.updateFolder = async (req, res) => {
             const userLanguage = getUserLanguageFromToken(token);
             
             try {
-                const oldFolderNameInLanguage = getContentNameByLanguage(oldName, userLanguage);
-                const newFolderNameInLanguage = getContentNameByLanguage(name, userLanguage);
-                const logDescription = committeeName 
-                    ? `تم تعديل مجلد من: ${oldFolderNameInLanguage} إلى: ${newFolderNameInLanguage} في لجنة: ${committeeName}`
-                    : `تم تعديل مجلد من: ${oldFolderNameInLanguage} إلى: ${newFolderNameInLanguage}`;
+                const logDescription = {
+                    ar: `تم تعديل مجلد من: ${getContentNameByLanguage(oldName, 'ar')} إلى: ${getContentNameByLanguage(name, 'ar')} في لجنة: ${getCommitteeNameByLanguage(comRows[0].name, 'ar')}`,
+                    en: `Updated folder from: ${getContentNameByLanguage(oldName, 'en')} to: ${getContentNameByLanguage(name, 'en')} in committee: ${getCommitteeNameByLanguage(comRows[0].name, 'en')}`
+                };
                 
                 await logAction(
                     userId,
                     'update_folder',
-                    logDescription,
+                    JSON.stringify(logDescription),
                     'folder',
                     id
                 );
@@ -408,11 +445,15 @@ exports.deleteFolder = async (req, res) => {
         const userLanguage = getUserLanguageFromToken(token);
   
         try {
-          const folderNameInLanguage = getContentNameByLanguage(folderName, userLanguage);
+          const logDescription = {
+              ar: `تم حذف المجلد: ${getContentNameByLanguage(folderName, 'ar')} من لجنة: ${getCommitteeNameByLanguage(comRows[0].name, 'ar')}`,
+              en: `Deleted folder: ${getContentNameByLanguage(folderName, 'en')} from committee: ${getCommitteeNameByLanguage(comRows[0].name, 'en')}`
+          };
+          
           await logAction(
             userId,
             'delete_folder',
-            `تم حذف المجلد: ${folderNameInLanguage} من لجنة: ${committeeName}`,
+            JSON.stringify(logDescription),
             'folder',
             id
           );
@@ -509,12 +550,9 @@ exports.addContent = async (req, res) => {
   
       // 🔹 تسجيل اللوق
       try {
-        const userLanguage = getUserLanguageFromToken(token);
-        
-        // إنشاء النص ثنائي اللغة
         const logDescription = {
-          ar: `تمت إضافة محتوى بعنوان: ${getContentNameByLanguage(title, 'ar')} في لجنة: ${getCommitteeNameByLanguage(committeeName, 'ar')}`,
-          en: `Added content with title: ${getContentNameByLanguage(title, 'en')} in committee: ${getCommitteeNameByLanguage(committeeName, 'en')}`
+          ar: `تمت إضافة محتوى بعنوان: ${getContentNameByLanguage(title, 'ar')} في لجنة: ${getCommitteeNameByLanguage(comRows[0].name, 'ar')}`,
+          en: `Added content with title: ${getContentNameByLanguage(title, 'en')} in committee: ${getCommitteeNameByLanguage(comRows[0].name, 'en')}`
         };
         
         await logAction(
@@ -584,11 +622,9 @@ exports.addContent = async (req, res) => {
         const userLanguage = getUserLanguageFromToken(token);
 
         try {
-          const oldContentNameInLanguage = getContentNameByLanguage(oldTitle, userLanguage);
-          const newContentNameInLanguage = getContentNameByLanguage(title, userLanguage);
           const logDescription = {
-            ar: `تم تعديل محتوى من: ${oldContentNameInLanguage} إلى: ${newContentNameInLanguage} في لجنة: ${getCommitteeNameByLanguage(committeeName, 'ar')}`,
-            en: `Updated content from: ${oldContentNameInLanguage} to: ${newContentNameInLanguage} in committee: ${getCommitteeNameByLanguage(committeeName, 'en')}`
+            ar: `تم تعديل محتوى من: ${getContentNameByLanguage(oldTitle, 'ar')} إلى: ${getContentNameByLanguage(title, 'ar')} في لجنة: ${getCommitteeNameByLanguage(comRows[0].name, 'ar')}`,
+            en: `Updated content from: ${getContentNameByLanguage(oldTitle, 'en')} to: ${getContentNameByLanguage(title, 'en')} in committee: ${getCommitteeNameByLanguage(comRows[0].name, 'en')}`
           };
           
           await logAction(
@@ -641,15 +677,14 @@ exports.deleteContent = async (req, res) => {
       if (token) {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const userId = decoded.id;
-        const userLanguage = getUserLanguageFromToken(token);
   
         try {
-          const userLanguage = getUserLanguageFromToken(token);
-
-          // إنشاء النص ثنائي اللغة
+          // جلب اسم اللجنة مرة أخرى للتسجيل
+          const [comRows] = await db.execute('SELECT com.name FROM committees com JOIN committee_folders cf ON com.id = cf.committee_id WHERE cf.id = ?', [folderId]);
+          
           const logDescription = {
-            ar: `تم حذف محتوى: ${getContentNameByLanguage(contentTitle, 'ar')} من لجنة: ${getCommitteeNameByLanguage(committeeName, 'ar')}`,
-            en: `Deleted content: ${getContentNameByLanguage(contentTitle, 'en')} from committee: ${getCommitteeNameByLanguage(committeeName, 'en')}`
+            ar: `تم حذف محتوى: ${getContentNameByLanguage(contentTitle, 'ar')} من لجنة: ${getCommitteeNameByLanguage(comRows[0].name, 'ar')}`,
+            en: `Deleted content: ${getContentNameByLanguage(contentTitle, 'en')} from committee: ${getCommitteeNameByLanguage(comRows[0].name, 'en')}`
           };
           
           await logAction(
@@ -744,10 +779,15 @@ exports.approveContent = async (req, res) => {
             const userId = decoded.id;
             
             try {
+                const logDescription = {
+                    ar: `تم ${status === 'approved' ? 'اعتماد' : 'رفض'} المحتوى`,
+                    en: `Content ${status === 'approved' ? 'approved' : 'rejected'}`
+                };
+                
                 await logAction(
                     userId,
                     status === 'approved' ? 'approve_content' : 'reject_content',
-                    `تم ${status === 'approved' ? 'اعتماد' : 'رفض'} المحتوى من قبل ${decoded.id}`,
+                    JSON.stringify(logDescription),
                     'committee_content',
                     contentId
                 );

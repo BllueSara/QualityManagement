@@ -57,6 +57,23 @@ function filterNotifications() {
 
   renderNotifications(filtered);
 }
+const currentLang = localStorage.getItem('language') || 'ar';
+
+// دالة تستبدل أي JSON مضمّن بـالنص المناسب
+function extractText(jsonOrString) {
+  if (!jsonOrString) return '';
+
+  // استبدال كل كتلة JSON داخل السلسلة
+  return jsonOrString.replace(/\{[^}]+\}/g, match => {
+    try {
+      const obj = JSON.parse(match);
+      return obj[currentLang] || obj.ar || obj.en || '';
+    } catch {
+      return match;
+    }
+  });
+}
+
 
 // ✅ عرض الإشعارات ديناميكياً
 function renderNotifications(notifications) {
@@ -69,8 +86,14 @@ function renderNotifications(notifications) {
   }
 
   notifications.forEach(n => {
+    // ① فكّ JSON stringify إن وجد في العنوان والرسالة
+    const titleText   = extractText(n.title);
+    const messageText = extractText(n.message);
+
+    // ② حدّد الأيقونة واللون بناءً على النوع
     const { iconClass, bg } = getIconAndColor(n.type);
 
+    // ③ ابني الكارد بالـ HTML
     const card = document.createElement('div');
     card.className = 'notification-card';
     card.innerHTML = `
@@ -78,40 +101,44 @@ function renderNotifications(notifications) {
         <i class="${iconClass}"></i>
       </div>
       <div class="notification-content">
-<div class="notification-user">${n.user_name || '—'}</div>
-      <div class="notification-title">${getNotificationTranslation(n.title)}</div>
-        <div class="notification-description">${getNotificationTranslation(n.message)}</div>
+        <div class="notification-user">${n.user_name || '—'}</div>
+        <div class="notification-title">
+          ${getNotificationTranslation(titleText)}
+        </div>
+        <div class="notification-description">
+          ${getNotificationTranslation(messageText)}
+        </div>
       </div>
       <div class="notification-meta">
         <div class="notification-time">${timeAgo(n.created_at)}</div>
         <div class="read-indicator read"></div>
-        <button class="delete-btn" data-id="${n.id}" title="${getTranslation('notification-delete')}"><i class="fas fa-trash"></i></button>
+        <button class="delete-btn" data-id="${n.id}" title="${getTranslation('notification-delete')}">
+          <i class="fas fa-trash"></i>
+        </button>
       </div>
     `;
-
     listContainer.appendChild(card);
   });
 
-  // ✅ الحذف اليدوي بزر
+  // ④ اربط أزرار الحذف كما كان عندك
   document.querySelectorAll('.delete-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.dataset.id;
       try {
-await fetch(`${apiBase}/users/${userId}/notifications/${id}`, {
-  method: 'DELETE',
-  headers: { 'Authorization': `Bearer ${token}` }
-});
-
-
+        await fetch(`${apiBase}/users/${userId}/notifications/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        // حدّث القائمة محلياً وأعدّ تصفيتها
         allNotifications = allNotifications.filter(n => n.id != id);
-        filterNotifications(); // نعيد التصفية حسب النوع/البحث
-
+        filterNotifications();
       } catch {
         alert(getTranslation('notifications-delete-failed'));
       }
     });
   });
 }
+
 
 // ✅ أيقونات وألوان حسب النوع
 function getIconAndColor(type) {
@@ -189,6 +216,12 @@ function getNotificationTranslation(text) {
  if (committeeApprovedMatch) {
    return `The committee file "${committeeApprovedMatch[1]}" has been approved by the administration.`;
  }
+   const committeeRejectedMatch = text.match(
+    /^ملف اللجنة "(.+)" تم رفضه من قبل الإدارة\.$/
+  );
+  if (committeeRejectedMatch) {
+    return `The committee file "${committeeRejectedMatch[1]}" has been rejected by the administration.`;
+  }
 
   const translations = {
     'تم تفويضك للتوقيع بالنيابة عن مستخدم آخر على الملف رقم': 'You have been delegated to sign on behalf of another user for file number',

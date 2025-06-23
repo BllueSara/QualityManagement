@@ -847,7 +847,8 @@ const translations = {
   "status_confirm_inactive": "غير نشط",
   "confirm_status_change": "هل تريد حقاً تغيير الحالة إلى",
   "logout_due_to_deactivation": "تم تعطيل حسابك، سيتم تسجيل الخروج.",
-  "status_change_failed": "فشل تغيير الحالة."
+  "status_change_failed": "فشل تغيير الحالة.",
+  
     },
     en: {
         // Navigation
