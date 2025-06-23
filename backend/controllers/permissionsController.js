@@ -137,37 +137,22 @@ const updateUserPermissions = async (req, res) => {
     // Add to logs
     const addedPerms = keys.filter(k => !oldPerms.includes(k));
     const removedPerms = oldPerms.filter(k => !keys.includes(k));
-    
-    let logMessage;
-    if (addedPerms.length > 0 && removedPerms.length > 0) {
-      logMessage = userLang === 'en' 
-        ? `Updated permissions for user '${userDetails.username}': added [${addedPerms.join(', ')}], removed [${removedPerms.join(', ')}]`
-        : `حدث صلاحيات المستخدم '${userDetails.username}': أضاف [${addedPerms.join(', ')}], أزال [${removedPerms.join(', ')}]`;
-    } else if (addedPerms.length > 0) {
-      logMessage = userLang === 'en' 
-        ? `Added permissions to user '${userDetails.username}': [${addedPerms.join(', ')}]`
-        : `أضاف صلاحيات للمستخدم '${userDetails.username}': [${addedPerms.join(', ')}]`;
-    } else if (removedPerms.length > 0) {
-      logMessage = userLang === 'en' 
-        ? `Removed permissions from user '${userDetails.username}': [${removedPerms.join(', ')}]`
-        : `أزال صلاحيات من المستخدم '${userDetails.username}': [${removedPerms.join(', ')}]`;
-    } else {
-      logMessage = userLang === 'en' 
-        ? `Updated permissions for user '${userDetails.username}' (no changes)`
-        : `حدث صلاحيات المستخدم '${userDetails.username}' (لا توجد تغييرات)`;
-    }
-    
-    // ✅ تسجيل اللوق بعد نجاح تحديث الصلاحيات
-    try {
-        const userLanguage = getUserLang(req);
-        const logDescription = {
-            ar: `تم تحديث صلاحيات المستخدم: ${userDetails.username}`,
-            en: `Updated permissions for user: ${userDetails.username}`
-        };
-        
-        await logAction(adminUserId, 'update_user_permissions', JSON.stringify(logDescription), 'user', userId);
-    } catch (logErr) {
-        console.error('logAction error:', logErr);
+
+    if (addedPerms.length > 0 || removedPerms.length > 0) {
+        try {
+            const logDescription = {
+                ar: `تم تحديث صلاحيات المستخدم: ${userDetails.username}`,
+                en: `Updated permissions for user: ${userDetails.username}`,
+                details: {
+                    added: addedPerms,
+                    removed: removedPerms
+                }
+            };
+            
+            await logAction(adminUserId, 'update_user_permissions', JSON.stringify(logDescription), 'user', userId);
+        } catch (logErr) {
+            console.error('logAction error:', logErr);
+        }
     }
 
     await conn.commit();
@@ -234,11 +219,20 @@ const addUserPermission = async (req, res) => {
       [userId, perm.id]
     );
 
-    // Add to logs
-    const logMessage = userLang === 'en' 
-      ? `Added permission '${key}' to user '${userDetails.username}'`
-      : `أضاف صلاحية '${key}' للمستخدم '${userDetails.username}'`;
-    await logAction(adminUserId, 'add_user_permission', logMessage, 'user', userId);
+    // ✅ تسجيل اللوق بعد نجاح إضافة الصلاحية
+    try {
+      const logDescription = {
+        ar: `تم إضافة صلاحية للمستخدم: ${userDetails.username}`,
+        en: `Added permission to user: ${userDetails.username}`,
+        details: {
+            added: [key]
+        }
+      };
+      
+      await logAction(adminUserId, 'add_user_permission', JSON.stringify(logDescription), 'user', userId);
+    } catch (logErr) {
+      console.error('logAction error:', logErr);
+    }
 
     return res.json({ status: 'success', message: 'تم إضافة الصلاحية' });
   } catch (error) {
@@ -294,13 +288,22 @@ const removeUserPermission = async (req, res) => {
       return res.status(404).json({ status: 'error', message: 'لم تُمنح هذه الصلاحية للمستخدم' });
     }
 
-    // Add to logs
-    const logMessage = userLang === 'en' 
-      ? `Removed permission '${key}' from user '${userDetails.username}'`
-      : `أزال صلاحية '${key}' من المستخدم '${userDetails.username}'`;
-    await logAction(adminUserId, 'remove_user_permission', logMessage, 'user', userId);
+    // ✅ تسجيل اللوق بعد نجاح إزالة الصلاحية
+    try {
+      const logDescription = {
+        ar: `تم إزالة صلاحية من المستخدم: ${userDetails.username}`,
+        en: `Removed permission from user: ${userDetails.username}`,
+        details: {
+            removed: [key]
+        }
+      };
+      
+      await logAction(adminUserId, 'remove_user_permission', JSON.stringify(logDescription), 'user', userId);
+    } catch (logErr) {
+      console.error('logAction error:', logErr);
+    }
 
-    return res.json({ status: 'success', message: 'تم إزالة الصلاحية' });
+    return res.status(200).json({ status: 'success', message: 'تم إزالة الصلاحية بنجاح' });
   } catch (error) {
     res.status(500).json({ message: 'Failed to remove user permission.' });
   }

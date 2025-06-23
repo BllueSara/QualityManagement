@@ -71,7 +71,7 @@ const getUserPendingApprovals = async (req, res) => {
 // اعتماد/رفض ملف
 const handleApproval = async (req, res) => {
   let { contentId: originalContentId } = req.params;
-  const { approved, signature, notes, electronic_signature, on_behalf_of } = req.body;
+  const { approved, signature, notes, electronic_signature, on_behalf_of, } = req.body;
 
   let contentId;
   let isCommitteeContent = false;
@@ -148,11 +148,20 @@ const handleApproval = async (req, res) => {
       notes || ''
     ]);
 
+    // Fetch details for logging
+    const [itemDetails] = await db.execute(`SELECT title FROM ${contentsTable} WHERE id = ?`, [contentId]);
+    const itemTitle = itemDetails.length > 0 ? itemDetails[0].title : `رقم ${contentId}`;
+
     // ✅ log action
+    const logDescription = {
+        ar: `تم ${approved ? 'اعتماد' : 'رفض'} الملف: "${getContentNameByLanguage(itemTitle, 'ar')}"${isProxy ? ' كمفوض عن مستخدم آخر' : ''}`,
+        en: `${approved ? 'Approved' : 'Rejected'} file: "${getContentNameByLanguage(itemTitle, 'en')}"${isProxy ? ' as a proxy' : ''}`
+    };
+
     await logAction(
       currentUserId,
       approved ? 'approve_content' : 'reject_content',
-      `تم ${approved ? 'اعتماد' : 'رفض'} الملف رقم ${contentId}${isProxy ? ' كمفوض عن مستخدم آخر' : ''}`,
+      JSON.stringify(logDescription),
       isCommitteeContent ? 'committee_content' : 'content',
       contentId
     );
@@ -654,12 +663,20 @@ const getAssignedApprovals = async (req, res) => {
 };
 
 
+// Helper لتحويل نص JSON إلى اسم حسب اللغة
+function parseTitleByLang(titleJson, lang = 'ar') {
+  try {
+    const obj = JSON.parse(titleJson);
+    return obj[lang] || obj.ar || obj.en || '';
+  } catch {
+    return titleJson || '';
+  }
+}
+
 const delegateApproval = async (req, res) => {
-  // 1) فكّ الـ prefix وخذ الرقم فقط
   const rawId = req.params.id;            // e.g. "dept-10" أو "comm-5"
   const parts = rawId.split('-');
   const contentId = parseInt(parts[1], 10);
-
   const { delegateTo, notes } = req.body;
 
   try {
@@ -667,13 +684,11 @@ const delegateApproval = async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const currentUserId = decoded.id;
 
-    // 2) تحقق من صحة القيم بعد التحويل
     if (isNaN(contentId) || !delegateTo || !currentUserId) {
-      console.error('❌ قيم ناقصة أو غير صحيحة:', { contentId, delegateTo, currentUserId });
       return res.status(400).json({ status: 'error', message: 'بيانات مفقودة أو غير صحيحة للتفويض' });
     }
 
-    // 3) نفّذ الاستعلام مع الرقم الصحيح
+    // 1) سجّل التفويض
     await db.execute(`
       INSERT INTO approval_logs (
         content_id,
@@ -683,8 +698,7 @@ const delegateApproval = async (req, res) => {
         status,
         comments,
         created_at
-      )
-      VALUES (?, ?, ?, 1, 'pending', ?, NOW())
+      ) VALUES (?, ?, ?, 1, 'pending', ?, NOW())
       ON DUPLICATE KEY UPDATE
         delegated_by = VALUES(delegated_by),
         signed_as_proxy = 1,
@@ -693,14 +707,36 @@ const delegateApproval = async (req, res) => {
         created_at = NOW()
     `, [contentId, delegateTo, currentUserId, notes || null]);
 
+    // 2) احضُر اسم المستخدم والمحتوى بشكل صحيح
+    const [delegateRows] = await db.execute(
+      'SELECT username FROM users WHERE id = ?', 
+      [delegateTo]
+    );
+    const isCommittee = rawId.startsWith('comm-');
+    const tableName = isCommittee ? 'committee_contents' : 'contents';
+    const [contentRows] = await db.execute(
+      `SELECT title FROM ${tableName} WHERE id = ?`, 
+      [contentId]
+    );
+
+    const delegateeUsername = delegateRows.length 
+      ? delegateRows[0].username 
+      : String(delegateTo);
+    const rawTitle = contentRows.length 
+      ? contentRows[0].title 
+      : '';
+    const parsedTitleAr = parseTitleByLang(rawTitle, 'ar') || 'غير معروف';
+    const parsedTitleEn = parseTitleByLang(rawTitle, 'en') || 'Unknown';
+
+    // 3) سجّل الحركة بنوع مرجعي صحيح (enum يحتوي على 'approval')
     await logAction(
       currentUserId,
       'delegate_signature',
       JSON.stringify({
-        ar: `تم تفويض التوقيع للمستخدم: ${delegateTo} على الملف رقم: ${contentId}`,
-        en: `Delegated signature to user: ${delegateTo} for file ID: ${contentId}`
+        ar: `تم تفويض التوقيع للمستخدم: ${delegateeUsername} على الملف: "${parsedTitleAr}"`,
+        en: `Delegated signature to user: ${delegateeUsername} for file: "${parsedTitleEn}"`
       }),
-      rawId.startsWith('comm-') ? 'committee_content' : 'content',
+      'approval',      // يجب أن يكون ضمن enum('content','folder','user','approval','notification')
       contentId
     );
 
@@ -714,6 +750,7 @@ const delegateApproval = async (req, res) => {
     return res.status(500).json({ status: 'error', message: 'فشل التفويض بالنيابة' });
   }
 };
+
 
 
 const getProxyApprovals = async (req, res) => {
@@ -745,6 +782,19 @@ const getProxyApprovals = async (req, res) => {
     res.status(500).json({ status: 'error', message: 'فشل جلب الموافقات بالوكالة' });
   }
 };
+
+// Helper function to get content title by language
+function getContentNameByLanguage(contentNameData, userLanguage = 'ar') {
+    try {
+        if (typeof contentNameData === 'string' && contentNameData.startsWith('{')) {
+            const parsed = JSON.parse(contentNameData);
+            return parsed[userLanguage] || parsed['ar'] || contentNameData;
+        }
+        return contentNameData || 'غير معروف';
+    } catch (error) {
+        return contentNameData || 'غير معروف';
+    }
+}
 
 module.exports = {
   getUserPendingApprovals,

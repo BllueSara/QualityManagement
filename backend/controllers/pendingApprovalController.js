@@ -169,7 +169,7 @@ exports.sendApprovalRequest = async (req, res) => {
         [contentId]
     );
 
-    const [approverUsers] = await conn.execute(
+    const [approverUsers] = await conn.query(
       `SELECT username FROM users WHERE id IN (?)`,
       [approvers]
     );
@@ -220,11 +220,16 @@ exports.sendApprovalRequest = async (req, res) => {
     );
 
     // Add to logs
-    const localizedDeptName = getLocalizedName(contentDetails.department_name, userLang);
-    const logMessage = userLang === 'en' 
-      ? `Sent content '${contentDetails.title}' in department '${localizedDeptName}' for approval to: ${approverNames}`
-      : `أرسل المحتوى '${contentDetails.title}' في القسم '${localizedDeptName}' للموافقة إلى: ${approverNames}`;
-    await logAction(userId, 'send_approval_request', logMessage, 'content', contentId);
+    const localizedDeptNameAR = getLocalizedName(contentDetails.department_name, 'ar');
+    const localizedDeptNameEN = getLocalizedName(contentDetails.department_name, 'en');
+    const titleAR = getLocalizedName(contentDetails.title, 'ar');
+    const titleEN = getLocalizedName(contentDetails.title, 'en');
+
+    const logDescription = {
+        ar: `أرسل المحتوى '${titleAR}' في القسم '${localizedDeptNameAR}' للموافقة إلى: ${approverNames}`,
+        en: `Sent content '${titleEN}' in department '${localizedDeptNameEN}' for approval to: ${approverNames}`
+    };
+    await logAction(userId, 'send_approval_request', JSON.stringify(logDescription), 'content', contentId);
 
     await conn.commit();
     res.status(200).json({ status: 'success', message: 'تم الإرسال بنجاح' });
@@ -326,10 +331,14 @@ exports.delegateApproval = async (req, res) => {
     );
 
     // Add to logs
-    const localizedDepartmentName = getLocalizedName(contentDetails.department_name, userLang);
+    const localizedDepartmentNameAR = getLocalizedName(contentDetails.department_name, 'ar');
+    const localizedDepartmentNameEN = getLocalizedName(contentDetails.department_name, 'en');
+    const titleAR = getLocalizedName(contentDetails.title, 'ar');
+    const titleEN = getLocalizedName(contentDetails.title, 'en');
+
     const logDescription = {
-      ar: `تم تفويض الموافقة على المحتوى: ${contentDetails.title} في القسم: ${localizedDepartmentName} إلى: ${delegateeUsername}`,
-      en: `Delegated approval for content: ${contentDetails.title} in department: ${localizedDepartmentName} to: ${delegateeUsername}`
+      ar: `تم تفويض الموافقة على المحتوى: '${titleAR}' في القسم: '${localizedDepartmentNameAR}' إلى: ${delegateeUsername}`,
+      en: `Delegated approval for content: '${titleEN}' in department: '${localizedDepartmentNameEN}' to: ${delegateeUsername}`
     };
     
     await logAction(currentUserId, 'delegate_approval', JSON.stringify(logDescription), 'content', contentId);
