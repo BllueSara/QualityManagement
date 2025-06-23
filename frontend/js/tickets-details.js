@@ -262,5 +262,6 @@ function normalizeValue(val) {
   if (val === 'صيانة المنشأة' || val.toLowerCase().includes('facility maintenance')) return 'facility-maintenance';
   if (val === 'قضايا تقنية المعلومات' || val.toLowerCase().includes('it issues')) return 'it-issues';
   if (val === 'التغذية السريرية' || val.toLowerCase().includes('clinical nutrition')) return 'clinical-nutrition';
+  if (val==='فرط الضغط' || val.toLowerCase().includes('pressure fracture')) return 'pressure fracture';
   return val;
 }

@@ -3,7 +3,17 @@ document.addEventListener('DOMContentLoaded', loadDelegations);
 const apiBaseDept = 'http://localhost:3006/api/approvals/proxy';
 const apiBaseComm = 'http://localhost:3006/api/committee-approvals/proxy';
 const token = localStorage.getItem('token');
+const currentLang = localStorage.getItem('language') || 'ar';
 
+function getLocalizedName(jsonString) {
+  try {
+    const obj = JSON.parse(jsonString);
+    return obj[currentLang] || obj.ar || obj.en || '';
+  } catch (e) {
+    // لو مش JSON، رجع النص كما هو
+    return jsonString;
+  }
+}
 let selectedContentId = null;
 let selectedContentType = null;
 
@@ -35,8 +45,8 @@ async function loadDelegations() {
     allData.forEach(d => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${escapeHtml(d.title)}</td>
-        <td class="col-signer">
+ <td>${escapeHtml(getLocalizedName(d.title))}</td>
+         <td class="col-signer">
           ${escapeHtml(d.delegated_by_name || d.delegated_by || '—')}
         </td>
         <td class="col-action">

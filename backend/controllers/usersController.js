@@ -335,38 +335,29 @@ const updateUser = async (req, res) => {
 
 // 5) حذف مستخدم
 const deleteUser = async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith('Bearer ')) {
+    return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+  }
+
+  let payload;
+  try {
+    payload = jwt.verify(auth.slice(7), process.env.JWT_SECRET);
+  } catch (err) {
+    return res.status(401).json({ status: 'error', message: 'Invalid token' });
+  }
+  const adminUserId = payload.id;
+
   const id = req.params.id;
   try {
-    // التحقق من وجود محتويات مرتبطة بالمستخدم
-    const [relatedContents] = await db.execute(
-      'SELECT COUNT(*) as count FROM contents WHERE created_by = ? OR approved_by = ?',
-      [id, id]
+    // جلب تفاصيل المستخدم قبل الحذف للتسجيل
+    const [[userDetails]] = await db.execute(
+      'SELECT username FROM users WHERE id = ?',
+      [id]
     );
 
-    // 8) تحويل سجلات النشاط (activity_logs) لحقل user_id إلى NULL
-    await conn.execute(
-      `UPDATE activity_logs
-         SET user_id = NULL
-       WHERE user_id = ?`,
-      [userId]
-    );
-
-    // 9) حذف صلاحيات المستخدم (user_permissions) — مُعرَّفة بـ ON DELETE CASCADE،
-    //    ولكن نضمن عبر حذف المستخدم نفسه لاحقًا
-
-    // 10) حذف إشعارات المستخدم (notifications) — أيضاً CASCADE
-
-    // 11) حذف المستخدم نفسه
-    const [delResult] = await conn.execute(
-      `DELETE FROM users WHERE id = ?`,
-      [userId]
-    );
-    if (delResult.affectedRows === 0) {
-      await conn.rollback();
-      return res.status(404).json({
-        status: 'error',
-        message: 'المستخدم غير موجود'
-      });
+    if (!userDetails) {
+      return res.status(404).json({ status:'error', message:'المستخدم غير موجود' });
     }
 
     const [result] = await db.execute('DELETE FROM users WHERE id = ?', [id]);
@@ -378,8 +369,8 @@ const deleteUser = async (req, res) => {
     // ✅ تسجيل اللوق بعد نجاح حذف المستخدم
     try {
         const logDescription = {
-            ar: `تم حذف مستخدم: ${username}`,
-            en: `Deleted user: ${username}`
+            ar: `تم حذف مستخدم: ${userDetails.username}`,
+            en: `Deleted user: ${userDetails.username}`
         };
         
         await logAction(adminUserId, 'delete_user', JSON.stringify(logDescription), 'user', id);
@@ -389,18 +380,15 @@ const deleteUser = async (req, res) => {
 
     res.status(200).json({ 
       status: 'success',
-      message: 'تم حذف المستخدم وجميع السجلات المرتبطة به بنجاح'
+      message: 'تم حذف المستخدم بنجاح'
     });
 
   } catch (error) {
-    if (conn) await conn.rollback();
     console.error('deleteUser error:', error);
     return res.status(500).json({
       status: 'error',
       message: error.message || 'فشل حذف المستخدم'
     });
-  } finally {
-    if (conn) conn.release();
   }
 };
 
@@ -509,11 +497,17 @@ const adminResetPassword = async (req, res) => {
       return res.status(404).json({ status:'error', message:'المستخدم غير موجود' });
     }
 
-    // Add to logs
-    const logMessage = userLang === 'en' 
-      ? `Reset password for user: '${userDetails.username}'`
-      : `أعاد تعيين كلمة المرور للمستخدم: '${userDetails.username}'`;
-    await logAction(adminUserId, 'reset_user_password', logMessage, 'user', id);
+    // ✅ تسجيل اللوق بعد نجاح إعادة تعيين كلمة المرور
+    try {
+      const logDescription = {
+        ar: `تم إعادة تعيين كلمة المرور للمستخدم: ${userDetails.username}`,
+        en: `Reset password for user: ${userDetails.username}`
+      };
+      
+      await logAction(adminUserId, 'reset_user_password', JSON.stringify(logDescription), 'user', id);
+    } catch (logErr) {
+      console.error('logAction error:', logErr);
+    }
 
     res.status(200).json({ 
       status: 'success',
@@ -589,7 +583,7 @@ const getLogs = async (req, res) => {
           const parsed = JSON.parse(text);
           return parsed[userLanguage] || parsed['ar'] || parsed['en'] || text;
         } catch (e) {
-          // إذا فشل التحليل، استمر مع المعالجة العادية
+          // إذا فشل التحليل، اترك النص كما هو
         }
       }
       
@@ -613,7 +607,6 @@ const getLogs = async (req, res) => {
               processedText = processedText.replace(match, translatedText);
             } catch (e) {
               // إذا فشل التحليل، اترك النص كما هو
-              console.log('DEBUG: Failed to parse JSON in backend:', match, e);
             }
           });
         }
@@ -627,7 +620,12 @@ const getLogs = async (req, res) => {
     const logsWithLanguage = rows.map(log => {
       // معالجة النصوص ثنائية اللغة
       const processedUser = processBilingualText(log.user, userLanguage);
-      const processedDescription = processBilingualText(log.description, userLanguage);
+      let processedDescription = log.description; // لا تعالج الوصف هنا مبدئياً
+
+      // لا تقم بمعالجة وصف الصلاحيات أو التفويض في الباك اند، دع الفرونت اند يعالجها
+      if (!log.action.includes('permission') && !log.action.includes('delegate')) {
+        processedDescription = processBilingualText(log.description, userLanguage);
+      }
       
       // استخراج المعلومات من الوصف ومعالجتها
       const extractedInfo = extractInfoFromDescription(processedDescription);
@@ -645,17 +643,6 @@ const getLogs = async (req, res) => {
         extracted_info: extractedInfo
       };
     });
-    
-    // Debug logging
-    if (rows.length > 0) {
-      console.log('DEBUG: First log description type:', typeof rows[0].description);
-      console.log('DEBUG: First log description value:', rows[0].description);
-      console.log('DEBUG: First log action type:', typeof rows[0].action);
-      console.log('DEBUG: First log action value:', rows[0].action);
-      console.log('DEBUG: First log user type:', typeof rows[0].user);
-      console.log('DEBUG: First log user value:', rows[0].user);
-      console.log('DEBUG: User language:', userLanguage);
-    }
     
     res.status(200).json({ status: 'success', data: logsWithLanguage });
   } catch (error) {

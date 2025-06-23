@@ -83,7 +83,7 @@ exports.getDepartments = async (req, res) => {
 // Create a new ticket
 exports.createTicket = async (req, res) => {
   try {
-    upload(req, res, async function (err) {
+    upload(req, res, async (err) => {
       if (err) {
         return res.status(400).json({ error: err.message });
       }
@@ -108,43 +108,54 @@ exports.createTicket = async (req, res) => {
               mimetype: file.mimetype
             }))
           : [],
-        classification   // ← أضف هنا المصفوفة
+        classification
       };
 
-      // 3) انشئ التذكرة في الموديل
+      // 3) انشئ التذكرة في الموديل، وارجع الـ ID
       const ticketId = await Ticket.create(ticketData, req.user.id);
 
-      // 4) Add to logs
-      const userLang = getUserLang(req);
-      const logMessage = userLang === 'en' 
-        ? `Created new ticket: '${req.body.title}' in department '${req.body.department}'`
-        : `أنشأ تذكرة جديدة: '${req.body.title}' في القسم '${req.body.department}'`;
-      await logAction(req.user.id, 'create_ticket', logMessage, 'ticket', ticketId);
+      // 4) جلب التذكرة للتأكد من وجود الحقل title
+      const createdTicket = await Ticket.findById(
+        ticketId,
+        req.user.id,
+        req.user.role
+      );
 
-      // ✅ تسجيل اللوق بعد نجاح إنشاء التذكرة
+      // 5) استخرج العنوان (قد يكون JSON أو نص)
+      const rawTitle = createdTicket?.title || ticketData.title || '';
+      const userLang = getUserLang(req);
+      const localizedTitle = getLocalizedName(rawTitle, userLang) || rawTitle;
+
+      // 6) تسجيل اللوق بعد نجاح الإنشاء
       try {
         const logDescription = {
-          ar: `تم إنشاء تذكرة جديدة: ${req.body.title}`,
-          en: `Created new ticket: ${req.body.title}`
+          ar: `تم إنشاء تذكرة جديدة: ${ticketId}`,
+          en: `Created new ticket: ${ticketId}`
         };
-        
-        await logAction(req.user.id, 'create_ticket', JSON.stringify(logDescription), 'ticket', ticketId);
+        await logAction(
+          req.user.id,
+          'create_ticket',
+          JSON.stringify(logDescription),
+          'ticket',
+          ticketId
+        );
       } catch (logErr) {
         console.error('logAction error:', logErr);
       }
 
-      // 5) أعِد الاستجابة
-      res.status(201).json({
+      // 7) أرسل الرد
+      return res.status(201).json({
         status: 'success',
         message: 'تم إنشاء التذكرة بنجاح',
         data: { id: ticketId }
       });
     });
   } catch (error) {
-    // console.error('createTicket error:', error);
-    res.status(500).json({ message: 'Error creating ticket.' });
+    console.error('createTicket error:', error);
+    return res.status(500).json({ message: 'Error creating ticket.' });
   }
 };
+
 
 
 // Get all tickets
@@ -188,90 +199,78 @@ exports.getTicket = async (req, res) => {
 
 exports.updateTicket = async (req, res) => {
   try {
-    // نفّذ الـ upload أولاً
     upload(req, res, async function (err) {
       if (err) {
         return res.status(400).json({ error: err.message });
       }
 
-      // Fetch old ticket details for logging
-      const oldTicket = await Ticket.findById(req.params.id, req.user.id, req.user.role);
+      const userLang = getUserLang(req);
 
-      // 1) فك التصنيفات إلى مصفوفة
+      const oldTicket = await Ticket.findById(req.params.id);
+
       const classifications = Array.isArray(req.body.classification)
         ? req.body.classification
         : req.body.classification
           ? [req.body.classification]
           : [];
 
-      // 2) (اختياري) فك أنواع المرضى بنفس المنطق لو تستخدم هذا الحقل
       const patient_types = Array.isArray(req.body.patient_types)
         ? req.body.patient_types
         : req.body.patient_types
           ? [req.body.patient_types]
           : [];
 
-      // 3) جهّز بيانات التذكرة مع إضافة الحقول الجديدة
       const ticketData = {
         ...req.body,
-        classifications,      // هنا المصفوفة
-        patient_types,        // لو تستخدم patient_types
+        classifications,
+        patient_types,
         attachments: req.files
-          ? req.files.map(file => ({
-              filename: file.filename,
-              path: file.path,
-              mimetype: file.mimetype
-            }))
+          ? req.files.map(f => ({ filename: f.filename, path: f.path, mimetype: f.mimetype }))
           : []
       };
 
-      // 4) نفّذ التحديث بالموديل
       await Ticket.update(req.params.id, ticketData, req.user.id);
 
-      // 5) Add to logs
-      const userLang = getUserLang(req);
-      let logMessage;
-      
-      if (oldTicket) {
-        const changes = [];
-        if (req.body.title && req.body.title !== oldTicket.title) {
-          changes.push(userLang === 'en' 
-            ? `title: '${oldTicket.title}' → '${req.body.title}'`
-            : `العنوان: '${oldTicket.title}' → '${req.body.title}'`);
-        }
-        if (req.body.department && req.body.department !== oldTicket.department) {
-          changes.push(userLang === 'en' 
-            ? `department: '${oldTicket.department}' → '${req.body.department}'`
-            : `القسم: '${oldTicket.department}' → '${req.body.department}'`);
-        }
-        if (req.body.status && req.body.status !== oldTicket.status) {
-          changes.push(userLang === 'en' 
-            ? `status: '${oldTicket.status}' → '${req.body.status}'`
-            : `الحالة: '${oldTicket.status}' → '${req.body.status}'`);
-        }
-        
-        if (changes.length > 0) {
-          logMessage = userLang === 'en' 
-            ? `Updated ticket '${oldTicket.title}': ${changes.join(', ')}`
-            : `حدث التذكرة '${oldTicket.title}': ${changes.join(', ')}`;
-        } else {
-          logMessage = userLang === 'en' 
-            ? `Updated ticket '${oldTicket.title}' (no significant changes)`
-            : `حدث التذكرة '${oldTicket.title}' (لا توجد تغييرات مهمة)`;
-        }
-      } else {
-        logMessage = userLang === 'en' 
-          ? `Updated ticket ID ${req.params.id}`
-          : `حدث التذكرة رقم ${req.params.id}`;
+      const newTicket = await Ticket.findById(req.params.id);
+
+      const changesAr = [];
+      const changesEn = [];
+
+      if (oldTicket.responding_dept_name !== newTicket.responding_dept_name) {
+        changesAr.push(`القسم المستجيب: '${oldTicket.responding_dept_name}' → '${newTicket.responding_dept_name}'`);
+        changesEn.push(`Responding Dept: '${oldTicket.responding_dept_name}' → '${newTicket.responding_dept_name}'`);
       }
-      
-      await logAction(req.user.id, 'update_ticket', logMessage, 'ticket', req.params.id);
+
+      if (oldTicket.reporting_dept_name !== newTicket.reporting_dept_name) {
+        changesAr.push(`القسم المُبلغ: '${oldTicket.reporting_dept_name}' → '${newTicket.reporting_dept_name}'`);
+        changesEn.push(`Reporting Dept: '${oldTicket.reporting_dept_name}' → '${newTicket.reporting_dept_name}'`);
+      }
+
+
+      // أضف هنا أي حقول إضافية حسب الحاجة
+
+      if (changesAr.length > 0) {
+        const identifierAr = `رقم ${req.params.id}`;
+        const identifierEn = `ID ${req.params.id}`;
+
+        const logDescription = {
+          ar: `تم تحديث التذكرة ${identifierAr}: ${changesAr.join(', ')}`,
+          en: `Updated ticket ${identifierEn}: ${changesEn.join(', ')}`
+        };
+
+        await logAction(
+          req.user.id,
+          'update_ticket',
+          JSON.stringify(logDescription),
+          'ticket',
+          req.params.id
+        );
+      }
 
       return res.json({ message: 'تم تحديث التذكرة بنجاح' });
     });
-
   } catch (error) {
-    console.error(error);
+    console.error('Error in updateTicket:', error);
     return res.status(500).json({ error: error.message });
   }
 };
@@ -279,60 +278,126 @@ exports.updateTicket = async (req, res) => {
 
 // Delete a ticket
 exports.deleteTicket = async (req, res) => {
+  try {
+    // 1) جلب بيانات التذكرة قبل الحذف
+    const ticket = await Ticket.findById(
+      req.params.id,
+      req.user.id,
+      req.user.role
+    );
+
+    // 2) حذف التذكرة
+    await Ticket.delete(req.params.id);
+
+    // 3) تحضير العنوان المترجم
+    const rawTitle = ticket?.title || null;
+    // عربي
+    const titleAr = rawTitle
+      ? getLocalizedName(rawTitle, 'ar')
+      : `رقم ${req.params.id}`;
+    // إنجليزي
+    const titleEn = rawTitle
+      ? getLocalizedName(rawTitle, 'en')
+      : `ID ${req.params.id}`;
+
+    // 4) تسجيل اللوق
     try {
-        // Fetch ticket details for logging
-        const ticket = await Ticket.findById(req.params.id, req.user.id, req.user.role);
-        
-        await Ticket.delete(req.params.id);
-        
-        // Add to logs
-        const userLang = getUserLang(req);
-        const logMessage = userLang === 'en' 
-          ? `Deleted ticket: '${ticket ? ticket.title : `ID ${req.params.id}`}'`
-          : `حذف التذكرة: '${ticket ? ticket.title : `رقم ${req.params.id}`}'`;
-        await logAction(req.user.id, 'delete_ticket', logMessage, 'ticket', req.params.id);
-        
-        res.json({ message: 'تم حذف التذكرة بنجاح' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+      const logDescription = {
+        ar: `تم حذف التذكرة: ${titleAr}`,
+        en: `Deleted ticket: ${titleEn}`
+      };
+      await logAction(
+        req.user.id,
+        'delete_ticket',
+        JSON.stringify(logDescription),
+        'ticket',
+        req.params.id
+      );
+    } catch (logErr) {
+      console.error('logAction error:', logErr);
     }
+
+    // 5) ردّ النجاح
+    return res.json({ message: 'تم حذف التذكرة بنجاح' });
+  } catch (error) {
+    console.error('Error in deleteTicket:', error);
+    return res.status(500).json({ error: error.message });
+  }
 };
 
+
 // Assign a ticket
+
 exports.assignTicket = async (req, res) => {
-    try {
-        const { assignedTo, comments } = req.body;
-        
-        // Fetch ticket details for logging
-        const ticket = await Ticket.findById(req.params.id, req.user.id, req.user.role);
-        
-        // Fetch assignee details for logging
-        const mysql = require('mysql2/promise');
-        const db = mysql.createPool({
-            host: process.env.DB_HOST || 'localhost',
-            user: process.env.DB_USER || 'root',
-            password: process.env.DB_PASSWORD || '',
-            database: process.env.DB_NAME || 'Quality'
-        });
-        
-        const [[assigneeDetails]] = await db.execute(
-            'SELECT username FROM users WHERE id = ?',
-            [assignedTo]
-        );
-        
-        await Ticket.assignTicket(req.params.id, assignedTo, req.user.id, comments);
-        
-        // Add to logs
-        const userLang = getUserLang(req);
-        const logMessage = userLang === 'en' 
-          ? `Assigned ticket '${ticket ? ticket.title : `ID ${req.params.id}`}' to: ${assigneeDetails ? assigneeDetails.username : `User ${assignedTo}`}`
-          : `عين التذكرة '${ticket ? ticket.title : `رقم ${req.params.id}`}' إلى: ${assigneeDetails ? assigneeDetails.username : `المستخدم ${assignedTo}`}`;
-        await logAction(req.user.id, 'assign_ticket', logMessage, 'ticket', req.params.id);
-        
-        res.json({ message: 'تم تعيين التذكرة بنجاح' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+  try {
+    const ticketId    = req.params.id;
+    let   { assignedTo, comments } = req.body;
+    const userLang    = getUserLang(req);
+
+    // إذا front-end مرسل مصفوفة كـ string، فكّها
+    if (typeof assignedTo === 'string') {
+      try {
+        assignedTo = JSON.parse(assignedTo);
+      } catch {
+        // خليه قيمة واحدة لو مش JSON
+        assignedTo = [assignedTo];
+      }
     }
+
+    // تأكد إنه مصفوفة
+    const assigneeIds = Array.isArray(assignedTo)
+      ? assignedTo
+      : [assignedTo];
+
+    // 1) جلب بيانات التذكرة (لو محتاجين العنوان مثلاً)
+    const ticket = await Ticket.findById(ticketId, req.user.id, req.user.role);
+
+    // 2) تعيين التذكرة (موديلك الحالي يدعم فقط ID واحد، لو عدّة حتحتاج iterating)
+    await Ticket.assignTicket(ticketId, assigneeIds[0], req.user.id, comments);
+
+    // 3) جلب جميع بيانات المكلفين
+    const mysql = require('mysql2/promise');
+    const db    = mysql.createPool({ /*...*/ });
+    const [rows] = await db.execute(
+      `SELECT id, username
+         FROM users
+        WHERE id IN (?)`,
+      [assigneeIds]
+    );
+
+    // 4) جهّز سلسلة الأسماء + الأيدي
+    const assigneeInfo = rows.length
+      ? rows.map(u => `${u.username} (ID: ${u.id})`).join(', ')
+      : assigneeIds.map(id => `ID:${id}`).join(', ');
+
+    // 5) عنوان التذكرة (دايمًا نستخدم رقمها هنا)
+    const identifierAr = `رقم ${ticketId}`;
+    const identifierEn = `ID ${ticketId}`;
+
+    // 6) تسجيل اللوق
+    const logDescription = {
+      ar: `تم تعيين التذكرة ${identifierAr} إلى: ${assigneeInfo}`,
+      en: `Assigned ticket ${identifierEn} to: ${assigneeInfo}`
+    };
+    await logAction(
+      req.user.id,
+      'assign_ticket',
+      JSON.stringify(logDescription),
+      'ticket',
+      ticketId
+    );
+
+    // 7) ريسبونس للـ front
+    return res.json({
+      status: 'success',
+      message: 'تم تعيين التذكرة بنجاح',
+      assignees: rows
+    });
+
+  } catch (error) {
+    console.error('Error in assignTicket:', error);
+    return res.status(500).json({ error: error.message });
+  }
 };
 
 // Get ticket status history
@@ -345,71 +410,110 @@ exports.getTicketStatusHistory = async (req, res) => {
     }
 };
 
+
 exports.addReply = async (req, res) => {
     try {
         const ticketId = req.params.id;
         const { text } = req.body;
+
+        // 1) فكّ التوكن واستخراج الـ userId
         const token = req.headers.authorization.split(' ')[1];
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const userId = decoded.id;
 
-        // Fetch ticket details for logging
+        // 2) جلب لغة المستخدم
+        const userLang = getUserLang(req);
+
+        // 3) جلب التذكرة (بما في ذلك الحقل title)
         const ticket = await Ticket.findById(ticketId, userId, decoded.role);
 
-        await Reply.create({ ticketId, text, authorId: userId });
+        // 4) استخراج العنوان وتحويله حسب اللغة
+        const rawTitle = ticket && ticket.title ? ticket.title : null;
+        const title = rawTitle
+            ? getLocalizedName(rawTitle, userLang)
+            : ` ${ticketId}`;
+
+        // 5) إنشاء الرد
+const newReply = await Ticket.addReply(ticketId, userId, text);
+
         
-        // Add to logs
-        const userLang = getUserLang(req);
+        // 6) تسجيل الحدث في اللوغ
         const logDescription = {
-            ar: `تم إضافة رد على التذكرة: ${ticket ? ticket.title : `رقم ${ticketId}`}`,
-            en: `Added reply to ticket: ${ticket ? ticket.title : `ID ${ticketId}`}`
+            ar: `تم إضافة رد على التذكرة: ${title}`,
+            en: `Added reply to ticket: ${title}`
         };
+        await logAction(
+            userId,
+            'add_reply',
+            JSON.stringify(logDescription),
+            'ticket',
+            ticketId
+        );
         
-        await logAction(userId, 'add_reply', JSON.stringify(logDescription), 'ticket', ticketId);
-        
-        res.status(201).json({ message: 'Reply added successfully.' });
+return res.status(201).json({
+  message: 'Reply added and ticket closed if needed.',
+  reply: newReply
+});
     } catch (err) {
-        // console.error(err);
-        res.status(500).json({ message: 'Error adding reply.' });
+        console.error('Error in addReply:', err);
+        return res.status(500).json({ message: 'Error adding reply.' });
     }
 };
+
 exports.assignToUsers = async (req, res) => {
   const ticketId = req.params.id;
-  const { assignees } = req.body;  // مصفوفة userIds
-  
+  let assigneeIds = req.body.assignees; 
+
   try {
-    // Fetch ticket details for logging
-    const ticket = await Ticket.findById(ticketId, req.user.id, req.user.role);
-    
-    // Fetch assignee details for logging
+    // فكّ JSON إذا لزم
+    if (typeof assigneeIds === 'string') {
+      assigneeIds = JSON.parse(assigneeIds);
+    }
+    if (!Array.isArray(assigneeIds) || assigneeIds.length === 0) {
+      return res.status(400).json({ error: 'assignees must be a non-empty array' });
+    }
+
+    // 1) جلب pool
     const mysql = require('mysql2/promise');
     const db = mysql.createPool({
-        host: process.env.DB_HOST || 'localhost',
-        user: process.env.DB_USER || 'root',
-        password: process.env.DB_PASSWORD || '',
-        database: process.env.DB_NAME || 'Quality'
+      host:     process.env.DB_HOST || 'localhost',
+      user:     process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'Quality'
     });
-    
-    const [assigneeUsers] = await db.execute(
-        'SELECT username FROM users WHERE id IN (?)',
-        [assignees]
-    );
+
+    // 2) جلب أسماء المكلَّفين
+    const placeholders = assigneeIds.map(() => '?').join(',');
+    const sql = `SELECT username FROM users WHERE id IN (${placeholders})`;
+    const [assigneeUsers] = await db.execute(sql, assigneeIds);
     const assigneeNames = assigneeUsers.map(u => u.username).join(', ');
-    
-    await Ticket.assignUsers(ticketId, assignees, req.user.id);
-    
-    // Add to logs
-    const userLang = getUserLang(req);
-    const logMessage = userLang === 'en' 
-      ? `Assigned ticket '${ticket ? ticket.title : `ID ${ticketId}`}' to multiple users: ${assigneeNames}`
-      : `عين التذكرة '${ticket ? ticket.title : `رقم ${ticketId}`}' لعدة مستخدمين: ${assigneeNames}`;
-    await logAction(req.user.id, 'assign_ticket_multiple', logMessage, 'ticket', ticketId);
-    
-    res.json({ status: 'success' });
+
+    // 3) نفّذ التعيين
+    await Ticket.assignUsers(ticketId, assigneeIds, req.user.id);
+
+    // 4) سجّل اللّوج
+    const identifierAr = `رقم ${ticketId}`;
+    const identifierEn = `ID ${ticketId}`;
+    const logDescription = {
+      ar: `تم تعيين التذكرة ${identifierAr} ل : ${assigneeNames}`,
+      en: `Assigned ticket ${identifierEn} to  : ${assigneeNames}`
+    };
+    await logAction(
+      req.user.id,
+      'assign_ticket_multiple',
+      JSON.stringify(logDescription),
+      'ticket',
+      ticketId
+    );
+
+    return res.json({ status: 'success' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('assignToUsers error:', error);
+    return res.status(500).json({ error: error.message });
   }
 };
+
+
 // GET /api/tickets/:id/track
 exports.trackTicket = async (req, res) => {
   const ticketId = req.params.id;
@@ -446,12 +550,17 @@ exports.closeTicket = async (req, res) => {
         // تحديث حالة التذكرة إلى مغلق
         await Ticket.updateStatus(ticketId, 'مغلق', req.user.id);
         
-        // Add to logs
-        const userLang = getUserLang(req);
-        const logMessage = userLang === 'en' 
-          ? `Closed ticket: '${ticket ? ticket.title : `ID ${ticketId}`}'`
-          : `أغلق التذكرة: '${ticket ? ticket.title : `رقم ${ticketId}`}'`;
-        await logAction(req.user.id, 'close_ticket', logMessage, 'ticket', ticketId);
+        // ✅ تسجيل اللوق بعد نجاح إغلاق التذكرة
+        try {
+          const logDescription = {
+            ar: `تم إغلاق التذكرة: ${ticket ? ticket.title : `رقم ${ticketId}`}`,
+            en: `Closed ticket: ${ticket ? ticket.title : `ID ${ticketId}`}`
+          };
+          
+          await logAction(req.user.id, 'close_ticket', JSON.stringify(logDescription), 'ticket', ticketId);
+        } catch (logErr) {
+          console.error('logAction error:', logErr);
+        }
         
         // جلب صاحب التذكرة
         if (ticket && ticket.created_by) {

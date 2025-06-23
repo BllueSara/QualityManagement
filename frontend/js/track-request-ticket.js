@@ -166,7 +166,7 @@ if (item.comments) {
         <div class="timeline-details-row">
           <div class="timeline-author">
             <i class="fas fa-user-circle"></i>
-            <span>${item.changed_by || '—'} - ${item.department_name || '—'}</span>
+   ${item.changed_by || '—'} – ${parseLocalizedName(item.department_name, currentLang) || '—'}
           </div>
           <div class="timeline-details">
             <span class="timeline-date">${date}</span>
