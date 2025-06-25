@@ -88,9 +88,26 @@ async function handleCommitteeApproval(req, res) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const currentUserId = decoded.id;
 
-    const approverId  = on_behalf_of || currentUserId;
-    const isProxy     = Boolean(on_behalf_of);
-    const delegatedBy = isProxy ? currentUserId : null;
+    // 2) Fallback لبيانات التفويض القديمة إن لم يُرسل on_behalf_of
+    let delegatedBy = on_behalf_of || null;
+    let isProxy    = Boolean(on_behalf_of);
+
+    if (!on_behalf_of) {
+      const [existing] = await db.execute(`
+        SELECT delegated_by, signed_as_proxy
+        FROM committee_approval_logs
+        WHERE content_id = ? AND approver_id = ?
+        LIMIT 1
+      `, [contentId, currentUserId]);
+
+      if (existing.length && existing[0].signed_as_proxy === 1) {
+        delegatedBy = existing[0].delegated_by;
+        isProxy    = true;
+      }
+    }
+
+    // 3) الموقّع الفعلي دائماً currentUserId
+    const approverId = currentUserId;
 
     if (approved && !signature && !electronic_signature) {
       return res.status(400).json({ status: 'error', message: 'التوقيع مفقود' });
@@ -457,21 +474,31 @@ async function getProxyCommitteeApprovals(req, res) {
  * Helper: generate final signed PDF for committee
  */
 async function generateFinalSignedCommitteePDF(contentId) {
-  const [rows] = await db.execute(`SELECT file_path FROM committee_contents WHERE id = ?`, [contentId]);
+  const [rows] = await db.execute(
+    `SELECT file_path FROM committee_contents WHERE id = ?`,
+    [contentId]
+  );
   if (!rows.length) return console.error('Committee content not found');
 
-  // The file_path contains the path including backend directory (e.g., backend/uploads/content_files/filename.pdf)
-  // So we need to go up two levels from controllers to reach project root, then use the stored path
   const fullPath = path.join(__dirname, '../..', rows[0].file_path);
   if (!fs.existsSync(fullPath)) return console.error('File not found', fullPath);
 
   const pdfBytes = fs.readFileSync(fullPath);
   const pdfDoc   = await PDFDocument.load(pdfBytes);
 
+  // 6) جلب سجلات الاعتماد مع بيانات النيابة
   const [logs] = await db.execute(`
-    SELECT u.username, al.signature, al.electronic_signature, al.signed_as_proxy, al.comments
+    SELECT
+      al.signature,
+      al.electronic_signature,
+      al.signed_as_proxy,
+      al.delegated_by,
+      u_actual.username   AS actual_signer,
+      u_proxy.username    AS original_user,
+      al.comments
     FROM committee_approval_logs al
-    JOIN users u ON al.approver_id = u.id
+    JOIN users u_actual ON al.approver_id = u_actual.id
+    LEFT JOIN users u_proxy ON al.delegated_by = u_proxy.id
     WHERE al.content_id = ? AND al.status = 'approved'
     ORDER BY al.created_at
   `, [contentId]);
@@ -480,31 +507,46 @@ async function generateFinalSignedCommitteePDF(contentId) {
   let page = pdfDoc.addPage();
   let y    = 750;
 
-  page.drawText('Committee Signatures Summary', { x: 200, y, size: 20, font, color: rgb(0,0,0) });
+  page.drawText('Committee Signatures Summary', {
+    x: 200, y, size: 20, font, color: rgb(0,0,0)
+  });
   y -= 40;
 
+  // 7) رسم التوقيعات مع “on behalf of”
   for (const log of logs) {
     if (y < 200) { page = pdfDoc.addPage(); y = 750; }
-    const label = log.signed_as_proxy ? 'Signed on behalf of' : 'Signed by';
-    page.drawText(`${label}: ${log.username}`, { x: 50, y, size: 14, font });
+    const label = log.signed_as_proxy
+      ? `Signed by ${log.actual_signer} on behalf of ${log.original_user}`
+      : `Signed by ${log.actual_signer}`;
+    page.drawText(label, { x: 50, y, size: 14, font });
     y -= 25;
 
-    // embed hand signature
+    // hand signature
     if (log.signature?.startsWith('data:image')) {
       const imgBytes = Buffer.from(log.signature.split(',')[1], 'base64');
       const img      = await pdfDoc.embedPng(imgBytes);
       const dims     = img.scale(0.4);
-      page.drawImage(img, { x: 150, y: y - dims.height + 10, width: dims.width, height: dims.height });
+      page.drawImage(img, {
+        x: 150,
+        y: y - dims.height + 10,
+        width: dims.width,
+        height: dims.height
+      });
       y -= dims.height + 30;
     }
 
-    // embed e-stamp
+    // electronic signature
     if (log.electronic_signature) {
-      const stampPath     = path.join(__dirname, '../e3teamdelc.png');
-      const stampBytes    = fs.readFileSync(stampPath);
-      const stampImage    = await pdfDoc.embedPng(stampBytes);
-      const stampDims     = stampImage.scale(0.5);
-      page.drawImage(stampImage, { x: 150, y: y - stampDims.height + 10, width: stampDims.width, height: stampDims.height });
+      const stampPath  = path.join(__dirname, '../e3teamdelc.png');
+      const stampBytes = fs.readFileSync(stampPath);
+      const stampImg   = await pdfDoc.embedPng(stampBytes);
+      const stampDims  = stampImg.scale(0.5);
+      page.drawImage(stampImg, {
+        x: 150,
+        y: y - stampDims.height + 10,
+        width: stampDims.width,
+        height: stampDims.height
+      });
       y -= stampDims.height + 30;
     }
 
@@ -513,10 +555,16 @@ async function generateFinalSignedCommitteePDF(contentId) {
       y -= 20;
     }
 
-    page.drawLine({ start:{x:50,y}, end:{x:550,y}, thickness:1, color:rgb(0.8,0.8,0.8) });
+    page.drawLine({
+      start: { x:50, y },
+      end:   { x:550, y },
+      thickness: 1,
+      color: rgb(0.8,0.8,0.8)
+    });
     y -= 30;
   }
 
+  // 8) حفظ التعديلات
   const finalBytes = await pdfDoc.save();
   fs.writeFileSync(fullPath, finalBytes);
   console.log('✅ Committee signature page added:', fullPath);
