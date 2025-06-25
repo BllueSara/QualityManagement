@@ -651,6 +651,7 @@ const translations = {
         'error-loading-replies': 'تعذر تحميل الردود.',
         'error-sending-reply': 'خطأ أثناء إرسال الرد: ',
         'write-reply-first': 'اكتب ردّك أولاً',
+        'sign_elctronic': 'اعتماد الإلكتروني',
 
         // Track Request Ticket Page Translations
         'track-ticket': 'تتبع التذكرة',
@@ -855,6 +856,7 @@ const translations = {
         'home': 'Home',
         'back': 'Back',
         'account': 'Account',
+        'sign_elctronic': 'Electronic Approval',
         'logs': 'Logs',
         'notifications': 'Notifications',
         'language': 'English',
