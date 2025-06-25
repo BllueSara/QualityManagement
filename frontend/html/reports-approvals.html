@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تقارير الاعتمادات</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/shared.css">
+  <link rel="stylesheet" href="../css/home.css">
+  <link rel="stylesheet" href="../css/reports-tickets.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="hospital-logo">
+        <img src="/frontend/images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز">
+      </div>
+      <div class="system-title">
+        <img src="/frontend/images/system-title.png" alt="نظام إدارة الجودة والسلامة">
+      </div>
+    </div>
+  </header>
+  <main>
+    <div class="container">
+      <h1 class="reports-title" id="page-title">تقارير الاعتمادات</h1>
+      <div class="actions-bar">
+        <label>القسم:
+          <select id="department-select">
+            <option value="all">الكل</option>
+            <!-- Departments will be populated dynamically -->
+          </select>
+        </label>
+        <label>من: <input type="date" id="start-date"></label>
+        <label>إلى: <input type="date" id="end-date"></label>
+        <button id="filter-btn" class="btn"><i class="fas fa-filter"></i> بحث</button>
+        <button id="download-btn" class="btn"><i class="fas fa-download"></i> تحميل</button>
+      </div>
+      <div class="table-wrapper">
+        <table id="approvals-report-table">
+          <thead>
+            <tr>
+              <th id="file-name-th">اسم الملف</th>
+              <th id="department-th">القسم</th>
+              <th id="start-date-th">تاريخ البداية</th>
+              <th id="end-date-th">تاريخ الانتهاء</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Data will be populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+  <script src="../js/reports-approvals.js"></script>
+</body>
+</html> 

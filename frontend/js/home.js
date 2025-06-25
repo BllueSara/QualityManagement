@@ -46,6 +46,12 @@ document.querySelectorAll('.cards-grid .card').forEach(card => {
   const titleEl = card.querySelector('[data-translate]');
   const key     = titleEl ? titleEl.dataset.translate : null;
 
+  // اجعل كرت التقارير يظهر دائمًا
+  if (key === 'reports') {
+    card.style.display = '';
+    return;
+  }
+
   if (key && toggleable.includes(key)) {
     // تعطيل البطاقة لو عنده disable_<key>
     card.style.display = permissionsKeys.includes(`disable_${key}`) ? 'none' : '';
