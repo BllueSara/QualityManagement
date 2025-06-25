@@ -66,9 +66,17 @@ async function populateDepartments() {
   while (select.options.length > 1) select.remove(1);
   const departments = await fetchDepartments();
   departments.forEach(dep => {
+    let nameObj = dep.name;
+    if (typeof nameObj === 'string') {
+      try {
+        nameObj = JSON.parse(dep.name);
+      } catch (e) {
+        nameObj = { ar: dep.name, en: dep.name };
+      }
+    }
     const option = document.createElement('option');
-    option.value = currentLang === 'ar' ? dep.name_ar : dep.name_en;
-    option.textContent = currentLang === 'ar' ? dep.name_ar : dep.name_en;
+    option.value = currentLang === 'ar' ? nameObj.ar : nameObj.en;
+    option.textContent = currentLang === 'ar' ? nameObj.ar : nameObj.en;
     select.appendChild(option);
   });
 }
