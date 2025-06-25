@@ -1,6 +1,7 @@
 const mysql = require('mysql2/promise');
 const multer = require('multer');
 const jwt = require('jsonwebtoken');
+const path = require('path');
 
 const db = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
@@ -138,7 +139,8 @@ exports.getCommittee = async (req, res) => {
 exports.addCommittee = async (req, res) => {
     try {
       const { name } = req.body;
-      const imagePath = req.file ? req.file.path.replace(/\\/g, '/') : null;
+      // Save relative path instead of full system path
+      const imagePath = req.file ? path.posix.join('backend', 'uploads', 'images', req.file.filename) : null;
   
       if (!name || !imagePath) {
         return res.status(400).json({ message: 'اسم اللجنة والصورة مطلوبان' });
@@ -192,7 +194,8 @@ exports.addCommittee = async (req, res) => {
     try {
       const { id } = req.params;
       const { name } = req.body;
-      const imagePath = req.file ? req.file.path.replace(/\\/g, '/') : null;
+      // Save relative path instead of full system path
+      const imagePath = req.file ? path.posix.join('backend', 'uploads', 'images', req.file.filename) : null;
   
       if (!name) {
         return res.status(400).json({ message: 'اسم اللجنة مطلوب' });
@@ -521,7 +524,8 @@ exports.addContent = async (req, res) => {
     try {
       const { title, notes, approvers_required } = req.body;
       const { folderId } = req.params;
-      const filePath = req.file ? req.file.path.replace(/\\/g, '/') : null;
+      // Save the path including backend directory since multer saves to backend/uploads/content_files
+      const filePath = req.file ? path.posix.join('backend', 'uploads', 'content_files', req.file.filename) : null;
   
       const authHeader = req.headers.authorization;
       if (!authHeader) return res.status(401).json({ message: 'مطلوب تسجيل الدخول' });
@@ -579,7 +583,8 @@ exports.addContent = async (req, res) => {
     try {
       const { id } = req.params;
       const { title, notes } = req.body;
-      const filePath = req.file ? req.file.path.replace(/\\/g, '/') : null;
+      // Save the path including backend directory since multer saves to backend/uploads/content_files
+      const filePath = req.file ? path.posix.join('backend', 'uploads', 'content_files', req.file.filename) : null;
 
       // جلب العنوان القديم وfolder_id قبل التحديث
       const [oldRows] = await db.execute('SELECT title, folder_id FROM committee_contents WHERE id = ?', [id]);

@@ -146,7 +146,8 @@ async function fetchDepartments() {
             if (permissions.canEdit || permissions.canDelete) {
                 icons = '<div class="card-icons">';
                 if (permissions.canEdit)
-                    icons += `<a href="#" class="edit-icon" data-id="${dept.id}" data-name="${dept.name}"><img src="../images/edit.svg" alt="${getTranslation('edit')}"></a>`;
+                    icons += `<a href="#" class="edit-icon" data-id="${dept.id}" data-name='${dept.name}'"><img src="../images/edit.svg" alt="${getTranslation('edit')}"></a>`;
+
                 if (permissions.canDelete)
                     icons += `<a href="#" class="delete-icon" data-id="${dept.id}"><img src="../images/delet.svg" alt="${getTranslation('delete')}"></a>`;
                 icons += '</div>';
