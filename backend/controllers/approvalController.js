@@ -105,9 +105,31 @@ const handleApproval = async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const currentUserId = decoded.id;
 
-    const approverId = on_behalf_of || currentUserId;
-    const delegatedBy = on_behalf_of ? currentUserId : null;
-    const isProxy = !!on_behalf_of;
+// ——— fallback لحفظ التفويض القديم إذا ما جالنا on_behalf_of ———
+// أولاً حدد القيم الواردة من الـ body
+let delegatedBy = on_behalf_of || null;
+let isProxy    = Boolean(on_behalf_of);
+
+// إذا ما وصلنا on_behalf_of نقرأ من القاعدة السجل القديم
+if (!on_behalf_of) {
+  const [existing] = await db.execute(`
+    SELECT delegated_by, signed_as_proxy
+    FROM approval_logs
+    WHERE content_id = ? AND approver_id = ?
+    LIMIT 1
+  `, [contentId, currentUserId]);
+
+  if (existing.length && existing[0].signed_as_proxy === 1) {
+    // احتفظ بقيم التفويض القديمة بدل مسحها
+    delegatedBy = existing[0].delegated_by;
+    isProxy    = true;
+  }
+}
+
+// بعدين استخدم currentUserId كموقّع فعلي
+const approverId = currentUserId;
+// ————————————————————————————————————————————————
+
 
     if (approved === true && !signature && !electronic_signature) {
       return res.status(400).json({ status: 'error', message: 'التوقيع مفقود' });
@@ -132,8 +154,9 @@ const handleApproval = async (req, res) => {
       )
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
       ON DUPLICATE KEY UPDATE
-        delegated_by = VALUES(delegated_by),
-        signed_as_proxy = VALUES(signed_as_proxy),
+       delegated_by    = COALESCE(VALUES(delegated_by), delegated_by),
+
+signed_as_proxy = COALESCE(VALUES(signed_as_proxy), signed_as_proxy),
         status = VALUES(status),
         signature = VALUES(signature),
         electronic_signature = VALUES(electronic_signature),
@@ -222,17 +245,23 @@ const handleApproval = async (req, res) => {
     res.status(500).json({ status: 'error', message: 'خطأ أثناء معالجة الاعتماد' });
   }
 };
-
-
-// توليد نسخة نهائية موقعة من PDF
+// توليد نسخة نهائية موقعة من PDF مع دعم “توقيع بالنيابة”
 async function generateFinalSignedPDF(contentId) {
-  const [rows] = await db.execute(`SELECT file_path FROM contents WHERE id = ?`, [contentId]);
-  if (!rows.length) return console.error('📁 Content not found');
-
-  const relativePath = rows[0].file_path;
+  // 1) جلب مسار الملف
+  const [fileRows] = await db.execute(
+    `SELECT file_path FROM contents WHERE id = ?`,
+    [contentId]
+  );
+  if (!fileRows.length) {
+    return console.error('📁 Content not found for ID', contentId);
+  }
+  const relativePath = fileRows[0].file_path;
   const fullPath = path.join(__dirname, '../../uploads', relativePath);
-  if (!fs.existsSync(fullPath)) return console.error('❌ File not found:', fullPath);
+  if (!fs.existsSync(fullPath)) {
+    return console.error('❌ File not found on disk:', fullPath);
+  }
 
+  // 2) تحميل وثيقة الـ PDF
   let pdfDoc;
   try {
     const pdfBytes = fs.readFileSync(fullPath);
@@ -241,20 +270,32 @@ async function generateFinalSignedPDF(contentId) {
     return console.error('❌ Failed to load PDF:', err);
   }
 
+  // 3) جلب سجلات الاعتماد بما فيها التفويض
   const [logs] = await db.execute(`
-    SELECT 
-      u.username AS username,
+    SELECT
+      al.signed_as_proxy,
+      u_actual.username   AS actual_signer,
+      u_original.username AS original_user,
       al.signature,
       al.electronic_signature,
-      al.signed_as_proxy,
       al.comments
     FROM approval_logs al
-    JOIN users u ON al.approver_id = u.id
+    JOIN users u_actual
+      ON al.approver_id = u_actual.id
+    LEFT JOIN users u_original
+      ON al.delegated_by = u_original.id
     WHERE al.content_id = ? AND al.status = 'approved'
+    ORDER BY al.created_at
   `, [contentId]);
 
-  if (!logs.length) return console.warn('No signatures found');
+  console.log('PDF logs:', logs); // للتأكد من القيم
 
+  if (!logs.length) {
+    console.warn('⚠️ No approved signatures found for content', contentId);
+    return;
+  }
+
+  // 4) إعداد الصفحة
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   let page = pdfDoc.addPage();
   let y = 750;
@@ -266,42 +307,34 @@ async function generateFinalSignedPDF(contentId) {
     font,
     color: rgb(0, 0, 0)
   });
-
   y -= 40;
 
+  // 5) رسم كل توقيع
   for (const log of logs) {
     if (y < 200) {
       page = pdfDoc.addPage();
       y = 750;
     }
 
-    const isProxy = !!log.signed_as_proxy;
-    const label = isProxy ? 'Signed on behalf of' : 'Signed by';
+    // التسمية تصير:
+    //   إذا signed_as_proxy = 1 → "Signed by Ahmed on behalf of Rawad"
+    //   وإلا → "Signed by Ahmed"
+    const label = log.signed_as_proxy
+      ? `Signed by ${log.actual_signer} on behalf of ${log.original_user}`
+      : `Signed by ${log.actual_signer}`;
 
-    page.drawText(`${label}: ${log.username}`, {
-      x: 50,
-      y,
-      size: 14,
-      font,
-      color: rgb(0, 0, 0)
+    page.drawText(label, {
+      x: 50, y, size: 14, font, color: rgb(0, 0, 0)
     });
-
     y -= 25;
 
-    if (log.signature && log.signature.startsWith('data:image')) {
+    // توقيع يدوي
+    if (log.signature?.startsWith('data:image')) {
       try {
         const base64Data = log.signature.split(',')[1];
-        const imageBytes = Buffer.from(base64Data, 'base64');
-        const img = await pdfDoc.embedPng(imageBytes);
+        const imgBytes = Buffer.from(base64Data, 'base64');
+        const img = await pdfDoc.embedPng(imgBytes);
         const dims = img.scale(0.4);
-
-        page.drawText(`Hand Signature:`, {
-          x: 50,
-          y,
-          size: 12,
-          font,
-          color: rgb(0.2, 0.2, 0.2)
-        });
 
         page.drawImage(img, {
           x: 150,
@@ -309,28 +342,20 @@ async function generateFinalSignedPDF(contentId) {
           width: dims.width,
           height: dims.height
         });
-
-        y -= dims.height + 30;
+        y -= dims.height + 20;
       } catch (err) {
         console.warn('Failed to draw hand signature:', err);
         y -= 20;
       }
     }
 
+    // توقيع إلكتروني
     if (log.electronic_signature) {
       try {
         const stampPath = path.join(__dirname, '../e3teamdelc.png');
-        const stampImageBytes = fs.readFileSync(stampPath);
-        const stampImg = await pdfDoc.embedPng(stampImageBytes);
+        const stampBytes = fs.readFileSync(stampPath);
+        const stampImg = await pdfDoc.embedPng(stampBytes);
         const dims = stampImg.scale(0.5);
-
-        page.drawText(`E-Signature:`, {
-          x: 50,
-          y,
-          size: 12,
-          font,
-          color: rgb(0.2, 0.2, 0.2)
-        });
 
         page.drawImage(stampImg, {
           x: 150,
@@ -338,39 +363,41 @@ async function generateFinalSignedPDF(contentId) {
           width: dims.width,
           height: dims.height
         });
-
-        y -= dims.height + 30;
+        y -= dims.height + 20;
       } catch (err) {
         console.warn('Failed to draw electronic signature:', err);
         y -= 20;
       }
     }
 
+    // التعليقات
     if (log.comments) {
       page.drawText(`Comments: ${log.comments}`, {
-        x: 50,
-        y,
-        size: 12,
-        font,
-        color: rgb(0.3, 0.3, 0.3)
+        x: 50, y, size: 12, font, color: rgb(0.3, 0.3, 0.3)
       });
       y -= 20;
     }
 
+    // فاصل
     page.drawLine({
-      start: { x: 50, y: y },
-      end: { x: 550, y: y },
+      start: { x: 50, y },
+      end:   { x: 550, y },
       thickness: 1,
-      color: rgb(0.8, 0.8, 0.8),
+      color: rgb(0.8, 0.8, 0.8)
     });
-
     y -= 30;
   }
 
-  const finalBytes = await pdfDoc.save();
-  fs.writeFileSync(fullPath, finalBytes);
-  console.log(`✅ Signature page added: ${fullPath}`);
+  // 6) حفظ التعديلات
+  try {
+    const finalBytes = await pdfDoc.save();
+    fs.writeFileSync(fullPath, finalBytes);
+    console.log(`✅ PDF updated: ${fullPath}`);
+  } catch (err) {
+    console.error('❌ Error saving PDF:', err);
+  }
 }
+
 
 async function getUserPermissions(userId) {
   const [permRows] = await db.execute(`
