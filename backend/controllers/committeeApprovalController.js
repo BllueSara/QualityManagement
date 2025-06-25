@@ -331,7 +331,12 @@ function parseTitleByLang(jsonOrString, lang = 'ar') {
 
 async function delegateCommitteeApproval(req, res) {
   // 1) احصل على الرقم من "comm-<id>"
-  const contentId = parseInt(req.params.id.replace(/^comm-/, ''), 10);
+  let contentId;
+  if (typeof req.params.id === 'string' && req.params.id.startsWith('comm-')) {
+    contentId = parseInt(req.params.id.split('-')[1], 10);
+  } else {
+    contentId = parseInt(req.params.id, 10);
+  }
   const { delegateTo, notes } = req.body;
 
   if (!contentId || !delegateTo) {
@@ -360,6 +365,8 @@ async function delegateCommitteeApproval(req, res) {
         comments        = VALUES(comments),
         created_at      = NOW()
     `, [contentId, delegateTo, currentUserId, notes || null]);
+
+
 
     // 4) جلب اسم المفوَّض
     const [delegateeRows] = await db.execute(
@@ -541,10 +548,33 @@ function getContentNameByLanguage(contentNameData, userLanguage = 'ar') {
     }
 }
 
+const acceptProxyDelegationCommittee = async (req, res) => {
+  let contentId;
+  if (typeof req.params.id === 'string' && req.params.id.startsWith('comm-')) {
+    contentId = parseInt(req.params.id.split('-')[1], 10);
+  } else {
+    contentId = parseInt(req.params.id, 10);
+  }
+  const token = req.headers.authorization?.split(' ')[1];
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  const userId = decoded.id;
+
+  try {
+    await db.execute(
+      'INSERT IGNORE INTO committee_content_approvers (content_id, user_id) VALUES (?, ?)',
+      [contentId, userId]
+    );
+    res.json({ status: 'success', message: 'تم قبول التفويض وستظهر لك في تقارير اللجان المكلف بها' });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: 'فشل قبول التفويض للجنة' });
+  }
+};
+
 module.exports = {
   getUserPendingCommitteeApprovals,
   handleCommitteeApproval,
   getAssignedCommitteeApprovals,
   delegateCommitteeApproval,
-  getProxyCommitteeApprovals
+  getProxyCommitteeApprovals,
+  acceptProxyDelegationCommittee,
 };
