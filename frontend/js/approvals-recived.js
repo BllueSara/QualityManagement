@@ -322,11 +322,9 @@ function initActions() {
   });
 
 // لو عندك apiBase من قبل:
-const serverUrl   = apiBase.replace('/api', '');        // مثال: "http://localhost:3006"
 // أو بدل هذا استخدم origin ديناميكي:
 // const serverUrl = window.location.origin;
 
-const previewBase = `${serverUrl}/uploads`;
 
 document.querySelectorAll('.btn-preview').forEach(btn => {
   btn.addEventListener('click', e => {
@@ -339,13 +337,29 @@ document.querySelectorAll('.btn-preview').forEach(btn => {
       return;
     }
 
-    // شيل بادئة 'uploads/' لو موجودة
-    let filePath = item.file_path;
-    if (filePath.startsWith('uploads/')) {
-      filePath = filePath.replace(/^uploads\//, '');
-    }
+const baseApiUrl = apiBase.replace('/api', '');
 
-    const url = `${previewBase}/${filePath}`;
+let filePath = item.file_path;
+let fileBaseUrl;
+
+// حالة ملفات اللجان (مسار يبدأ بـ backend/uploads/)
+if (filePath.startsWith('backend/uploads/')) {
+  fileBaseUrl = `${baseApiUrl}/backend/uploads`;
+  // شيل البادئة بالكامل
+  filePath = filePath.replace(/^backend\/uploads\//, '');
+}
+// حالة ملفات الأقسام (مسار يبدأ بـ uploads/)
+else if (filePath.startsWith('uploads/')) {
+  fileBaseUrl = `${baseApiUrl}/uploads`;
+  // شيل البادئة
+  filePath = filePath.replace(/^uploads\//, '');
+}
+// أي حالة ثانية نفترض نفس مجلد uploads
+else {
+  fileBaseUrl = `${baseApiUrl}/uploads`;
+}
+
+    const url = `${fileBaseUrl}/${filePath}`;
     window.open(url, '_blank');
   });
 });
