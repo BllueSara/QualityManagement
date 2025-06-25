@@ -8,9 +8,9 @@ const committeesController = require('../controllers/committeesController');
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     if (file.fieldname === 'image') {
-      cb(null, './uploads/images');
+      cb(null, path.join(__dirname, '../uploads/images'));
     } else if (file.fieldname === 'file') {
-      cb(null, './uploads/content_files');
+      cb(null, path.join(__dirname, '../uploads/content_files'));
     } else {
       cb(new Error('Unrecognized field'), null);
     }

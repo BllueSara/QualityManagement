@@ -160,8 +160,30 @@ document.addEventListener('DOMContentLoaded', async () => {
       committeeName = committee.name;
     }
 
-const imgSrc = `http://localhost:3006/${committee.image}`;
-
+    // معالجة مسار الصورة للتوافق مع المسارات القديمة والجديدة
+    let imgSrc;
+    if (committee.image) {
+      if (committee.image.startsWith('backend/uploads/')) {
+        // المسار الجديد: backend/uploads/images/filename.jpg
+        imgSrc = `http://localhost:3006/${committee.image}`;
+      } else if (committee.image.startsWith('uploads/')) {
+        // المسار القديم: uploads/images/filename.jpg
+        imgSrc = `http://localhost:3006/${committee.image}`;
+      } else if (committee.image.startsWith('frontend/images/')) {
+        // المسار القديم: frontend/images/filename.jpg
+        imgSrc = `http://localhost:3006/${committee.image}`;
+      } else if (committee.image.includes('\\') || committee.image.includes('/')) {
+        // مسار كامل للنظام، استخرج اسم الملف فقط
+        const fileName = committee.image.split(/[\\/]/).pop();
+        imgSrc = `http://localhost:3006/backend/uploads/images/${fileName}`;
+      } else {
+        // اسم ملف فقط
+        imgSrc = `http://localhost:3006/backend/uploads/images/${committee.image}`;
+      }
+    } else {
+      // صورة افتراضية
+      imgSrc = '../images/committee.svg';
+    }
 
     card.innerHTML = `
       ${icons}

@@ -142,98 +142,108 @@ async function loadPendingApprovals() {
     return new Date(b.created_at) - new Date(a.created_at);
   });
 
-  const baseUrl = apiBase.replace('/api', '') + '/uploads';
-approvals.forEach(item => {
-  // 1) افصل الأسماء المرسَلة سابقًا
-  const assignedApproverNames = item.assigned_approvers
-    ? item.assigned_approvers.split(',').map(a => a.trim())
-    : [];
-  const hasApprovers = assignedApproverNames.length > 0;
+  approvals.forEach(item => {
+    // 1) افصل الأسماء المرسَلة سابقًا
+    const assignedApproverNames = item.assigned_approvers
+      ? item.assigned_approvers.split(',').map(a => a.trim())
+      : [];
+    const hasApprovers = assignedApproverNames.length > 0;
 
-  // 2) ابني badges من الأسماء
-  const approverBadges = assignedApproverNames
-    .map(name => `<span class="badge">${name}</span>`)
-    .join('');
+    // 2) ابني badges من الأسماء
+    const approverBadges = assignedApproverNames
+      .map(name => `<span class="badge">${name}</span>`)
+      .join('');
 
-  const contentType = item.type === 'committee'
-    ? getTranslation('committee-file')
-    : getTranslation('department-report');
+    const contentType = item.type === 'committee'
+      ? getTranslation('committee-file')
+      : getTranslation('department-report');
 
-  // 3) أنشئ العنصر <tr> وخزن الأسماء في data-assigned-names
-  const tr = document.createElement('tr');
-  tr.dataset.id             = item.id;
-  tr.dataset.type           = item.type;
-  tr.dataset.assignedNames  = JSON.stringify(assignedApproverNames);
-// لو الـ item.approvers_required من السيرفر هو array من الأي ديز:
-const assignedApproverIds = Array.isArray(item.approvers_required)
-  ? item.approvers_required
-  : JSON.parse(item.approvers_required || '[]');
-tr.dataset.assignedIds = JSON.stringify(assignedApproverIds);
+    // 3) أنشئ العنصر <tr> وخزن الأسماء في data-assigned-names
+    const tr = document.createElement('tr');
+    tr.dataset.id             = item.id;
+    tr.dataset.type           = item.type;
+    tr.dataset.assignedNames  = JSON.stringify(assignedApproverNames);
+    // لو الـ item.approvers_required من السيرفر هو array من الأي ديز:
+    const assignedApproverIds = Array.isArray(item.approvers_required)
+      ? item.approvers_required
+      : JSON.parse(item.approvers_required || '[]');
+    tr.dataset.assignedIds = JSON.stringify(assignedApproverIds);
 
-  // 4) الغِ innerHTML القديمة أو أضف فوقها
-  tr.innerHTML = `
-    <td>
+    // 4) الغِ innerHTML القديمة أو أضف فوقها
+    tr.innerHTML = `
+      <td>
 ${parseLocalizedName(item.title)}
-      <div class="content-meta">(${contentType} - ${parseLocalizedName(item.source_name)})</div>
-    </td>
-    <td>
-      <div class="dropdown-custom" data-type="dept">
-        <button class="dropdown-btn">${getTranslation('select-department')}</button>
-        <div class="dropdown-content">
-          <input type="text" class="dropdown-search" placeholder="${getTranslation('search-department')}">
+        <div class="content-meta">(${contentType} - ${parseLocalizedName(item.source_name)})</div>
+      </td>
+      <td>
+        <div class="dropdown-custom" data-type="dept">
+          <button class="dropdown-btn">${getTranslation('select-department')}</button>
+          <div class="dropdown-content">
+            <input type="text" class="dropdown-search" placeholder="${getTranslation('search-department')}">
+          </div>
         </div>
-      </div>
-    </td>
-    <td>
-      <div class="dropdown-custom" data-type="users">
-        <button class="dropdown-btn" disabled>${getTranslation('select-department-first')}</button>
-        <div class="dropdown-content">
-          <input class="dropdown-search" placeholder="${getTranslation('search-person')}">
+      </td>
+      <td>
+        <div class="dropdown-custom" data-type="users">
+          <button class="dropdown-btn" disabled>${getTranslation('select-department-first')}</button>
+          <div class="dropdown-content">
+            <input class="dropdown-search" placeholder="${getTranslation('search-person')}">
+          </div>
         </div>
-      </div>
-    </td>
-    <td class="selected-cell">${approverBadges}</td>
-    <td>
-      <span class="${hasApprovers ? 'badge-sent' : 'badge-pending'}">
-        ${hasApprovers ? getTranslation('sent') : getTranslation('waiting-send')}
-      </span>
-    </td>
-    <td>
-      <button class="btn-send" style="padding:6px 12px;">
-        <i class="bi ${hasApprovers ? 'bi-plus-circle' : 'bi-send'}"></i>
-        ${hasApprovers ? getTranslation('add-more') : getTranslation('send')}
-      </button>
-      ${item.file_path
-        ? `<button class="btn-view" data-file-path="${item.file_path}" style="margin-right:5px;padding:6px 12px;">
-             <i class="bi bi-eye"></i> ${getTranslation('view')}
-           </button>`
-        : ''}
-    </td>
-  `;
+      </td>
+      <td class="selected-cell">${approverBadges}</td>
+      <td>
+        <span class="${hasApprovers ? 'badge-sent' : 'badge-pending'}">
+          ${hasApprovers ? getTranslation('sent') : getTranslation('waiting-send')}
+        </span>
+      </td>
+      <td>
+        <button class="btn-send" style="padding:6px 12px;">
+          <i class="bi ${hasApprovers ? 'bi-plus-circle' : 'bi-send'}"></i>
+          ${hasApprovers ? getTranslation('add-more') : getTranslation('send')}
+        </button>
+        ${item.file_path
+          ? `<button class="btn-view" data-file-path="${item.file_path}" style="margin-right:5px;padding:6px 12px;">
+               <i class="bi bi-eye"></i> ${getTranslation('view')}
+             </button>`
+          : ''}
+      </td>
+    `;
 
-  tbody.appendChild(tr);
+    tbody.appendChild(tr);
 
-  // 5) زوّد مستمع للعرض إذا لزم الأمر
-  const viewButton = tr.querySelector('.btn-view');
-  if (viewButton) {
-viewButton.addEventListener('click', e => {
-  e.stopPropagation();
+    // 5) زوّد مستمع للعرض إذا لزم الأمر
+    const viewButton = tr.querySelector('.btn-view');
+    if (viewButton) {
+      viewButton.addEventListener('click', e => {
+        e.stopPropagation();
 
-  // خذ المسار من الداتا
-  let filePath = e.currentTarget.dataset.filePath; 
-  // لو كان يبدأ بـ "uploads/" شيلها
-  if (filePath.startsWith('uploads/')) {
-    filePath = filePath.replace(/^uploads\//, '');
-  }
+        // خذ المسار من الداتا
+        let filePath = e.currentTarget.dataset.filePath; 
+        
+        // تحديد baseUrl حسب نوع المحتوى
+        let baseUrl;
+        if (filePath.startsWith('backend/uploads/')) {
+          // ملفات اللجان: backend/uploads/content_files/...
+          baseUrl = apiBase.replace('/api', '') + '/backend/uploads';
+          filePath = filePath.replace(/^backend\/uploads\//, '');
+        } else if (filePath.startsWith('uploads/')) {
+          // ملفات الأقسام: uploads/content_files/...
+          baseUrl = apiBase.replace('/api', '') + '/uploads';
+          filePath = filePath.replace(/^uploads\//, '');
+        } else {
+          // مسار غير معروف
+          baseUrl = apiBase.replace('/api', '') + '/uploads';
+        }
 
-  if (filePath) {
-    window.open(`${baseUrl}/${filePath}`, '_blank');
-  } else {
-    showToast(getTranslation('file-link-unavailable'), 'error');
-  }
-});
-  }
-});
+        if (filePath) {
+          window.open(`${baseUrl}/${filePath}`, '_blank');
+        } else {
+          showToast(getTranslation('file-link-unavailable'), 'error');
+        }
+      });
+    }
+  });
 }
 
 async function initDropdowns() {
@@ -243,7 +253,7 @@ async function initDropdowns() {
     const userDrop = row.querySelector('[data-type=users]');
     const sendBtn  = row.querySelector('.btn-send');
 
-if (!sendBtn) return;
+    if (!sendBtn) return;
     let selectedDepts = [];
     let selectedUsers = [];
 
@@ -254,15 +264,15 @@ if (!sendBtn) return;
       const itm = document.createElement('div');
       itm.className     = 'dropdown-item';
       itm.dataset.value = d.id;
-let name = d.name;
-const lang = localStorage.getItem('language') || 'ar';
-try {
-  const parsed = typeof name === 'string' ? JSON.parse(name) : name;
-  name = parsed[lang] || parsed.ar || parsed.en || '';
-} catch {}
+      let name = d.name;
+      const lang = localStorage.getItem('language') || 'ar';
+      try {
+        const parsed = typeof name === 'string' ? JSON.parse(name) : name;
+        name = parsed[lang] || parsed.ar || parsed.en || '';
+      } catch {}
 
-itm.textContent = name;
-itm.dataset.label = name;
+      itm.textContent = name;
+      itm.dataset.label = name;
       deptList.appendChild(itm);
     });
 
@@ -303,7 +313,7 @@ itm.dataset.label = name;
       const uBtn  = userDrop.querySelector('.dropdown-btn');
       const uList = userDrop.querySelector('.dropdown-content');
       uList.innerHTML = `<input type="text" class="dropdown-search" placeholder="${getTranslation('search-person')}">`;
-  const existingAssignedNames = JSON.parse(row.dataset.assignedNames || '[]');
+      const existingAssignedNames = JSON.parse(row.dataset.assignedNames || '[]');
 
       if (!selectedDepts.length) {
         uBtn.disabled = true;
@@ -328,7 +338,7 @@ itm.dataset.label = name;
         }
 
         users.forEach(u => {
-            if (existingAssignedNames.includes(u.name)) return;
+          if (existingAssignedNames.includes(u.name)) return;
           const item = document.createElement('div');
           item.className = 'dropdown-item';
           item.textContent = u.name;
@@ -379,16 +389,14 @@ itm.dataset.label = name;
         selectedUsers.forEach(u => {
           const badge = document.createElement('span');
           badge.className = 'badge';
-const lang = localStorage.getItem('language') || 'ar';
-const dept = selectedDepts.find(d => d.id === u.deptId);
-let deptName = dept?.name || '';
+          const lang = localStorage.getItem('language') || 'ar';
+          const dept = selectedDepts.find(d => d.id === u.deptId);
+          let deptName = dept?.name || '';
 
-try {
-  const parsed = typeof deptName === 'string' ? JSON.parse(deptName) : deptName;
-  deptName = parsed?.[lang] || parsed?.ar || parsed?.en || '';
-} catch {}
-
-badge.textContent = `${u.name} (${deptName})`;
+          try {
+            const parsed = typeof deptName === 'string' ? JSON.parse(deptName) : deptName;
+            deptName = parsed?.[lang] || parsed?.ar || parsed?.en || '';
+          } catch {}
 
           badge.textContent = `${u.name} (${deptName})`;
           selCell.appendChild(badge);
@@ -396,70 +404,64 @@ badge.textContent = `${u.name} (${deptName})`;
       });
     })();
 
-// داخل initDropdowns، بعد ربط الـ dropdowns وأيقونة Send
-sendBtn.addEventListener('click', async () => {
-  // 1) أقرأ الأسماء المخزّنة حالياً
-  const existingAssignedNames = JSON.parse(row.dataset.assignedNames || '[]');
-  const existingIds           = JSON.parse(row.dataset.assignedIds   || '[]');
+    // داخل initDropdowns، بعد ربط الـ dropdowns وأيقونة Send
+    sendBtn.addEventListener('click', async () => {
+      // 1) أقرأ الأسماء المخزّنة حالياً
+      const existingAssignedNames = JSON.parse(row.dataset.assignedNames || '[]');
+      const existingIds           = JSON.parse(row.dataset.assignedIds   || '[]');
 
-  // 2) جلب اللي اختارهم المستخدم
-  const userItems = row.querySelectorAll('[data-type="users"] .dropdown-item.selected');
-  const newUsers  = Array.from(userItems)
-    .map(el => ({ id: +el.dataset.userId, name: el.textContent.trim() }))
-    .filter(u => !existingAssignedNames.includes(u.name));
+      // 2) جلب اللي اختارهم المستخدم
+      const userItems = row.querySelectorAll('[data-type="users"] .dropdown-item.selected');
+      const newUsers  = Array.from(userItems)
+        .map(el => ({ id: +el.dataset.userId, name: el.textContent.trim() }))
+        .filter(u => !existingAssignedNames.includes(u.name));
 
-  if (!newUsers.length) {
-    return alert(getTranslation('no-new-approvers'));
-  }
+      if (!newUsers.length) {
+        return alert(getTranslation('no-new-approvers'));
+      }
 
-  // 3) دمج القديم مع الجديد
-  const allNames = existingAssignedNames.concat(newUsers.map(u => u.name));
-  const allIds   = existingIds.concat(newUsers.map(u => u.id));
+      // 3) دمج القديم مع الجديد
+      const allNames = existingAssignedNames.concat(newUsers.map(u => u.name));
+      const allIds   = existingIds.concat(newUsers.map(u => u.id));
 
-  // 4) أرسل الـ API
-  const contentId = row.dataset.id;
-  const endpoint  = row.dataset.type === 'committee'
-    ? 'pending-committee-approvals/send'
-    : 'pending-approvals/send';
+      // 4) أرسل الـ API
+      const contentId = row.dataset.id;
+      const endpoint  = row.dataset.type === 'committee'
+        ? 'pending-committee-approvals/send'
+        : 'pending-approvals/send';
 
-  try {
-    const resp = await fetchJSON(`${apiBase}/${endpoint}`, {
-      method: 'POST',
-      body: JSON.stringify({ contentId, approvers: allIds })
+      try {
+        const resp = await fetchJSON(`${apiBase}/${endpoint}`, {
+          method: 'POST',
+          body: JSON.stringify({ contentId, approvers: allIds })
+        });
+        if (resp.status === 'success') {
+          // 5) حدّث الواجهة
+          const selCell = row.querySelector('.selected-cell');
+          newUsers.forEach(u => {
+            const badge = document.createElement('span');
+            badge.className   = 'badge';
+            badge.textContent = u.name;
+            selCell.appendChild(badge);
+          });
+
+          // 6) خزّن القيم الجديدة في الـ data-attributes
+          row.dataset.assignedNames = JSON.stringify(allNames);
+          row.dataset.assignedIds   = JSON.stringify(allIds);
+
+          showToast(getTranslation('add-more-success'), 'success');
+
+          // 7) أعد تحميل الـ rows علشان تخزن الـ attributes الجديدة
+          await loadPendingApprovals();
+          await initDropdowns();
+        } else {
+          showToast(getTranslation('send-failed'), 'error');
+        }
+      } catch (err) {
+        console.error('فشل الإرسال:', err);
+        showToast(getTranslation('send-failed'), 'error');
+      }
     });
-    if (resp.status === 'success') {
-      // 5) حدّث الواجهة
-      const selCell = row.querySelector('.selected-cell');
-      newUsers.forEach(u => {
-        const badge = document.createElement('span');
-        badge.className   = 'badge';
-        badge.textContent = u.name;
-        selCell.appendChild(badge);
-      });
-
-      // 6) خزّن القيم الجديدة في الـ data-attributes
-      row.dataset.assignedNames = JSON.stringify(allNames);
-      row.dataset.assignedIds   = JSON.stringify(allIds);
-
-      showToast(getTranslation('add-more-success'), 'success');
-
-      // 7) أعد تحميل الـ rows علشان تخزن الـ attributes الجديدة
-      await loadPendingApprovals();
-      await initDropdowns();
-    } else {
-      showToast(getTranslation('send-failed'), 'error');
-    }
-  } catch (err) {
-    console.error('فشل الإرسال:', err);
-    showToast(getTranslation('send-failed'), 'error');
-  }
-});
-
-
-
-
-
-
   });
 }
 

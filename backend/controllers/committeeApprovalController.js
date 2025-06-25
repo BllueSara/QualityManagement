@@ -453,7 +453,9 @@ async function generateFinalSignedCommitteePDF(contentId) {
   const [rows] = await db.execute(`SELECT file_path FROM committee_contents WHERE id = ?`, [contentId]);
   if (!rows.length) return console.error('Committee content not found');
 
-  const fullPath = path.join(__dirname, '../../uploads', rows[0].file_path);
+  // The file_path contains the path including backend directory (e.g., backend/uploads/content_files/filename.pdf)
+  // So we need to go up two levels from controllers to reach project root, then use the stored path
+  const fullPath = path.join(__dirname, '../..', rows[0].file_path);
   if (!fs.existsSync(fullPath)) return console.error('File not found', fullPath);
 
   const pdfBytes = fs.readFileSync(fullPath);
