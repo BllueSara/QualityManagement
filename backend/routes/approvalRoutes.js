@@ -5,7 +5,8 @@ const {
   handleApproval,
   getAssignedApprovals,
   delegateApproval,
-  getProxyApprovals
+  getProxyApprovals,
+  acceptProxyDelegation
 } = require('../controllers/approvalController');
 
 
@@ -15,5 +16,6 @@ router.post('/:contentId/approve', handleApproval);
 router.get('/assigned-to-me', getAssignedApprovals);
 router.post('/:id/delegate', delegateApproval);
 router.get('/proxy', getProxyApprovals);
+router.post('/proxy/accept/:id', acceptProxyDelegation);
 
 module.exports = router;

@@ -4,6 +4,7 @@ const apiBaseDept = 'http://localhost:3006/api/approvals/proxy';
 const apiBaseComm = 'http://localhost:3006/api/committee-approvals/proxy';
 const token = localStorage.getItem('token');
 const currentLang = localStorage.getItem('language') || 'ar';
+const currentUserId = localStorage.getItem('userId');
 
 function getLocalizedName(jsonString) {
   try {
@@ -50,7 +51,7 @@ async function loadDelegations() {
           ${escapeHtml(d.delegated_by_name || d.delegated_by || '—')}
         </td>
         <td class="col-action">
-          <button class="btn-accept" data-id="${d.id}" data-type="${d.type}">${getTranslation('accept')}</button>
+          <button class="btn-accept" data-id="${d.id}" data-type="${d.type}" data-delegatedby="${d.delegated_by}">${getTranslation('accept')}</button>
           <button class="btn-reject" data-id="${d.id}" data-type="${d.type}">${getTranslation('reject')}</button>
         </td>
       `;
@@ -59,15 +60,27 @@ async function loadDelegations() {
 
     // زر القبول
     document.querySelectorAll('.btn-accept').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const contentId = btn.dataset.id;
-        const type = btn.dataset.type;
-        const page = type === 'dept'
-          ? 'approvals-recived.html'
-          : 'committee-approvals-recived.html';
+        const contentType = btn.dataset.type;
+        const page = 'approvals-recived.html';
 
-        showPopup(getTranslation('accept-message'), () => {
-          window.location.href = `/frontend/html/${page}?id=${contentId}`;
+        showPopup(getTranslation('accept-message'), async () => {
+          try {
+            const endpointRoot = (contentType === 'committee') ? 'committee-approvals' : 'approvals';
+            const res = await fetch(`http://localhost:3006/api/${endpointRoot}/proxy/accept/${contentId}`, {
+              method: 'POST',
+              headers: authHeaders()
+            });
+            const json = await res.json();
+            if (json.status === 'success') {
+              window.location.href = `/frontend/html/${page}?id=${contentId}`;
+            } else {
+              alert(json.message || 'خطأ أثناء قبول التفويض');
+            }
+          } catch (err) {
+            alert('خطأ أثناء قبول التفويض');
+          }
         });
       });
     });
