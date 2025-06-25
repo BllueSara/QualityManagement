@@ -68,7 +68,6 @@ const getUserPendingApprovals = async (req, res) => {
 };
 
 // اعتماد/رفض ملف
-// اعتماد/رفض ملف
 const handleApproval = async (req, res) => {
   let { contentId: originalContentId } = req.params;
   const { approved, signature, notes, electronic_signature, on_behalf_of, } = req.body;
@@ -81,8 +80,11 @@ const handleApproval = async (req, res) => {
       contentId = parseInt(originalContentId.split('-')[1], 10);
       isCommitteeContent = false;
     } else if (originalContentId.startsWith('comm-')) {
-      contentId = parseInt(originalContentId.split('-')[1], 10);
-      isCommitteeContent = true;
+      // Redirect committee content to the appropriate handler
+      return res.status(400).json({ 
+        status: 'error', 
+        message: 'محتوى اللجان يجب أن يتم اعتماده عبر API اللجان المنفصل' 
+      });
     } else {
       contentId = parseInt(originalContentId, 10);
       isCommitteeContent = false;
@@ -111,10 +113,10 @@ const handleApproval = async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'التوقيع مفقود' });
     }
 
-    const approvalLogsTable = isCommitteeContent ? 'committee_approval_logs' : 'approval_logs';
-    const contentApproversTable = isCommitteeContent ? 'committee_content_approvers' : 'content_approvers';
-    const contentsTable = isCommitteeContent ? 'committee_contents' : 'contents';
-    const generatePdfFunction = isCommitteeContent ? generateFinalSignedCommitteePDF : generateFinalSignedPDF;
+    const approvalLogsTable = 'approval_logs';
+    const contentApproversTable = 'content_approvers';
+    const contentsTable = 'contents';
+    const generatePdfFunction = generateFinalSignedPDF;
 
     await db.execute(`
       INSERT INTO ${approvalLogsTable} (
@@ -162,7 +164,7 @@ const handleApproval = async (req, res) => {
       currentUserId,
       approved ? 'approve_content' : 'reject_content',
       JSON.stringify(logDescription),
-      isCommitteeContent ? 'committee_content' : 'content',
+      'content',
       contentId
     );
 
@@ -368,154 +370,6 @@ async function generateFinalSignedPDF(contentId) {
   const finalBytes = await pdfDoc.save();
   fs.writeFileSync(fullPath, finalBytes);
   console.log(`✅ Signature page added: ${fullPath}`);
-}
-
-// Add a placeholder for committee PDF generation
-async function generateFinalSignedCommitteePDF(contentId) {
-  const [rows] = await db.execute(`SELECT file_path FROM committee_contents WHERE id = ?`, [contentId]);
-  if (!rows.length) return console.error('📁 Committee Content not found');
-
-  const relativePath = rows[0].file_path;
-  const fullPath = path.join(__dirname, '../../uploads', relativePath);
-  if (!fs.existsSync(fullPath)) return console.error('❌ Committee File not found:', fullPath);
-
-  let pdfDoc;
-  try {
-    const pdfBytes = fs.readFileSync(fullPath);
-    pdfDoc = await PDFDocument.load(pdfBytes);
-  } catch (err) {
-    return console.error('❌ Failed to load committee PDF:', err);
-  }
-
-  const [logs] = await db.execute(`
-    SELECT 
-      u.username AS username,
-      al.signature,
-      al.electronic_signature,
-      al.signed_as_proxy,
-      al.comments
-    FROM committee_approval_logs al
-    JOIN users u ON al.approver_id = u.id
-    WHERE al.content_id = ? AND al.status = 'approved'
-  `, [contentId]);
-
-  if (!logs.length) return console.warn('No committee signatures found');
-
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  let page = pdfDoc.addPage();
-  let y = 750;
-
-  page.drawText('Committee Signatures Summary', {
-    x: 200,
-    y,
-    size: 20,
-    font,
-    color: rgb(0, 0, 0)
-  });
-
-  y -= 40;
-
-  for (const log of logs) {
-    if (y < 200) {
-      page = pdfDoc.addPage();
-      y = 750;
-    }
-
-    const isProxy = !!log.signed_as_proxy;
-    const label = isProxy ? 'Signed on behalf of' : 'Signed by';
-
-    page.drawText(`${label}: ${log.username}`, {
-      x: 50,
-      y,
-      size: 14,
-      font,
-      color: rgb(0, 0, 0)
-    });
-
-    y -= 25;
-
-    if (log.signature && log.signature.startsWith('data:image')) {
-      try {
-        const base64Data = log.signature.split(',')[1];
-        const imageBytes = Buffer.from(base64Data, 'base64');
-        const img = await pdfDoc.embedPng(imageBytes);
-        const dims = img.scale(0.4);
-
-        page.drawText(`Hand Signature:`, {
-          x: 50,
-          y,
-          size: 12,
-          font,
-          color: rgb(0.2, 0.2, 0.2)
-        });
-
-        page.drawImage(img, {
-          x: 150,
-          y: y - dims.height + 10,
-          width: dims.width,
-          height: dims.height
-        });
-
-        y -= dims.height + 30;
-      } catch (err) {
-        console.warn('Failed to draw hand signature for committee:', err);
-        y -= 20;
-      }
-    }
-
-    if (log.electronic_signature) {
-      try {
-        const stampPath = path.join(__dirname, '../e3teamdelc.png');
-        const stampImageBytes = fs.readFileSync(stampPath);
-        const stampImg = await pdfDoc.embedPng(stampImageBytes);
-        const dims = stampImg.scale(0.5);
-
-        page.drawText(`E-Signature:`, {
-          x: 50,
-          y,
-          size: 12,
-          font,
-          color: rgb(0.2, 0.2, 0.2)
-        });
-
-        page.drawImage(stampImg, {
-          x: 150,
-          y: y - dims.height + 10,
-          width: dims.width,
-          height: dims.height
-        });
-
-        y -= dims.height + 30;
-      } catch (err) {
-        console.warn('Failed to draw electronic signature for committee:', err);
-        y -= 20;
-      }
-    }
-
-    if (log.comments) {
-      page.drawText(`Comments: ${log.comments}`, {
-        x: 50,
-        y,
-        size: 12,
-        font,
-        color: rgb(0.3, 0.3, 0.3)
-      });
-      y -= 20;
-    }
-
-    page.drawLine({
-      start: { x: 50, y: y },
-      end: { x: 550, y: y },
-      thickness: 1,
-      color: rgb(0.8, 0.8, 0.8),
-    });
-
-    y -= 30;
-  }
-
-  const finalBytes = await pdfDoc.save();
-  fs.writeFileSync(fullPath, finalBytes);
-  console.log(`✅ Committee Signature page added: ${fullPath}`);
 }
 
 async function getUserPermissions(userId) {
@@ -802,7 +656,6 @@ module.exports = {
   delegateApproval,
   getAssignedApprovals,
   getProxyApprovals,
-  generateFinalSignedCommitteePDF
 };
 
 

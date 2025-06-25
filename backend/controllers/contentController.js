@@ -300,7 +300,7 @@ const updateContent = async (req, res) => {
   
       const originalId = req.params.contentId;
       const { title, notes } = req.body;
-      const filePath = req.file ? path.join('content_files', req.file.filename).replace(/\\/g, '/') : null;
+      const filePath = req.file ? path.posix.join('content_files', req.file.filename) : null;
   
       const connection = await db.getConnection();
   
@@ -527,7 +527,7 @@ const downloadContent = async (req, res) => {
 
         const filePathFull = path.join(__dirname, '../../uploads', content[0].file_path);
 
-        if (!fs.existsSync(filePath)) {
+        if (!fs.existsSync(filePathFull)) {
             connection.release();
             return res.status(404).json({ 
                 status: 'error',
@@ -536,7 +536,7 @@ const downloadContent = async (req, res) => {
         }
 
         connection.release();
-        res.download(filePath, content[0].title);
+        res.download(filePathFull, content[0].title);
     } catch (error) {
         res.status(500).json({ message: 'خطأ في تحميل المحتوى' });
     }
