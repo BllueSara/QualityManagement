@@ -1,0 +1,159 @@
+/* تقارير التذاكر */
+.reports-title {
+  text-align:center;
+  margin: 40px 0 30px;
+  font-size:2em;
+  color:#333;
+}
+.actions-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+.actions-bar .btn {
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 18px;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.actions-bar .btn:hover {
+  background: #1256a3;
+}
+.actions-bar .btn-secondary {
+  background: #fff;
+  color: #1976d2;
+  border: 1px solid #1976d2;
+}
+.actions-bar .btn-secondary:hover {
+  background: #e3f2fd;
+}
+.actions-bar label {
+  font-weight: 500;
+  margin: 0 4px;
+}
+.category-filter {
+  min-width: 180px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-family: inherit;
+  font-size: 1em;
+}
+.table-wrapper {
+  overflow-x: auto;
+  margin-top: 20px;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  background: #fff;
+}
+th, td {
+  border: 1px solid #e0e0e0;
+  padding: 8px 6px;
+  text-align: center;
+}
+th {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+tr:nth-child(even) td {
+  background: #f7fafd;
+}
+@media (max-width: 600px) {
+  .actions-bar { flex-direction: column; align-items: center; }
+  .reports-title { font-size: 1.2em; margin: 20px 0 15px; }
+}
+
+/* Approvals Report Styles */
+.approvals-report-container {
+  max-width: 900px;
+  margin: 40px auto;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+  padding: 32px 24px;
+}
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 32px;
+}
+.filter-bar label {
+  font-weight: 500;
+  margin: 0 4px;
+}
+.filter-bar select, .filter-bar input[type="date"] {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+}
+.filter-bar button {
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 18px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.filter-bar button:hover {
+  background: #125ea2;
+}
+#approvals-report-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 auto;
+  background: #fafbfc;
+}
+#approvals-report-table th, #approvals-report-table td {
+  padding: 12px 18px;
+  border: 1px solid #e0e0e0;
+  text-align: center;
+}
+#approvals-report-table th {
+  background: #f0f4f8;
+  font-weight: 700;
+}
+.reports-cards-wrapper {
+  display: flex;
+  gap: 32px;
+  justify-content: center;
+  margin-bottom: 48px;
+}
+.report-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 220px;
+  height: 120px;
+  background: #f5f7fa;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #1976d2;
+  text-decoration: none;
+  transition: box-shadow 0.2s, background 0.2s;
+}
+.report-card:hover {
+  background: #e3eaf6;
+  box-shadow: 0 4px 16px rgba(25,118,210,0.10);
+} 
