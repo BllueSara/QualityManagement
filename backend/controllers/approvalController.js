@@ -528,9 +528,13 @@ function parseTitleByLang(titleJson, lang = 'ar') {
 }
 
 const delegateApproval = async (req, res) => {
-  const rawId = req.params.id;            // e.g. "dept-10" أو "comm-5"
-  const parts = rawId.split('-');
-  const contentId = parseInt(parts[1], 10);
+  const rawId = req.params.id;            // e.g. "dept-10" أو "comm-5" أو رقم فقط
+  let contentId;
+  if (typeof rawId === 'string' && (rawId.startsWith('dept-') || rawId.startsWith('comm-'))) {
+    contentId = parseInt(rawId.split('-')[1], 10);
+  } else {
+    contentId = parseInt(rawId, 10);
+  }
   const { delegateTo, notes } = req.body;
 
   try {
@@ -650,12 +654,34 @@ function getContentNameByLanguage(contentNameData, userLanguage = 'ar') {
     }
 }
 
+const acceptProxyDelegation = async (req, res) => {
+  const contentId = parseInt(req.params.id, 10);
+  const token = req.headers.authorization?.split(' ')[1];
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  const userId = decoded.id;
+
+  try {
+    // أضف المستخدم لجدول المعيّنين
+    await db.execute(
+      'INSERT IGNORE INTO content_approvers (content_id, user_id) VALUES (?, ?)',
+      [contentId, userId]
+    );
+
+
+
+    res.json({ status: 'success', message: 'تم قبول التفويض وستظهر لك في التقارير المكلف بها' });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: 'فشل قبول التفويض' });
+  }
+};
+
 module.exports = {
   getUserPendingApprovals,
   handleApproval,
   delegateApproval,
   getAssignedApprovals,
   getProxyApprovals,
+  acceptProxyDelegation,
 };
 
 

@@ -6,7 +6,8 @@ const {
   handleCommitteeApproval,
   getAssignedCommitteeApprovals,
   delegateCommitteeApproval,
-  getProxyCommitteeApprovals
+  getProxyCommitteeApprovals,
+  acceptProxyDelegationCommittee
 } = require('../controllers/committeeApprovalController');
 
 // 1. Pending approvals for the user
@@ -23,5 +24,8 @@ router.post('/:id/delegate', delegateCommitteeApproval);
 
 // 5. View approvals where I'm proxy
 router.get('/proxy', getProxyCommitteeApprovals);
+
+// 6. Accept proxy delegation
+router.post('/proxy/accept/:id', acceptProxyDelegationCommittee);
 
 module.exports = router;
