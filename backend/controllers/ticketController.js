@@ -342,56 +342,47 @@ exports.deleteTicket = async (req, res) => {
 };
 
 // Assign a ticket
+// Assign a ticket
 exports.assignTicket = async (req, res) => {
   try {
-    const ticketId    = req.params.id;
-    let   { assignedTo, comments } = req.body;
-    const userLang    = getUserLang(req);
+    const ticketId = req.params.id;
+    let { assignedTo, comments } = req.body;
+    const userLang = getUserLang(req);
 
-    // إذا front-end مرسل مصفوفة كـ string، فكّها
+    // 1) فكّ JSON لو كان string
     if (typeof assignedTo === 'string') {
       try {
         assignedTo = JSON.parse(assignedTo);
       } catch {
-        // خليه قيمة واحدة لو مش JSON
         assignedTo = [assignedTo];
       }
     }
+    const assigneeIds = Array.isArray(assignedTo) ? assignedTo : [assignedTo];
 
-    // تأكد إنه مصفوفة
-    const assigneeIds = Array.isArray(assignedTo)
-      ? assignedTo
-      : [assignedTo];
+    // 2) تأكد من وجود التذكرة وحالتها
+    const before = await Ticket.findById(ticketId, req.user.id, req.user.role);
+    if (!before) {
+      return res.status(404).json({ status: 'error', message: 'التذكرة غير موجودة' });
+    }
+    if (['مغلق','closed'].includes(before.status)) {
+      return res.status(400).json({ status: 'error', message: 'لا يمكن تحويل تذكرة مغلقة' });
+    }
 
-    // 1) جلب بيانات التذكرة (لو محتاجين العنوان مثلاً)
-    const ticket = await Ticket.findById(ticketId, req.user.id, req.user.role);
-
-    // 2) تعيين التذكرة (موديلك الحالي يدعم فقط ID واحد، لو عدّة حتحتاج iterating)
+    // 3) نفّذ التعيين (موديلك الحالي يدعم ID واحد فقط)
     await Ticket.assignTicket(ticketId, assigneeIds[0], req.user.id, comments);
 
-    // 3) جلب جميع بيانات المكلفين
-    const mysql = require('mysql2/promise');
-    const db    = mysql.createPool({ /*...*/ });
-    const [rows] = await db.execute(
-      `SELECT id, username
-         FROM users
-        WHERE id IN (?)`,
-      [assigneeIds]
-    );
+    // 4) جلب التذكرة المحدثة (بما فيها classifications)
+    const updatedTicket = await Ticket.findById(ticketId, req.user.id, req.user.role);
 
-    // 4) جهّز سلسلة الأسماء + الأيدي
-    const assigneeInfo = rows.length
-      ? rows.map(u => `${u.username} (ID: ${u.id})`).join(', ')
-      : assigneeIds.map(id => `ID:${id}`).join(', ');
-
-    // 5) عنوان التذكرة (دايمًا نستخدم رقمها هنا)
+    // 5) سجل اللوج
+    const assigneesInfo = updatedTicket.assigned_to_name
+      ? updatedTicket.assigned_to_name
+      : assigneeIds.join(', ');
     const identifierAr = `رقم ${ticketId}`;
     const identifierEn = `ID ${ticketId}`;
-
-    // 6) تسجيل اللوق
     const logDescription = {
-      ar: `تم تعيين التذكرة ${identifierAr} إلى: ${assigneeInfo}`,
-      en: `Assigned ticket ${identifierEn} to: ${assigneeInfo}`
+      ar: `تم تعيين التذكرة ${identifierAr} إلى: ${assigneesInfo}`,
+      en: `Assigned ticket ${identifierEn} to: ${assigneesInfo}`
     };
     await logAction(
       req.user.id,
@@ -401,18 +392,19 @@ exports.assignTicket = async (req, res) => {
       ticketId
     );
 
-    // 7) ريسبونس للـ front
+    // 6) أرسل التذكرة كاملة مع التصنيفات
     return res.json({
       status: 'success',
       message: 'تم تعيين التذكرة بنجاح',
-      assignees: rows
+      data: updatedTicket
     });
 
   } catch (error) {
     console.error('Error in assignTicket:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ status: 'error', message: error.message });
   }
 };
+
 
 // Get ticket status history
 exports.getTicketStatusHistory = async (req, res) => {

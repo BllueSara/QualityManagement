@@ -136,9 +136,9 @@ function renderFiltersAndTitle() {
 // تحميل التقرير وبناء الجدول
 async function loadTicketsReport() {
   const lang = getCurrentLang();
-  const selCat = document.getElementById('categoryFilter').value;
   let fromDate = document.getElementById('fromDate').value;
   let toDate   = document.getElementById('toDate').value;
+  const selCat = document.getElementById('categoryFilter').value;
   if (!fromDate || !toDate) {
     const y = new Date().getFullYear();
     fromDate = `${y}-01-01`;
@@ -158,20 +158,20 @@ async function loadTicketsReport() {
     if (!res.ok) throw new Error();
     const { data: rows } = await res.json();
 
-    // جهّز مصفوفة النتائج
+    // بناء مصفوفة النتائج حسب التصنيفات الثابتة
     const langCats = categories.map(c => c[lang]);
     const dataMap = {};
     langCats.forEach(c => dataMap[c] = Array(12).fill(0));
     rows.forEach(r => {
       const mIdx = (r.month || 1) - 1;
-      if (dataMap[r.category] && mIdx >= 0 && mIdx < 12) {
-        dataMap[r.category][mIdx] = r.count;
+      // التصنيف من البيانات قد يكون نص عربي أو إنجليزي أو كود، نطابقه مع الثابت
+      const catIdx = langCats.findIndex(c => c === r.classification);
+      if (catIdx !== -1 && mIdx >= 0 && mIdx < 12) {
+        dataMap[langCats[catIdx]][mIdx] = r.closed_count;
       }
     });
 
-    const selCats = selCat
-      ? categories.filter(c => c[lang] === selCat)
-      : categories;
+    const selCats = selCat ? langCats.filter(c => c === selCat) : langCats;
 
     // بناء الجدول
     let html = '<table><thead><tr>';
@@ -179,8 +179,8 @@ async function loadTicketsReport() {
     months.forEach(m => { html += `<th>${m[lang]}</th>`; });
     html += '</tr></thead><tbody>';
     selCats.forEach(cat => {
-      html += `<tr><td>${cat[lang]}</td>`;
-      dataMap[cat[lang]].forEach(val => { html += `<td>${val}</td>`; });
+      html += `<tr><td>${cat}</td>`;
+      dataMap[cat].forEach(val => { html += `<td>${val}</td>`; });
       html += '</tr>';
     });
     html += '</tbody></table>';
@@ -194,9 +194,9 @@ async function loadTicketsReport() {
 // تنزيل الجدول كـ CSV
 async function downloadTableAsCSV() {
   const lang = getCurrentLang();
-  const selCat = document.getElementById('categoryFilter').value;
   let fromDate = document.getElementById('fromDate').value;
   let toDate   = document.getElementById('toDate').value;
+  const selCat = document.getElementById('categoryFilter').value;
   if (!fromDate || !toDate) {
     const y = new Date().getFullYear();
     fromDate = `${y}-01-01`;
@@ -218,24 +218,23 @@ async function downloadTableAsCSV() {
     langCats.forEach(c => dataMap[c] = Array(12).fill(0));
     rows.forEach(r => {
       const mIdx = (r.month || 1) - 1;
-      if (dataMap[r.category] && mIdx >= 0 && mIdx < 12) {
-        dataMap[r.category][mIdx] = r.count;
+      const catIdx = langCats.findIndex(c => c === r.classification);
+      if (catIdx !== -1 && mIdx >= 0 && mIdx < 12) {
+        dataMap[langCats[catIdx]][mIdx] = r.closed_count;
       }
     });
-
-    const selCats = selCat
-      ? categories.filter(c => c[lang] === selCat)
-      : categories;
+    const selCats = selCat ? langCats.filter(c => c === selCat) : langCats;
 
     // توليد CSV
     let csv = '';
     csv += [getTranslation('category'), ...months.map(m => m[lang])].join(',') + '\n';
     selCats.forEach(cat => {
-      const row = [cat[lang], ...dataMap[cat[lang]]];
+      const row = [cat, ...dataMap[cat]];
       csv += row.join(',') + '\n';
     });
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    // إضافة BOM في بداية الملف لحل مشكلة الترميز مع العربية
+    const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
     a.href     = url;
