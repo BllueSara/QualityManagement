@@ -212,6 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'update_user_permissions': 'تعديل صلاحيات المستخدم',
         'remove_user_permission': 'حذف صلاحية المستخدم',
         'assign_ticket_multiple': 'تعيين تذكرة لعدة مستخدمين',
+        'notify_content_expired': ' انتهاء صلاحية المحتوى',
       },
       en: {
         'create_folder': 'Create Folder',
@@ -220,6 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'approve_committee_content': 'Approve Committee Content',
         'reject_committee_content': 'Reject Committee Content',
         'send_committee_approval_request': 'Send Committee Approval Request',
+        'notify_content_expired': ' Content Expired',
         'send_approval_request': 'Send Approval Request',
         'add_user_permission': 'Add User Permission',
         'update_user_permissions': 'Update User Permissions',
@@ -289,7 +291,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'approve_content': 'اعتماد محتوى',
         'reject_content': 'رفض محتوى',
         'sign_document': 'توقيع مستند',
-        'delegate_signature': 'تفويض توقيع'
+        'delegate_signature': 'تفويض توقيع',
+        'notify_content_expired': ' انتهاء صلاحية المحتوى',
       },
       en: {
         'all-actions': 'All Actions',
@@ -304,6 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'delete_content': 'Delete Content',
         'add_department': 'Add Department',
         'update_department': 'Update Department',
+        'notify_content_expired': ' Content Expiration',
         'delete_department': 'Delete Department',
         'add_user': 'Add User',
         'update_user': 'Update User',

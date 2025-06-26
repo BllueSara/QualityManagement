@@ -190,6 +190,16 @@ function getTranslation(key) {
 function getNotificationTranslation(text) {
   const lang = localStorage.getItem('language') || document.documentElement.lang || 'ar';
   if (lang === 'ar') return text;
+  // ترجمة إشعار انتهاء الصلاحية
+  const expiredContentMatch = text.match(/^انتهت صلاحية المحتوى "(.+)" بتاريخ ([0-9\-]+). يرجى تحديثه أو رفع نسخة جديدة\.?\n?$/);
+  if (expiredContentMatch) {
+    return `The content "${expiredContentMatch[1]}" expired on ${expiredContentMatch[2]}. Please update or upload a new version.`;
+  }
+  // ترجمة إشعار انتهاء الصلاحية مع تفاصيل القسم والمجلد
+  const expiredContentDetailsMatch = text.match(/^انتهت صلاحية المحتوى "(.+)" في قسم "(.+)"، مجلد "(.+)" بتاريخ ([0-9\-]+). يرجى تحديثه أو رفع نسخة جديدة\.?\n?$/);
+  if (expiredContentDetailsMatch) {
+    return `The content "${expiredContentDetailsMatch[1]}" in department "${expiredContentDetailsMatch[2]}", folder "${expiredContentDetailsMatch[3]}" expired on ${expiredContentDetailsMatch[4]}. Please update or upload a new version.`;
+  }
   // exact-title translations
   if (text === 'تم تفويضك للتوقيع') {
     return 'You have been delegated to sign';

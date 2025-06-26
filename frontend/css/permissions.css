@@ -247,6 +247,10 @@ main {
     background-color: #28a745; /* Green for active */
 }
 
+.user-status.inactive {
+    background-color: #dc3545;
+}
+
 /* Permissions Content */
 .permissions-content {
     flex-grow: 1;
@@ -845,4 +849,121 @@ select::placeholder {
 }
 .user-status.inactive {
   background-color: red;
+}
+
+/* Committees Dropdown Styles */
+.committees-dropdown {
+    position: relative;
+    margin-top: 10px;
+    width: 100%;
+}
+
+.dropdown-btn {
+    width: 100%;
+    padding: 8px 12px;
+    background-color: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    color: #333;
+    transition: all 0.2s;
+}
+
+.dropdown-btn:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.dropdown-btn i {
+    transition: transform 0.2s;
+}
+
+.dropdown-btn.active i {
+    transform: rotate(180deg);
+}
+
+.dropdown-content {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+}
+
+.dropdown-content.show {
+    display: block;
+}
+
+.search-box {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.committee-search {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.committees-list {
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.committee-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s;
+}
+
+.committee-item:hover {
+    background-color: #f8f9fa;
+}
+
+.committee-item.selected {
+    background-color: #e3f2fd;
+    color: #1976d2;
+}
+
+.committee-item input[type="checkbox"] {
+    margin: 0;
+}
+
+.committee-item label {
+    cursor: pointer;
+    margin: 0;
+    flex: 1;
+}
+
+/* RTL Support for dropdown */
+:lang(ar) .dropdown-btn {
+    text-align: right;
+}
+
+:lang(ar) .committee-item {
+    text-align: right;
+}
+
+:lang(en) .dropdown-btn {
+    text-align: left;
+}
+
+:lang(en) .committee-item {
+    text-align: left;
 }

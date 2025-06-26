@@ -298,6 +298,21 @@ document.querySelector('.user-profile-header')?.classList.add('active');
       }
     };
   });
+
+  // إظهار الدروب داون إذا كانت الصلاحية مفعلة
+  const viewOwnCommitteesCheckbox = document.querySelector('label.switch[data-key="view_own_committees"] input[type="checkbox"]');
+  const committeesDropdown = document.getElementById('committees-dropdown');
+  if (viewOwnCommitteesCheckbox && committeesDropdown) {
+    if (targetSet.has('view_own_committees')) {
+      committeesDropdown.style.display = 'block';
+      loadUserCommittees(id); // تحميل لجان المستخدم المختارة
+    } else {
+      committeesDropdown.style.display = 'none';
+    }
+  }
+
+  // تحميل اللجان المختارة للمستخدم
+  await loadUserCommittees(id);
 }
 
 
@@ -441,4 +456,266 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadMyPermissions();
 
   loadUsers();
+  initializeCommitteesDropdown();
+});
+
+// =====================
+// Committees Dropdown Functionality
+// =====================
+let selectedCommittees = new Set();
+let allCommittees = [];
+
+async function initializeCommitteesDropdown() {
+  console.log('🚀 Initializing committees dropdown...');
+  const dropdown = document.getElementById('committees-dropdown');
+  const dropdownBtn = dropdown?.querySelector('.dropdown-btn');
+  const dropdownContent = dropdown?.querySelector('.dropdown-content');
+  const searchInput = dropdown?.querySelector('.committee-search');
+  const committeesList = dropdown?.querySelector('.committees-list');
+
+  console.log('🔍 Dropdown elements found:', {
+    dropdown: !!dropdown,
+    dropdownBtn: !!dropdownBtn,
+    dropdownContent: !!dropdownContent,
+    searchInput: !!searchInput,
+    committeesList: !!committeesList
+  });
+
+  if (!dropdown || !dropdownBtn || !dropdownContent || !searchInput || !committeesList) {
+    console.log('❌ Dropdown elements not found');
+    return;
+  }
+
+  // Load committees
+  await loadAllCommittees();
+
+  // Toggle dropdown
+  dropdownBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    dropdownContent.classList.toggle('show');
+    dropdownBtn.classList.toggle('active');
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!dropdown.contains(e.target)) {
+      dropdownContent.classList.remove('show');
+      dropdownBtn.classList.remove('active');
+    }
+  });
+
+  // Search functionality
+  searchInput.addEventListener('input', (e) => {
+    const searchTerm = e.target.value.toLowerCase();
+    const items = committeesList.querySelectorAll('.committee-item');
+    
+    items.forEach(item => {
+      const label = item.querySelector('label').textContent.toLowerCase();
+      item.style.display = label.includes(searchTerm) ? 'flex' : 'none';
+    });
+  });
+
+  // Handle committee selection
+  committeesList.addEventListener('change', (e) => {
+    if (e.target.type === 'checkbox') {
+      const committeeId = e.target.value;
+      const committeeName = e.target.nextElementSibling.textContent;
+      
+      if (e.target.checked) {
+        selectedCommittees.add(committeeId);
+        e.target.closest('.committee-item').classList.add('selected');
+      } else {
+        selectedCommittees.delete(committeeId);
+        e.target.closest('.committee-item').classList.remove('selected');
+      }
+      
+      updateDropdownButtonText();
+      
+      // Save to database when selection changes
+      if (selectedUserId) {
+        saveUserCommittees();
+      }
+    }
+  });
+}
+
+async function loadAllCommittees() {
+  console.log('🔄 Loading all committees...');
+  try {
+    const response = await fetch(`${apiBase}/committees`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    
+    if (!response.ok) throw new Error('Failed to fetch committees');
+    
+    allCommittees = await response.json();
+    console.log('✅ Loaded committees:', allCommittees.length);
+    renderCommitteesList();
+  } catch (error) {
+    console.error('❌ Error loading committees:', error);
+  }
+}
+
+async function loadUserCommittees(userId) {
+  console.log('🔄 Loading committees for user:', userId);
+  try {
+    const response = await fetch(`${apiBase}/users/${userId}/committees`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    
+    console.log('📡 Response status:', response.status);
+    
+    if (response.ok) {
+      const userCommittees = await response.json();
+      console.log('✅ User committees loaded:', userCommittees);
+      selectedCommittees = new Set(userCommittees.map(c => c.id.toString()));
+      console.log('📝 Selected committees set:', Array.from(selectedCommittees));
+      renderCommitteesList();
+      updateDropdownButtonText();
+    } else {
+      console.log('❌ Failed to load user committees, status:', response.status);
+      const errorText = await response.text();
+      console.log('❌ Error response:', errorText);
+    }
+  } catch (error) {
+    console.error('❌ Error loading user committees:', error);
+  }
+}
+
+async function saveUserCommittees() {
+  if (!selectedUserId) return;
+  
+  try {
+    const response = await fetch(`${apiBase}/users/${selectedUserId}/committees`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      },
+      body: JSON.stringify({
+        committeeIds: Array.from(selectedCommittees).map(id => parseInt(id))
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to save committees');
+    }
+  } catch (error) {
+    console.error('Error saving user committees:', error);
+  }
+}
+
+function renderCommitteesList() {
+  console.log('🎨 Rendering committees list...');
+  const committeesList = document.querySelector('.committees-list');
+  if (!committeesList) {
+    console.log('❌ Committees list element not found');
+    return;
+  }
+
+  committeesList.innerHTML = '';
+  const lang = localStorage.getItem('language') || 'ar';
+  console.log('📝 Rendering', allCommittees.length, 'committees for language:', lang);
+  console.log('📝 Selected committees:', Array.from(selectedCommittees));
+
+  allCommittees.forEach(committee => {
+    const item = document.createElement('div');
+    item.className = 'committee-item';
+    
+    let committeeName;
+    try {
+      const parsed = JSON.parse(committee.name);
+      committeeName = parsed[lang] || parsed['ar'] || committee.name;
+    } catch {
+      committeeName = committee.name;
+    }
+
+    const isSelected = selectedCommittees.has(committee.id.toString());
+    console.log(`📋 Committee ${committee.id} (${committeeName}): ${isSelected ? 'SELECTED' : 'not selected'}`);
+
+    item.innerHTML = `
+      <input type="checkbox" id="committee-${committee.id}" value="${committee.id}" ${isSelected ? 'checked' : ''}>
+      <label for="committee-${committee.id}">${committeeName}</label>
+    `;
+
+    if (isSelected) {
+      item.classList.add('selected');
+    }
+
+    committeesList.appendChild(item);
+  });
+  setCommitteeSearchPlaceholder();
+  console.log('✅ Committees list rendered successfully');
+}
+
+function updateDropdownButtonText() {
+  console.log('🔄 Updating dropdown button text...');
+  const dropdownBtn = document.querySelector('.dropdown-btn span');
+  if (!dropdownBtn) {
+    console.log('❌ Dropdown button span not found');
+    return;
+  }
+
+  console.log('📝 Selected committees count:', selectedCommittees.size);
+
+  if (selectedCommittees.size === 0) {
+    dropdownBtn.textContent = getTranslation('select-committees');
+    console.log('✅ Set button text to:', getTranslation('select-committees'));
+  } else if (selectedCommittees.size === 1) {
+    const committeeId = Array.from(selectedCommittees)[0];
+    const committee = allCommittees.find(c => c.id.toString() === committeeId);
+    if (committee) {
+      const lang = localStorage.getItem('language') || 'ar';
+      let committeeName;
+      try {
+        const parsed = JSON.parse(committee.name);
+        committeeName = parsed[lang] || parsed['ar'] || committee.name;
+      } catch {
+        committeeName = committee.name;
+      }
+      dropdownBtn.textContent = committeeName;
+      console.log('✅ Set button text to single committee:', committeeName);
+    }
+  } else {
+    dropdownBtn.textContent = `${selectedCommittees.size} ${getTranslation('committee-selected')}`;
+    console.log('✅ Set button text to multiple committees:', `${selectedCommittees.size} ${getTranslation('committee-selected')}`);
+  }
+}
+
+// Update search placeholder translation in dropdown
+function setCommitteeSearchPlaceholder() {
+  const searchInput = document.querySelector('.committee-search');
+  if (searchInput) {
+    searchInput.placeholder = getTranslation('search-committee-placeholder');
+  }
+}
+
+// Call setCommitteeSearchPlaceholder on language change and after rendering dropdown
+window.addEventListener('languageChanged', setCommitteeSearchPlaceholder);
+document.addEventListener('DOMContentLoaded', setCommitteeSearchPlaceholder);
+
+// Show/hide dropdown based on permission checkbox
+document.addEventListener('change', (e) => {
+  console.log('🔍 Change event detected:', e.target);
+  
+  if (e.target.type === 'checkbox') {
+    const label = e.target.closest('.switch');
+    console.log('🔍 Label found:', label);
+    console.log('🔍 Label data-key:', label?.dataset?.key);
+    
+    if (label && label.dataset.key === 'view_own_committees') {
+      console.log('✅ Found view_own_committees checkbox, updating dropdown visibility');
+      const dropdown = document.getElementById('committees-dropdown');
+      console.log('🔍 Dropdown element:', dropdown);
+      
+      if (dropdown) {
+        dropdown.style.display = e.target.checked ? 'block' : 'none';
+        console.log('✅ Dropdown visibility changed to:', e.target.checked ? 'block' : 'none');
+        if (e.target.checked && selectedUserId) {
+          // تحميل لجان المستخدم مباشرة عند التفعيل
+          loadUserCommittees(selectedUserId);
+        }
+      }
+    }
+  }
 });

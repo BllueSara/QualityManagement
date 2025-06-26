@@ -1,45 +1,75 @@
 // Language labels
-const labels = {
-  ar: {
-    pageTitle: 'تقارير الاعتمادات',
-    fileName: 'اسم الملف',
-    department: 'القسم',
-    startDate: 'تاريخ البداية',
-    endDate: 'تاريخ الانتهاء',
-    filter: 'بحث',
-    download: 'تحميل',
-    all: 'الكل',
-  },
-  en: {
-    pageTitle: 'Approvals Reports',
-    fileName: 'File Name',
-    department: 'Department',
-    startDate: 'Start Date',
-    endDate: 'End Date',
-    filter: 'Search',
-    download: 'Download',
-    all: 'All',
-  }
+let currentLang = localStorage.getItem('lang') || 'ar';
+apiBase = 'http://localhost:3006';
+// صلاحيات المستخدم (افتراضيًا كل شيء false)
+const permissions = {
+  // ... باقي الصلاحيات
+  canDownloadReport: false,
 };
 
-let currentLang = localStorage.getItem('lang') || 'ar';
+// دالة لجلب التوكن من localStorage
+function getToken() {
+  return localStorage.getItem('token');
+}
+
+// دالة لفك التوكن واستخراج الدور
+function getUserRoleFromToken() {
+  const token = getToken();
+  if (!token) return null;
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(c =>
+      '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+    ).join(''));
+    return JSON.parse(jsonPayload).role;
+  } catch {
+    return null;
+  }
+}
+
+// جلب صلاحيات المستخدم من الـ API
+async function fetchPermissions() {
+  const userId = JSON.parse(atob(getToken().split('.')[1])).id;
+  const headers = { 'Authorization': `Bearer ${getToken()}` };
+  const res = await fetch(`${apiBase}/users/${userId}/permissions`, { headers });
+  if (!res.ok) return;
+  const { data: perms } = await res.json();
+  const keys = perms.map(p => typeof p === 'string' ? p : p.permission);
+
+  if (keys.includes('download_reports_approvals')) {
+    permissions.canDownloadReport = true;
+  }
+}
+
+// ——— ترجمة ———
+function getCurrentLang() {
+  return localStorage.getItem('language') === 'en' ? 'en' : 'ar';
+}
+
+function getTranslation(key) {
+  const lang = getCurrentLang();
+  if (window.translations?.[lang]?.[key]) {
+    return window.translations[lang][key];
+  }
+  return key;
+}
 
 function setLanguage(lang) {
   currentLang = lang;
   document.documentElement.lang = lang;
   document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
-  document.getElementById('page-title').textContent = labels[lang].pageTitle;
-  document.getElementById('file-name-th').textContent = labels[lang].fileName;
-  document.getElementById('department-th').textContent = labels[lang].department;
-  document.getElementById('start-date-th').textContent = labels[lang].startDate;
-  document.getElementById('end-date-th').textContent = labels[lang].endDate;
-  document.getElementById('filter-btn').textContent = labels[lang].filter;
-  document.getElementById('download-btn').textContent = labels[lang].download;
-  // Update department select options
-  const select = document.getElementById('department-select');
-  select.options[0].textContent = labels[lang].all;
+  document.getElementById('page-title').textContent = getTranslation('approvals-reports-title');
+  document.getElementById('file-name-th').textContent = getTranslation('file-name');
+  document.getElementById('department-th').textContent = getTranslation('department-name');
+  document.getElementById('start-date-th').textContent = getTranslation('start-date-label');
+  document.getElementById('end-date-th').textContent = getTranslation('end-date-label');
+  document.getElementById('filter-btn').textContent = getTranslation('search');
+  document.getElementById('download-btn').textContent = getTranslation('download');
+  document.getElementById('department-select').options[0].textContent = getTranslation('all-departments');
 }
 
+// بيانات وهمية للتجربة
 const mockData = [
   { fileName: 'ملف 1.pdf', department: 'الجودة', startDate: '2024-05-01', endDate: '2024-05-10' },
   { fileName: 'ملف 2.pdf', department: 'التمريض', startDate: '2024-05-03', endDate: '2024-05-12' },
@@ -48,12 +78,9 @@ const mockData = [
 
 async function fetchDepartments() {
   try {
-    // Adjust the endpoint if needed to match your backend
     const res = await fetch('/api/departments');
     if (!res.ok) throw new Error('Network response was not ok');
-    const data = await res.json();
-    // Assume data is an array of { id, name_ar, name_en }
-    return data;
+    return await res.json();
   } catch (err) {
     console.error('Failed to fetch departments:', err);
     return [];
@@ -62,21 +89,19 @@ async function fetchDepartments() {
 
 async function populateDepartments() {
   const select = document.getElementById('department-select');
-  // Remove old options except 'all'
   while (select.options.length > 1) select.remove(1);
   const departments = await fetchDepartments();
+  const lang = getCurrentLang();
+
   departments.forEach(dep => {
     let nameObj = dep.name;
     if (typeof nameObj === 'string') {
-      try {
-        nameObj = JSON.parse(dep.name);
-      } catch (e) {
-        nameObj = { ar: dep.name, en: dep.name };
-      }
+      try { nameObj = JSON.parse(nameObj); }
+      catch { nameObj = { ar: nameObj, en: nameObj }; }
     }
     const option = document.createElement('option');
-    option.value = currentLang === 'ar' ? nameObj.ar : nameObj.en;
-    option.textContent = currentLang === 'ar' ? nameObj.ar : nameObj.en;
+    option.value = nameObj[lang];
+    option.textContent = nameObj[lang];
     select.appendChild(option);
   });
 }
@@ -84,11 +109,11 @@ async function populateDepartments() {
 function filterData() {
   const dep = document.getElementById('department-select').value;
   const start = document.getElementById('start-date').value;
-  const end = document.getElementById('end-date').value;
+  const end   = document.getElementById('end-date').value;
   return mockData.filter(row => {
-    const matchDep = dep === 'all' || row.department === dep;
+    const matchDep   = dep === 'all' || row.department === dep;
     const matchStart = !start || row.startDate >= start;
-    const matchEnd = !end || row.endDate <= end;
+    const matchEnd   = !end   || row.endDate <= end;
     return matchDep && matchStart && matchEnd;
   });
 }
@@ -96,8 +121,7 @@ function filterData() {
 function populateTable() {
   const tbody = document.querySelector('#approvals-report-table tbody');
   tbody.innerHTML = '';
-  const data = filterData();
-  data.forEach(row => {
+  filterData().forEach(row => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${row.fileName}</td>
@@ -111,22 +135,45 @@ function populateTable() {
 
 function downloadCSV() {
   const data = filterData();
-  const header = [labels[currentLang].fileName, labels[currentLang].department, labels[currentLang].startDate, labels[currentLang].endDate];
-  const rows = data.map(row => [row.fileName, row.department, row.startDate, row.endDate]);
-  let csvContent = header.join(',') + '\n' + rows.map(r => r.join(',')).join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const header = [
+    getTranslation('file-name'),
+    getTranslation('department-name'),
+    getTranslation('start-date-label'),
+    getTranslation('end-date-label')
+  ];
+  const rows = data.map(r => [r.fileName, r.department, r.startDate, r.endDate]);
+  const csv = [header.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
   link.download = 'approvals_report.csv';
   link.click();
 }
 
-document.getElementById('filter-btn').addEventListener('click', populateTable);
-document.getElementById('download-btn').addEventListener('click', downloadCSV);
+// ——— الإعداد عند التحميل ———
+window.addEventListener('DOMContentLoaded', async () => {
+  setLanguage(getCurrentLang());
+  await fetchPermissions();      // أولًا: جلب صلاحيات المستخدم
+  await populateDepartments();
+  populateTable();
 
-// Language switching (assume a global language switcher sets localStorage 'lang' and reloads page)
-window.addEventListener('DOMContentLoaded', () => {
-  setLanguage(currentLang);
+  document.getElementById('filter-btn')
+    .addEventListener('click', populateTable);
+
+  const downloadBtn = document.getElementById('download-btn');
+
+  // إظهار/إخفاء زر التحميل بناءً على الدور أو الصلاحية
+  if (getUserRoleFromToken() === 'admin' || permissions.canDownloadReport) {
+    downloadBtn.style.display = 'inline-block';
+    downloadBtn.addEventListener('click', downloadCSV);
+  } else {
+    downloadBtn.style.display = 'none';
+  }
+});
+
+// استماع لتغيير اللغة (إن وجد)
+window.addEventListener('languageChanged', () => {
+  setLanguage(getCurrentLang());
   populateDepartments();
   populateTable();
-}); 
+});

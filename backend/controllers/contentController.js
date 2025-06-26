@@ -41,10 +41,91 @@ const upload = multer({
         fileSize: 10 * 1024 * 1024 // 10MB max file size
     }
 });
+// مرة وحدة كل 24 ساعة (24h * 60m * 60s * 1000ms)
+// في أعلى الملف
+const THROTTLE_INTERVAL = 0;  // بدل 24h بثانية للتجربة
+let lastRunTs = 0;
+
+async function maybeNotifyExpiredContents() {
+  const now = Date.now();
+  if (now - lastRunTs < THROTTLE_INTERVAL) return;
+  await notifyExpiredContents();
+  lastRunTs = now;
+}
+
+// دالة تفحص صلاحية المحتوى وترسل إشعار إذا انتهت
+
+async function notifyExpiredContents() {
+  const today = new Date().toISOString().split('T')[0]; // yyyy-mm-dd
+  const connection = await db.getConnection();
+
+  try {
+    const [expired] = await connection.execute(`
+      SELECT c.id, c.title, c.created_by, c.end_date, c.folder_id
+      FROM contents c
+      LEFT JOIN notifications n
+        ON n.type = CONCAT('content_expired_', c.id)
+       AND n.user_id = c.created_by
+      WHERE c.end_date IS NOT NULL
+        AND c.end_date < ?
+        AND n.id IS NULL
+    `, [today]);
+
+    for (const row of expired) {
+      // جلب أسماء القسم والمجلد
+      const [folderRows] = await connection.execute(
+        `SELECT f.name AS folder_name, d.name AS department_name
+         FROM folders f
+         JOIN departments d ON f.department_id = d.id
+         WHERE f.id = ?`,
+        [row.folder_id]
+      );
+
+      const folderName = folderRows[0]?.folder_name || '';
+      const departmentName = folderRows[0]?.department_name || '';
+
+      // بناء النص
+      const notificationMsg = 
+        `انتهت صلاحية المحتوى "${row.title}" في  "${departmentName}"، ` +
+        `مجلد "${folderName}" بتاريخ ${row.end_date}. يرجى تحديثه أو رفع نسخة جديدة.`;
+
+      // 1) أدخل الإشعار
+      const dynamicType = `content_expired_${row.id}`;
+      await insertNotification(
+        row.created_by,
+        'انتهت صلاحية المحتوى',
+        notificationMsg,
+        dynamicType
+      );
+
+      // 2) سجّل الحدث في جدول اللوق مع تتبع الأخطاء
+      const logDescription = {
+        ar: `  إشعار لانتهاء صلاحية المحتوى: ${row.title} في  ${departmentName}، مجلد ${folderName}`,
+        en: `Sent expiration notification for content: ${row.title} in  ${departmentName}, folder ${folderName}`
+      };
+      console.log('⬇️ Calling logAction for content ID', row.id);
+      try {
+        await logAction(
+          row.created_by,                 // user_id
+          'notify_content_expired',       // actionType
+          JSON.stringify(logDescription), // description (JSON string)
+          'content',                      // referenceType
+          row.id                          // referenceId
+        );
+        console.log('✅ logAction succeeded for content ID', row.id);
+      } catch (err) {
+        console.error('❌ logAction failed for content ID', row.id, err);
+      }
+    }
+  } finally {
+    connection.release();
+  }
+}
 
 // جلب جميع المحتويات لمجلد معين
 const getContentsByFolderId = async (req, res) => {
     try {
+        await maybeNotifyExpiredContents();
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
             return res.status(401).json({ 
@@ -105,6 +186,8 @@ const getContentsByFolderId = async (req, res) => {
                 c.approvers_required,
                 c.created_at,
                 c.updated_at,
+                c.end_date,
+                c.is_old_content,
                 u.username as created_by_username,
                 a.username as approved_by_username
             FROM contents c
@@ -119,12 +202,44 @@ const getContentsByFolderId = async (req, res) => {
             query += ' AND c.is_approved = 1 AND c.approval_status = "approved"';
         }
         
-
         query += ' ORDER BY c.created_at DESC';
 
         const [contents] = await connection.execute(query, params);
-
         connection.release();
+
+        // منطق الفلترة حسب الصلاحية
+        const now = new Date();
+        const nowMs = now.getTime();
+        const oneDayMs = 24 * 60 * 60 * 1000;
+        const isAdmin = decodedToken.role === 'admin';
+        // TODO: إذا عندك صلاحية خاصة أضفها هنا
+        const canViewExpired = isAdmin; // أو decodedToken.permissions?.includes('view_expired_content')
+
+        const filtered = contents.filter(item => {
+          if (!item.end_date) return true;
+          const endDate = new Date(item.end_date);
+          if (isNaN(endDate.getTime())) return true; // تجاهل التواريخ غير الصالحة
+          // إذا لم تمر 24 ساعة بعد الانتهاء، أظهر للجميع
+          if (nowMs - endDate.getTime() < oneDayMs) return true;
+          // إذا أدمن أو عنده صلاحية، أظهر له الكل
+          if (canViewExpired) return true;
+          // غير ذلك، أخفِ المحتوى المنتهي
+          return false;
+        }).map(item => {
+          // أضف علامة expired إذا انتهى فعلاً
+          let extra = {};
+          if (item.end_date) {
+            const endDate = new Date(item.end_date);
+            if (!isNaN(endDate.getTime()) && nowMs > endDate.getTime() + oneDayMs) {
+              extra.expired = true;
+            }
+          }
+          // أضف خاصية is_old_content
+          if (item.is_old_content == 1) {
+            extra.is_old_content = true;
+          }
+          return { ...item, extra };
+        });
 
         res.json({
             status: 'success',
@@ -137,9 +252,10 @@ const getContentsByFolderId = async (req, res) => {
                 created_by: folder[0].created_by,
                 created_by_username: folder[0].created_by_username
             },
-            data: contents
+            data: filtered
         });
     } catch (error) {
+        console.error('getContentsByFolderId error:', error);
         res.status(500).json({ message: 'خطأ في جلب المحتويات' });
     }
 };
@@ -169,8 +285,14 @@ const addContent = async (req, res) => {
   
       const folderId = req.params.folderId;
       const { title, notes, approvers_required } = req.body;
+      const startDate = req.body.start_date || null;
+      const endDate   = req.body.end_date   || null;
       const filePath = req.file ? path.posix.join('content_files', req.file.filename) : null;
-
+      // 🟢 دعم محتوى قديم
+      const isOldContent = req.body.is_old_content === 'true' || req.body.is_old_content === true;
+      const approvalStatus = isOldContent ? 'approved' : 'pending';
+      const isApproved = isOldContent ? 1 : 0;
+      const approvedBy = isOldContent ? decodedToken.id : null;
   
       const connection = await db.getConnection();
   
@@ -217,17 +339,27 @@ const addContent = async (req, res) => {
           created_by,
           approvers_required,
           approvals_log,
+          start_date,
+          end_date,
+          is_old_content,
+          approved_by,
           created_at,
           updated_at
-        ) VALUES (?, ?, ?, ?, 'pending', 0, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
         [
           title, 
           filePath, 
           notes || null,
           folderId, 
+          approvalStatus,
+          isApproved,
           decodedToken.id,
           approvers_required ? JSON.stringify(approvers_required) : null,
-          JSON.stringify([])
+          JSON.stringify([]),
+          startDate,
+          endDate,
+          isOldContent ? 1 : 0,
+          approvedBy
         ]
       );
   
@@ -256,8 +388,8 @@ const addContent = async (req, res) => {
         
         // إنشاء النص ثنائي اللغة
         const logDescription = {
-            ar: `تم إضافة محتوى: ${getContentNameByLanguage(title, 'ar')} في قسم: ${getDepartmentNameByLanguage(departmentName, 'ar')}`,
-            en: `Added content: ${getContentNameByLanguage(title, 'en')} in department: ${getDepartmentNameByLanguage(departmentName, 'en')}`
+            ar: `تم إضافة محتوى: ${getContentNameByLanguage(title, 'ar')} في : ${getDepartmentNameByLanguage(departmentName, 'ar')}`,
+            en: `Added content: ${getContentNameByLanguage(title, 'en')} in : ${getDepartmentNameByLanguage(departmentName, 'en')}`
         };
         
         await logAction(
@@ -275,10 +407,10 @@ const addContent = async (req, res) => {
   
       res.status(201).json({
         status: 'success',
-        message: 'تم رفع المحتوى بنجاح وهو في انتظار الاعتمادات اللازمة',
+        message: isOldContent ? 'تم رفع المحتوى القديم وتم اعتماده مباشرة' : 'تم رفع المحتوى بنجاح وهو في انتظار الاعتمادات اللازمة',
         contentId: contentId,
-        isApproved: false,
-        status: 'pending'
+        isApproved: !!isApproved,
+        status: approvalStatus
       });
     } catch (error) {
       res.status(500).json({ message: 'خطأ في إضافة المحتوى' });
@@ -300,6 +432,8 @@ const updateContent = async (req, res) => {
   
       const originalId = req.params.contentId;
       const { title, notes } = req.body;
+      const startDate = req.body.start_date || null;
+      const endDate   = req.body.end_date   || null;
       const filePath = req.file ? path.posix.join('content_files', req.file.filename) : null;
   
       const connection = await db.getConnection();
@@ -329,14 +463,7 @@ const updateContent = async (req, res) => {
         }
       }
   
-      // ✅ تجاهل التحقق من التكرار إذا كان التعديل على نفس العنوان
-      const [duplicateCheck] = await connection.execute(
-        'SELECT id FROM contents WHERE title = ? AND folder_id = ? AND id != ?',
-        [title, folderId, originalId]
-      );
-      if (duplicateCheck.length > 0) {
-        return res.status(409).json({ status: 'error', message: 'يوجد محتوى آخر بنفس العنوان في هذا المجلد.' });
-      }
+
   
       // إنشاء النسخة الجديدة
       const [insertResult] = await connection.execute(
@@ -344,8 +471,9 @@ const updateContent = async (req, res) => {
           title, file_path, notes, folder_id,
           approval_status, is_approved,
           created_by, approvers_required, approvals_log,
+          start_date, end_date,
           created_at, updated_at
-        ) VALUES (?, ?, ?, ?, 'pending', 0, ?, ?, ?, NOW(), NOW())`,
+        ) VALUES (?, ?, ?, ?, 'pending', 0, ?, ?, ?, ?, ?, NOW(), NOW())`,
         [
           title,
           filePath,
@@ -353,7 +481,9 @@ const updateContent = async (req, res) => {
           folderId,
           userId,
           originalApproversRequired, // استخدم الموافقين المطلوبين من المحتوى الأصلي
-          JSON.stringify([])
+          JSON.stringify([]),
+          startDate,
+          endDate
         ]
       );
   
@@ -365,8 +495,8 @@ const updateContent = async (req, res) => {
         
         // إنشاء النص ثنائي اللغة
         const logDescription = {
-          ar: `تم تحديث محتوى من: ${getContentNameByLanguage(oldTitle, 'ar')} إلى: ${getContentNameByLanguage(title, 'ar')} في قسم: ${getDepartmentNameByLanguage(departmentName, 'ar')}`,
-          en: `Updated content from: ${getContentNameByLanguage(oldTitle, 'en')} to: ${getContentNameByLanguage(title, 'en')} in department: ${getDepartmentNameByLanguage(departmentName, 'en')}`
+          ar: `تم تحديث محتوى من: ${getContentNameByLanguage(oldTitle, 'ar')} إلى: ${getContentNameByLanguage(title, 'ar')} في : ${getDepartmentNameByLanguage(departmentName, 'ar')}`,
+          en: `Updated content from: ${getContentNameByLanguage(oldTitle, 'en')} to: ${getContentNameByLanguage(title, 'en')} in : ${getDepartmentNameByLanguage(departmentName, 'en')}`
         };
         
         await logAction(
@@ -481,8 +611,8 @@ const deleteContent = async (req, res) => {
             
             // إنشاء النص ثنائي اللغة
             const logDescription = {
-                ar: `تم حذف محتوى: ${getContentNameByLanguage(content[0].title, 'ar')} من قسم: ${getDepartmentNameByLanguage(departmentName, 'ar')}`,
-                en: `Deleted content: ${getContentNameByLanguage(content[0].title, 'en')} from department: ${getDepartmentNameByLanguage(departmentName, 'en')}`
+                ar: `تم حذف محتوى: ${getContentNameByLanguage(content[0].title, 'ar')} من : ${getDepartmentNameByLanguage(departmentName, 'ar')}`,
+                en: `Deleted content: ${getContentNameByLanguage(content[0].title, 'en')} from : ${getDepartmentNameByLanguage(departmentName, 'en')}`
             };
             
             await logAction(
@@ -694,8 +824,8 @@ const approveContent = async (req, res) => {
             
             // إنشاء النص ثنائي اللغة
             const logDescription = {
-                ar: `تم ${isApproved ? 'اعتماد' : 'تسجيل موافقة على'} محتوى: ${getContentNameByLanguage(content[0].title, 'ar')} في قسم: ${getDepartmentNameByLanguage(departmentName, 'ar')}`,
-                en: `${isApproved ? 'Approved' : 'Partially approved'} content: ${getContentNameByLanguage(content[0].title, 'en')} in department: ${getDepartmentNameByLanguage(departmentName, 'en')}`
+                ar: `تم ${isApproved ? 'اعتماد' : 'تسجيل موافقة على'} محتوى: ${getContentNameByLanguage(content[0].title, 'ar')} في : ${getDepartmentNameByLanguage(departmentName, 'ar')}`,
+                en: `${isApproved ? 'Approved' : 'Partially approved'} content: ${getContentNameByLanguage(content[0].title, 'en')} in : ${getDepartmentNameByLanguage(departmentName, 'en')}`
             };
             
             await logAction(

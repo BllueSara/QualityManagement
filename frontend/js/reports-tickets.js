@@ -1,4 +1,3 @@
-// تقارير التذاكر
 // التصنيفات الثابتة مع الترجمة
 const categories = [
   { ar: 'النظافة', en: 'Cleaning' },
@@ -29,6 +28,8 @@ const categories = [
   { ar: 'التغذية السريرية', en: 'Clinical Nutrition' },
   { ar: 'قضايا تقنية المعلومات', en: 'IT Issues' }
 ];
+
+// أسماء الشهور
 const months = [
   { ar: 'يناير', en: 'January' },
   { ar: 'فبراير', en: 'February' },
@@ -44,69 +45,85 @@ const months = [
   { ar: 'ديسمبر', en: 'December' }
 ];
 
-const translations = {
-  ar: {
-    title: 'تقرير التذاكر حسب التصنيف والشهر',
-    from: 'من:',
-    to: 'إلى:',
-    allCategories: 'كل التصنيفات',
-    filter: 'عرض',
-    showAll: 'عرض الكل',
-    download: 'تحميل',
-    category: 'التصنيف',
-  },
-  en: {
-    title: 'Tickets Report by Category and Month',
-    from: 'From:',
-    to: 'To:',
-    allCategories: 'All Categories',
-    filter: 'Filter',
-    showAll: 'Show All',
-    download: 'Download',
-    category: 'Category',
-  }
-};
-
 const apiBase = 'http://localhost:3006/api';
 
+// صلاحيات المستخدم
+const permissions = {
+  canDownloadReport: false
+};
+
+// جلب التوكن من localStorage
+function getToken() {
+  return localStorage.getItem('token');
+}
+
+// فكّ التوكن لاستخراج دور المستخدم
+function getUserRoleFromToken() {
+  const token = getToken();
+  if (!token) return null;
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(c =>
+      '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+    ).join(''));
+    return JSON.parse(jsonPayload).role;
+  } catch {
+    return null;
+  }
+}
+
+// جلب صلاحيات المستخدم من الـ API
+async function fetchPermissions() {
+  const token = getToken();
+  if (!token) return;
+  const userId = JSON.parse(atob(token.split('.')[1])).id;
+  const res = await fetch(`${apiBase}/users/${userId}/permissions`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!res.ok) return;
+  const { data: perms } = await res.json();
+  const keys = perms.map(p => typeof p === 'string' ? p : p.permission);
+  if (keys.includes('download_reports_tickets')) {
+    permissions.canDownloadReport = true;
+  }
+}
+
+// اللغة الحالية وترجمة المفاتيح
 function getCurrentLang() {
   return localStorage.getItem('language') === 'en' ? 'en' : 'ar';
 }
+function getTranslation(key) {
+  const lang = getCurrentLang();
+  return window.translations?.[lang]?.[key] || key;
+}
 
-document.addEventListener('DOMContentLoaded', function() {
-  renderFiltersAndTitle();
-  document.getElementById('filterBtn').onclick = loadTicketsReport;
-  document.getElementById('showAllBtn').onclick = function() {
-    document.getElementById('fromDate').value = '';
-    document.getElementById('toDate').value = '';
-    document.getElementById('categoryFilter').value = '';
-    loadTicketsReport();
-  };
-  document.getElementById('downloadBtn').onclick = downloadTableAsCSV;
-  loadTicketsReport();
-  window.addEventListener('languageChanged', () => {
-    renderFiltersAndTitle();
-    loadTicketsReport();
-  });
-});
-
+// إعادة رسم الفلاتر والعناوين
 function renderFiltersAndTitle() {
   const lang = getCurrentLang();
-  // العنوان
-  document.querySelector('.reports-title').textContent = translations[lang].title;
-  // الفلاتر والأزرار
-  const actionsBar = document.querySelector('.actions-bar');
-  actionsBar.innerHTML = `
-    <label>${translations[lang].from} <input type="date" id="fromDate"></label>
-    <label>${translations[lang].to} <input type="date" id="toDate"></label>
+  document.querySelector('.reports-title').textContent = getTranslation('tickets-reports-title');
+  document.querySelector('.actions-bar').innerHTML = `
+    <label>
+      <span>${getTranslation('from-date')}</span>
+      <input type="date" id="fromDate">
+    </label>
+    <label>
+      <span>${getTranslation('to-date')}</span>
+      <input type="date" id="toDate">
+    </label>
     <select id="categoryFilter" class="category-filter">
-      <option value="">${translations[lang].allCategories}</option>
+      <option value="">${getTranslation('all-categories')}</option>
     </select>
-    <button id="filterBtn" class="btn"><i class="fas fa-filter"></i> ${translations[lang].filter}</button>
-    <button id="showAllBtn" class="btn btn-secondary"><i class="fas fa-list"></i> ${translations[lang].showAll}</button>
-    <button id="downloadBtn" class="btn"><i class="fas fa-download"></i> ${translations[lang].download}</button>
+    <button id="filterBtn" class="btn">
+      <i class="fas fa-filter"></i> ${getTranslation('filter')}
+    </button>
+    <button id="showAllBtn" class="btn btn-secondary">
+      <i class="fas fa-list"></i> ${getTranslation('show-all')}
+    </button>
+    <button id="downloadBtn" class="btn">
+      <i class="fas fa-download"></i> ${getTranslation('download')}
+    </button>
   `;
-  // Populate category filter
   const catSelect = document.getElementById('categoryFilter');
   categories.forEach(cat => {
     const opt = document.createElement('option');
@@ -116,112 +133,162 @@ function renderFiltersAndTitle() {
   });
 }
 
+// تحميل التقرير وبناء الجدول
 async function loadTicketsReport() {
   const lang = getCurrentLang();
-  const selectedCat = document.getElementById('categoryFilter').value;
-  const fromDate = document.getElementById('fromDate').value;
-  const toDate = document.getElementById('toDate').value;
-  const token = localStorage.getItem('token');
-  const tableWrapper = document.getElementById('tickets-report-table-wrapper');
-  tableWrapper.innerHTML = '<div class="loading">جاري التحميل...</div>';
+  const selCat = document.getElementById('categoryFilter').value;
+  let fromDate = document.getElementById('fromDate').value;
+  let toDate   = document.getElementById('toDate').value;
+  if (!fromDate || !toDate) {
+    const y = new Date().getFullYear();
+    fromDate = `${y}-01-01`;
+    toDate   = `${y}-12-31`;
+  }
+  const params = new URLSearchParams({ startDate: fromDate, endDate: toDate });
+  if (selCat) params.append('category', selCat);
+
+  const wrap = document.getElementById('tickets-report-table-wrapper');
+  wrap.innerHTML = `<div class="loading">${getTranslation('loading')}</div>`;
+
   try {
-    const params = new URLSearchParams();
-    if (fromDate) params.append('startDate', fromDate);
-    if (toDate) params.append('endDate', toDate);
-    if (selectedCat) params.append('category', selectedCat);
-    // إذا لم يحدد المستخدم تاريخ، استخدم سنة كاملة افتراضية
-    if (!fromDate || !toDate) {
-      const year = new Date().getFullYear();
-      params.set('startDate', `${year}-01-01`);
-      params.set('endDate', `${year}-12-31`);
-    }
-    const res = await fetch(`${apiBase}/tickets/report/closed-tickets?${params.toString()}`, {
+    const token = getToken();
+    const res = await fetch(`${apiBase}/tickets/report/closed-tickets?${params}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
-    if (!res.ok) throw new Error('فشل جلب البيانات');
-    const body = await res.json();
-    const reportData = body.data || [];
-    // بناء مصفوفة: { [category]: [12 شهر] }
-    const cats = categories.map(c => c[lang]);
-    const monthsArr = Array(12).fill(0).map((_, i) => i + 1);
-    const data = {};
-    cats.forEach(cat => { data[cat] = Array(12).fill(0); });
-    reportData.forEach(row => {
-      const cat = row.category;
-      const monthIdx = (row.month || 1) - 1;
-      if (data[cat] && monthIdx >= 0 && monthIdx < 12) {
-        data[cat][monthIdx] = row.count;
+    if (!res.ok) throw new Error();
+    const { data: rows } = await res.json();
+
+    // جهّز مصفوفة النتائج
+    const langCats = categories.map(c => c[lang]);
+    const dataMap = {};
+    langCats.forEach(c => dataMap[c] = Array(12).fill(0));
+    rows.forEach(r => {
+      const mIdx = (r.month || 1) - 1;
+      if (dataMap[r.category] && mIdx >= 0 && mIdx < 12) {
+        dataMap[r.category][mIdx] = r.count;
       }
     });
-    let catsToShow = selectedCat ? categories.filter(c => c[lang] === selectedCat) : categories;
+
+    const selCats = selCat
+      ? categories.filter(c => c[lang] === selCat)
+      : categories;
+
     // بناء الجدول
-    let html = `<table><thead><tr><th style="direction:rtl;">${translations[lang].category}</th>`;
-    months.forEach(m=> html += `<th style="direction:rtl;">${m[lang]}</th>`);
+    let html = '<table><thead><tr>';
+    html += `<th>${getTranslation('category')}</th>`;
+    months.forEach(m => { html += `<th>${m[lang]}</th>`; });
     html += '</tr></thead><tbody>';
-    catsToShow.forEach(cat => {
+    selCats.forEach(cat => {
       html += `<tr><td>${cat[lang]}</td>`;
-      data[cat[lang]].forEach(num => html += `<td>${num}</td>`);
+      dataMap[cat[lang]].forEach(val => { html += `<td>${val}</td>`; });
       html += '</tr>';
     });
     html += '</tbody></table>';
-    tableWrapper.innerHTML = html;
-  } catch (err) {
-    tableWrapper.innerHTML = `<div class="error">${lang === 'ar' ? 'حدث خطأ أثناء جلب البيانات' : 'Error loading data'}</div>`;
+    wrap.innerHTML = html;
+
+  } catch {
+    wrap.innerHTML = `<div class="error">${getTranslation('error-loading-data')}</div>`;
   }
 }
 
+// تنزيل الجدول كـ CSV
 async function downloadTableAsCSV() {
   const lang = getCurrentLang();
-  const selectedCat = document.getElementById('categoryFilter').value;
-  const fromDate = document.getElementById('fromDate').value;
-  const toDate = document.getElementById('toDate').value;
-  const token = localStorage.getItem('token');
-  const params = new URLSearchParams();
-  if (fromDate) params.append('startDate', fromDate);
-  if (toDate) params.append('endDate', toDate);
-  if (selectedCat) params.append('category', selectedCat);
+  const selCat = document.getElementById('categoryFilter').value;
+  let fromDate = document.getElementById('fromDate').value;
+  let toDate   = document.getElementById('toDate').value;
   if (!fromDate || !toDate) {
-    const year = new Date().getFullYear();
-    params.set('startDate', `${year}-01-01`);
-    params.set('endDate', `${year}-12-31`);
+    const y = new Date().getFullYear();
+    fromDate = `${y}-01-01`;
+    toDate   = `${y}-12-31`;
   }
+  const params = new URLSearchParams({ startDate: fromDate, endDate: toDate });
+  if (selCat) params.append('category', selCat);
+
   try {
-    const res = await fetch(`${apiBase}/tickets/report/closed-tickets?${params.toString()}`, {
+    const token = getToken();
+    const res = await fetch(`${apiBase}/tickets/report/closed-tickets?${params}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
-    if (!res.ok) throw new Error('فشل جلب البيانات');
-    const body = await res.json();
-    const reportData = body.data || [];
-    const cats = categories.map(c => c[lang]);
-    const data = {};
-    cats.forEach(cat => { data[cat] = Array(12).fill(0); });
-    reportData.forEach(row => {
-      const cat = row.category;
-      const monthIdx = (row.month || 1) - 1;
-      if (data[cat] && monthIdx >= 0 && monthIdx < 12) {
-        data[cat][monthIdx] = row.count;
+    if (!res.ok) throw new Error();
+    const { data: rows } = await res.json();
+
+    const langCats = categories.map(c => c[lang]);
+    const dataMap = {};
+    langCats.forEach(c => dataMap[c] = Array(12).fill(0));
+    rows.forEach(r => {
+      const mIdx = (r.month || 1) - 1;
+      if (dataMap[r.category] && mIdx >= 0 && mIdx < 12) {
+        dataMap[r.category][mIdx] = r.count;
       }
     });
-    let catsToShow = selectedCat ? categories.filter(c => c[lang] === selectedCat) : categories;
+
+    const selCats = selCat
+      ? categories.filter(c => c[lang] === selCat)
+      : categories;
+
+    // توليد CSV
     let csv = '';
-    let rtlRow = [translations[lang].category];
-    months.forEach(m => rtlRow.push(m[lang]));
-    csv += rtlRow.map(t => '"' + '\u200F' + t + '"').join(',') + '\n';
-    catsToShow.forEach(cat => {
-      let row = [cat[lang]];
-      data[cat[lang]].forEach(num => row.push(num));
-      csv += row.map(t => '"' + t + '"').join(',') + '\n';
+    csv += [getTranslation('category'), ...months.map(m => m[lang])].join(',') + '\n';
+    selCats.forEach(cat => {
+      const row = [cat[lang], ...dataMap[cat[lang]]];
+      csv += row.join(',') + '\n';
     });
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
     a.download = 'tickets-report.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  } catch (err) {
-    alert(lang === 'ar' ? 'حدث خطأ أثناء التحميل' : 'Error downloading CSV');
+
+  } catch {
+    alert(getTranslation('error-downloading'));
   }
-} 
+}
+
+// الإعداد عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', async () => {
+  await fetchPermissions();      // جلب الصلاحيات أولاً
+  renderFiltersAndTitle();       // رسم الفلاتر والعناوين
+  loadTicketsReport();           // تحميل البيانات
+
+  document.getElementById('filterBtn').onclick = loadTicketsReport;
+  document.getElementById('showAllBtn').onclick = () => {
+    document.getElementById('fromDate').value = '';
+    document.getElementById('toDate').value   = '';
+    document.getElementById('categoryFilter').value = '';
+    loadTicketsReport();
+  };
+
+  const downloadBtn = document.getElementById('downloadBtn');
+  // إظهار أو إخفاء زر التنزيل حسب الدور أو الصلاحية
+  if (
+    getUserRoleFromToken() === 'admin' ||
+    permissions.canDownloadReport
+  ) {
+    downloadBtn.style.display = 'inline-block';
+    downloadBtn.onclick = downloadTableAsCSV;
+  } else {
+    downloadBtn.style.display = 'none';
+  }
+
+  window.addEventListener('languageChanged', () => {
+    renderFiltersAndTitle();
+    loadTicketsReport();
+    // إعادة فحص الصلاحية بعد تغيير اللغة
+    const dl = document.getElementById('downloadBtn');
+    if (
+      getUserRoleFromToken() === 'admin' ||
+      permissions.canDownloadReport
+    ) {
+      dl.style.display = 'inline-block';
+      dl.onclick = downloadTableAsCSV;
+    } else {
+      dl.style.display = 'none';
+    }
+  });
+});
