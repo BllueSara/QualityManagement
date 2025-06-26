@@ -15,7 +15,8 @@ const permissions = {
   canEditContent:  false,
   canEditContentName: false,
   canDeleteContent:false,
-  canDeleteContentName:false
+  canDeleteContentName:false,
+  canAddOldContent: false
 };
     function getToken() {
         const token = localStorage.getItem('token');
@@ -24,7 +25,21 @@ const permissions = {
 // 1) مصفوفة الأسماء والاختيار
 let folderNames = [];
 let selectedFolderId = null;
-
+function getUserRoleFromToken() {
+  const token = localStorage.getItem('token');
+  if (!token) return null;
+  try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      return JSON.parse(jsonPayload).role; // يفترض أن الدور موجود في الحمولة كـ 'role'
+  } catch (e) {
+      console.error('Error decoding token:', e);
+      return null;
+  }
+}
 // 1) جلب الأسماء
 async function loadFolderNames() {
   if (!currentDepartmentId) return;
@@ -789,6 +804,8 @@ async function fetchPermissions() {
   if (keys.includes('add_content_name'))    permissions.canAddContentName    = true;
   if (keys.includes('edit_content_name'))   permissions.canEditContentName   = true;
   if (keys.includes('delete_content_name')) permissions.canDeleteContentName = true;
+
+  if (keys.includes('add_old_content'))    permissions.canAddOldContent    = true;
 }
 
     // دالة لجلب مجلدات القسم بناءً على departmentId
@@ -943,27 +960,43 @@ const approvalStatus = getTranslation(key);
                         }
                         
                         // 1) بنية الأيقونات حسب الصلاحيات
-        let icons = '';
-        if (permissions.canEditContent || permissions.canDeleteContent) {
-          icons = '<div class="item-icons">';
-          if (permissions.canEditContent) {
-            icons += `<a href="#" class="edit-icon"   data-id="${content.id}"><img src="../images/edit.svg" alt="تعديل"></a>`;
-          }
-          if (permissions.canDeleteContent) {
-            icons += `<a href="#" class="delete-icon" data-id="${content.id}"><img src="../images/delet.svg" alt="حذف"></a>`;
-          }
-          icons += '</div>';
+                                let expiredBadge = '';
+        if (content.extra && content.extra.expired && getUserRoleFromToken() === 'admin') {
+          expiredBadge = `<span class="expired-badge" style="color: #fff; background: #d9534f; border-radius: 4px; padding: 2px 8px; margin-right: 8px; font-size: 12px;">${getTranslation('expired-content') || 'منتهي الصلاحية'}</span>`;
         }
+
+
+let icons = '';
+if (permissions.canEditContent || permissions.canDeleteContent) {
+  icons = '<div class="item-icons">';
+  // هنا نضيف الشارات أولاً عشان تظهر يسار الأزرار
+  icons += expiredBadge ;
+  if (permissions.canEditContent) {
+    icons += `<a href="#" class="edit-icon" data-id="${content.id}">
+                <img src="../images/edit.svg" alt="تعديل">
+              </a>`;
+  }
+  if (permissions.canDeleteContent) {
+    icons += `<a href="#" class="delete-icon" data-id="${content.id}">
+                <img src="../images/delet.svg" alt="حذف">
+              </a>`;
+  }
+  icons += '</div>';
+}
+        
 
         // 2) أنشئ العنصر
         const fileItem = document.createElement('div');
         fileItem.className = 'file-item';
+
+        
         fileItem.innerHTML = `
           ${icons}
           <img src="../images/pdf.svg" alt="ملف PDF">
           <div class="file-info">
             <div class="file-name">${displayTitle}</div>
             <div class="approval-status ${approvalClass}">${approvalStatus}</div>
+            <div class="file-date">${content.end_date}</div>
           </div>
         `;
         filesList.appendChild(fileItem);
@@ -1165,18 +1198,19 @@ function closeAddContentModal() {
 
     // Function to handle Create Content
 async function handleCreateContent() {
+    console.log('isOldContentMode:', isOldContentMode);
   const folderIdToUpload = document.getElementById('addContentFolderId')?.value;
   const contentFile      = document.getElementById('contentFile')?.files[0];
-
-  // 🟢 نجيب الاسم المختار من الحقل المخفي
   const selectedContentName = document.getElementById('selectedContentNameId')?.value;
+  // 🟢 حقول التواريخ
+  const startDate = document.getElementById('contentStartDate')?.value;
+  const endDate   = document.getElementById('contentEndDate')?.value;
 
   if (!folderIdToUpload || !selectedContentName || !contentFile || selectedContentName === getTranslation('choose-name')) {
     showToast(getTranslation('select-content'), 'error');
     return;
   }
 
-  // ابحث عن القالب الأصلي الذي يحتوي على الاسم باللغتين
   let titlePayload;
   const selectedTemplate = contentNames.find(template => {
     try {
@@ -1190,21 +1224,23 @@ async function handleCreateContent() {
   });
 
   if (selectedTemplate) {
-    // استخدم البيانات الأصلية من القالب
     try {
       titlePayload = JSON.parse(selectedTemplate.name);
     } catch (e) {
-      // لو فشل في فك JSON، استخدم الاسم كما هو
       titlePayload = { ar: selectedContentName, en: selectedContentName };
     }
   } else {
-    // لو لم نجد قالب، استخدم الاسم المختار في اللغتين
     titlePayload = { ar: selectedContentName, en: selectedContentName };
   }
 
   const formData = new FormData();
   formData.append('title', JSON.stringify(titlePayload));
   formData.append('file', contentFile);
+    if (isOldContentMode) formData.append('is_old_content', 'true');
+  // 🟢 أضف التواريخ
+  if (startDate) formData.append('start_date', startDate);
+  if (endDate)   formData.append('end_date', endDate);
+  
 
   try {
     const response = await fetch(
@@ -1669,6 +1705,9 @@ document.getElementById('updateFolderBtn')
                      document.getElementById('editSelectedContentNameId').value = displayTitle;
                      // عرض المودال
                      editContentModal.style.display = 'flex';
+                     // 🟢 عيّن التواريخ في الحقول
+                     document.getElementById('editContentStartDate').value = data.data.start_date ? data.data.start_date.split('T')[0] : '';
+                     document.getElementById('editContentEndDate').value   = data.data.end_date   ? data.data.end_date.split('T')[0]   : '';
 
                  } else {
                      showToast(data.message || 'فشل جلب بيانات المحتوى.', 'error');
@@ -1712,20 +1751,14 @@ function closeEditContentModal() {
         let contentId = editContentIdInput.value.trim();
         const contentTitle = document.getElementById('editSelectedContentNameId').value.trim();
         const contentFile = document.getElementById('editContentFile').files[0];
-      
-        // تنظيف معرف المحتوى (إزالة رموز غير رقمية مثل ⁃)
+        // 🟢 حقول التواريخ
+        const startDate = document.getElementById('editContentStartDate')?.value;
+        const endDate   = document.getElementById('editContentEndDate')?.value;
         contentId = contentId.replace(/[^\d]/g, '');
-      
-        console.log('🔄 handleUpdateContent: contentId =', contentId);
-        console.log('📄 New Title =', contentTitle);
-        console.log('📎 New File =', contentFile ? contentFile.name : 'No file selected');
-      
         if (!contentId || !contentTitle) {
           showToast(getTranslation('content-title-required'), 'error');
           return;
         }
-
-        // ابحث عن القالب الأصلي الذي يحتوي على الاسم باللغتين
         let titlePayload;
         const selectedTemplate = contentNames.find(template => {
           try {
@@ -1737,24 +1770,21 @@ function closeEditContentModal() {
             return template.name === contentTitle;
           }
         });
-
         if (selectedTemplate) {
-          // استخدم البيانات الأصلية من القالب
           try {
             titlePayload = JSON.parse(selectedTemplate.name);
           } catch (e) {
-            // لو فشل في فك JSON، استخدم الاسم كما هو
             titlePayload = { ar: contentTitle, en: contentTitle };
           }
         } else {
-          // لو لم نجد قالب، استخدم الاسم المختار في اللغتين
           titlePayload = { ar: contentTitle, en: contentTitle };
         }
-      
         const formData = new FormData();
         formData.append('title', JSON.stringify(titlePayload));
         if (contentFile) formData.append('file', contentFile);
-      
+        // 🟢 أضف التواريخ
+        if (startDate) formData.append('start_date', startDate);
+        if (endDate)   formData.append('end_date', endDate);
         try {
           const response = await fetch(`${apiBase}/contents/${contentId}`, {
             method: 'PUT',
@@ -1763,9 +1793,7 @@ function closeEditContentModal() {
             },
             body: formData
           });
-      
           const data = await response.json();
-      
           if (response.ok) {
             showToast(data.message || '✅ تم التحديث بنجاح', 'success');
             closeEditContentModal();
@@ -2183,8 +2211,7 @@ if (departmentIdFromUrl && isInitialFetch) {
                 return;
             }
     
-const name = { ar: nameAr, en: nameEn }; // 👈 كائن وليس سترنق
-
+            const name = JSON.stringify({ ar: nameAr, en: nameEn });
     
             try {
                 const response = await fetch(`${apiBase}/content-names/${id}`, {
@@ -2250,7 +2277,48 @@ const name = { ar: nameAr, en: nameEn }; // 👈 كائن وليس سترنق
 
     // --- Folder Name Modals ---
 
+    let isOldContentMode = false;
 
+    // 2) إضافة زر "إضافة محتوى قديم" بجانب زر إضافة محتوى عادي
+    const addOldContentBtn = document.createElement('button');
+    addOldContentBtn.className = 'btn-primary';
+    addOldContentBtn.id = 'addOldContentBtn';
+    addOldContentBtn.type = 'button';
+    addOldContentBtn.innerHTML = `<span data-translate="add-old-content">إضافة محتوى قديم</span>`;
+    addOldContentBtn.style.marginRight = '8px';
+    
+    // أضف الزر بجانب زر إضافة محتوى إذا كان للمستخدم الصلاحية
+    const fileControlsBar = document.querySelector('.file-controls-bar');
+    if (fileControlsBar) {
+      // دالة جلب صلاحيات المستخدم
+      function userCanAddOldContent() {
+        const role = getUserRoleFromToken();
+        if (role === 'admin') return true;
+        // تحقق من الصلاحيات الإضافية
+if (fileControlsBar && (getUserRoleFromToken() === 'admin' || permissions.canAddOldContent)) {
+  fileControlsBar.insertBefore(addOldContentBtn, document.getElementById('addContentBtn'));
+}
+
+        return false;
+      }
+      if (userCanAddOldContent()) {
+        fileControlsBar.insertBefore(addOldContentBtn, document.getElementById('addContentBtn'));
+      }
+    }
+    
+    // 3) عند الضغط على زر إضافة محتوى قديم
+    addOldContentBtn.addEventListener('click', function() {
+      isOldContentMode = true;
+      openAddContentModal();
+    });
+    
+    // 4) عند الضغط على زر إضافة محتوى عادي
+    if (addContentBtn) {
+      addContentBtn.addEventListener('click', function() {
+        isOldContentMode = false;
+        openAddContentModal();
+      });
+    }
 
 
 }); // End of DOMContentLoaded 
@@ -2260,47 +2328,70 @@ const name = { ar: nameAr, en: nameEn }; // 👈 كائن وليس سترنق
 // If you need to call applyLanguageUI(lang) from language.js, do so here if needed after dynamic content is rendered. 
 
 // تحديث نص الزر الافتراضي
-document.getElementById('folderNameToggle').innerHTML = `<span data-translate="choose-from-list">${getTranslation('choose-from-list')}</span> <span class="arrow">▾</span>`;
-document.getElementById('editFolderToggle').innerHTML = `<span data-translate="choose-from-list">${getTranslation('choose-from-list')}</span> <span class="arrow">▾</span>`;
-document.getElementById('contentNameToggle').innerHTML = `<span data-translate="choose-name">${getTranslation('choose-name')}</span> <span class="arrow">▾</span>`;
-document.getElementById('editContentNameToggle').innerHTML = `<span data-translate="choose-name">${getTranslation('choose-name')}</span> <span class="arrow">▾</span>`;
+const folderNameToggleEl = document.getElementById('folderNameToggle');
+if (folderNameToggleEl) folderNameToggleEl.innerHTML = `<span data-translate="choose-from-list">${getTranslation('choose-from-list')}</span> <span class="arrow">▾</span>`;
+const editFolderToggleEl = document.getElementById('editFolderToggle');
+if (editFolderToggleEl) editFolderToggleEl.innerHTML = `<span data-translate="choose-from-list">${getTranslation('choose-from-list')}</span> <span class="arrow">▾</span>`;
+const contentNameToggleEl = document.getElementById('contentNameToggle');
+if (contentNameToggleEl) contentNameToggleEl.innerHTML = `<span data-translate="choose-name">${getTranslation('choose-name')}</span> <span class="arrow">▾</span>`;
+const editContentNameToggleEl = document.getElementById('editContentNameToggle');
+if (editContentNameToggleEl) editContentNameToggleEl.innerHTML = `<span data-translate="choose-name">${getTranslation('choose-name')}</span> <span class="arrow">▾</span>`;
 
-// تحديث نص زر العودة للملفات
-document.getElementById('backToFilesBtn').innerHTML = `
+const backToFilesBtnEl = document.getElementById('backToFilesBtn');
+if (backToFilesBtnEl) backToFilesBtnEl.innerHTML = `
   <img src="../images/Back.png" alt="رجوع" class="back-arrow-icon">
   <span data-translate="back-to-files">العودة للملفات</span>
 `;
 
-// تحديث النصوص في القوائم المنسدلة
-document.getElementById('addNewContentNameLink').innerHTML = `<span data-translate="add-content-name">+ إضافة اسم جديد</span>`;
-document.getElementById('editAddNewLink').innerHTML = `<span data-translate="add-folder">إضافة مجلد+</span>`;
-document.getElementById('editAddNewContentNameLink').innerHTML = `<span data-translate="add-content-name">+ إضافة اسم جديد</span>`;
+const addNewContentNameLinkEl = document.getElementById('addNewContentNameLink');
+if (addNewContentNameLinkEl) addNewContentNameLinkEl.innerHTML = `<span data-translate="add-content-name">+ إضافة اسم جديد</span>`;
+const editAddNewLinkEl = document.getElementById('editAddNewLink');
+if (editAddNewLinkEl) editAddNewLinkEl.innerHTML = `<span data-translate="add-folder">إضافة مجلد+</span>`;
+const editAddNewContentNameLinkEl = document.getElementById('editAddNewContentNameLink');
+if (editAddNewContentNameLinkEl) editAddNewContentNameLinkEl.innerHTML = `<span data-translate="add-content-name">+ إضافة اسم جديد</span>`;
 
-// تحديث النصوص في النوافذ المنبثقة
-document.querySelector('#addFolderModal .modal-header h3').innerHTML = `<span data-translate="add-folder">إضافة مجلد</span>`;
-document.querySelector('#addContentModal .modal-header h3').innerHTML = `<span data-translate="add-content">إضافة محتوى للمجلد</span>`;
-document.querySelector('#editFolderModal .modal-header h3').innerHTML = `<span data-translate="edit-folder">تعديل مجلد</span>`;
-document.querySelector('#editContentModal .modal-header h3').innerHTML = `<span data-translate="edit-content">تعديل محتوى للمجلد</span>`;
-document.querySelector('#deleteFolderModal .modal-header h3').innerHTML = `<span data-translate="delete-folder-title">تأكيد حذف المجلد</span>`;
-document.querySelector('#deleteContentModal .modal-header h3').innerHTML = `<span data-translate="delete-content-title">تأكيد حذف المحتوى</span>`;
+const addFolderModalHeader = document.querySelector('#addFolderModal .modal-header h3');
+if (addFolderModalHeader) addFolderModalHeader.innerHTML = `<span data-translate="add-folder">إضافة مجلد</span>`;
+const addContentModalHeader = document.querySelector('#addContentModal .modal-header h3');
+if (addContentModalHeader) addContentModalHeader.innerHTML = `<span data-translate="add-content">إضافة محتوى للمجلد</span>`;
+const editFolderModalHeader = document.querySelector('#editFolderModal .modal-header h3');
+if (editFolderModalHeader) editFolderModalHeader.innerHTML = `<span data-translate="edit-folder">تعديل مجلد</span>`;
+const editContentModalHeader = document.querySelector('#editContentModal .modal-header h3');
+if (editContentModalHeader) editContentModalHeader.innerHTML = `<span data-translate="edit-content">تعديل محتوى للمجلد</span>`;
+const deleteFolderModalHeader = document.querySelector('#deleteFolderModal .modal-header h3');
+if (deleteFolderModalHeader) deleteFolderModalHeader.innerHTML = `<span data-translate="delete-folder-title">تأكيد حذف المجلد</span>`;
+const deleteContentModalHeader = document.querySelector('#deleteContentModal .modal-header h3');
+if (deleteContentModalHeader) deleteContentModalHeader.innerHTML = `<span data-translate="delete-content-title">تأكيد حذف المحتوى</span>`;
 
-// تحديث النصوص في الأزرار
-document.getElementById('createFolderBtn').innerHTML = `<span data-translate="create">إنشاء</span>`;
-document.getElementById('cancelFolderBtn').innerHTML = `<span data-translate="cancel">إلغاء</span>`;
-document.getElementById('createContentBtn').innerHTML = `<span data-translate="add">إضافة</span>`;
-document.getElementById('cancelContentBtn').innerHTML = `<span data-translate="cancel">إلغاء</span>`;
-document.getElementById('updateFolderBtn').innerHTML = `<span data-translate="update">تحديث</span>`;
-document.getElementById('cancelEditFolderBtn').innerHTML = `<span data-translate="cancel">إلغاء</span>`;
-document.getElementById('updateContentBtn').innerHTML = `<span data-translate="update">تحديث</span>`;
-document.getElementById('cancelEditContentBtn').innerHTML = `<span data-translate="cancel">إلغاء</span>`;
-document.getElementById('confirmDeleteFolderBtn').innerHTML = `<span data-translate="delete">حذف</span>`;
-document.getElementById('cancelDeleteFolderBtn').innerHTML = `<span data-translate="cancel">إلغاء</span>`;
-document.getElementById('confirmDeleteContentBtn').innerHTML = `<span data-translate="delete">حذف</span>`;
-document.getElementById('cancelDeleteContentBtn').innerHTML = `<span data-translate="cancel">إلغاء</span>`;
+const createFolderBtnEl = document.getElementById('createFolderBtn');
+if (createFolderBtnEl) createFolderBtnEl.innerHTML = `<span data-translate="create">إنشاء</span>`;
+const cancelFolderBtnEl = document.getElementById('cancelFolderBtn');
+if (cancelFolderBtnEl) cancelFolderBtnEl.innerHTML = `<span data-translate="cancel">إلغاء</span>`;
+const createContentBtnEl = document.getElementById('createContentBtn');
+if (createContentBtnEl) createContentBtnEl.innerHTML = `<span data-translate="add">إضافة</span>`;
+const cancelContentBtnEl = document.getElementById('cancelContentBtn');
+if (cancelContentBtnEl) cancelContentBtnEl.innerHTML = `<span data-translate="cancel">إلغاء</span>`;
+const updateFolderBtnEl = document.getElementById('updateFolderBtn');
+if (updateFolderBtnEl) updateFolderBtnEl.innerHTML = `<span data-translate="update">تحديث</span>`;
+const cancelEditFolderBtnEl = document.getElementById('cancelEditFolderBtn');
+if (cancelEditFolderBtnEl) cancelEditFolderBtnEl.innerHTML = `<span data-translate="cancel">إلغاء</span>`;
+const updateContentBtnEl = document.getElementById('updateContentBtn');
+if (updateContentBtnEl) updateContentBtnEl.innerHTML = `<span data-translate="update">تحديث</span>`;
+const cancelEditContentBtnEl = document.getElementById('cancelEditContentBtn');
+if (cancelEditContentBtnEl) cancelEditContentBtnEl.innerHTML = `<span data-translate="cancel">إلغاء</span>`;
+const confirmDeleteFolderBtnEl = document.getElementById('confirmDeleteFolderBtn');
+if (confirmDeleteFolderBtnEl) confirmDeleteFolderBtnEl.innerHTML = `<span data-translate="delete">حذف</span>`;
+const cancelDeleteFolderBtnEl = document.getElementById('cancelDeleteFolderBtn');
+if (cancelDeleteFolderBtnEl) cancelDeleteFolderBtnEl.innerHTML = `<span data-translate="cancel">إلغاء</span>`;
+const confirmDeleteContentBtnEl = document.getElementById('confirmDeleteContentBtn');
+if (confirmDeleteContentBtnEl) confirmDeleteContentBtnEl.innerHTML = `<span data-translate="delete">حذف</span>`;
+const cancelDeleteContentBtnEl = document.getElementById('cancelDeleteContentBtn');
+if (cancelDeleteContentBtnEl) cancelDeleteContentBtnEl.innerHTML = `<span data-translate="cancel">إلغاء</span>`;
 
-// تحديث النصوص في رسائل التأكيد
-document.querySelector('#deleteFolderModal .modal-body p').innerHTML = `<span data-translate="delete-folder-confirm">${getTranslation('delete-folder-confirm')}</span>`;
-document.querySelector('#deleteContentModal .modal-body p').innerHTML = `<span data-translate="delete-content-confirm">${getTranslation('delete-content-confirm')}</span>`;
+const deleteFolderModalBodyP = document.querySelector('#deleteFolderModal .modal-body p');
+if (deleteFolderModalBodyP) deleteFolderModalBodyP.innerHTML = `<span data-translate="delete-folder-confirm">${getTranslation('delete-folder-confirm')}</span>`;
+const deleteContentModalBodyP = document.querySelector('#deleteContentModal .modal-body p');
+if (deleteContentModalBodyP) deleteContentModalBodyP.innerHTML = `<span data-translate="delete-content-confirm">${getTranslation('delete-content-confirm')}</span>`;
 
 // تحديث النصوص في رسائل النجاح والخطأ
 const successMessages = {
@@ -2373,3 +2464,74 @@ function showToast(message, type = 'info', duration = 3000) {
 } 
 
 window.translations = translations;
+
+// 1) إضافة متغير وضع "محتوى قديم"
+
+
+// 5) عند إرسال النموذج، أضف is_old_content إذا كان الوضع قديم
+async function handleCreateContent() {
+  const folderIdToUpload = document.getElementById('addContentFolderId')?.value;
+  const contentFile      = document.getElementById('contentFile')?.files[0];
+  const selectedContentName = document.getElementById('selectedContentNameId')?.value;
+  const startDate = document.getElementById('contentStartDate')?.value;
+  const endDate   = document.getElementById('contentEndDate')?.value;
+
+  if (!folderIdToUpload || !selectedContentName || !contentFile || selectedContentName === getTranslation('choose-name')) {
+    showToast(getTranslation('select-content'), 'error');
+    return;
+  }
+
+  let titlePayload;
+  const selectedTemplate = contentNames.find(template => {
+    try {
+      const parsed = JSON.parse(template.name);
+      const lang = localStorage.getItem('language') || 'ar';
+      const displayName = parsed[lang] || parsed.ar;
+      return displayName === selectedContentName;
+    } catch (e) {
+      return template.name === selectedContentName;
+    }
+  });
+
+  if (selectedTemplate) {
+    try {
+      titlePayload = JSON.parse(selectedTemplate.name);
+    } catch (e) {
+      titlePayload = { ar: selectedContentName, en: selectedContentName };
+    }
+  } else {
+    titlePayload = { ar: selectedContentName, en: selectedContentName };
+  }
+
+  const formData = new FormData();
+  formData.append('title', JSON.stringify(titlePayload));
+  formData.append('file', contentFile);
+  if (startDate) formData.append('start_date', startDate);
+  if (endDate)   formData.append('end_date', endDate);
+  // 🟢 أضف is_old_content إذا كان الوضع قديم
+  if (isOldContentMode) formData.append('is_old_content', 'true');
+
+  try {
+    const response = await fetch(
+      `http://localhost:3006/api/folders/${folderIdToUpload}/contents`,
+      {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${getToken()}` },
+        body: formData
+      }
+    );
+
+    const result = await response.json();
+
+    if (response.ok) {
+      showToast(result.message || '✅ تم رفع المحتوى بنجاح!', 'success');
+      closeAddContentModal();
+      await fetchFolderContents(folderIdToUpload);
+    } else {
+      showToast(`❌ فشل إضافة المحتوى: ${result.message || 'خطأ'}`, 'error');
+    }
+  } catch (err) {
+    console.error(err);
+    showToast('❌ خطأ في الاتصال بالخادم.', 'error');
+  }
+}

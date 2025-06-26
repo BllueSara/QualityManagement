@@ -23,7 +23,54 @@ const translations = {
         
         // System title
         'system-title': 'نظام إدارة الجودة والسلامة',
+'dashboard-overview': 'لوحة المعاينة',
 
+        // Reports Page Translations
+        'reports': 'التقارير',
+        'reports-title': 'التقارير',
+        'tickets-reports': 'تقارير التذاكر',
+        'approvals-reports': 'تقارير الاعتمادات',
+        'tickets-reports-desc': 'عرض تقارير التذاكر حسب التصنيف والشهر',
+        'approvals-reports-desc': 'عرض تقارير الاعتمادات حسب القسم والتاريخ',
+
+        // Tickets Reports Page Translations
+        'tickets-reports-title': 'تقرير التذاكر حسب التصنيف والشهر',
+        'from-date': 'من:',
+        'to-date': 'إلى:',
+        'all-categories': 'كل التصنيفات',
+        'filter': 'عرض',
+        'show-all': 'عرض الكل',
+        'download': 'تحميل',
+        'category': 'التصنيف',
+        'loading': 'جاري التحميل...',
+        'error-loading-data': 'حدث خطأ أثناء جلب البيانات',
+        'error-downloading': 'حدث خطأ أثناء التحميل',
+
+        // Approvals Reports Page Translations
+        'approvals-reports-title': 'تقارير الاعتمادات',
+        'department': 'القسم',
+        'all-departments': 'الكل',
+        'start-date': 'تاريخ البداية',
+        'end-date': 'تاريخ الانتهاء',
+        'search': 'بحث',
+        'file-name': 'اسم الملف',
+        'department-name': 'اسم القسم',
+        'start-date-label': 'تاريخ البداية',
+        'end-date-label': 'تاريخ الانتهاء',
+        'at': 'في',
+        'add-more': 'إضافة معتمدين جدد',
+        'no-new-approvers': 'لا يوجد معتمدين جدد لإرسالهم',
+        'add-more-success': 'تم إضافة معتمدين جدد بنجاح',
+
+'view_reports' : 'عرض التقارير',
+'report-group-tickets' : 'تقارير التذاكر',
+'view_reports_by_person_tickets' : 'عرض تقارير التذاكر للشخص',
+'view_all_reports_tickets' : 'عرض كل تقارير التذاكر',
+'download_reports_tickets' : 'تحميل التقارير التذاكر',
+'report-group-approvals' : 'تقارير الاعتمادات',
+'view_reports_by_person_approvals' : 'عرض تقارير الاعتمادات للشخص',
+'view_all_reports_approvals' : 'عرض كل تقارير الاعتمادات',
+'download_reports_approvals' : 'تحميل التقارير الاعتمادات',
         // Committee Content Page specific translations
         'committee-content-title': 'محتويات اللجنة',
         'choose-folder-name': 'اختر اسم المجلد',
@@ -376,6 +423,7 @@ const translations = {
         'user-name': 'اسم المستخدم',
         'select-user': 'اختر المستخدم',
         'notes': 'ملاحظات',
+        'old-content': 'قديم',
         'confirm': 'تأكيد',
         'cancel': 'إلغاء',
         'sign': 'توقيع',
@@ -396,6 +444,8 @@ const translations = {
         'please-login': 'يرجى تسجيل الدخول أولاً',
         'please-select-user': 'يرجى اختيار المستخدم',
         'please-enter-reason': 'يرجى كتابة سبب الرفض',
+
+        'expired-content': 'محتوى منتهي الصلاحية',
 
         // Sign page translations
         'sign-title': 'توقيع بالنيابة - نظام إدارة الجودة والسلامة',
@@ -602,15 +652,10 @@ const translations = {
         'gender': 'الجنس',
         'male': 'ذكر',
         'female': 'أنثى',
-        'at': 'في',    'add-more': 'إضافة معتمدين جدد',
-    
-    // أضف هذا السطر:
-    'no-new-approvers': 'لا يوجد معتمدين جدد لإرسالهم',
-    'add-more-success': 'تم إضافة معتمدين جدد بنجاح',
         
         'report-type': 'نوع البلاغ',
         'accident': 'حادث',
-        'near-miss': 'شبه خطأ',
+        'near-miss': 'حدث قابل للتبليغ',
         
         'event-description': 'وصف الحدث',
         'has-attachments': 'يوجد مرفقات',
@@ -849,7 +894,15 @@ const translations = {
   "confirm_status_change": "هل تريد حقاً تغيير الحالة إلى",
   "logout_due_to_deactivation": "تم تعطيل حسابك، سيتم تسجيل الخروج.",
   "status_change_failed": "فشل تغيير الحالة.",
-  
+  'old-content': 'قديم',
+  'add_old_content': 'إضافة محتوى قديم',
+  'reports': 'تقارير',
+        // Committees (new UI strings)
+        'view_own_committees': 'عرض اللجان الحالية',
+        'select-committees': 'اختر اللجان',
+        'committee-selected': 'لجنة مختارة',
+        'search-committee-placeholder': 'ابحث عن لجنة...',
+        'view_own_department': 'عرض القسم الموجود',
     },
     en: {
         // Navigation
@@ -997,7 +1050,8 @@ const translations = {
         'permission-description': 'Permission Description',
         'assign-permission': 'Assign Permission',
         'remove-permission': 'Remove Permission',
-
+'old-content': 'Old',
+'add_old_content': 'Add Old Content',
         // Register specific
         'employee-number': 'Employee Number',
         'enter-employee-number': 'Enter employee number',
@@ -1078,6 +1132,7 @@ const translations = {
         'add': 'Add',
         'update': 'Update',
         'edit-folder': 'Edit Folder',
+        'reports': 'Reports',
         'edit-content': 'Edit Folder Content',
         'delete-folder-title': 'Confirm Folder Deletion',
         'delete-folder-confirm': 'Are you sure you want to delete this folder? This will delete all contents inside it.',
@@ -1149,6 +1204,7 @@ const translations = {
         "new": "New",
 "sent": "Sent",
 "closed": "Closed",
+'old-content': 'Old',
 
         // Approvals page specific translations
         'all-departments-committees': 'All Departments/Committees',
@@ -1274,6 +1330,15 @@ const translations = {
         'error-rejecting': 'Error rejecting document',
         'reason-required': '⚠️ Please enter rejection reason',
 
+'view_reports': 'View Reports',
+'report-group-tickets': 'Reports Tickets',
+'view_reports_by_person_tickets': 'View Reports By Person Tickets',
+'view_all_reports_tickets': 'View All Reports Tickets',
+'download_reports_tickets': 'Download Reports Tickets',
+'report-group-approvals': 'Reports Approvals',
+'view_reports_by_person_approvals': 'View Reports By Person Approvals',
+'view_all_reports_approvals': 'View All Reports Approvals',
+'download_reports_approvals': 'Download Reports Approvals',
         // Pending Approvals Page
         'pending-approvals-title': 'Pending Approvals - Quality and Safety Management System',
         'pending-approvals': 'Pending Approvals',
@@ -1368,6 +1433,7 @@ const translations = {
         'enter-reporter-position': 'Enter job title',
         'reporter-phone': 'Mobile Number',
         'reporter-email': 'Email',
+        'expired-content': 'Expired Content',
         
         'actions-taken': 'Actions Taken',
         'enter-actions': 'Describe the actions that were taken',
@@ -1414,6 +1480,23 @@ const translations = {
         'upload-hint': 'You can upload multiple files at once (jpg, png, pdf, doc).',
         
         'cancel': 'Cancel / Back',
+        'reports-title': 'Reports',
+                'tickets-reports': 'Tickets Reports',
+                    'approvals-reports': 'Approvals Reports',
+                       'tickets-reports-desc': 'Manage and view tickets reports',
+                       'approvals-reports-desc': 'Manage and view approvals reports',
+                      'tickets-reports-title': 'Tickets Reports',
+                      'approvals-reports-title': 'Approvals Reports',
+                            'all-categories': 'All Categories',
+                            'all-departments': 'All Departments',
+                            'show-all': 'Show All',
+                                 'start-date-label': 'Start Date',
+                                 'end-date-label': 'End Date',
+                                 'add-more': 'Add More Approvals',
+                                    'no-new-approvers': 'No new approvers',
+                                 'add-more-success': 'Successfully added more approvers',
+                                 'add-more-failed': 'Failed to add more approvers',  
+                                 'download': 'Download',  
 
         // Ticket List Page Translations
         'ticket-list-title': 'Ticket List - Quality and Safety Management System',
@@ -1687,6 +1770,12 @@ const translations = {
         'no-files-selected': 'No files selected',
         'select-classification': 'Please select at least one classification',
         'classification-hint': 'Separate classifications with commas',
+        // Committees (new UI strings)
+        'view_own_committees': 'View Own Committees',
+        'select-committees': 'Select Committees',
+        'committee-selected': 'Committee Selected',
+        'search-committee-placeholder': 'Search for a committee...',
+        'view_own_department': 'View Own Department',
     }
 };
 window.translations = translations;

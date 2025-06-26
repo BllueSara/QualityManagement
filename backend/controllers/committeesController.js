@@ -119,9 +119,71 @@ function getUserLanguageFromToken(token) {
 // ========== Committees CRUD ==========
 exports.getCommittees = async (req, res) => {
     try {
-        const [rows] = await db.execute('SELECT * FROM committees');
+        // استخراج معلومات المستخدم من التوكن
+        const token = req.headers.authorization?.split(' ')[1];
+        let userId = null;
+        let userRole = null;
+        let canViewOwnCommittees = false;
+
+        if (token) {
+            try {
+                const decoded = jwt.verify(token, process.env.JWT_SECRET);
+                userId = decoded.id;
+                userRole = decoded.role;
+
+                // جلب صلاحيات المستخدم
+                const [permRows] = await db.execute(`
+                    SELECT p.permission_key
+                    FROM permissions p
+                    JOIN user_permissions up ON up.permission_id = p.id
+                    WHERE up.user_id = ?
+                `, [userId]);
+                
+                const userPermissions = new Set(permRows.map(r => r.permission_key));
+                canViewOwnCommittees = userPermissions.has('view_own_committees');
+            } catch (error) {
+                console.error('Error decoding token:', error);
+            }
+        }
+
+        let query = 'SELECT * FROM committees';
+        let params = [];
+
+        // إذا كان المستخدم admin أو ليس لديه صلاحية view_own_committees، اجلب كل اللجان
+        if (userRole === 'admin' || !canViewOwnCommittees) {
+            query = 'SELECT * FROM committees';
+        } else {
+            // إذا كان لديه صلاحية view_own_committees، تحقق من وجود لجان مختارة
+            if (userId) {
+                // تحقق من وجود لجان مختارة للمستخدم
+                const [userCommittees] = await db.execute(`
+                    SELECT COUNT(*) as count FROM user_committees WHERE user_id = ?
+                `, [userId]);
+                
+                if (userCommittees[0].count > 0) {
+                    // إذا كان لديه لجان مختارة، اجلبها
+                    query = `
+                        SELECT DISTINCT c.* 
+                        FROM committees c
+                        JOIN user_committees uc ON c.id = uc.committee_id
+                        WHERE uc.user_id = ?
+                        ORDER BY c.name
+                    `;
+                    params = [userId];
+                } else {
+                    // إذا لم يكن لديه لجان مختارة، اجلب كل اللجان
+                    query = 'SELECT * FROM committees';
+                }
+            } else {
+                // إذا لم يكن هناك userId، اجلب كل اللجان
+                query = 'SELECT * FROM committees';
+            }
+        }
+
+        const [rows] = await db.execute(query, params);
         res.status(200).json(rows);
     } catch (error) {
+        console.error('Error in getCommittees:', error);
         res.status(500).json({ message: 'خطأ في جلب اللجان', error });
     }
 };

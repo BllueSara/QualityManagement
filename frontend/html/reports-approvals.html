@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>تقارير الاعتمادات</title>
+  <title data-translate="approvals-reports-title">تقارير الاعتمادات</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,27 +25,27 @@
   </header>
   <main>
     <div class="container">
-      <h1 class="reports-title" id="page-title">تقارير الاعتمادات</h1>
+      <h1 class="reports-title" id="page-title" data-translate="approvals-reports-title">تقارير الاعتمادات</h1>
       <div class="actions-bar">
-        <label>القسم:
+        <label><span data-translate="department">القسم:</span>
           <select id="department-select">
-            <option value="all">الكل</option>
+            <option value="all" data-translate="all-departments">الكل</option>
             <!-- Departments will be populated dynamically -->
           </select>
         </label>
-        <label>من: <input type="date" id="start-date"></label>
-        <label>إلى: <input type="date" id="end-date"></label>
-        <button id="filter-btn" class="btn"><i class="fas fa-filter"></i> بحث</button>
-        <button id="download-btn" class="btn"><i class="fas fa-download"></i> تحميل</button>
+        <label><span data-translate="from-date">من:</span> <input type="date" id="start-date"></label>
+        <label><span data-translate="to-date">إلى:</span> <input type="date" id="end-date"></label>
+        <button id="filter-btn" class="btn"><i class="fas fa-filter"></i> <span data-translate="search">بحث</span></button>
+        <button id="download-btn" class="btn"><i class="fas fa-download"></i> <span data-translate="download">تحميل</span></button>
       </div>
       <div class="table-wrapper">
         <table id="approvals-report-table">
           <thead>
             <tr>
-              <th id="file-name-th">اسم الملف</th>
-              <th id="department-th">القسم</th>
-              <th id="start-date-th">تاريخ البداية</th>
-              <th id="end-date-th">تاريخ الانتهاء</th>
+              <th id="file-name-th" data-translate="file-name">اسم الملف</th>
+              <th id="department-th" data-translate="department-name">اسم القسم</th>
+              <th id="start-date-th" data-translate="start-date-label">تاريخ البداية</th>
+              <th id="end-date-th" data-translate="end-date-label">تاريخ الانتهاء</th>
             </tr>
           </thead>
           <tbody>
@@ -55,6 +55,7 @@
       </div>
     </div>
   </main>
+  <script src="../js/language.js"></script>
   <script src="../js/reports-approvals.js"></script>
 </body>
 </html> 
