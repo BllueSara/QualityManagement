@@ -32,7 +32,7 @@ function getUserRoleFromToken() {
 async function fetchPermissions() {
   const userId = JSON.parse(atob(getToken().split('.')[1])).id;
   const headers = { 'Authorization': `Bearer ${getToken()}` };
-  const res = await fetch(`${apiBase}/users/${userId}/permissions`, { headers });
+  const res = await fetch(`${apiBase}/api/users/${userId}/permissions`, { headers });
   if (!res.ok) return;
   const { data: perms } = await res.json();
   const keys = perms.map(p => typeof p === 'string' ? p : p.permission);
@@ -69,16 +69,27 @@ function setLanguage(lang) {
   document.getElementById('department-select').options[0].textContent = getTranslation('all-departments');
 }
 
-// بيانات وهمية للتجربة
-const mockData = [
-  { fileName: 'ملف 1.pdf', department: 'الجودة', startDate: '2024-05-01', endDate: '2024-05-10' },
-  { fileName: 'ملف 2.pdf', department: 'التمريض', startDate: '2024-05-03', endDate: '2024-05-12' },
-  { fileName: 'ملف 3.pdf', department: 'الموارد البشرية', startDate: '2024-05-05', endDate: '2024-05-15' },
-];
+// بيانات التقارير الحقيقية
+let approvalsData = [];
+
+// جلب بيانات تقارير الاعتمادات من الباك اند
+async function fetchApprovalsReports() {
+  try {
+    const res = await fetch(`${apiBase}/api/reports/approvals`, {
+      headers: { 'Authorization': `Bearer ${getToken()}` }
+    });
+    if (!res.ok) throw new Error('Network response was not ok');
+    const { data } = await res.json();
+    approvalsData = data || [];
+  } catch (err) {
+    console.error('Failed to fetch approvals reports:', err);
+    approvalsData = [];
+  }
+}
 
 async function fetchDepartments() {
   try {
-    const res = await fetch('/api/departments');
+    const res = await fetch(`${apiBase}/api/departments`);
     if (!res.ok) throw new Error('Network response was not ok');
     return await res.json();
   } catch (err) {
@@ -106,15 +117,58 @@ async function populateDepartments() {
   });
 }
 
+function getDepartmentName(dep) {
+  if (!dep) return '';
+  if (typeof dep === 'string') {
+    try {
+      const obj = JSON.parse(dep);
+      if (typeof obj === 'object' && obj.ar && obj.en) {
+        return obj[getCurrentLang()] || obj.ar;
+      }
+      return dep;
+    } catch {
+      return dep;
+    }
+  }
+  if (typeof dep === 'object' && (dep.ar || dep.en)) {
+    return dep[getCurrentLang()] || dep.ar || dep.en;
+  }
+  return String(dep);
+}
+
+function getFileName(name) {
+  if (!name) return '';
+  if (typeof name === 'string') {
+    try {
+      const obj = JSON.parse(name);
+      if (typeof obj === 'object' && obj.ar && obj.en) {
+        return obj[getCurrentLang()] || obj.ar;
+      }
+      return name;
+    } catch {
+      return name;
+    }
+  }
+  if (typeof name === 'object' && (name.ar || name.en)) {
+    return name[getCurrentLang()] || name.ar || name.en;
+  }
+  return String(name);
+}
+
 function filterData() {
   const dep = document.getElementById('department-select').value;
   const start = document.getElementById('start-date').value;
   const end   = document.getElementById('end-date').value;
-  return mockData.filter(row => {
-    const matchDep   = dep === 'all' || row.department === dep;
+  const fileNameInput = document.getElementById('file-name-input');
+  const fileNameFilter = fileNameInput ? fileNameInput.value.trim() : '';
+  return approvalsData.filter(row => {
+    const rowDepName = getDepartmentName(row.department);
+    const rowFileName = getFileName(row.fileName);
+    const matchDep   = dep === 'all' || rowDepName === dep;
     const matchStart = !start || row.startDate >= start;
     const matchEnd   = !end   || row.endDate <= end;
-    return matchDep && matchStart && matchEnd;
+    const matchFile  = !fileNameFilter || rowFileName.includes(fileNameFilter);
+    return matchDep && matchStart && matchEnd && matchFile;
   });
 }
 
@@ -124,10 +178,10 @@ function populateTable() {
   filterData().forEach(row => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${row.fileName}</td>
-      <td>${row.department}</td>
-      <td>${row.startDate}</td>
-      <td>${row.endDate}</td>
+      <td>${getFileName(row.fileName)}</td>
+      <td>${getDepartmentName(row.department)}</td>
+      <td>${row.startDate ? row.startDate.split('T')[0] : ''}</td>
+      <td>${row.endDate ? row.endDate.split('T')[0] : ''}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -141,8 +195,13 @@ function downloadCSV() {
     getTranslation('start-date-label'),
     getTranslation('end-date-label')
   ];
-  const rows = data.map(r => [r.fileName, r.department, r.startDate, r.endDate]);
-  const csv = [header.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const rows = data.map(r => [
+    getFileName(r.fileName),
+    getDepartmentName(r.department),
+    r.startDate,
+    r.endDate
+  ]);
+  const csv = '\uFEFF' + [header.join(','), ...rows.map(r => r.join(','))].join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
@@ -155,6 +214,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   setLanguage(getCurrentLang());
   await fetchPermissions();      // أولًا: جلب صلاحيات المستخدم
   await populateDepartments();
+  await fetchApprovalsReports(); // جلب بيانات التقارير
   populateTable();
 
   document.getElementById('filter-btn')

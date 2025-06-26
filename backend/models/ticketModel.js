@@ -10,6 +10,7 @@ const db = mysql.createPool({
 class Ticket {
 // models/Ticket.js
 static async create(ticketData, userId) {
+  const allowedGenders = ['ذكر', 'أنثى', 'male', 'female'];
   const {
     event_date, event_time, event_location,
     reporting_dept_id, responding_dept_id, other_depts,
@@ -27,6 +28,9 @@ static async create(ticketData, userId) {
   try {
     await connection.beginTransaction();
 
+    // تأكد أن gender صحيح
+    const safeGender = (gender === undefined || gender === null || gender === '' || gender === 'null' || !allowedGenders.includes(gender)) ? null : gender;
+
     // 1) إدراج التذكرة
     const [result] = await connection.query(
       `INSERT INTO tickets (
@@ -42,7 +46,7 @@ static async create(ticketData, userId) {
       [
         event_date, event_time, event_location,
         reporting_dept_id, responding_dept_id, other_depts,
-        patient_name, medical_record_no, dob, gender,
+        patient_name, medical_record_no, dob, safeGender,
         report_type, report_short_desc, event_description,
         reporter_name, report_date, reporter_position,
         reporter_phone, reporter_email, actions_taken,
@@ -98,97 +102,86 @@ static async create(ticketData, userId) {
     connection.release();
   }
 }
-
 static async findAllAndAssignments(userId, userRole) {
   const conn = await db.getConnection();
   try {
-    // 1) جلب صلاحيات المستخدم من جدول user_permissions
+    // 1) صلاحيات المستخدم
     const [permRows] = await conn.query(
-      `SELECT p.permission_key 
+      `SELECT p.permission_key
        FROM permissions p
        JOIN user_permissions up ON up.permission_id = p.id
        WHERE up.user_id = ?`,
       [userId]
     );
     const userPerms = new Set(permRows.map(r => r.permission_key));
+    const canViewAll = userRole === 'admin' || userPerms.has('view_tickets');
 
-    // إذا ادمن أو لديه صلاحية view_tickets => يرى كل التذاكر
-    const canViewAll = (userRole === 'admin') || userPerms.has('view_tickets');
+    // 2) SQL مع تجميع التصنيفات بشكل موثوق
+    let baseSQL = `
+      SELECT
+        t.id,
+        t.event_date,
+        t.event_time,
+        t.event_location,
+        rd.name       AS reporting_dept,
+        sd.name       AS responding_dept,
+        latest.status AS current_status,
+        u.username    AS created_by,
+        t.created_at,
+        -- لو ما فيه تصنيفات نرجع []، وإلا نجمعهم
+COALESCE(JSON_ARRAYAGG(tc.classification), JSON_ARRAY()) AS classifications
+      FROM tickets t
+      LEFT JOIN departments rd ON t.reporting_dept_id = rd.id
+      LEFT JOIN departments sd ON t.responding_dept_id = sd.id
+      LEFT JOIN users u       ON t.created_by = u.id
+      LEFT JOIN (
+        SELECT h1.ticket_id, h1.status
+        FROM ticket_status_history h1
+        INNER JOIN (
+          SELECT ticket_id, MAX(id) AS max_id
+          FROM ticket_status_history
+          GROUP BY ticket_id
+        ) h2 ON h1.ticket_id = h2.ticket_id AND h1.id = h2.max_id
+      ) AS latest ON latest.ticket_id = t.id
+      LEFT JOIN ticket_classifications tc
+        ON tc.ticket_id = t.id
+    `;
 
-    let sql, params = [];
-
-    if (canViewAll) {
-      // للمشرف أو من يملك view_tickets: كل التذاكر مع آخر حالة
-      sql = `
-        SELECT
-          t.id,
-          t.event_date,
-          t.event_time,
-          t.event_location,
-          rd.name        AS reporting_dept,
-          sd.name        AS responding_dept,
-          latest.status  AS current_status,
-          u.username     AS created_by,
-          t.created_at
-        FROM tickets t
-        LEFT JOIN departments rd ON t.reporting_dept_id = rd.id
-        LEFT JOIN departments sd ON t.responding_dept_id = sd.id
-        LEFT JOIN users u      ON t.created_by = u.id
-
-        LEFT JOIN (
-          SELECT h1.ticket_id, h1.status
-          FROM ticket_status_history h1
-          INNER JOIN (
-            SELECT ticket_id, MAX(id) AS max_id
-            FROM ticket_status_history
-            GROUP BY ticket_id
-          ) h2 ON h1.ticket_id = h2.ticket_id AND h1.id = h2.max_id
-        ) AS latest ON latest.ticket_id = t.id
-
-        ORDER BY t.created_at DESC
-      `;
-    } else {
-      // للمستخدم العادي بدون صلاحية عرض الكل: فقط التذاكر المحوَّلة إليه والحالة 'تم الإرسال'
-      sql = `
-        SELECT
-          t.id,
-          t.event_date,
-          t.event_time,
-          t.event_location,
-          rd.name        AS reporting_dept,
-          sd.name        AS responding_dept,
-          latest.status  AS current_status,
-          u.username     AS created_by,
-          t.created_at
-        FROM tickets t
-        LEFT JOIN departments rd ON t.reporting_dept_id = rd.id
-        LEFT JOIN departments sd ON t.responding_dept_id = sd.id
-        LEFT JOIN users u      ON t.created_by = u.id
-
-        LEFT JOIN (
-          SELECT h1.ticket_id, h1.status
-          FROM ticket_status_history h1
-          INNER JOIN (
-            SELECT ticket_id, MAX(id) AS max_id
-            FROM ticket_status_history
-            GROUP BY ticket_id
-          ) h2 ON h1.ticket_id = h2.ticket_id AND h1.id = h2.max_id
-        ) AS latest ON latest.ticket_id = t.id
-
+    // 3) شرط لغير الأدمن
+    let whereClause = '';
+    const params = [];
+    if (!canViewAll) {
+      whereClause = `
         WHERE EXISTS (
           SELECT 1
           FROM ticket_assignments ta
           WHERE ta.ticket_id   = t.id
             AND ta.assigned_to = ?
         )
-
-        ORDER BY t.created_at DESC
       `;
       params.push(userId);
     }
 
+    // 4) لازم GROUP BY بسبب COUNT/JSON_ARRAYAGG
+    const orderClause = `
+      GROUP BY t.id
+      ORDER BY t.created_at DESC
+    `;
+
+    const sql = baseSQL + whereClause + orderClause;
+
+    // 5) جلب النتائج
     const [rows] = await conn.query(sql, params);
-    return rows;
+
+    // 6) حوّل حقل classifications من JSON string لمصفوفة JS
+    const tickets = rows.map(r => ({
+      ...r,
+      classifications: typeof r.classifications === 'string'
+        ? JSON.parse(r.classifications)
+        : r.classifications
+    }));
+
+    return tickets;
 
   } finally {
     conn.release();
@@ -286,6 +279,7 @@ static async findById(id) {
       [id]
     );
     ticket.classifications = classifications.map(r => r.classification);
+    console.log('classifications:', ticket.classifications);
 
     // 5) أنواع المرضى
     const [patientTypes] = await conn.query(
@@ -320,6 +314,8 @@ static async findById(id) {
 
 // في ملف backend/models/ticketModel.js
 
+// في ملف backend/models/ticketModel.js
+
 static async update(id, ticketData, userId) {
   const connection = await db.getConnection();
   try {
@@ -336,35 +332,58 @@ static async update(id, ticketData, userId) {
     const orig = origRows[0];
     const currentStatus = orig.status;
 
+    const allowedGenders = ['ذكر', 'أنثى', 'male', 'female'];
+
     // 2) فك التدمير مع قيم افتراضية من orig
     let {
       event_date     = orig.event_date,
       event_time     = orig.event_time,
       event_location = orig.event_location,
-      reporting_dept_id = orig.reporting_dept_id,
+      reporting_dept_id  = orig.reporting_dept_id,
       responding_dept_id = orig.responding_dept_id,
-      other_depts       = orig.other_depts,
-      patient_name      = orig.patient_name,
-      medical_record_no = orig.medical_record_no,
-      dob               = orig.dob,
+      other_depts       = orig.other_depts ?? null,
+      patient_name      = orig.patient_name ?? null,
+      medical_record_no = orig.medical_record_no ?? null,
+      dob               = orig.dob ?? null,
       gender            = orig.gender,
-      report_type       = orig.report_type,
-      report_short_desc = orig.report_short_desc,
-      event_description = orig.event_description,
-      reporter_name     = orig.reporter_name,
+      report_type       = orig.report_type ?? null,
+      report_short_desc = orig.report_short_desc ?? null,
+      event_description = orig.event_description ?? null,
+      reporter_name     = orig.reporter_name ?? null,
       report_date       = orig.report_date,
-      reporter_position = orig.reporter_position,
-      reporter_phone    = orig.reporter_phone,
-      reporter_email    = orig.reporter_email,
-      actions_taken     = orig.actions_taken,
-      had_injury        = orig.had_injury,
-      injury_type       = orig.injury_type,
+      reporter_position = orig.reporter_position ?? null,
+      reporter_phone    = orig.reporter_phone ?? null,
+      reporter_email    = orig.reporter_email ?? null,
+      actions_taken     = orig.actions_taken ?? null,
+      had_injury,
+      injury_type,
       status            = orig.status,
       attachments       = []
     } = ticketData;
 
-    // القيمة الواحدة للـ patient_type
-    let { patient_type = null } = ticketData;
+    // 2.1) معالجة الحقول الاختيارية
+    // other_depts, patient_name, ... فعلتها ضمن defaults أعلى
+    // تأكد من صحة gender
+    gender = allowedGenders.includes(gender) ? gender : null;
+
+    // had_injury: إذا جاء '' أو undefined اعتبره null
+    had_injury = (had_injury === undefined || had_injury === '') 
+                  ? null 
+                  : had_injury;
+
+    // injury_type:
+    // - لو المفتاح غير موجود: خليه زي ما كان في DB
+    if (ticketData.injury_type === undefined) {
+      injury_type = orig.injury_type;
+    } else {
+      // لو جاء '' اعتبره null، وإلا استخدم القيمة
+      injury_type = (injury_type === '') ? null : injury_type;
+    }
+
+    // report_date: لو مررنا فراغ استخدم القيمة الأصلية
+    if (ticketData.report_date === undefined || ticketData.report_date === '') {
+      report_date = orig.report_date;
+    }
 
     // لو أرسل attachments كمصفوفة:
     if (Array.isArray(ticketData.attachments)) {
@@ -426,33 +445,28 @@ static async update(id, ticketData, userId) {
     );
 
     // 4) تحديث patient_type في ticket_patient_types
-    // نحذف القديم
     await connection.query(
       'DELETE FROM ticket_patient_types WHERE ticket_id = ?',
       [id]
     );
-    // إذا أرسل العميل patient_type غير فارغ
-    if (patient_type) {
+    if (ticketData.patient_type) {
       await connection.query(
         'INSERT INTO ticket_patient_types (ticket_id, patient_type) VALUES (?, ?)',
-        [id, patient_type]
+        [id, ticketData.patient_type]
       );
     }
 
-    // 5) تحديث التصنيفات كما سبق (إذا تريد) …
-    // مثال:
-    if (Array.isArray(ticketData.classifications)) {
+    // 5) تحديث التصنيفات فقط إذا أُرسلت
+    if (ticketData.classifications !== undefined && Array.isArray(ticketData.classifications) && ticketData.classifications.length > 0) {
       await connection.query(
         'DELETE FROM ticket_classifications WHERE ticket_id = ?',
         [id]
       );
-      if (ticketData.classifications.length > 0) {
-        const clsVals = ticketData.classifications.map(c => [id, c]);
-        await connection.query(
-          'INSERT INTO ticket_classifications (ticket_id, classification) VALUES ?',
-          [clsVals]
-        );
-      }
+      const clsVals = ticketData.classifications.map(c => [id, c]);
+      await connection.query(
+        'INSERT INTO ticket_classifications (ticket_id, classification) VALUES ?',
+        [clsVals]
+      );
     }
 
     // 6) إضافة مرفقات جديدة
@@ -468,7 +482,7 @@ static async update(id, ticketData, userId) {
       );
     }
 
-    // 7) تاريخ حالة التذكرة
+    // 7) تسجيل تغيير الحالة
     if (status && status !== currentStatus) {
       await connection.query(
         `INSERT INTO ticket_status_history

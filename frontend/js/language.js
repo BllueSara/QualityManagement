@@ -45,7 +45,7 @@ const translations = {
         'loading': 'جاري التحميل...',
         'error-loading-data': 'حدث خطأ أثناء جلب البيانات',
         'error-downloading': 'حدث خطأ أثناء التحميل',
-
+'transfer-tickets-desc' : 'ادارة وتحويل التذاكر الحالية بسلاسة',
         // Approvals Reports Page Translations
         'approvals-reports-title': 'تقارير الاعتمادات',
         'department': 'القسم',
@@ -506,7 +506,6 @@ const translations = {
         'view-tickets-desc': 'استعراض وإدارة التذاكر الحالية',
         'view-all-tickets': 'عرض جميع التذاكر',
         'transfer-tickets-title': 'تحويل التذاكر',
-        'transfer-tickets-desc': 'إدارة وتحويل التذاكر الحالية بسلاسة',
         'start-transfer': 'ابدأ عملية التحويل',
 
         // Ticket Creation Page Translations
@@ -903,8 +902,6 @@ const translations = {
         'committee-selected': 'لجنة مختارة',
         'search-committee-placeholder': 'ابحث عن لجنة...',
         'view_own_department': 'عرض القسم الموجود',
-        'transfer-tickets-desc': 'Manage and transfer current OVR smoothly',
-        'start-transfer': 'Start Transfer Process',
 
         // رسائل التحويل الجديدة
         'ticket-closed-error': 'Cannot transfer ticket because it is closed',
@@ -1014,6 +1011,7 @@ const translations = {
         'edit-department': 'Edit Department',
         'employee-number-placeholder': 'Enter Employee Number',
         'at':'at',
+        'transfer-tickets-desc': 'Manage and transfer current OVR smoothly',
 
         // Approvals
         'approval-list': 'Approval List',
@@ -1387,7 +1385,6 @@ const translations = {
         'view-tickets-desc': 'Browse and manage current OVR',
         'view-all-tickets': 'View All OVR',
         'transfer-tickets-title': 'Transfer OVR',
-        'transfer-tickets-desc': 'Manage and transfer current OVR smoothly',
         'start-transfer': 'Start Transfer Process',
 
         'disable_approvals': 'Disable Approvals',

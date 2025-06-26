@@ -20,17 +20,20 @@
             <div class="hospital-logo">
                 <img src="/frontend/images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز">
             </div>
-            <nav>
-                <ul>
-                    <li><a href="index.html"><img src="/frontend/images/home.svg" alt=""> <span data-translate="home">الرئيسية</span></a></li>
-                    <li><a href="profile.html"><img src="/frontend/images/profile.svg" alt=""> <span data-translate="account">الحساب</span></a></li>
-                </ul>
-            </nav>
             <div class="system-title">
                 <img src="/frontend/images/system-title.png" alt="نظام إدارة الجودة والسلامة">
             </div>
         </div>
     </header>
+      <div class="header-actions">
+    <button class="back-btn" onclick="history.back()">
+     <i class="fas fa-arrow-right" id="backIcon"></i>        <span data-translate="back">رجوع</span>
+  </button>
+  <button class="home-btn" onclick="window.location.href='index.html'">
+    <i class="fas fa-home"></i>
+    <span data-translate="home">الرئيسية</span>
+  </button>
+</div>
     <main>
         <div class="container">
             <h1 class="reports-title" data-translate="reports-title">التقارير</h1>
