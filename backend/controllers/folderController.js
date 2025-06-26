@@ -486,6 +486,13 @@ const updateFolderName = async (req, res) => {
       conn.release();
       return res.status(404).json({ message: '❌ لم يتم العثور على اسم المجلد.' });
     }
+    const oldName = rows[0].name;
+
+    // 2) تحديث الاسم في قاعدة البيانات
+    await conn.execute(
+      'UPDATE folder_names SET name = ? WHERE id = ?',
+      [name, id]
+    );
 
     // ✅ تسجيل اللوق بعد نجاح تعديل اسم المجلد
     const token = req.headers.authorization?.split(' ')[1];
@@ -494,14 +501,10 @@ const updateFolderName = async (req, res) => {
       const userId = decoded.id;
       
       try {
-        const userLanguage = getUserLanguageFromToken(token);
-        const oldFolderNameInLanguage = getFolderNameByLanguage(rows[0].name, userLanguage);
-        const newFolderNameInLanguage = getFolderNameByLanguage(name, userLanguage);
-        
         // إنشاء النص ثنائي اللغة
         const logDescription = {
-          ar: `تم تعديل اسم مجلد للأقسام من: ${getFolderNameByLanguage(oldFolderNameInLanguage, 'ar')} إلى: ${getFolderNameByLanguage(newFolderNameInLanguage, 'ar')}`,
-          en: `Updated folder name for departments from: ${getFolderNameByLanguage(oldFolderNameInLanguage, 'en')} to: ${getFolderNameByLanguage(newFolderNameInLanguage, 'en')}`
+          ar: `تم تعديل اسم مجلد للأقسام من: ${getFolderNameByLanguage(oldName, 'ar')} إلى: ${getFolderNameByLanguage(name, 'ar')}`,
+          en: `Updated folder name for departments from: ${getFolderNameByLanguage(oldName, 'en')} to: ${getFolderNameByLanguage(name, 'en')}`
         };
         
         await logAction(
@@ -550,8 +553,6 @@ const deleteFolderName = async (req, res) => {
       const userId = decoded.id;
       
       try {
-        const userLanguage = getUserLanguageFromToken(token);
-        const folderNameInLanguage = getFolderNameByLanguage(folderName, userLanguage);
         
         // إنشاء النص ثنائي اللغة
         const logDescription = {
@@ -574,7 +575,7 @@ const deleteFolderName = async (req, res) => {
       await insertNotification(
         userId,
         'حذف اسم مجلد',
-        `تم حذف اسم مجلد للأقسام: ${folderNameInLanguage}`,
+        `تم حذف اسم مجلد للأقسام: ${folderName}`,
         'delete'
       );
     }
