@@ -903,6 +903,17 @@ const translations = {
         'committee-selected': 'لجنة مختارة',
         'search-committee-placeholder': 'ابحث عن لجنة...',
         'view_own_department': 'عرض القسم الموجود',
+        'transfer-tickets-desc': 'Manage and transfer current OVR smoothly',
+        'start-transfer': 'Start Transfer Process',
+
+        // رسائل التحويل الجديدة
+        'ticket-closed-error': 'Cannot transfer ticket because it is closed',
+        'already-assigned-error': 'All selected users are already assigned to this ticket',
+        'transfer-success': 'Ticket transferred successfully',
+        'users-assigned': 'user assigned',
+        'users-skipped': 'user skipped (already assigned)',
+
+        'disable_approvals': 'Disable Approvals',
     },
     en: {
         // Navigation
