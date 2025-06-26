@@ -108,55 +108,67 @@ try {
             alert('يرجى اختيار القسم المبلغ والقسم المستجيب.');
             return;
         }
-  const checkboxes = form.querySelectorAll('input[type="checkbox"][name="classification"]');
-    const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
-    if (!anyChecked) {
-      alert('يرجى اختيار خيار واحد على الأقل');
-      return;
-    }
-// بعد: const formData = new FormData(form);
 
-// Map fields one by one:
+        // التحقق من اختيار نوع البلاغ
+        const reportType = form.querySelector('input[name="reportType"]:checked');
+        if (!reportType) {
+            alert('يرجى اختيار نوع البلاغ.');
+            return;
+        }
 
-// جمع بيانات النموذج
-const formData = new FormData(form);
-formData.set('event_date', formData.get('eventDate'));
-formData.set('event_time', formData.get('eventTime'));
-formData.set('event_location', formData.get('eventLocation'));
-formData.set('reporting_dept_id', formData.get('reportingDept'));
-formData.set('responding_dept_id', formData.get('respondingDept'));
-formData.set('other_depts', formData.get('otherDepts'));
-formData.set('patient_name', formData.get('patientName'));
-formData.set('medical_record_no', formData.get('medicalRecordNo'));
-// … بعد formData.set('medical_record_no', …)
+        const checkboxes = form.querySelectorAll('input[type="checkbox"][name="classification"]');
+        const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
+        if (!anyChecked) {
+          alert('يرجى اختيار خيار واحد على الأقل');
+          return;
+        }
 
+        // بعد: const formData = new FormData(form);
 
-// جمع patient types
-const patientTypeValues = Array.from(
-  form.querySelectorAll('input[name="patientType"]:checked')
-).map(cb => cb.value);
-formData.set('patient_types', JSON.stringify(patientTypeValues));
+        // جمع بيانات النموذج
+        const formData = new FormData(form);
 
-formData.set('dob', formData.get('dob'));
-formData.set('gender', formData.get('gender'));
-formData.set('report_type', formData.get('reportType'));
-formData.set('report_short_desc', formData.get('reportShortDesc'));
-formData.set('event_description', formData.get('eventDescription'));
-formData.set('reporter_name', formData.get('reporterName'));
-formData.set('report_date', formData.get('reportDate'));
-formData.set('reporter_position', formData.get('reporterPosition'));
-formData.set('reporter_phone', formData.get('reporterPhone'));
-formData.set('reporter_email', formData.get('reporterEmail'));
-formData.set('actions_taken', formData.get('actionsTaken'));
-formData.set('had_injury', formData.get('hadInjury'));
-formData.set('injury_type', formData.get('injuryType'));
-const classificationValues = Array.from(checkboxes)
-  .filter(cb => cb.checked)
-  .map(cb => cb.value);
+        // الحقول المطلوبة
+        formData.set('event_date', formData.get('eventDate'));
+        formData.set('event_time', formData.get('eventTime'));
+        formData.set('event_location', formData.get('eventLocation'));
+        formData.set('reporting_dept_id', formData.get('reportingDept'));
+        formData.set('responding_dept_id', formData.get('respondingDept'));
+        formData.set('other_depts', formData.get('otherDepts') || '');
+        formData.set('patient_name', formData.get('patientName') || '');
+        formData.set('medical_record_no', formData.get('medicalRecordNo') || '');
 
-// 2. خزنهم في FormData كسلسلة JSON
-formData.set('classification', JSON.stringify(classificationValues));
-formData.set('language', localStorage.getItem('language') || 'ar'); // ✅ أضف هذا
+        // جمع patient types - إذا لم يتم اختيار أي شيء، أرسل مصفوفة فارغة
+        const patientTypeValues = Array.from(
+          form.querySelectorAll('input[name="patientType"]:checked')
+        ).map(cb => cb.value);
+        formData.set('patient_types', JSON.stringify(patientTypeValues));
+
+        // الحقول الاختيارية - تأكد من إرسال قيم فارغة بدلاً من null
+        formData.set('dob', formData.get('dob') || '');
+        formData.set('gender', formData.get('gender') || '');
+        formData.set('report_type', formData.get('reportType'));
+        formData.set('report_short_desc', formData.get('reportShortDesc') || '');
+        formData.set('event_description', formData.get('eventDescription'));
+        formData.set('reporter_name', formData.get('reporterName'));
+        formData.set('report_date', formData.get('reportDate'));
+        formData.set('reporter_position', formData.get('reporterPosition'));
+        formData.set('reporter_phone', formData.get('reporterPhone'));
+        formData.set('reporter_email', formData.get('reporterEmail'));
+        formData.set('actions_taken', formData.get('actionsTaken'));
+
+        // الحقول الاختيارية للإصابة
+        formData.set('had_injury', formData.get('hadInjury') || '');
+        formData.set('injury_type', formData.get('injuryType') || '');
+
+        // جمع التصنيفات
+        const classificationValues = Array.from(checkboxes)
+          .filter(cb => cb.checked)
+          .map(cb => cb.value);
+
+        // خزنهم في FormData كسلسلة JSON
+        formData.set('classification', JSON.stringify(classificationValues));
+        formData.set('language', localStorage.getItem('language') || 'ar');
 
         try {
 const response = await fetch(`${apiBase}/tickets`, {

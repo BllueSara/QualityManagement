@@ -122,7 +122,6 @@ ${depts.map(d => {
     row.append(tdSel);
 
     // خلية الحالة
-// خلية الحالة
 const tdStatus = document.createElement('td');
 const statusKey = (ticket.status || '').toLowerCase();
 
@@ -157,12 +156,21 @@ switch (statusKey) {
 tdStatus.innerHTML = `<span class="${badgeClass}">${translatedStatus}</span>`;
 row.append(tdStatus);
 
-
-    row.append(tdStatus);
-
-    // زر التحويل
+    // زر التحويل - تعطيله للتذاكر المغلقة
     const tdAct = document.createElement('td');
-    tdAct.innerHTML = `<button class="btn-send"><i class="bi bi-send"></i> ${getTranslation('send')}</button>`;
+    const isClosed = statusKey === 'closed' || statusKey === 'مغلق';
+    const sendBtn = document.createElement('button');
+    sendBtn.className = 'btn-send';
+    sendBtn.innerHTML = `<i class="bi bi-send"></i> ${getTranslation('send')}`;
+    
+    if (isClosed) {
+      sendBtn.disabled = true;
+      sendBtn.title = getTranslation('ticket-closed-error') || 'لا يمكن تحويل التذكرة لأنها مغلقة';
+      sendBtn.style.opacity = '0.5';
+      sendBtn.style.cursor = 'not-allowed';
+    }
+    
+    tdAct.appendChild(sendBtn);
     row.append(tdAct);
 
     tbody.append(row);
@@ -203,6 +211,22 @@ async function rebuildUsersList() {
     ? `${selectedUsers.length} ${getTranslation('selected')}`
     : getTranslation('select-people');
 
+  // جلب المستخدمين المكلفين مسبقاً لهذه التذكرة
+  const ticketId = row.dataset.id;
+  let existingAssigneeIds = [];
+  try {
+    const assignRes = await fetch(`${apiBase}/tickets/${ticketId}/assign`, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (assignRes.ok) {
+      const assignData = await assignRes.json();
+      existingAssigneeIds = assignData.assignees ? assignData.assignees.map(a => a.id) : [];
+    }
+  } catch (err) {
+    console.error('Error fetching existing assignees:', err);
+  }
+
   for (const deptVal of selectedDepts) {
     // فاصل باسم القسم
     const divider = document.createElement('div');
@@ -220,8 +244,11 @@ async function rebuildUsersList() {
     const { data: users } = await res.json();
 
     users.forEach(u => {
-      // استثنِ الأسماء اللي أرسلت لهم
+      // استثنِ الأسماء اللي أرسلت لهم مسبقاً
       if (existingNames.includes(u.name)) return;
+      
+      // استثنِ المستخدمين المكلفين مسبقاً
+      if (existingAssigneeIds.includes(u.id)) return;
 
       const div = document.createElement('div');
       div.className = 'dropdown-item';
@@ -335,6 +362,12 @@ async function rebuildUsersList() {
       const sendBtn = row.querySelector('.btn-send');
 
   sendBtn.addEventListener('click', async () => {
+    // التحقق من أن الزر غير معطل
+    if (sendBtn.disabled) {
+      alert(sendBtn.title || getTranslation('ticket-closed-error') || 'لا يمكن تحويل التذكرة لأنها مغلقة');
+      return;
+    }
+
     if (!selectedUsers.length) {
       alert(getTranslation('please-select-users'));
       return;
@@ -365,24 +398,59 @@ const assignRes = await fetch(`http://localhost:3006/api/tickets/${ticketId}/ass
   body: JSON.stringify({ assignees })
 });
 
-if (!assignRes.ok) throw new Error('Failed to assign ticket');
+if (!assignRes.ok) {
+  const errorData = await assignRes.json();
+  
+  // التعامل مع الأخطاء المختلفة
+  if (errorData.status === 'closed') {
+    alert(getTranslation('ticket-closed-error') || 'لا يمكن تحويل التذكرة لأنها مغلقة');
+    // تعطيل الزر بعد اكتشاف أن التذكرة مغلقة
+    sendBtn.disabled = true;
+    sendBtn.style.opacity = '0.5';
+    sendBtn.style.cursor = 'not-allowed';
+    return;
+  }
+  
+  if (errorData.status === 'already_assigned') {
+    alert(getTranslation('already-assigned-error') || 'جميع المستخدمين المحددين مكلفون بالفعل بهذه التذكرة');
+    return;
+  }
+  
+  throw new Error(errorData.error || 'Failed to assign ticket');
+}
 
+const result = await assignRes.json();
 
-      alert(getTranslation('success-sent'));
+// رسالة نجاح مع تفاصيل
+let successMessage = getTranslation('success-sent');
+if (result.assignedCount > 0) {
+  successMessage += `\nتم تحويل التذكرة إلى ${result.assignedCount} مستخدم`;
+  if (result.skippedCount > 0) {
+    successMessage += `\nتم تخطي ${result.skippedCount} مستخدم (مكلفون مسبقاً)`;
+  }
+}
+
+alert(successMessage);
+
 // تحديث خانة الحالة بشكل مرن
 const tdStatus = row.querySelector('td:nth-child(5)');
 if (tdStatus) {
   tdStatus.innerHTML = `<span class="badge-sent">${getTranslation('sent')}</span>`;
 }
+
+// تحديث قائمة الأسماء المكلفة
+const newNames = selectedUsers.map(u => u.name);
+const existingNames = JSON.parse(row.dataset.assignedNames || '[]');
+const allNames = existingNames.concat(newNames);
+row.dataset.assignedNames = JSON.stringify(allNames);
+
+// إعادة بناء قائمة المستخدمين لإزالة المكلفين الجدد
+await rebuildUsersList();
+
 } catch (err) {
   console.error('❌ Error:', err);
   alert(getTranslation('error-sending') + `\n${err.message || ''}`);
 }
-    // ← إضافة هذا الجزء:
-    const newNames = selectedUsers.map(u => u.name);
-    const existingNames = JSON.parse(row.dataset.assignedNames || '[]');
-    const allNames = existingNames.concat(newNames);
-    row.dataset.assignedNames = JSON.stringify(allNames);
   });
   }
 });
