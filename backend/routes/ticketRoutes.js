@@ -32,6 +32,9 @@ router.post('/:id/replies', authenticateToken, ticketController.addReply);
 
 router.post('/:id/assign', authenticateToken, ticketController.assignToUsers);
 
+// جلب المستخدمين المكلفين بتذكرة معينة
+router.get('/:id/assign', authenticateToken, ticketController.getTicketAssignees);
+
 // GET /api/tickets/assigned
 router.get('/:id/track', authenticateToken, ticketController.trackTicket);
 

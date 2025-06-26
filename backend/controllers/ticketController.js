@@ -98,9 +98,29 @@ exports.createTicket = async (req, res) => {
         }
       }
 
-      // 2) جهّز بيانات التذكرة
-      const ticketData = {
+      // 2) فك JSON لمصفوفة أنواع المرضى
+      let patient_types = [];
+      if (req.body.patient_types) {
+        try {
+          patient_types = JSON.parse(req.body.patient_types);
+        } catch (e) {
+          // إذا فشل الفك، اعتبره قيمة واحدة
+          patient_types = req.body.patient_types ? [req.body.patient_types] : [];
+        }
+      }
+
+      // 3) تنظيف البيانات - تحويل القيم الفارغة إلى null
+      const cleanData = {
         ...req.body,
+        // الحقول الاختيارية - تحويل القيم الفارغة إلى null
+        other_depts: req.body.other_depts || null,
+        patient_name: req.body.patient_name || null,
+        medical_record_no: req.body.medical_record_no || null,
+        dob: req.body.dob || null,
+        gender: req.body.gender || null,
+        report_short_desc: req.body.report_short_desc || null,
+        had_injury: req.body.had_injury || null,
+        injury_type: req.body.injury_type || null,
         attachments: req.files
           ? req.files.map(file => ({
               filename: file.filename,
@@ -108,29 +128,30 @@ exports.createTicket = async (req, res) => {
               mimetype: file.mimetype
             }))
           : [],
-        classification
+        classification,
+        patient_types
       };
 
-      // 3) انشئ التذكرة في الموديل، وارجع الـ ID
-      const ticketId = await Ticket.create(ticketData, req.user.id);
+      // 4) انشئ التذكرة في الموديل، وارجع الـ ID
+      const ticketId = await Ticket.create(cleanData, req.user.id);
 
-      // 4) جلب التذكرة للتأكد من وجود الحقل title
+      // 5) جلب التذكرة للتأكد من وجود الحقل title
       const createdTicket = await Ticket.findById(
         ticketId,
         req.user.id,
         req.user.role
       );
 
-      // 5) استخرج العنوان (قد يكون JSON أو نص)
-      const rawTitle = createdTicket?.title || ticketData.title || '';
+      // 6) استخرج العنوان (قد يكون JSON أو نص)
+      const rawTitle = createdTicket?.title || cleanData.report_short_desc || `تذكرة رقم ${ticketId}`;
       const userLang = getUserLang(req);
       const localizedTitle = getLocalizedName(rawTitle, userLang) || rawTitle;
 
-      // 6) تسجيل اللوق بعد نجاح الإنشاء
+      // 7) تسجيل اللوق بعد نجاح الإنشاء
       try {
         const logDescription = {
-          ar: `تم إنشاء تذكرة جديدة: ${ticketId}`,
-          en: `Created new ticket: ${ticketId}`
+          ar: `تم إنشاء تذكرة جديدة: ${localizedTitle}`,
+          en: `Created new ticket: ${localizedTitle}`
         };
         await logAction(
           req.user.id,
@@ -143,7 +164,7 @@ exports.createTicket = async (req, res) => {
         console.error('logAction error:', logErr);
       }
 
-      // 7) أرسل الرد
+      // 8) أرسل الرد
       return res.status(201).json({
         status: 'success',
         message: 'تم إنشاء التذكرة بنجاح',
@@ -155,8 +176,6 @@ exports.createTicket = async (req, res) => {
     return res.status(500).json({ message: 'Error creating ticket.' });
   }
 };
-
-
 
 // Get all tickets
 exports.getAllTickets = async (req, res) => {
@@ -172,7 +191,6 @@ exports.getAssignedTickets = async (req, res) => {
   const tickets = await Ticket.findAllAndAssignments(req.user.id, req.user.role);
   res.json({ status: 'success', data: tickets });
 };
-
 
 // Get a single ticket
 exports.getTicket = async (req, res) => {
@@ -246,7 +264,6 @@ exports.updateTicket = async (req, res) => {
         changesEn.push(`Reporting Dept: '${oldTicket.reporting_dept_name}' → '${newTicket.reporting_dept_name}'`);
       }
 
-
       // أضف هنا أي حقول إضافية حسب الحاجة
 
       if (changesAr.length > 0) {
@@ -274,7 +291,6 @@ exports.updateTicket = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
-
 
 // Delete a ticket
 exports.deleteTicket = async (req, res) => {
@@ -325,9 +341,7 @@ exports.deleteTicket = async (req, res) => {
   }
 };
 
-
 // Assign a ticket
-
 exports.assignTicket = async (req, res) => {
   try {
     const ticketId    = req.params.id;
@@ -410,7 +424,6 @@ exports.getTicketStatusHistory = async (req, res) => {
     }
 };
 
-
 exports.addReply = async (req, res) => {
     try {
         const ticketId = req.params.id;
@@ -482,16 +495,50 @@ exports.assignToUsers = async (req, res) => {
       database: process.env.DB_NAME || 'Quality'
     });
 
-    // 2) جلب أسماء المكلَّفين
-    const placeholders = assigneeIds.map(() => '?').join(',');
+    // 2) التحقق من حالة التذكرة - منع تحويل التذاكر المغلقة
+    const [ticketRows] = await db.execute(
+      'SELECT status FROM tickets WHERE id = ?',
+      [ticketId]
+    );
+    
+    if (ticketRows.length === 0) {
+      return res.status(404).json({ error: 'التذكرة غير موجودة' });
+    }
+    
+    const ticketStatus = ticketRows[0].status;
+    if (ticketStatus === 'مغلق' || ticketStatus === 'closed') {
+      return res.status(400).json({ 
+        error: 'لا يمكن تحويل التذكرة لأنها مغلقة',
+        status: 'closed'
+      });
+    }
+
+    // 3) جلب المستخدمين المكلفين مسبقاً لمنع التحويل لنفس الشخص مرتين
+    const [existingAssignments] = await db.execute(
+      'SELECT assigned_to FROM ticket_assignments WHERE ticket_id = ?',
+      [ticketId]
+    );
+    
+    const existingAssigneeIds = existingAssignments.map(a => a.assigned_to);
+    const newAssigneeIds = assigneeIds.filter(id => !existingAssigneeIds.includes(parseInt(id)));
+    
+    if (newAssigneeIds.length === 0) {
+      return res.status(400).json({ 
+        error: 'جميع المستخدمين المحددين مكلفون بالفعل بهذه التذكرة',
+        status: 'already_assigned'
+      });
+    }
+
+    // 4) جلب أسماء المكلَّفين الجدد فقط
+    const placeholders = newAssigneeIds.map(() => '?').join(',');
     const sql = `SELECT username FROM users WHERE id IN (${placeholders})`;
-    const [assigneeUsers] = await db.execute(sql, assigneeIds);
+    const [assigneeUsers] = await db.execute(sql, newAssigneeIds);
     const assigneeNames = assigneeUsers.map(u => u.username).join(', ');
 
-    // 3) نفّذ التعيين
-    await Ticket.assignUsers(ticketId, assigneeIds, req.user.id);
+    // 5) نفّذ التعيين للمستخدمين الجدد فقط
+    await Ticket.assignUsers(ticketId, newAssigneeIds, req.user.id);
 
-    // 4) سجّل اللّوج
+    // 6) سجّل اللّوج
     const identifierAr = `رقم ${ticketId}`;
     const identifierEn = `ID ${ticketId}`;
     const logDescription = {
@@ -506,13 +553,17 @@ exports.assignToUsers = async (req, res) => {
       ticketId
     );
 
-    return res.json({ status: 'success' });
+    return res.json({ 
+      status: 'success',
+      message: `تم تحويل التذكرة إلى ${assigneeNames}`,
+      assignedCount: newAssigneeIds.length,
+      skippedCount: assigneeIds.length - newAssigneeIds.length
+    });
   } catch (error) {
     console.error('assignToUsers error:', error);
     return res.status(500).json({ error: error.message });
   }
 };
-
 
 // GET /api/tickets/:id/track
 exports.trackTicket = async (req, res) => {
@@ -575,4 +626,40 @@ exports.closeTicket = async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
+};
+
+// جلب المستخدمين المكلفين بتذكرة معينة
+exports.getTicketAssignees = async (req, res) => {
+  const ticketId = req.params.id;
+  
+  try {
+    const mysql = require('mysql2/promise');
+    const db = mysql.createPool({
+      host:     process.env.DB_HOST || 'localhost',
+      user:     process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'Quality'
+    });
+
+    const [assignees] = await db.execute(
+      `SELECT ta.assigned_to, u.username, d.name AS department_name
+       FROM ticket_assignments ta
+       JOIN users u ON ta.assigned_to = u.id
+       LEFT JOIN departments d ON u.department_id = d.id
+       WHERE ta.ticket_id = ?`,
+      [ticketId]
+    );
+
+    return res.json({
+      status: 'success',
+      assignees: assignees.map(a => ({
+        id: a.assigned_to,
+        username: a.username,
+        department: a.department_name
+      }))
+    });
+  } catch (error) {
+    console.error('getTicketAssignees error:', error);
+    return res.status(500).json({ error: error.message });
+  }
 };
