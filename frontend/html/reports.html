@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>التقارير</title>
+    <title data-translate="reports-title">التقارير</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,8 +22,8 @@
             </div>
             <nav>
                 <ul>
-                    <li><a href="index.html"><img src="/frontend/images/home.svg" alt=""> <span>الرئيسية</span></a></li>
-                    <li><a href="profile.html"><img src="/frontend/images/profile.svg" alt=""> <span>الحساب</span></a></li>
+                    <li><a href="index.html"><img src="/frontend/images/home.svg" alt=""> <span data-translate="home">الرئيسية</span></a></li>
+                    <li><a href="profile.html"><img src="/frontend/images/profile.svg" alt=""> <span data-translate="account">الحساب</span></a></li>
                 </ul>
             </nav>
             <div class="system-title">
@@ -33,21 +33,21 @@
     </header>
     <main>
         <div class="container">
-            <h1 class="reports-title">التقارير</h1>
+            <h1 class="reports-title" data-translate="reports-title">التقارير</h1>
             <div class="cards-grid">
                 <a href="reports-tickets.html" class="card">
                     <div class="card-icon bg-purple"><img src="/frontend/images/ticket.svg" alt="تقارير التذاكر"></div>
-                    <div class="card-title">تقارير التذاكر</div>
-                    <div class="card-subtitle">اضغط للدخول</div>
+                    <div class="card-title" data-translate="tickets-reports">تقارير التذاكر</div>
+                    <div class="card-subtitle" data-translate="tickets-reports-desc">عرض تقارير التذاكر حسب التصنيف والشهر</div>
                 </a>
                 <a href="reports-approvals.html" class="card">
                     <div class="card-icon bg-lightblue"><img src="/frontend/images/e3tmadat.svg" alt="تقارير الاعتمادات"></div>
-                    <div class="card-title">تقارير الاعتمادات</div>
-                    <div class="card-subtitle">اضغط للدخول</div>
+                    <div class="card-title" data-translate="approvals-reports">تقارير الاعتمادات</div>
+                    <div class="card-subtitle" data-translate="approvals-reports-desc">عرض تقارير الاعتمادات حسب القسم والتاريخ</div>
                 </a>
             </div>
         </div>
     </main>
- 
+    <script src="../js/language.js"></script>
 </body>
 </html> 

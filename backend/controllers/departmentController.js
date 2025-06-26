@@ -38,9 +38,70 @@ function getUserLanguageFromToken(token) {
 
 const getDepartments = async (req, res) => {
     try {
-        const [rows] = await db.execute('SELECT * FROM departments');
+        // استخراج معلومات المستخدم من التوكن
+        const token = req.headers.authorization?.split(' ')[1];
+        let userId = null;
+        let userRole = null;
+        let userDepartmentId = null;
+        let canViewOwnDepartment = false;
+
+        console.log('🔍 Getting departments for token:', !!token);
+
+        if (token) {
+            try {
+                const decoded = jwt.verify(token, process.env.JWT_SECRET);
+                userId = decoded.id;
+                userRole = decoded.role;
+                userDepartmentId = decoded.department_id;
+
+                console.log('🔍 User info:', { userId, userRole, userDepartmentId });
+
+                // جلب صلاحيات المستخدم
+                const [permRows] = await db.execute(`
+                    SELECT p.permission_key
+                    FROM permissions p
+                    JOIN user_permissions up ON up.permission_id = p.id
+                    WHERE up.user_id = ?
+                `, [userId]);
+                
+                const userPermissions = new Set(permRows.map(r => r.permission_key));
+                canViewOwnDepartment = userPermissions.has('view_own_department');
+
+                console.log('🔍 User permissions:', Array.from(userPermissions));
+                console.log('🔍 Can view own department:', canViewOwnDepartment);
+            } catch (error) {
+                console.error('Error decoding token:', error);
+            }
+        }
+
+        let query = 'SELECT * FROM departments';
+        let params = [];
+
+        // إذا كان المستخدم admin أو ليس لديه صلاحية view_own_department، اجلب كل الأقسام
+        if (userRole === 'admin' || !canViewOwnDepartment) {
+            query = 'SELECT * FROM departments';
+            console.log('🔍 Fetching all departments (admin or no permission)');
+        } else {
+            // إذا كان لديه صلاحية view_own_department، تحقق من وجود departmentId
+            if (userDepartmentId && userDepartmentId !== null && userDepartmentId !== undefined && userDepartmentId !== '') {
+                query = 'SELECT * FROM departments WHERE id = ?';
+                params = [userDepartmentId];
+                console.log('🔍 Fetching user department:', userDepartmentId);
+            } else {
+                // إذا لم يكن لديه departmentId، لا تعرض أي أقسام
+                query = 'SELECT * FROM departments WHERE 1 = 0'; // This will return empty result
+                console.log('🔍 No departmentId assigned - returning empty result');
+            }
+        }
+
+        console.log('🔍 Final query:', query);
+        console.log('🔍 Final params:', params);
+
+        const [rows] = await db.execute(query, params);
+        console.log('✅ Fetched departments:', rows.length);
         res.status(200).json(rows);
     } catch (error) {
+        console.error('❌ Error in getDepartments:', error);
         res.status(500).json({ message: 'خطأ في جلب الأقسام' });
     }
 };

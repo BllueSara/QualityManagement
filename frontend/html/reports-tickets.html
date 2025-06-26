@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تقارير التذاكر</title>
+    <title data-translate="tickets-reports-title">تقرير التذكرة حسب التصنيف والشهر</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -26,24 +26,25 @@
     </header>
     <main>
         <div class="container">
-            <h1 class="reports-title">تقرير التذاكر حسب التصنيف والشهر</h1>
+            <h1 class="reports-title" data-translate="tickets-reports-title">تقرير التذكرة حسب التصنيف والشهر</h1>
             <div class="actions-bar">
                
                
-                <label>من: <input type="date" id="fromDate"></label>
-                <label>إلى: <input type="date" id="toDate"></label>
+                <label><span data-translate="from-date">من:</span> <input type="date" id="fromDate"></label>
+                <label><span data-translate="to-date">إلى:</span> <input type="date" id="toDate"></label>
                 <select id="categoryFilter" class="category-filter">
-                  <option value="">كل التصنيفات</option>
+                  <option value="" data-translate="all-categories">كل التصنيفات</option>
                 </select>
-                <button id="filterBtn" class="btn"><i class="fas fa-filter"></i> عرض</button>
-                <button id="showAllBtn" class="btn btn-secondary"><i class="fas fa-list"></i> عرض الكل</button>
-                <button id="downloadBtn" class="btn"><i class="fas fa-download"></i> تحميل</button>
+                <button id="filterBtn" class="btn"><i class="fas fa-filter"></i> <span data-translate="filter">عرض</span></button>
+                <button id="showAllBtn" class="btn btn-secondary"><i class="fas fa-list"></i> <span data-translate="show-all">عرض الكل</span></button>
+                <button id="downloadBtn" class="btn"><i class="fas fa-download"></i> <span data-translate="download">تحميل</span></button>
             </div>
             <div class="table-wrapper">
                 <div id="tickets-report-table-wrapper"></div>
             </div>
         </div>
     </main>
+    <script src="../js/language.js"></script>
     <script src="../js/reports-tickets.js"></script>
 </body>
 </html> 

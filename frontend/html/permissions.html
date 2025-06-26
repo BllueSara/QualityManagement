@@ -156,10 +156,36 @@
         <span class="slider round"></span>
       </label>
     </div>
+        <div class="permission-item">
+      <div class="permission-details">
+        <div class="text-content">
+          <div class="permission-title" data-translate="view_reports">عرض التقارير </div>
+        </div>
+      </div>
+      <label class="switch" data-key="view_reports">
+        <input type="checkbox">
+        <span class="slider round"></span>
+      </label>
+    </div>
   </div>
+
+
+
+
 
   <div class="permission-group">
     <h4 class="group-title" data-translate="departments-group">الأقسام</h4>
+    <div class="permission-item">
+      <div class="permission-details">
+        <div class="text-content">
+          <div class="permission-title" data-translate="view_own_department">عرض القسم الموجود</div>
+        </div>
+      </div>
+      <label class="switch" data-key="view_own_department">
+        <input type="checkbox">
+        <span class="slider round"></span>
+      </label>
+    </div>
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
@@ -281,6 +307,17 @@
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
+          <div class="permission-title" data-translate="add_old_content">إضافة محتوى قديم</div>
+        </div>
+      </div>
+      <label class="switch"data-key="add_old_content">
+        <input type="checkbox" >
+        <span class="slider round"></span>
+      </label>
+    </div>
+    <div class="permission-item">
+      <div class="permission-details">
+        <div class="text-content">
           <div class="permission-title" data-translate="add_content_name">إضافة اسم محتوى</div>
         </div>
       </div>
@@ -337,6 +374,31 @@
 
   <div class="permission-group">
     <h4 class="group-title" data-translate="committees-group">اللجان</h4>
+    <div class="permission-item">
+      <div class="permission-details">
+        <div class="text-content">
+          <div class="permission-title" data-translate="view_own_committees">عرض اللجان الحالية</div>
+        </div>
+      </div>
+      <label class="switch" data-key="view_own_committees">
+        <input type="checkbox">
+        <span class="slider round"></span>
+      </label>
+      <div class="committees-dropdown" id="committees-dropdown" style="display: none;">
+        <button class="dropdown-btn" type="button">
+          <span data-translate="select-committees">اختر اللجان</span>
+          <i class="fas fa-chevron-down"></i>
+        </button>
+        <div class="dropdown-content">
+          <div class="search-box">
+            <input type="text" placeholder="ابحث عن لجنة..." class="committee-search">
+          </div>
+          <div class="committees-list">
+            <!-- سيتم تحميل اللجان هنا ديناميكياً -->
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="permission-item">
       <div class="permission-details">
         <div class="text-content">
@@ -572,6 +634,44 @@
     </div>
   </div>
 
+  
+  <div class="permission-group">
+    <h4 class="group-title" data-translate="report-group-tickets">تقارير التذاكر</h4>
+
+    <div class="permission-item">
+      <div class="permission-details">
+        <div class="text-content">
+          <div class="permission-title" data-translate="view_reports_by_person_tickets"> عرض تقارير التذاكر للشخص</div>
+        </div>
+      </div>
+      <label class="switch"data-key="view_reports_by_person_tickets">
+        <input type="checkbox" >
+        <span class="slider round"></span>
+      </label>
+    </div>
+    <div class="permission-item">
+      <div class="permission-details">
+        <div class="text-content">
+          <div class="permission-title" data-translate="view_all_reports_tickets">عرض كل تقارير التذاكر </div>
+        </div>
+      </div>
+      <label class="switch"data-key="view_all_reports_tickets">
+        <input type="checkbox" >
+        <span class="slider round"></span>
+      </label>
+    </div>
+    <div class="permission-item">
+      <div class="permission-details">
+        <div class="text-content">
+          <div class="permission-title" data-translate="download_reports_tickets"> تحميل تقارير التذاكر</div>
+        </div>
+      </div>
+      <label class="switch" data-key="download_reports_tickets">
+        <input type="checkbox">
+        <span class="slider round"></span>
+      </label>
+    </div>
+  </div>
   <!-- الاعتمادات -->
   <div class="permission-group">
     <h4 class="group-title" data-translate="approvals-group">الاعتمادات</h4>
@@ -604,6 +704,44 @@
         </div>
       </div>
       <label class="switch" data-key="track_credits">
+        <input type="checkbox">
+        <span class="slider round"></span>
+      </label>
+    </div>
+  </div>
+  
+  <div class="permission-group">
+    <h4 class="group-title" data-translate="report-group-approvals">تقارير الاعتمادات</h4>
+
+    <div class="permission-item">
+      <div class="permission-details">
+        <div class="text-content">
+          <div class="permission-title" data-translate="view_reports_by_person_approvals"> عرض تقارير الاعتمادات للشخص</div>
+        </div>
+      </div>
+      <label class="switch"data-key="view_reports_by_person_approvals">
+        <input type="checkbox" >
+        <span class="slider round"></span>
+      </label>
+    </div>
+    <div class="permission-item">
+      <div class="permission-details">
+        <div class="text-content">
+          <div class="permission-title" data-translate="view_all_reports_approvals">عرض كل تقارير الاعتمادات </div>
+        </div>
+      </div>
+      <label class="switch"data-key="view_all_reports_approvals">
+        <input type="checkbox" >
+        <span class="slider round"></span>
+      </label>
+    </div>
+    <div class="permission-item">
+      <div class="permission-details">
+        <div class="text-content">
+          <div class="permission-title" data-translate="download_reports_approvals"> تحميل تقارير الاعتمادات</div>
+        </div>
+      </div>
+      <label class="switch" data-key="download_reports_approvals">
         <input type="checkbox">
         <span class="slider round"></span>
       </label>
