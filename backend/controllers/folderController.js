@@ -13,7 +13,6 @@ const pool = mysql.createPool({
   queueLimit: 0
 });
 const { logAction } = require('../models/logger');
-const { insertNotification } = require('../models/notfications-utils');
 
 // دالة مساعدة لاستخراج اسم القسم باللغة المناسبة
 function getDepartmentNameByLanguage(departmentNameData, userLanguage = 'ar') {
@@ -488,35 +487,42 @@ const updateFolderName = async (req, res) => {
     }
     const oldName = rows[0].name;
 
-    // 2) تحديث الاسم في قاعدة البيانات
+    // 2) ابدأ معاملة علشان إذا فشل التحديث في أي مكان نرجع الحالة كما هي
+    await conn.beginTransaction();
+
+    // 3) تحديث الاسم في جدول folder_names
     await conn.execute(
       'UPDATE folder_names SET name = ? WHERE id = ?',
       [name, id]
     );
+
+    // 4) — **الجديد** — تحديث كل المجلدات في جدول folders
+    await conn.execute(
+      'UPDATE folders SET name = ? WHERE name = ?',
+      [name, oldName]
+    );
+
+    // 5) اكتمال المعاملة
+    await conn.commit();
 
     // ✅ تسجيل اللوق بعد نجاح تعديل اسم المجلد
     const token = req.headers.authorization?.split(' ')[1];
     if (token) {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const userId = decoded.id;
-      
-      try {
-        // إنشاء النص ثنائي اللغة
-        const logDescription = {
-          ar: `تم تعديل اسم مجلد للأقسام من: ${getFolderNameByLanguage(oldName, 'ar')} إلى: ${getFolderNameByLanguage(name, 'ar')}`,
-          en: `Updated folder name for departments from: ${getFolderNameByLanguage(oldName, 'en')} to: ${getFolderNameByLanguage(name, 'en')}`
-        };
-        
-        await logAction(
-          userId,
-          'update_folder_name',
-          JSON.stringify(logDescription),
-          'folder',
-          id
-        );
-      } catch (logErr) {
-        console.error('logAction error:', logErr);
-      }
+
+      const logDescription = {
+        ar: `تم تعديل اسم مجلد للأقسام من: ${getFolderNameByLanguage(oldName, 'ar')} إلى: ${getFolderNameByLanguage(name, 'ar')}`,
+        en: `Updated folder name for departments from: ${getFolderNameByLanguage(oldName, 'en')} to: ${getFolderNameByLanguage(name, 'en')}`
+      };
+
+      await logAction(
+        userId,
+        'update_folder_name',
+        JSON.stringify(logDescription),
+        'folder',
+        id
+      );
     }
 
     conn.release();
@@ -525,11 +531,14 @@ const updateFolderName = async (req, res) => {
       message: '✅ تم تعديل اسم المجلد وكل المجلدات المرتبطة بنجاح'
     });
   } catch (err) {
+    // لو صار خطأ، نرجع كل شيء كما كان
+    await conn.rollback();
     conn.release();
     console.error(err);
     return res.status(500).json({ message: '❌ فشل في تعديل المجلد.' });
   }
 };
+
 
 const deleteFolderName = async (req, res) => {
   const { id } = req.params;
@@ -572,12 +581,6 @@ const deleteFolderName = async (req, res) => {
       }
 
       // ✅ إرسال إشعار بحذف اسم المجلد
-      await insertNotification(
-        userId,
-        'حذف اسم مجلد',
-        `تم حذف اسم مجلد للأقسام: ${folderName}`,
-        'delete'
-      );
     }
     
     conn.release();

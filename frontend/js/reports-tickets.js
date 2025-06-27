@@ -238,7 +238,7 @@ async function downloadTableAsCSV() {
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
     a.href     = url;
-    a.download = 'tickets-report.csv';
+    a.download = 'OVR-Report.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

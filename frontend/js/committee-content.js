@@ -22,58 +22,10 @@ const permissions = {
 // دالة الترجمة
 function getTranslation(key) {
   const lang = localStorage.getItem('language') || 'ar';
-  const translations = {
-    ar: {
-      'select-content': 'يرجى اختيار اسم المحتوى وملف',
-      'content-added-success': 'تم إضافة المحتوى بنجاح',
-      'content-update-success': 'تم تحديث المحتوى بنجاح',
-      'content-deleted-success': 'تم حذف المحتوى بنجاح',
-      'content-title-required': 'عنوان المحتوى مطلوب',
-      'folder-added-success': 'تم إضافة المجلد بنجاح',
-      'folder-updated-success': 'تم تحديث المجلد بنجاح',
-      'folder-deleted-success': 'تم حذف المجلد بنجاح',
-      'folder-name-required': 'اسم المجلد مطلوب',
-      'choose-folder-name': 'اختر اسم المجلد',
-      'choose-content-name': 'اختر عنوان المحتوى',
-      'select-folder': 'يرجى اختيار مجلد أولاً',
-      'pdf-only': 'ملفات PDF فقط',
-      'selected-file': 'الملف المحدد: ',
-      'file-link-unavailable': 'رابط الملف غير متاح',
-      'status-approved': 'معتمد',
-      'status-awaiting': 'في انتظار الاعتماد',
-      'no-folders': 'لا توجد مجلدات',
-      'no-contents': 'لا يوجد محتوى',
-      'delete-folder-confirm': 'هل أنت متأكد من حذف هذا المجلد؟',
-      'delete-content-confirm': 'هل أنت متأكد من حذف هذا المحتوى؟',
-      'error-occurred': 'حدث خطأ'
-    },
-    en: {
-      'select-content': 'Please select content title and file',
-      'content-added-success': 'Content added successfully',
-      'content-update-success': 'Content updated successfully',
-      'content-deleted-success': 'Content deleted successfully',
-      'content-title-required': 'Content title is required',
-      'folder-added-success': 'Folder added successfully',
-      'folder-updated-success': 'Folder updated successfully',
-      'folder-deleted-success': 'Folder deleted successfully',
-      'folder-name-required': 'Folder name is required',
-      'choose-folder-name': 'Choose folder name',
-      'choose-content-name': 'Choose content title',
-      'select-folder': 'Please select a folder first',
-      'pdf-only': 'PDF files only',
-      'selected-file': 'Selected file: ',
-      'file-link-unavailable': 'File link unavailable',
-      'status-approved': 'Approved',
-      'status-awaiting': 'Awaiting approval',
-      'no-folders': 'No folders',
-      'no-contents': 'No contents',
-      'delete-folder-confirm': 'Are you sure you want to delete this folder?',
-      'delete-content-confirm': 'Are you sure you want to delete this content?',
-      'error-occurred': 'An error occurred'
-    }
-  };
-  
-  return translations[lang]?.[key] || key;
+  if (window.translations && window.translations[lang] && window.translations[lang][key]) {
+    return window.translations[lang][key];
+  }
+  return key;
 }
 
 function getLocalizedName(name) {
@@ -295,9 +247,6 @@ let selectedFolderNameId = null;
 
 
 
-
-
-
 folderNameToggle.addEventListener('click', e => {
   e.stopPropagation();
   folderNameMenu.classList.toggle('hidden');
@@ -480,6 +429,7 @@ function renderEditFolderNameOptions(list) {
     }
   }
 }
+
 
 
 async function createFolderName(name) {
@@ -854,174 +804,160 @@ async function fetchPermissions() {
     currentCommitteeId = committeeIdFromUrl;
     fetchFolders(currentCommitteeId);
 
+    // متغيرات global لتخزين كل المجلدات وكل الملفات
+    let allFolders = [];
+    let allContents = [];
+
+    // عدل دالة fetchFolders لتخزين كل المجلدات
     async function fetchFolders(committeeId) {
       if (currentFolderId !== null) return;
-      
       if (foldersSection) foldersSection.style.display = 'block';
       if (folderContentsSection) folderContentsSection.style.display = 'none';
       if (backToFilesContainer) backToFilesContainer.style.display = 'none';
       if (folderContentTitle) folderContentTitle.textContent = 'مجلدات اللجنة';
-      
       try {
         const response = await fetch(`${apiBase}/api/committees/${committeeId}/folders`);
         const folders = await response.json();
-        const foldersList = document.querySelector('.folders-list');
-        if (!foldersList) return;
-        
-        foldersList.innerHTML = '';
-        
-        if (folders.length) {
-folders.forEach(folder => {
-  const card = document.createElement('div');
-  card.className = 'folder-card';
-  card.dataset.id = folder.id;
-
-  const localizedName = getLocalizedName(folder.name); // ✅ هنا
-
-  let icons = '<div class="item-icons">';
-  if (permissions.canEditFolder)
-    icons += `<a href="#" class="edit-icon"><img src="../images/edit.svg" alt="تعديل"></a>`;
-  if (permissions.canDeleteFolder)
-    icons += `<a href="#" class="delete-icon"><img src="../images/delet.svg" alt="حذف"></a>`;
-  icons += '</div>';
-
-  card.innerHTML = icons +
-    `<img src="../images/folders.svg">
-     <div class="folder-info">
-       <div class="folder-name">${localizedName}</div>
-     </div>`;
-
-  foldersList.appendChild(card);
-
-  card.addEventListener('click', e => {
-    if (!e.target.closest('.edit-icon') && !e.target.closest('.delete-icon')) {
-      fetchFolderContents(folder.id, localizedName); // ✅ تم التعديل هنا
-    }
-  });
-
-  const editIcon = card.querySelector('.edit-icon');
-  if (editIcon) {
-    editIcon.addEventListener('click', e => {
-      e.preventDefault();
-      e.stopPropagation();
-      openEditFolderModal(folder.id, localizedName); // ✅ تم التعديل هنا
-    });
-  }
-
-  const deleteIcon = card.querySelector('.delete-icon');
-  if (deleteIcon) {
-    deleteIcon.addEventListener('click', e => {
-      e.preventDefault();
-      e.stopPropagation();
-      openDeleteFolderModal(folder.id);
-    });
-  }
-});
-
-        } else {
-          foldersList.innerHTML = `<div class="no-content" data-translate="no-folders">${getTranslation('no-folders')}</div>`;
-        }
+        allFolders = folders; // حفظ كل المجلدات
+        renderFolders(folders);
       } catch (err) {
         showToast(getTranslation('error-occurred'), 'error');
       }
     }
-
-async function fetchFolderContents(folderId, folderName) {
-  currentFolderId = folderId;
-  
-  if (foldersSection) foldersSection.style.display = 'none';
-  if (folderContentsSection) folderContentsSection.style.display = 'block';
-  if (backToFilesContainer) backToFilesContainer.style.display = 'block';
-  if (folderContentTitle) folderContentTitle.textContent = folderName || getTranslation('folder-content-title');
-
-  try {
-    const token = getToken();
-    const response = await fetch(`${apiBase}/api/committees/folders/${folderId}/contents`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-
-    const responseJson = await response.json();
-    const contents = Array.isArray(responseJson.data)
-      ? responseJson.data
-      : (Array.isArray(responseJson) ? responseJson : []);
-
-    const filesList = document.querySelector('.files-list');
-    if (!filesList) return;
-    
-    filesList.innerHTML = '';
-
-    const decodedToken = JSON.parse(atob(token.split('.')[1]));
-    const isAdmin = decodedToken.role === 'admin';
-
-    const filteredContents = isAdmin ? contents : contents.filter(content => content.approval_status === 'approved');
-
-    if (filteredContents.length > 0) {
-      filteredContents.forEach(content => {
-        let icons = '<div class="item-icons">';
-        if (permissions.canEditContent)
-          icons += `<a href="#" class="edit-icon" data-content-id="${content.id}"><img src="../images/edit.svg" alt="تعديل"></a>`;
-        if (permissions.canDeleteContent)
-          icons += `<a href="#" class="delete-icon" data-content-id="${content.id}"><img src="../images/delet.svg" alt="حذف"></a>`;
-        icons += '</div>';
-
-        const fileItem = document.createElement('div');
-        fileItem.className = 'file-item';
-        fileItem.dataset.contentId = content.id;
-
-        const approvalStatusText = (content.approval_status === 'approved') ? getTranslation('status-approved') : getTranslation('status-awaiting');
-        const approvalClass = (content.approval_status === 'approved') ? 'approved' : 'pending';
-
-        fileItem.innerHTML = `
-          ${icons}
-          <img src="../images/pdf.svg" alt="ملف PDF">
-          <div class="file-info">
-            <div class="file-name">${getLocalizedName(content.title)}</div>
-            <div class="approval-status ${approvalClass}">${approvalStatusText}</div>
-          </div>
-        `;
-        filesList.appendChild(fileItem);
-
-        fileItem.addEventListener('click', function(e) {
-          if (!e.target.closest('.edit-icon') && !e.target.closest('.delete-icon')) {
-            if (content.file_path) {
-              const baseUrl = apiBase.replace('/api', '');
-              window.open(`${baseUrl}/${content.file_path}`, '_blank');
-            } else {
-              showToast(getTranslation('file-link-unavailable'), 'error');
+    // دالة عرض المجلدات (مستقلة)
+    function renderFolders(folders) {
+      const foldersList = document.querySelector('.folders-list');
+      if (!foldersList) return;
+      foldersList.innerHTML = '';
+      if (folders.length) {
+        folders.forEach(folder => {
+          const card = document.createElement('div');
+          card.className = 'folder-card';
+          card.dataset.id = folder.id;
+          const localizedName = getLocalizedName(folder.name);
+          let icons = '<div class="item-icons">';
+          if (permissions.canEditFolder)
+            icons += `<a href="#" class="edit-icon"><img src="../images/edit.svg" alt="تعديل"></a>`;
+          if (permissions.canDeleteFolder)
+            icons += `<a href="#" class="delete-icon"><img src="../images/delet.svg" alt="حذف"></a>`;
+          icons += '</div>';
+          card.innerHTML = icons +
+            `<img src="../images/folders.svg">
+             <div class="folder-info">
+               <div class="folder-name">${localizedName}</div>
+             </div>`;
+          foldersList.appendChild(card);
+          card.addEventListener('click', e => {
+            if (!e.target.closest('.edit-icon') && !e.target.closest('.delete-icon')) {
+              fetchFolderContents(folder.id, localizedName);
             }
+          });
+          const editIcon = card.querySelector('.edit-icon');
+          if (editIcon) {
+            editIcon.addEventListener('click', e => {
+              e.preventDefault();
+              e.stopPropagation();
+              openEditFolderModal(folder.id, localizedName);
+            });
+          }
+          const deleteIcon = card.querySelector('.delete-icon');
+          if (deleteIcon) {
+            deleteIcon.addEventListener('click', e => {
+              e.preventDefault();
+              e.stopPropagation();
+              openDeleteFolderModal(folder.id);
+            });
           }
         });
-
-        const editIcon = fileItem.querySelector('.edit-icon');
-        const deleteIcon = fileItem.querySelector('.delete-icon');
-
-        if (editIcon) {
-          editIcon.addEventListener('click', e => {
-            e.preventDefault();
-            e.stopPropagation();
-            openEditContentModal(content.id);
-          });
-        }
-
-        if (deleteIcon) {
-          deleteIcon.addEventListener('click', e => {
-            e.preventDefault();
-            e.stopPropagation();
-            openDeleteContentModal(content.id);
-          });
-        }
-      });
-    } else {
-      filesList.innerHTML = `<div class="no-content" data-translate="no-contents">${getTranslation('no-contents')}</div>`;
+      } else {
+        foldersList.innerHTML = `<div class="no-content" data-translate="no-folders">${getTranslation('no-folders')}</div>`;
+      }
     }
 
-  } catch (err) {
-    console.error('❌ خطأ في fetchFolderContents:', err);
-    showToast(getTranslation('error-occurred'), 'error');
-  }
-}
+    // عدل دالة fetchFolderContents لتخزين كل الملفات
+    async function fetchFolderContents(folderId, folderName) {
+      currentFolderId = folderId;
+      if (foldersSection) foldersSection.style.display = 'none';
+      if (folderContentsSection) folderContentsSection.style.display = 'block';
+      if (backToFilesContainer) backToFilesContainer.style.display = 'block';
+      if (folderContentTitle) folderContentTitle.textContent = folderName || getTranslation('folder-content-title');
+      try {
+        const token = getToken();
+        const response = await fetch(`${apiBase}/api/committees/folders/${folderId}/contents`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const responseJson = await response.json();
+        const contents = Array.isArray(responseJson.data)
+          ? responseJson.data
+          : (Array.isArray(responseJson) ? responseJson : []);
+        const decodedToken = JSON.parse(atob(token.split('.')[1]));
+        const isAdmin = decodedToken.role === 'admin';
+        const filteredContents = isAdmin ? contents : contents.filter(content => content.approval_status === 'approved');
+        allContents = filteredContents; // حفظ كل الملفات
+        renderContents(filteredContents);
+      } catch (err) {
+        console.error('❌ خطأ في fetchFolderContents:', err);
+        showToast(getTranslation('error-occurred'), 'error');
+      }
+    }
+    // دالة عرض الملفات (مستقلة)
+    function renderContents(contents) {
+      const filesList = document.querySelector('.files-list');
+      if (!filesList) return;
+      filesList.innerHTML = '';
+      if (contents.length > 0) {
+        contents.forEach(content => {
+          let icons = '<div class="item-icons">';
+          if (permissions.canEditContent)
+            icons += `<a href="#" class="edit-icon" data-content-id="${content.id}"><img src="../images/edit.svg" alt="تعديل"></a>`;
+          if (permissions.canDeleteContent)
+            icons += `<a href="#" class="delete-icon" data-content-id="${content.id}"><img src="../images/delet.svg" alt="حذف"></a>`;
+          icons += '</div>';
+          const fileItem = document.createElement('div');
+          fileItem.className = 'file-item';
+          fileItem.dataset.contentId = content.id;
+          const approvalStatusText = (content.approval_status === 'approved') ? getTranslation('status-approved') : getTranslation('status-awaiting');
+          const approvalClass = (content.approval_status === 'approved') ? 'approved' : 'pending';
+          fileItem.innerHTML = `
+            ${icons}
+            <img src="../images/pdf.svg" alt="ملف PDF">
+            <div class="file-info">
+              <div class="file-name">${getLocalizedName(content.title)}</div>
+              <div class="approval-status ${approvalClass}">${approvalStatusText}</div>
+            </div>
+          `;
+          filesList.appendChild(fileItem);
+          fileItem.addEventListener('click', function(e) {
+            if (!e.target.closest('.edit-icon') && !e.target.closest('.delete-icon')) {
+              if (content.file_path) {
+                const baseUrl = apiBase.replace('/api', '');
+                window.open(`${baseUrl}/${content.file_path}`, '_blank');
+              } else {
+                showToast(getTranslation('file-link-unavailable'), 'error');
+              }
+            }
+          });
+          const editIcon = fileItem.querySelector('.edit-icon');
+          const deleteIcon = fileItem.querySelector('.delete-icon');
+          if (editIcon) {
+            editIcon.addEventListener('click', e => {
+              e.preventDefault();
+              e.stopPropagation();
+              openEditContentModal(content.id);
+            });
+          }
+          if (deleteIcon) {
+            deleteIcon.addEventListener('click', e => {
+              e.preventDefault();
+              e.stopPropagation();
+              openDeleteContentModal(content.id);
+            });
+          }
+        });
+      } else {
+        filesList.innerHTML = `<div class="no-content" data-translate="no-contents">${getTranslation('no-contents')}</div>`;
+      }
+    }
 
     // باقي الدوال: إضافة/تعديل/حذف مجلد ومحتوى، modals، إلخ (مطابقة للأقسام مع تغيير المسميات)
 
@@ -1305,22 +1241,27 @@ function openEditContentModal(id) {
   if (!editContentIdInput) return;
   editContentIdInput.value = id;
 
-  loadEditContentTitleOptions()
+  loadEditContentTitleOptions()  // 1. نحمّل الخيارات أول
     .then(() => {
       return fetch(`${apiBase}/api/committees/contents/${id}`, {
         headers: { 'Authorization': `Bearer ${getToken()}` }
       })
       .then(res => res.json());
     })
-.then(content => {
- const display = getLocalizedName(content.title); 
-  editContentTitleToggle.innerHTML = `${display} <span class="arrow">▾</span>`;
+    .then(content => {
+      // 2. نحدّد العرض في الـ toggle
+      const display = getLocalizedName(content.title);
+      editContentTitleToggle.innerHTML = `${display} <span class="arrow">▾</span>`;
 
-  // 3. باقي الحقول
-  if (editContentNotesInput)  editContentNotesInput.value = content.notes || '';
-  if (editContentModal)       editContentModal.style.display = 'flex';
-})
+      // 3. نضبط القيمة الحقيقية في الـ select أو الـ input:
+      if (editSelectedContentTitle) {
+        editSelectedContentTitle.value = content.title;
+      }
 
+      // 4. باقي الحقول
+      if (editContentNotesInput)  editContentNotesInput.value = content.notes || '';
+      if (editContentModal)       editContentModal.style.display = 'flex';
+    })
     .catch(err => {
       console.error(err);
       showToast(getTranslation('error-occurred'), 'error');
@@ -1527,7 +1468,47 @@ async function handleUpdateContent() {
         }
     }
 
-});
+    // إضافة منطق البحث للفولدرات
+    const folderSearchInput = document.querySelector('.folders-section .search-bar input');
+    if (folderSearchInput) {
+      folderSearchInput.addEventListener('input', function() {
+        const q = this.value.trim().toLowerCase();
+        if (!q) {
+          renderFolders(allFolders);
+          return;
+        }
+        const filtered = allFolders.filter(folder => {
+          try {
+            const parsed = JSON.parse(folder.name);
+            return (parsed.ar && parsed.ar.toLowerCase().includes(q)) || (parsed.en && parsed.en.toLowerCase().includes(q));
+          } catch (e) {
+            return folder.name.toLowerCase().includes(q);
+          }
+        });
+        renderFolders(filtered);
+      });
+    }
+    // إضافة منطق البحث للملفات
+    const contentSearchInput = document.querySelector('.folder-contents-section .search-bar input');
+    if (contentSearchInput) {
+      contentSearchInput.addEventListener('input', function() {
+        const q = this.value.trim().toLowerCase();
+        if (!q) {
+          renderContents(allContents);
+          return;
+        }
+        const filtered = allContents.filter(content => {
+          try {
+            const parsed = JSON.parse(content.title);
+            return (parsed.ar && parsed.ar.toLowerCase().includes(q)) || (parsed.en && parsed.en.toLowerCase().includes(q));
+          } catch (e) {
+            return content.title.toLowerCase().includes(q);
+          }
+        });
+        renderContents(filtered);
+      });
+    }
+}); 
 
 function showToast(message, type = 'info', duration = 3006) {
     const toastContainer = document.getElementById('toast-container');
@@ -1633,7 +1614,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const nameAr = nameArInput.value.trim();
       const nameEn = nameEnInput.value.trim();
       if (!nameAr || !nameEn) {
-        showToast('الرجاء إدخال كافة الحقول', 'error');
+        showToast(getTranslation('all-fields-required'), 'error');
         return;
       }
       const name = JSON.stringify({ ar: nameAr, en: nameEn });
@@ -1670,7 +1651,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const nameAr = nameArInput.value.trim();
       const nameEn = nameEnInput.value.trim();
       if (!nameAr || !nameEn) {
-        showToast('الرجاء إدخال كافة الحقول', 'error');
+        showToast(getTranslation('all-fields-required'), 'error');
         return;
       }
       const name = JSON.stringify({ ar: nameAr, en: nameEn });
@@ -1772,7 +1753,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const nameAr = nameArInput.value.trim();
       const nameEn = nameEnInput.value.trim();
       if (!nameAr || !nameEn) {
-        showToast('الرجاء إدخال كافة الحقول', 'error');
+        showToast(getTranslation('all-fields-required'), 'error');
         return;
       }
       const name = JSON.stringify({ ar: nameAr, en: nameEn });
@@ -1809,7 +1790,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const nameAr = nameArInput.value.trim();
       const nameEn = nameEnInput.value.trim();
       if (!nameAr || !nameEn) {
-        showToast('الرجاء إدخال كافة الحقول', 'error');
+        showToast(getTranslation('all-fields-required'), 'error');
         return;
       }
       const name = JSON.stringify({ ar: nameAr, en: nameEn });
