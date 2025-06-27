@@ -1010,7 +1010,7 @@ exports.addFolderName = async (req, res) => {
           userId,
           'add_folder_name',
           `تمت إضافة اسم مجلد جديد للجان: ${folderNameInLanguage}`,
-          'folder_name',
+          'folder',
           result.insertId
         );
       } catch (logErr) {
@@ -1074,7 +1074,7 @@ const { id }   = req.params;
           userId,
           'update_folder_name',
           `تم تعديل اسم مجلد للجان من: ${oldFolderNameInLanguage} إلى: ${newFolderNameInLanguage}`,
-          'folder_name',
+          'folder',
           id
         );
       } catch (logErr) {
@@ -1117,7 +1117,7 @@ exports.deleteFolderName = async (req, res) => {
           userId,
           'delete_folder_name',
           `تم حذف اسم مجلد للجان: ${folderNameInLanguage}`,
-          'folder_name',
+          'folder',
           id
         );
       } catch (logErr) {
@@ -1164,7 +1164,7 @@ exports.addContentTitle = async (req, res) => {
           userId,
           'add_content_title',
           `تمت إضافة عنوان محتوى جديد للجان: ${contentTitleInLanguage}`,
-          'content_title',
+          'content',
           result.insertId
         );
       } catch (logErr) {
@@ -1221,7 +1221,7 @@ exports.updateContentTitle = async (req, res) => {
           userId,
           'update_content_title',
           `تم تعديل عنوان محتوى للجان من: ${oldContentTitleInLanguage} إلى: ${newContentTitleInLanguage}`,
-          'content_title',
+          'content',
           id
         );
       } catch (logErr) {
@@ -1267,7 +1267,7 @@ exports.deleteContentTitle = async (req, res) => {
           userId,
           'delete_content_title',
           `تم حذف عنوان محتوى للجان: ${contentTitleInLanguage}`,
-          'content_title',
+          'content',
           id
         );
       } catch (logErr) {
