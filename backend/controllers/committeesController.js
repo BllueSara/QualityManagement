@@ -221,7 +221,6 @@ exports.addCommittee = async (req, res) => {
       if (token) {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const userId = decoded.id;
-        const userLanguage = getUserLanguageFromToken(token);
   
         // ✅ تسجيل اللوق بعد نجاح إضافة اللجنة
         try {
@@ -284,7 +283,6 @@ exports.addCommittee = async (req, res) => {
       if (token) {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const userId = decoded.id;
-        const userLanguage = getUserLanguageFromToken(token);
   
         try {
           const logDescription = {
@@ -452,7 +450,6 @@ exports.updateFolder = async (req, res) => {
         if (token) {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             const userId = decoded.id;
-            const userLanguage = getUserLanguageFromToken(token);
             
             try {
                 const logDescription = {
@@ -507,7 +504,6 @@ exports.deleteFolder = async (req, res) => {
       if (token) {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const userId = decoded.id;
-        const userLanguage = getUserLanguageFromToken(token);
   
         try {
           const logDescription = {
