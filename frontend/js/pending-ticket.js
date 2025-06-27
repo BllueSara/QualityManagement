@@ -165,7 +165,7 @@ row.append(tdStatus);
     
     if (isClosed) {
       sendBtn.disabled = true;
-      sendBtn.title = getTranslation('ticket-closed-error') || 'لا يمكن تحويل التذكرة لأنها مغلقة';
+      sendBtn.title = getTranslation('ticket-closed-error') || 'لا يمكن تحويل الحدث العارض لأنه مغلق';
       sendBtn.style.opacity = '0.5';
       sendBtn.style.cursor = 'not-allowed';
     }
@@ -275,7 +275,7 @@ async function rebuildUsersList() {
       const btn    = deptDrop.querySelector('.dropdown-btn');
       const list   = deptDrop.querySelector('.dropdown-content');
       const search = list.querySelector('.dropdown-search');
-
+      search.addEventListener('click', e => e.stopPropagation());
       btn.addEventListener('click', e => {
         e.stopPropagation();
         list.classList.toggle('active');
@@ -316,7 +316,7 @@ async function rebuildUsersList() {
       const btn    = userDrop.querySelector('.dropdown-btn');
       const list   = userDrop.querySelector('.dropdown-content');
       const search = list.querySelector('.dropdown-search');
-
+      search.addEventListener('click', e => e.stopPropagation());
       btn.addEventListener('click', e => {
         e.stopPropagation();
         list.classList.toggle('active');
@@ -364,7 +364,7 @@ async function rebuildUsersList() {
   sendBtn.addEventListener('click', async () => {
     // التحقق من أن الزر غير معطل
     if (sendBtn.disabled) {
-      alert(sendBtn.title || getTranslation('ticket-closed-error') || 'لا يمكن تحويل التذكرة لأنها مغلقة');
+      alert(sendBtn.title || getTranslation('ticket-closed-error') || 'لا يمكن تحويل الحدث العارض لأنه مغلق');
       return;
     }
 
@@ -403,7 +403,7 @@ if (!assignRes.ok) {
   
   // التعامل مع الأخطاء المختلفة
   if (errorData.status === 'closed') {
-    alert(getTranslation('ticket-closed-error') || 'لا يمكن تحويل التذكرة لأنها مغلقة');
+    alert(getTranslation('ticket-closed-error') || 'لا يمكن تحويل الحدث العارض لأنه مغلق');
     // تعطيل الزر بعد اكتشاف أن التذكرة مغلقة
     sendBtn.disabled = true;
     sendBtn.style.opacity = '0.5';
@@ -412,7 +412,7 @@ if (!assignRes.ok) {
   }
   
   if (errorData.status === 'already_assigned') {
-    alert(getTranslation('already-assigned-error') || 'جميع المستخدمين المحددين مكلفون بالفعل بهذه التذكرة');
+    alert(getTranslation('already-assigned-error') || 'جميع المستخدمين المحددين مكلفون بالفعل بهذا الحدث العارض');
     return;
   }
   
@@ -424,7 +424,7 @@ const result = await assignRes.json();
 // رسالة نجاح مع تفاصيل
 let successMessage = getTranslation('success-sent');
 if (result.assignedCount > 0) {
-  successMessage += `\nتم تحويل التذكرة إلى ${result.assignedCount} مستخدم`;
+  successMessage += `\nتم تحويل الحدث العارض إلى ${result.assignedCount} مستخدم`;
   if (result.skippedCount > 0) {
     successMessage += `\nتم تخطي ${result.skippedCount} مستخدم (مكلفون مسبقاً)`;
   }

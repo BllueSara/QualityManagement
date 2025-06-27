@@ -735,7 +735,7 @@ const query = isAdmin
  * Delete a notification
  */
 const deleteNotification = async (req, res) => {
-  const notifId = req.params.id;
+const notifId = req.params.nid;
   try {
     const [result] = await db.execute(
       'DELETE FROM notifications WHERE id = ?',

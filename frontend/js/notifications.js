@@ -49,9 +49,16 @@ function filterNotifications() {
 
   const filtered = allNotifications.filter(n => {
     const matchesType = !type || n.type === type;
+    // البحث في جميع الحقول: اسم المستخدم، العنوان، الرسالة، النوع
+    const userName = (n.user_name || '').toLowerCase();
+    const title    = (n.title || '').toLowerCase();
+    const message  = (n.message || '').toLowerCase();
+    const notifType = (n.type || '').toLowerCase();
     const matchesSearch =
-      n.title.toLowerCase().includes(search) ||
-      n.message.toLowerCase().includes(search);
+      userName.includes(search) ||
+      title.includes(search) ||
+      message.includes(search) ||
+      notifType.includes(search);
     return matchesType && matchesSearch;
   });
 
@@ -191,9 +198,12 @@ function getNotificationTranslation(text) {
   const lang = localStorage.getItem('language') || document.documentElement.lang || 'ar';
   if (lang === 'ar') return text;
   // ترجمة إشعار انتهاء الصلاحية
-  const expiredContentMatch = text.match(/^انتهت صلاحية المحتوى "(.+)" بتاريخ ([0-9\-]+). يرجى تحديثه أو رفع نسخة جديدة\.?\n?$/);
-  if (expiredContentMatch) {
-    return `The content "${expiredContentMatch[1]}" expired on ${expiredContentMatch[2]}. Please update or upload a new version.`;
+  const expiredDetails = text.match(
+    /^انتهت صلاحية المحتوى\s*["«](.+?)["»]\s*في(?:\s*قسم)?\s*["«](.+?)["»][,،]\s*مجلد\s*["«](.+?)["»]\s*بتاريخ\s*(.+?)\.\s*يرجى تحديثه أو رفع نسخة جديدة\.?$/
+  );
+  if (expiredDetails) {
+    const [, title, dept, folder, date] = expiredDetails;
+    return `The content "${title}" in department "${dept}", folder "${folder}" expired on ${date}. Please update or upload a new version.`;
   }
   // ترجمة إشعار انتهاء الصلاحية مع تفاصيل القسم والمجلد
   const expiredContentDetailsMatch = text.match(/^انتهت صلاحية المحتوى "(.+)" في قسم "(.+)"، مجلد "(.+)" بتاريخ ([0-9\-]+). يرجى تحديثه أو رفع نسخة جديدة\.?\n?$/);
@@ -209,6 +219,9 @@ function getNotificationTranslation(text) {
   }
   if (text === 'تم رفض ملفك') {
     return 'Your file has been rejected';
+  }
+  if (text==='انتهت صلاحية المحتوى') {
+    return 'The content has expired';
   }
   // ترجمة الجمل التي تحتوي على اسم ملف بين علامات اقتباس
   const fileApprovedMatch = text.match(/^الملف "(.+)" تم اعتماده من قبل الإدارة\.$/);
@@ -237,8 +250,8 @@ function getNotificationTranslation(text) {
     'تم تفويضك للتوقيع بالنيابة عن مستخدم آخر على الملف رقم': 'You have been delegated to sign on behalf of another user for file number',
     'تم تفويضك للتوقيع على ملف جديد رقم': 'You have been delegated to sign a new file with number',
     'تم تفويضك للتوقيع على ملف لجنة جديد رقم': 'You have been delegated to sign a new committee file with number',
-    'تم إغلاق تذكرتك رقم': 'Your ticket number',
-    'تم إغلاق التذكرة': 'Ticket closed',
+    'تم إغلاق الحدث العارض رقم': 'Your OVO  has been closed number',
+    'تم إغلاق الحدث العارض': 'OVR closed',
     'الملف': 'The file',
     'تم اعتماده من قبل الإدارة.': 'has been approved by the administration.',
     'تم رفضه من قبل الإدارة.': 'has been rejected by the administration.',

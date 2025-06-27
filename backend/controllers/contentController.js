@@ -491,8 +491,7 @@ const updateContent = async (req, res) => {
   
       // ✅ تسجيل اللوق بعد نجاح تحديث المحتوى
       try {
-        const userLanguage = getUserLanguageFromToken(token);
-        
+         
         // إنشاء النص ثنائي اللغة
         const logDescription = {
           ar: `تم تحديث محتوى من: ${getContentNameByLanguage(oldTitle, 'ar')} إلى: ${getContentNameByLanguage(title, 'ar')} في : ${getDepartmentNameByLanguage(departmentName, 'ar')}`,

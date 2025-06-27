@@ -182,15 +182,15 @@ const response = await fetch(`${apiBase}/tickets`, {
             const result = await response.json();
 
             if (response.ok) {
-                alert('تم إنشاء التذكرة بنجاح');
+                alert('تم إنشاء الحدث العارض بنجاح');
                   window.location.reload();
 
             } else {
-                alert(result.error || 'حدث خطأ أثناء إنشاء التذكرة');
+                alert(result.error || 'حدث خطأ أثناء إنشاء الحدث العارض');
             }
         } catch (error) {
-            console.error('Error submitting ticket:', error);
-            alert('حدث خطأ أثناء إرسال التذكرة');
+            console.error('Error submitting OVR:', error);
+            alert('حدث خطأ أثناء إرسال الحدث العارض');
         }
     });
 });

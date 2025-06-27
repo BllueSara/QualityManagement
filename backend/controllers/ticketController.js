@@ -132,10 +132,10 @@ exports.createTicket = async (req, res) => {
         patient_types
       };
 
-      // 4) انشئ التذكرة في الموديل، وارجع الـ ID
+      // 4) انشئ الحدث عارض في الموديل، وارجع الـ ID
       const ticketId = await Ticket.create(cleanData, req.user.id);
 
-      // 5) جلب التذكرة للتأكد من وجود الحقل title
+      // 5) جلب الحدث عارض للتأكد من وجود الحقل title
       const createdTicket = await Ticket.findById(
         ticketId,
         req.user.id,
@@ -143,15 +143,15 @@ exports.createTicket = async (req, res) => {
       );
 
       // 6) استخرج العنوان (قد يكون JSON أو نص)
-      const rawTitle = createdTicket?.title || cleanData.report_short_desc || `تذكرة رقم ${ticketId}`;
+      const rawTitle = createdTicket?.title || cleanData.report_short_desc || `حدث عارض رقم ${ticketId}`;
       const userLang = getUserLang(req);
       const localizedTitle = getLocalizedName(rawTitle, userLang) || rawTitle;
 
       // 7) تسجيل اللوق بعد نجاح الإنشاء
       try {
         const logDescription = {
-          ar: `تم إنشاء تذكرة جديدة: ${localizedTitle}`,
-          en: `Created new ticket: ${localizedTitle}`
+          ar: `تم إنشاء حدث عارض جديد: ${localizedTitle}`,
+          en: `Created new OVR: ${localizedTitle}`
         };
         await logAction(
           req.user.id,
@@ -167,13 +167,13 @@ exports.createTicket = async (req, res) => {
       // 8) أرسل الرد
       return res.status(201).json({
         status: 'success',
-        message: 'تم إنشاء التذكرة بنجاح',
+        message: 'تم إنشاء الحدث العارض بنجاح',
         data: { id: ticketId }
       });
     });
   } catch (error) {
-    console.error('createTicket error:', error);
-    return res.status(500).json({ message: 'Error creating ticket.' });
+    console.error('OVR error:', error);
+    return res.status(500).json({ message: 'Error creating OVR.' });
   }
 };
 
@@ -202,13 +202,13 @@ exports.getTicket = async (req, res) => {
         );
 
         if (!ticket) {
-            return res.status(404).json({ message: 'Ticket not found.' });
+            return res.status(404).json({ message: 'OVR not found.' });
         }
 
         res.json(ticket);
     } catch (error) {
         // console.error(error);
-        res.status(500).json({ message: 'Error fetching ticket.' });
+        res.status(500).json({ message: 'Error fetching OVR.' });
     }
 };
 
@@ -271,8 +271,8 @@ exports.updateTicket = async (req, res) => {
         const identifierEn = `ID ${req.params.id}`;
 
         const logDescription = {
-          ar: `تم تحديث التذكرة ${identifierAr}: ${changesAr.join(', ')}`,
-          en: `Updated ticket ${identifierEn}: ${changesEn.join(', ')}`
+          ar: `تم تحديث الحدث العارض ${identifierAr}: ${changesAr.join(', ')}`,
+          en: `Updated OVR ${identifierEn}: ${changesEn.join(', ')}`
         };
 
         await logAction(
@@ -284,7 +284,7 @@ exports.updateTicket = async (req, res) => {
         );
       }
 
-      return res.json({ message: 'تم تحديث التذكرة بنجاح' });
+      return res.json({ message: 'تم تحديث الحدث العارض بنجاح' });
     });
   } catch (error) {
     console.error('Error in updateTicket:', error);
@@ -295,14 +295,14 @@ exports.updateTicket = async (req, res) => {
 // Delete a ticket
 exports.deleteTicket = async (req, res) => {
   try {
-    // 1) جلب بيانات التذكرة قبل الحذف
+    // 1) جلب بيانات الحدث عارض قبل الحذف
     const ticket = await Ticket.findById(
       req.params.id,
       req.user.id,
       req.user.role
     );
 
-    // 2) حذف التذكرة
+    // 2) حذف الحدث عارض
     await Ticket.delete(req.params.id);
 
     // 3) تحضير العنوان المترجم
@@ -319,8 +319,8 @@ exports.deleteTicket = async (req, res) => {
     // 4) تسجيل اللوق
     try {
       const logDescription = {
-        ar: `تم حذف التذكرة: ${titleAr}`,
-        en: `Deleted ticket: ${titleEn}`
+        ar: `تم حذف الحدث العارض: ${titleAr}`,
+        en: `Deleted OVR: ${titleEn}`
       };
       await logAction(
         req.user.id,
@@ -334,9 +334,9 @@ exports.deleteTicket = async (req, res) => {
     }
 
     // 5) ردّ النجاح
-    return res.json({ message: 'تم حذف التذكرة بنجاح' });
+    return res.json({ message: 'تم حذف الحدث العارض بنجاح' });
   } catch (error) {
-    console.error('Error in deleteTicket:', error);
+    console.error('Error in delete OVR:', error);
     return res.status(500).json({ error: error.message });
   }
 };
@@ -359,19 +359,19 @@ exports.assignTicket = async (req, res) => {
     }
     const assigneeIds = Array.isArray(assignedTo) ? assignedTo : [assignedTo];
 
-    // 2) تأكد من وجود التذكرة وحالتها
+    // 2) تأكد من وجود الحدث عارض وحالتها
     const before = await Ticket.findById(ticketId, req.user.id, req.user.role);
     if (!before) {
-      return res.status(404).json({ status: 'error', message: 'التذكرة غير موجودة' });
+      return res.status(404).json({ status: 'error', message: 'الحدث العارض غير موجودة' });
     }
     if (['مغلق','closed'].includes(before.status)) {
-      return res.status(400).json({ status: 'error', message: 'لا يمكن تحويل تذكرة مغلقة' });
+      return res.status(400).json({ status: 'error', message: 'لا يمكن تحويل الحدث العارض مغلق' });
     }
 
     // 3) نفّذ التعيين (موديلك الحالي يدعم ID واحد فقط)
     await Ticket.assignTicket(ticketId, assigneeIds[0], req.user.id, comments);
 
-    // 4) جلب التذكرة المحدثة (بما فيها classifications)
+    // 4) جلب الحدث عارض المحدثة (بما فيها classifications)
     const updatedTicket = await Ticket.findById(ticketId, req.user.id, req.user.role);
 
     // 5) سجل اللوج
@@ -381,8 +381,8 @@ exports.assignTicket = async (req, res) => {
     const identifierAr = `رقم ${ticketId}`;
     const identifierEn = `ID ${ticketId}`;
     const logDescription = {
-      ar: `تم تعيين التذكرة ${identifierAr} إلى: ${assigneesInfo}`,
-      en: `Assigned ticket ${identifierEn} to: ${assigneesInfo}`
+      ar: `تم تعيين الحدث العارض ${identifierAr} إلى: ${assigneesInfo}`,
+      en: `Assigned OVR ${identifierEn} to: ${assigneesInfo}`
     };
     await logAction(
       req.user.id,
@@ -392,15 +392,15 @@ exports.assignTicket = async (req, res) => {
       ticketId
     );
 
-    // 6) أرسل التذكرة كاملة مع التصنيفات
+    // 6) أرسل الحدث عارض كاملة مع التصنيفات
     return res.json({
       status: 'success',
-      message: 'تم تعيين التذكرة بنجاح',
+      message: 'تم تعيين الحدث العارض بنجاح',
       data: updatedTicket
     });
 
   } catch (error) {
-    console.error('Error in assignTicket:', error);
+    console.error('Error in assign OVR:', error);
     return res.status(500).json({ status: 'error', message: error.message });
   }
 };
@@ -429,7 +429,7 @@ exports.addReply = async (req, res) => {
         // 2) جلب لغة المستخدم
         const userLang = getUserLang(req);
 
-        // 3) جلب التذكرة (بما في ذلك الحقل title)
+        // 3) جلب الحدث عارض (بما في ذلك الحقل title)
         const ticket = await Ticket.findById(ticketId, userId, decoded.role);
 
         // 4) استخراج العنوان وتحويله حسب اللغة
@@ -444,8 +444,8 @@ const newReply = await Ticket.addReply(ticketId, userId, text);
         
         // 6) تسجيل الحدث في اللوغ
         const logDescription = {
-            ar: `تم إضافة رد على التذكرة: ${title}`,
-            en: `Added reply to ticket: ${title}`
+            ar: `تم إضافة رد على الحدث العارض: ${title}`,
+            en: `Added reply to OVR: ${title}`
         };
         await logAction(
             userId,
@@ -456,7 +456,7 @@ const newReply = await Ticket.addReply(ticketId, userId, text);
         );
         
 return res.status(201).json({
-  message: 'Reply added and ticket closed if needed.',
+  message: 'Reply added and OVR closed if needed.',
   reply: newReply
 });
     } catch (err) {
@@ -487,20 +487,20 @@ exports.assignToUsers = async (req, res) => {
       database: process.env.DB_NAME || 'Quality'
     });
 
-    // 2) التحقق من حالة التذكرة - منع تحويل التذاكر المغلقة
+    // 2) التحقق من حالة الحدث عارض - منع تحويل التذاكر المغلقة
     const [ticketRows] = await db.execute(
       'SELECT status FROM tickets WHERE id = ?',
       [ticketId]
     );
     
     if (ticketRows.length === 0) {
-      return res.status(404).json({ error: 'التذكرة غير موجودة' });
+      return res.status(404).json({ error: 'الحدث العارض غير موجود' });
     }
     
     const ticketStatus = ticketRows[0].status;
     if (ticketStatus === 'مغلق' || ticketStatus === 'closed') {
       return res.status(400).json({ 
-        error: 'لا يمكن تحويل التذكرة لأنها مغلقة',
+        error: 'لا يمكن تحويل الحدث العارض لأنه مغلق',
         status: 'closed'
       });
     }
@@ -516,7 +516,7 @@ exports.assignToUsers = async (req, res) => {
     
     if (newAssigneeIds.length === 0) {
       return res.status(400).json({ 
-        error: 'جميع المستخدمين المحددين مكلفون بالفعل بهذه التذكرة',
+        error: 'جميع المستخدمين المحددين مكلفون بالفعل بهذا الحدث العارض',
         status: 'already_assigned'
       });
     }
@@ -534,8 +534,8 @@ exports.assignToUsers = async (req, res) => {
     const identifierAr = `رقم ${ticketId}`;
     const identifierEn = `ID ${ticketId}`;
     const logDescription = {
-      ar: `تم تعيين التذكرة ${identifierAr} ل : ${assigneeNames}`,
-      en: `Assigned ticket ${identifierEn} to  : ${assigneeNames}`
+      ar: `تم تعيين الحدث العارض ${identifierAr} ل : ${assigneeNames}`,
+      en: `Assigned OVR ${identifierEn} to  : ${assigneeNames}`
     };
     await logAction(
       req.user.id,
@@ -547,7 +547,7 @@ exports.assignToUsers = async (req, res) => {
 
     return res.json({ 
       status: 'success',
-      message: `تم تحويل التذكرة إلى ${assigneeNames}`,
+      message: `تم تحويل الحدث العارض إلى ${assigneeNames}`,
       assignedCount: newAssigneeIds.length,
       skippedCount: assigneeIds.length - newAssigneeIds.length
     });
@@ -562,7 +562,7 @@ exports.trackTicket = async (req, res) => {
   const ticketId = req.params.id;
   try {
     const data = await Ticket.track(ticketId);
-    if (!data) return res.status(404).json({ status:'error', message:'التذكرة غير موجودة' });
+    if (!data) return res.status(404).json({ status:'error', message:'الحدث العارض غير موجود' });
 
     // شطب المراحل المكتملة
     const done = data.timeline.filter(i => ['مغلق','معتمد'].includes(i.status)).length;
@@ -582,7 +582,7 @@ exports.trackTicket = async (req, res) => {
   }
 };
 
-// إشعار عند إغلاق التذكرة
+// إشعار عند إغلاق الحدث عارض
 exports.closeTicket = async (req, res) => {
     try {
         const ticketId = req.params.id;
@@ -590,14 +590,14 @@ exports.closeTicket = async (req, res) => {
         // Fetch ticket details for logging
         const ticket = await Ticket.findById(ticketId, req.user.id, req.user.role);
         
-        // تحديث حالة التذكرة إلى مغلق
+        // تحديث حالة الحدث عارض إلى مغلق
         await Ticket.updateStatus(ticketId, 'مغلق', req.user.id);
         
-        // ✅ تسجيل اللوق بعد نجاح إغلاق التذكرة
+        // ✅ تسجيل اللوق بعد نجاح إغلاق الحدث عارض
         try {
           const logDescription = {
-            ar: `تم إغلاق التذكرة: ${ticket ? ticket.title : `رقم ${ticketId}`}`,
-            en: `Closed ticket: ${ticket ? ticket.title : `ID ${ticketId}`}`
+            ar: `تم إغلاق الحدث العارض: ${ticket ? ticket.title : `رقم ${ticketId}`}`,
+            en: `Closed OVR: ${ticket ? ticket.title : `ID ${ticketId}`}`
           };
           
           await logAction(req.user.id, 'close_ticket', JSON.stringify(logDescription), 'ticket', ticketId);
@@ -605,22 +605,22 @@ exports.closeTicket = async (req, res) => {
           console.error('logAction error:', logErr);
         }
         
-        // جلب صاحب التذكرة
+        // جلب صاحب الحدث عارض
         if (ticket && ticket.created_by) {
             await insertNotification(
                 ticket.created_by,
-                'تم إغلاق التذكرة',
-                `تم إغلاق تذكرتك رقم ${ticketId}.`,
+                'تم إغلاق الحدث العارض',
+                `تم إغلاق حدثك العارض رقم ${ticketId}.`,
                 'ticket'
             );
         }
-        res.json({ message: 'تم إغلاق التذكرة بنجاح' });
+        res.json({ message: 'تم إغلاق الحدث العارض بنجاح' });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 };
 
-// جلب المستخدمين المكلفين بتذكرة معينة
+// جلب المستخدمين المكلفين بحدث عارض معينة
 exports.getTicketAssignees = async (req, res) => {
   const ticketId = req.params.id;
   

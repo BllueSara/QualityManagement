@@ -828,6 +828,7 @@ async function fetchFolders(departmentId) {
       { headers: { 'Authorization': `Bearer ${getToken()}` } }
     );
     const data = await response.json();
+    window._lastFoldersData = data.data;
 
     if (!response.ok) {
       showToast(data.message || 'فشل جلب مجلدات القسم.', 'error');
@@ -905,6 +906,7 @@ async function fetchFolders(departmentId) {
     console.error('Error fetching folders:', err);
     showToast('حدث خطأ في الاتصال بجلب مجلدات القسم.', 'error');
   }
+  // بعد جلب البيانات:
 }
 
       
@@ -934,7 +936,7 @@ async function fetchFolders(departmentId) {
                 }
             });
             const data = await response.json();
-
+            window._lastFilesData = data.data;
             if (response.ok) {
                 const filesList = document.querySelector('.files-list');
                 filesList.innerHTML = '';
@@ -989,14 +991,15 @@ if (permissions.canEditContent || permissions.canDeleteContent) {
         const fileItem = document.createElement('div');
         fileItem.className = 'file-item';
 
-        
+          const rawDate = content.end_date;              // "2025-06-30T21:00:00.000Z"
+  const displayDate = rawDate.split('T')[0];     // "2025-06-30"
         fileItem.innerHTML = `
           ${icons}
           <img src="../images/pdf.svg" alt="ملف PDF">
           <div class="file-info">
             <div class="file-name">${displayTitle}</div>
             <div class="approval-status ${approvalClass}">${approvalStatus}</div>
-            <div class="file-date">${content.end_date}</div>
+            <div class="file-date">${displayDate}</div>
           </div>
         `;
         filesList.appendChild(fileItem);
@@ -1161,7 +1164,14 @@ function closeAddFolderModal() {
             }
 
             const fileName = file.name;
-            fileUploadText.innerHTML = `<span class="selected-file">تم اختيار: ${fileName}</span>`;
+fileUploadText.innerHTML = `
+  <span 
+    class="selected-file" 
+    data-translate="selected-file"
+  >
+    ${getTranslation('selected-file')}: ${fileName}
+  </span>
+`;
             fileDropArea.classList.add('has-file');
         } else {
             fileUploadText.innerHTML = '<span class="supported-files">ملفات PDF فقط</span>';
@@ -1190,7 +1200,14 @@ function closeAddContentModal() {
         document.getElementById('contentFile').value = '';
         const fileDropArea = document.querySelector('#addContentModal .file-drop-area');
         const fileUploadText = fileDropArea.querySelector('.file-upload-text');
-        fileUploadText.innerHTML = '<span class="supported-files">ملفات PDF فقط</span>';
+fileUploadText.innerHTML = `
+  <span 
+    class="supported-files" 
+    data-translate="supported-files"
+  >
+    ${getTranslation('supported-files')}
+  </span>
+`;
         fileDropArea.classList.remove('has-file');
     }
 }
@@ -1511,7 +1528,7 @@ document.getElementById('updateFolderBtn')
             const nameEn = nameEnInput.value.trim();
     
             if (!nameAr || !nameEn) {
-                showToast('الرجاء إدخال كافة الحقول', 'error');
+                showToast(getTranslation('all-fields-required'), 'error');
                 return;
             }
     
@@ -1528,7 +1545,7 @@ document.getElementById('updateFolderBtn')
                 });
                 const data = await response.json();
                 if (response.ok) {
-                    showToast('تمت إضافة اسم المجلد بنجاح', 'success');
+                    showToast(getTranslation('folder-added-success'), 'success');
                     closeAddFolderNameModal();
                     await loadFolderNames();
                 } else {
@@ -1553,7 +1570,7 @@ document.getElementById('updateFolderBtn')
             const nameEn = nameEnInput.value.trim();
     
             if (!nameAr || !nameEn) {
-                showToast('الرجاء إدخال كافة الحقول', 'error');
+                showToast(getTranslation('all-fields-required'), 'error');
                 return;
             }
     
@@ -1570,7 +1587,7 @@ document.getElementById('updateFolderBtn')
                 });
                 const data = await response.json();
                 if (response.ok) {
-                    showToast('تم تحديث اسم المجلد بنجاح', 'success');
+                    showToast(getTranslation('folder-updated-success'), 'success');
                     closeEditFolderNameModal();
                     await loadFolderNames();
                     renderEditFolderNames(folderNames); // Re-render the list in the edit modal if it's open
@@ -1596,7 +1613,7 @@ document.getElementById('updateFolderBtn')
                 });
                 const data = await response.json();
                 if (response.ok) {
-                    showToast('تم حذف اسم المجلد بنجاح', 'success');
+                    showToast(getTranslation('folder-deleted-success'), 'success');
                     closeDeleteFolderNameModal();
                     const fId = folderNames.find(f => f.id === parseInt(id));
                     if (fId && selectedFolderId === fId.id) {
@@ -2164,7 +2181,7 @@ if (departmentIdFromUrl && isInitialFetch) {
             const nameEn = nameEnInput.value.trim();
     
             if (!nameAr || !nameEn) {
-                showToast('الرجاء إدخال كافة الحقول', 'error');
+                showToast(getTranslation('all-fields-required'), 'error');
                 return;
             }
     
@@ -2181,7 +2198,7 @@ if (departmentIdFromUrl && isInitialFetch) {
                 });
                 const data = await response.json();
                 if (response.ok) {
-                    showToast('تمت إضافة اسم المحتوى بنجاح', 'success');
+                    showToast(getTranslation('content-added-success'), 'success');
                     closeAddContentNameModal();
                     await loadContentNames();
                     renderEditContentNames(contentNames);
@@ -2207,7 +2224,7 @@ if (departmentIdFromUrl && isInitialFetch) {
             const nameEn = nameEnInput.value.trim();
     
             if (!nameAr || !nameEn) {
-                showToast('الرجاء إدخال كافة الحقول', 'error');
+                showToast(getTranslation('all-fields-required'), 'error');
                 return;
             }
     
@@ -2224,7 +2241,7 @@ if (departmentIdFromUrl && isInitialFetch) {
                 });
                 const data = await response.json();
                 if (response.ok) {
-                    showToast('تم تحديث اسم المحتوى بنجاح', 'success');
+                    showToast(getTranslation('content-updated-success'), 'success');
                     closeEditContentNameModal();
                     await loadContentNames();
                     renderEditContentNames(contentNames);
@@ -2250,7 +2267,7 @@ if (departmentIdFromUrl && isInitialFetch) {
                 });
                 const data = await response.json();
                 if (response.ok) {
-                    showToast('تم حذف اسم المحتوى بنجاح', 'success');
+                    showToast(getTranslation('content-deleted-success'), 'success');
                     closeDeleteContentNameModal();
                     await loadContentNames();
                     renderEditContentNames(contentNames);
@@ -2284,8 +2301,9 @@ if (departmentIdFromUrl && isInitialFetch) {
     addOldContentBtn.className = 'btn-primary';
     addOldContentBtn.id = 'addOldContentBtn';
     addOldContentBtn.type = 'button';
-    addOldContentBtn.innerHTML = `<span data-translate="add-old-content">إضافة محتوى قديم</span>`;
-    addOldContentBtn.style.marginRight = '8px';
+addOldContentBtn.innerHTML =
+  `<span data-translate="add-old-content">${getTranslation('add-old-content')}</span>`;
+      addOldContentBtn.style.marginRight = '8px';
     
     // أضف الزر بجانب زر إضافة محتوى إذا كان للمستخدم الصلاحية
     const fileControlsBar = document.querySelector('.file-controls-bar');
@@ -2322,7 +2340,6 @@ if (fileControlsBar && (getUserRoleFromToken() === 'admin' || permissions.canAdd
 
 
 }); // End of DOMContentLoaded 
-
 
 // --- UI logic for alignment and dynamic elements (not translation) ---
 // If you need to call applyLanguageUI(lang) from language.js, do so here if needed after dynamic content is rendered. 
@@ -2535,3 +2552,167 @@ async function handleCreateContent() {
     showToast('❌ خطأ في الاتصال بالخادم.', 'error');
   }
 }
+
+// --- ربط بحث الفولدرات والمحتوى (بحث مباشر على الكروت) ---
+
+document.addEventListener('DOMContentLoaded', function() {
+  // ... existing code ...
+
+  // ربط بحث الفولدرات
+  const folderSearchInput = document.querySelector('.folder-controls-bar .search-bar input');
+  if (folderSearchInput) {
+    folderSearchInput.addEventListener('input', function(e) {
+      const q = e.target.value.trim().toLowerCase();
+      // فلترة الفولدرات حسب الاسم (عربي أو إنجليزي)
+      const lang = localStorage.getItem('language') || 'ar';
+      // جلب كل عناصر الفولدرات من آخر تحميل
+      const foldersList = document.querySelector('.folders-list');
+      if (!foldersList) return;
+      // احصل على البيانات الأصلية (من آخر fetch)
+      if (typeof window._lastFoldersData === 'undefined') return;
+      const filtered = window._lastFoldersData.filter(folder => {
+        let displayName = folder.name;
+        try {
+          const parsed = JSON.parse(folder.name);
+          displayName = parsed[lang] || parsed.ar || parsed.en || folder.name;
+        } catch {}
+        return displayName.toLowerCase().includes(q);
+      });
+      // إعادة رسم الفولدرات
+      foldersList.innerHTML = '';
+      if (filtered.length) {
+        filtered.forEach(folder => {
+          let displayName = folder.name;
+          try {
+            const parsed = JSON.parse(folder.name);
+            displayName = parsed[lang] || parsed.ar || parsed.en || folder.name;
+          } catch {}
+          const card = document.createElement('div');
+          card.className = 'folder-card';
+          card.dataset.id = folder.id;
+          let icons = '';
+          if (permissions.canEditFolder || permissions.canDeleteFolder) {
+            icons = '<div class="item-icons">';
+            if (permissions.canEditFolder)
+              icons += `<a href="#" class="edit-icon"><img src="../images/edit.svg" alt="تعديل"></a>`;
+            if (permissions.canDeleteFolder)
+              icons += `<a href="#" class="delete-icon"><img src="../images/delet.svg" alt="حذف"></a>`;
+            icons += '</div>';
+          }
+          card.innerHTML = icons +
+            `<img src="../images/folders.svg">
+             <div class="folder-info">
+               <div class="folder-name">${displayName}</div>
+             </div>`;
+          foldersList.appendChild(card);
+          card.addEventListener('click', e => {
+            if (!e.target.closest('.edit-icon') && !e.target.closest('.delete-icon')) {
+              fetchFolderContents(folder.id);
+            }
+          });
+          if (permissions.canEditFolder) {
+            const editIcon = card.querySelector('.edit-icon');
+            editIcon?.addEventListener('click', e => {
+              e.preventDefault(); e.stopPropagation();
+              openEditFolderModal(folder.id);
+            });
+          }
+          if (permissions.canDeleteFolder) {
+            const deleteIcon = card.querySelector('.delete-icon');
+            deleteIcon?.addEventListener('click', e => {
+              e.preventDefault(); e.stopPropagation();
+              openDeleteFolderModal(folder.id);
+            });
+          }
+        });
+      } else {
+        foldersList.innerHTML = `<div class="no-content" data-translate="no-folders">${getTranslation('no-folders')}</div>`;
+      }
+    });
+  }
+
+  // ربط بحث الملفات (المحتوى)
+  const contentSearchInput = document.querySelector('.file-controls-bar .search-bar input');
+  if (contentSearchInput) {
+    contentSearchInput.addEventListener('input', function(e) {
+      const q = e.target.value.trim().toLowerCase();
+      const lang = localStorage.getItem('language') || 'ar';
+      const filesList = document.querySelector('.files-list');
+      if (!filesList) return;
+      if (typeof window._lastFilesData === 'undefined') return;
+      const filtered = window._lastFilesData.filter(content => {
+        let displayTitle = content.title;
+        try {
+          const parsed = JSON.parse(content.title);
+          displayTitle = parsed[lang] || parsed.ar || parsed.en || content.title;
+        } catch {}
+        return displayTitle.toLowerCase().includes(q);
+      });
+      filesList.innerHTML = '';
+      if (filtered.length) {
+        filtered.forEach(content => {
+          const key = content.is_approved ? 'status-approved' : 'status-awaiting';
+          const approvalStatus = getTranslation(key);
+          const approvalClass = content.is_approved ? 'approved' : 'pending';
+          let displayTitle = content.title;
+          try {
+            const parsedTitle = JSON.parse(content.title);
+            displayTitle = parsedTitle[lang] || parsedTitle.ar || parsedTitle.en || content.title;
+          } catch {}
+          let icons = '';
+          if (permissions.canEditContent || permissions.canDeleteContent) {
+            icons = '<div class="item-icons">';
+            if (permissions.canEditContent) {
+              icons += `<a href="#" class="edit-icon" data-id="${content.id}"><img src="../images/edit.svg" alt="تعديل"></a>`;
+            }
+            if (permissions.canDeleteContent) {
+              icons += `<a href="#" class="delete-icon" data-id="${content.id}"><img src="../images/delet.svg" alt="حذف"></a>`;
+            }
+            icons += '</div>';
+          }
+          const fileItem = document.createElement('div');
+          fileItem.className = 'file-item';
+          const rawDate = content.end_date;
+          const displayDate = rawDate ? rawDate.split('T')[0] : '';
+          fileItem.innerHTML = `
+            ${icons}
+            <img src="../images/pdf.svg" alt="ملف PDF">
+            <div class="file-info">
+              <div class="file-name">${displayTitle}</div>
+              <div class="approval-status ${approvalClass}">${approvalStatus}</div>
+              <div class="file-date">${displayDate}</div>
+            </div>
+          `;
+          filesList.appendChild(fileItem);
+          if (permissions.canEditContent) {
+            const btn = fileItem.querySelector('.edit-icon');
+            btn && btn.addEventListener('click', e => {
+              e.preventDefault(); e.stopPropagation();
+              openEditContentModal(content.id);
+            });
+          }
+          if (permissions.canDeleteContent) {
+            const btn = fileItem.querySelector('.delete-icon');
+            btn && btn.addEventListener('click', e => {
+              e.preventDefault(); e.stopPropagation();
+              openDeleteContentModal(content.id);
+            });
+          }
+          fileItem.addEventListener('click', function(e) {
+            if (!e.target.closest('.edit-icon') && !e.target.closest('.delete-icon')) {
+              if (content.fileUrl) {
+                const fullFileUrl = `http://localhost:3006/uploads/${content.fileUrl}`;
+                window.open(fullFileUrl, '_blank');
+              } else {
+                showToast(getTranslation('pdf-only'), 'error');
+              }
+            }
+          });
+        });
+      } else {
+        filesList.innerHTML = `<div class="no-content" data-translate="no-contents">${getTranslation('no-contents')}</div>`;
+      }
+    });
+  }
+
+});

@@ -88,7 +88,7 @@ static async create(ticketData, userId) {
     // 5) سجل الحالة الابتدائية
     await connection.query(
       `INSERT INTO ticket_status_history (ticket_id, status, changed_by, comments)
-       VALUES (?, 'جديد', ?, 'تم إنشاء التذكرة')`,
+       VALUES (?, 'جديد', ?, 'تم إنشاء الحدث العارض')`,
       [ticketId, userId]
     );
 
@@ -492,7 +492,7 @@ static async update(id, ticketData, userId) {
           id,
           status,
           userId,
-          ticketData.status_comments || 'تم تحديث حالة التذكرة'
+          ticketData.status_comments || 'تم تحديث حالة الحدث العارض'
         ]
       );
     }
@@ -547,7 +547,7 @@ static async update(id, ticketData, userId) {
             await connection.query(
                 `INSERT INTO ticket_status_history (ticket_id, status, changed_by, comments) 
                  VALUES (?, 'assigned', ?, ?)`,
-                [ticketId, userId, comments || 'تم تعيين التذكرة']
+                [ticketId, userId, comments || 'تم تعيين الحدث العارض']
             );
 
             await connection.commit();
