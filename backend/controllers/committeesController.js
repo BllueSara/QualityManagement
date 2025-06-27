@@ -641,78 +641,114 @@ exports.addContent = async (req, res) => {
   };
   
 
-  exports.updateContent = async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { title, notes } = req.body;
-      // Save the path including backend directory since multer saves to backend/uploads/content_files
-      const filePath = req.file ? path.posix.join('backend', 'uploads', 'content_files', req.file.filename) : null;
-
-      // جلب العنوان القديم وfolder_id قبل التحديث
-      const [oldRows] = await db.execute('SELECT title, folder_id FROM committee_contents WHERE id = ?', [id]);
-      if (!oldRows.length) {
-        return res.status(404).json({ message: 'المحتوى غير موجود' });
-      }
-      const oldTitle = oldRows[0].title;
-      const folderId = oldRows[0].folder_id;
-      
-      // جلب اسم اللجنة باللغة المناسبة
-      let committeeName = '';
-      if (folderId) {
-        const [comRows] = await db.execute('SELECT com.name FROM committees com JOIN committee_folders cf ON com.id = cf.committee_id WHERE cf.id = ?', [folderId]);
-        if (comRows.length > 0) {
-          const token = req.headers.authorization?.split(' ')[1];
-          const userLanguage = token ? getUserLanguageFromToken(token) : 'ar';
-          committeeName = getCommitteeNameByLanguage(comRows[0].name, userLanguage);
-        }
-      }
-
-      let query = 'UPDATE committee_contents SET title = ?, notes = ?';
-      let params = [title, notes];
-      if (filePath) {
-        query += ', file_path = ?';
-        params.push(filePath);
-      }
-      query += ', updated_at = CURRENT_TIMESTAMP WHERE id = ?';
-      params.push(id);
-
-      const [result] = await db.execute(query, params);
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ message: 'المحتوى غير موجود' });
-      }
-
-      // استخراج userId من التوكن
-      const token = req.headers.authorization?.split(' ')[1];
-      if (token) {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const userId = decoded.id;
-        const userLanguage = getUserLanguageFromToken(token);
-
-        try {
-          const logDescription = {
-            ar: `تم تعديل محتوى من: ${getContentNameByLanguage(oldTitle, 'ar')} إلى: ${getContentNameByLanguage(title, 'ar')} في لجنة: ${getCommitteeNameByLanguage(comRows[0].name, 'ar')}`,
-            en: `Updated content from: ${getContentNameByLanguage(oldTitle, 'en')} to: ${getContentNameByLanguage(title, 'en')} in committee: ${getCommitteeNameByLanguage(comRows[0].name, 'en')}`
-          };
-          
-          await logAction(
-            userId,
-            'update_content',
-            JSON.stringify(logDescription),
-            'content',
-            id
-          );
-        } catch (logErr) {
-          console.error('logAction error:', logErr);
-        }
-      }
-
-      res.status(200).json({ message: 'تم تعديل المحتوى بنجاح' });
-    } catch (error) {
-      console.error('updateContent error:', error);
-      res.status(500).json({ message: 'خطأ في تعديل المحتوى', error });
+// إنشاء نسخة جديدة بدلاً من التعديل المباشر
+exports.updateContent = async (req, res) => {
+  try {
+    // 1) التحقّق من التوثيق
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ status: 'error', message: 'غير مصرح: لا يوجد توكن' });
     }
-  };
-  
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id;
+    const userLang = getUserLanguageFromToken(token);
+
+    // 2) باراميترات الطلب
+    const originalId = req.params.id;          // المعرف الأصلي
+    const { title, notes } = req.body;
+    // multer يحفظ الملف في backend/uploads/content_files
+    const filePath = req.file
+      ? path.posix.join('backend', 'uploads', 'content_files', req.file.filename)
+      : null;
+
+    // 3) افتح اتصال جديد
+    const connection = await db.getConnection();
+
+    // 4) جلب بيانات المحتوى الأصلي
+    const [oldRows] = await connection.execute(
+      `SELECT folder_id, title, approvers_required
+       FROM committee_contents
+       WHERE id = ?`,
+      [originalId]
+    );
+    if (!oldRows.length) {
+      connection.release();
+      return res.status(404).json({ status: 'error', message: 'المحتوى الأصلي غير موجود' });
+    }
+    const { folder_id: folderId, title: oldTitle, approvers_required } = oldRows[0];
+
+    // 5) جلب اسم اللجنة للوج
+    let committeeName = '';
+    if (folderId) {
+      const [cf] = await connection.execute(
+        `SELECT com.name
+         FROM committees com
+         JOIN committee_folders cf ON com.id = cf.committee_id
+         WHERE cf.id = ?`,
+        [folderId]
+      );
+      if (cf.length) {
+        committeeName = getCommitteeNameByLanguage(cf[0].name, userLang);
+      }
+    }
+
+    // 6) إدراج سجل جديد بنسخة المراجعة
+    const [insertRes] = await connection.execute(
+      `INSERT INTO committee_contents (
+         title,
+         notes,
+         file_path,
+         folder_id,
+         created_by,
+         approvers_required,
+         approvals_log,
+         created_at,
+         updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      [
+        title,
+        notes || null,
+        filePath,
+        folderId,
+        userId,
+        approvers_required,
+        JSON.stringify([])    // نبدأ بسجل خالي للموافقات
+      ]
+    );
+    const newContentId = insertRes.insertId;
+
+    // 7) تسجيل اللوق باللغة المناسبة
+    try {
+      const logDescription = {
+        ar: `تم تحديث محتوى من: ${getContentNameByLanguage(oldTitle, 'ar')} إلى: ${getContentNameByLanguage(title, 'ar')} في لجنة: ${getCommitteeNameByLanguage(committeeName, 'ar')}`,
+        en: `Updated content from: ${getContentNameByLanguage(oldTitle, 'en')} to: ${getContentNameByLanguage(title, 'en')} in committee: ${getCommitteeNameByLanguage(committeeName, 'en')}`
+      };
+      await logAction(
+        userId,
+        'update_content',
+        JSON.stringify(logDescription),
+        'content',
+        newContentId
+      );
+    } catch (logErr) {
+      console.error('logAction error:', logErr);
+    }
+
+    connection.release();
+
+    // 8) استجابة API
+    return res.status(201).json({
+      status: 'success',
+      message: '✅ تم إنشاء نسخة جديدة من المحتوى وهي بانتظار الاعتماد',
+      contentId: newContentId
+    });
+  } catch (err) {
+    console.error('updateContent error:', err);
+    return res.status(500).json({ status: 'error', message: 'خطأ في إنشاء نسخة محدثة' });
+  }
+};
+
 
 exports.deleteContent = async (req, res) => {
     try {

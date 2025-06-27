@@ -127,13 +127,13 @@ let translatedComment = item.comments;
 
 if (item.comments) {
   const knownCommentsMap = {
-    'تم إنشاء التذكرة': {
-      ar: 'تم إنشاء التذكرة',
-      en: 'Ticket created'
+    'تم إنشاء الحدث العارض': {
+      ar: 'تم إنشاء الحدث العارض',
+      en: 'OVR created'
     },
-    'تم تحديث حالة التذكرة': {
-      ar: 'تم تحديث حالة التذكرة',
-      en: 'Status updated'
+    'تم تحديث حالة الحدث العارض': {
+      ar: 'تم تحديث حالة الحدث العارض',
+      en: 'Status updated for OVR'
     },
     'تم الإرسال إلى': {
       ar: 'تم الإرسال إلى',
@@ -214,8 +214,8 @@ ${translatedComment ? `<p class="timeline-note">${translatedComment}</p>` : ''}
 
   const lower = text.toLowerCase();
 
-  if (lower.includes('created')) return 'تم إنشاء التذكرة';
-  if (lower.includes('status updated')) return 'تم تحديث حالة التذكرة';
+  if (lower.includes('created')) return 'تم إنشاء الحدث العارض';
+  if (lower.includes('status updated')) return 'تم تحديث حالة الحدث العارض';
 
   const sentMatch = lower.match(/sent to (.+)/i);
   if (sentMatch) {

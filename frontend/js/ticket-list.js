@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 }
             });
-            if (!response.ok) throw new Error('Failed to fetch tickets');
+            if (!response.ok) throw new Error('Failed to fetch OVR');
 const body = await response.json();
 if (body.status !== 'success') throw new Error(body.message);
 tickets = body.data;
@@ -62,7 +62,7 @@ tickets = body.data;
             showPage(1);
         } catch (error) {
             // console.error('Error fetching tickets:', error);
-            alert('حدث خطأ أثناء جلب التذاكر.');
+            alert('حدث خطأ أثناء جلب الاحداث العارضة.');
         }
     }
 
@@ -137,13 +137,13 @@ const canTrack = permissions.canTrack; // أو حط صلاحية خاصة إذا
   document.querySelectorAll('.delete-icon').forEach(icon => {
     icon.addEventListener('click', async e => {
       const id = e.target.dataset.ticketId;
-      if (!confirm('هل أنت متأكد من حذف هذه التذكرة؟')) return;
+      if (!confirm('هل أنت متأكد من حذف هذا الحدث العارض')) return;
       const res = await fetch(`${apiBase}/tickets/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       if (res.ok) await fetchTickets();
-      else alert('فشل حذف التذكرة');
+      else alert('فشل حذف الحدث العارض');
     });
   });
 }
@@ -211,9 +211,9 @@ function getStatusText(status) {
         const lang = localStorage.getItem('language') || 'ar';
         
         if (lang === 'ar') {
-            recordsInfo.textContent = `عرض ${firstRec}-${lastRec} من ${totalRows} تذكرة`;
+            recordsInfo.textContent = `عرض ${firstRec}-${lastRec} من ${totalRows} حدث عارض`;
         } else {
-            recordsInfo.textContent = `Showing ${firstRec}-${lastRec} of ${totalRows} tickets`;
+            recordsInfo.textContent = `Showing ${firstRec}-${lastRec} of ${totalRows} OVR`;
         }
     }
   

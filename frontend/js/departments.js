@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     const addDepartmentNameInput = document.getElementById('departmentName');
     const addDepartmentImageInput = document.getElementById('departmentImage');
     const cardsGrid = document.querySelector('.cards-grid');
+    const searchInput = document.getElementById('searchInput');
 
     const editDepartmentModal = document.getElementById('editDepartmentModal');
     const editModalSaveBtn = document.getElementById('saveEditDepartment');
@@ -26,6 +27,9 @@ const addDepartmentNameArInput = document.getElementById('departmentNameAr');
 const addDepartmentNameEnInput = document.getElementById('departmentNameEn');
 const editDepartmentNameArInput = document.getElementById('editDepartmentNameAr');
 const editDepartmentNameEnInput = document.getElementById('editDepartmentNameEn');
+
+    // Store original departments data for filtering
+    let allDepartments = [];
 
     // Utility to get token
     function getToken() { return localStorage.getItem('token'); }
@@ -58,6 +62,68 @@ const editDepartmentNameEnInput = document.getElementById('editDepartmentNameEn'
 
     // فتح بوب اب اضافه القسم 
     addDepartmentBtn.addEventListener('click', () => openModal(addDepartmentModal));
+
+    // Search functionality
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.trim().toLowerCase();
+        filterDepartments(searchTerm);
+        
+        // Add visual feedback
+        if (searchTerm.length > 0) {
+            searchInput.style.borderColor = '#007bff';
+            searchInput.style.boxShadow = '0 0 0 2px rgba(0, 123, 255, 0.25)';
+        } else {
+            searchInput.style.borderColor = '';
+            searchInput.style.boxShadow = '';
+        }
+    });
+
+    // Add clear search functionality
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            this.value = '';
+            filterDepartments('');
+            this.style.borderColor = '';
+            this.style.boxShadow = '';
+        }
+    });
+
+    // Update search placeholder based on language
+    function updateSearchPlaceholder() {
+        const lang = localStorage.getItem('language') || 'ar';
+        if (lang === 'ar') {
+            searchInput.placeholder = 'ابحث عن قسم...';
+        } else {
+            searchInput.placeholder = 'Search for department...';
+        }
+    }
+
+    // Filter departments based on search term
+    function filterDepartments(searchTerm) {
+        const lang = localStorage.getItem('language') || 'ar';
+        
+        const filteredDepartments = allDepartments.filter(dept => {
+            let deptName;
+            let parsed;
+            try {
+                parsed = JSON.parse(dept.name);
+                deptName = parsed[lang] || parsed['ar'] || dept.name;
+            } catch {
+                deptName = dept.name;
+                parsed = null;
+            }
+            
+            // Search in both Arabic and English names
+            const nameAr = (parsed && parsed.ar) ? parsed.ar.toLowerCase() : '';
+            const nameEn = (parsed && parsed.en) ? parsed.en.toLowerCase() : '';
+            
+            return deptName.toLowerCase().includes(searchTerm) || 
+                   nameAr.includes(searchTerm) || 
+                   nameEn.includes(searchTerm);
+        });
+        
+        renderDepartments(filteredDepartments);
+    }
 
     // Fetch user permissions
 async function fetchPermissions() {
@@ -116,19 +182,26 @@ function closeModal(modal) {
         if (addDepartmentBtn) addDepartmentBtn.style.display = permissions.canAdd ? '' : 'none';
     }
 
-    // Fetch and render departments
-async function fetchDepartments() {
-    try {
-        const res = await fetch('http://localhost:3006/api/departments', {
-            headers: { 'Authorization': `Bearer ${getToken()}` }
-        });
-        const result = await res.json();
-        if (!res.ok) throw new Error(result.message);
-
+    // Render departments to the grid
+    function renderDepartments(departments) {
         cardsGrid.innerHTML = '';
         const lang = localStorage.getItem('language') || 'ar';
 
-        result.forEach(dept => {
+        if (departments.length === 0) {
+            const noResultsDiv = document.createElement('div');
+            noResultsDiv.className = 'no-results';
+            noResultsDiv.style.cssText = 'text-align: center; padding: 40px; color: #666; font-size: 18px; grid-column: 1 / -1;';
+            noResultsDiv.innerHTML = `
+                <div style="margin-bottom: 20px;">
+                    <i class="fas fa-search" style="font-size: 48px; color: #ccc;"></i>
+                </div>
+                <div>${getTranslation('no-results-found') || 'لا توجد نتائج مطابقة للبحث'}</div>
+            `;
+            cardsGrid.appendChild(noResultsDiv);
+            return;
+        }
+
+        departments.forEach(dept => {
             const card = document.createElement('div');
             card.className = 'card';
             card.dataset.id = dept.id;
@@ -169,6 +242,22 @@ async function fetchDepartments() {
             document.querySelectorAll('.edit-icon').forEach(el => el.addEventListener('click', handleEdit));
         if (permissions.canDelete)
             document.querySelectorAll('.delete-icon').forEach(el => el.addEventListener('click', handleDeleteOpen));
+    }
+
+    // Fetch and render departments
+async function fetchDepartments() {
+    try {
+        const res = await fetch('http://localhost:3006/api/departments', {
+            headers: { 'Authorization': `Bearer ${getToken()}` }
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.message);
+
+        // Store all departments for filtering
+        allDepartments = result;
+        
+        // Render all departments initially
+        renderDepartments(allDepartments);
 
     } catch (err) {
         console.error('Error fetching departments:', err);
@@ -297,10 +386,18 @@ editModalSaveBtn.addEventListener('click', async () => {
     // Overlay click closes
     document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if (e.target === m) closeModal(m); }));
 
+    // Listen for language changes
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'language') {
+            updateSearchPlaceholder();
+        }
+    });
+
     // Init
 await fetchPermissions();
 updateAddButtonVisibility();
 await fetchDepartments();
+updateSearchPlaceholder();
 
     window.goBack = () => window.history.back();
 });

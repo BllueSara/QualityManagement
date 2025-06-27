@@ -37,7 +37,7 @@ exports.getClosedTicketsReport = async (req, res) => {
         where += ' AND t.created_by = ?';
         params.push(userId);
       } else {
-        return res.status(403).json({ status: 'error', message: 'ليس لديك صلاحية عرض تقارير التذاكر.' });
+        return res.status(403).json({ status: 'error', message: 'ليس لديك صلاحية عرض تقارير الاحداث العارضة.' });
       }
     }
 
@@ -60,6 +60,6 @@ exports.getClosedTicketsReport = async (req, res) => {
     res.json({ status: 'success', data: rows });
   } catch (err) {
     console.error('getClosedTicketsReport error:', err);
-    res.status(500).json({ status: 'error', message: 'فشل جلب تقرير التذاكر.' });
+    res.status(500).json({ status: 'error', message: 'فشل جلب تقرير الاحداث العارضة.' });
   }
 }; 
