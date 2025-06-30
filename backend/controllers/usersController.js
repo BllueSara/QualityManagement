@@ -668,59 +668,57 @@ const getActionTypes = async (req, res) => {
 
 const getNotifications = async (req, res) => {
   const userId = req.params.id;
-
   try {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ status: 'error', message: 'Missing token' });
 
     let payload;
     try {
-      payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+      payload = jwt.verify(token, process.env.JWT_SECRET);
     } catch {
       return res.status(400).json({ status: 'error', message: 'توكن غير صالح' });
     }
 
     const isAdmin = payload.role === 'admin';
 
-const query = isAdmin
-  ? `
-    SELECT 
-      n.id,
-      n.user_id,
-      u.username AS user_name,
-      n.title,
-      n.message,
-      n.is_read,
-      n.created_at,
-      n.type
-    FROM notifications n
-    LEFT JOIN users u ON u.id = n.user_id
-    ORDER BY n.created_at DESC
-  `
-  : `
-    SELECT 
-      n.id,
-      n.user_id,
-      u.username AS user_name,
-      n.title,
-      n.message,
-      n.is_read,
-      n.created_at,
-      n.type
-    FROM notifications n
-    LEFT JOIN users u ON u.id = n.user_id
-    WHERE n.user_id = ?
-    ORDER BY n.created_at DESC
-  `;
-
+    const query = isAdmin
+      ? `
+        SELECT 
+          n.id,
+          n.user_id,
+          u.username AS user_name,
+          n.title,
+          n.message,
+          n.is_read_by_admin AS is_read,
+          n.created_at,
+          n.type
+        FROM notifications n
+        LEFT JOIN users u ON u.id = n.user_id
+        ORDER BY n.created_at DESC
+      `
+      : `
+        SELECT 
+          n.id,
+          n.user_id,
+          u.username AS user_name,
+          n.title,
+          n.message,
+          n.is_read_by_user AS is_read,
+          n.created_at,
+          n.type
+        FROM notifications n
+        LEFT JOIN users u ON u.id = n.user_id
+        WHERE n.user_id = ?
+        ORDER BY n.created_at DESC
+      `;
 
     const [rows] = await db.execute(query, isAdmin ? [] : [userId]);
-
     return res.status(200).json({ status: 'success', data: rows });
   } catch (error) {
     res.status(500).json({ message: 'Error fetching notifications' });
   }
 };
+
 
 
 
@@ -752,7 +750,6 @@ const notifId = req.params.nid;
 // controllers/usersController.js
 const markAllAsRead = async (req, res) => {
   const userId = req.params.id;
-
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {
     return res.status(401).json({ message: 'غير مصرح' });
@@ -770,8 +767,8 @@ const markAllAsRead = async (req, res) => {
   try {
     await db.execute(
       isAdmin
-        ? `UPDATE notifications SET is_read = 1 WHERE is_read = 0`
-        : `UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0`,
+        ? `UPDATE notifications SET is_read_by_admin = 1 WHERE is_read_by_admin = 0`
+        : `UPDATE notifications SET is_read_by_user = 1 WHERE user_id = ? AND is_read_by_user = 0`,
       isAdmin ? [] : [userId]
     );
 
@@ -780,11 +777,10 @@ const markAllAsRead = async (req, res) => {
     res.status(500).json({ message: 'Error marking as read' });
   }
 };
+
 // GET /api/users/:id/notifications/unread-count
 const getUnreadCount = async (req, res) => {
   const userId = req.params.id;
-
-  // استخرج الدور من التوكن
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {
     return res.status(401).json({ message: 'غير مصرح' });
@@ -802,8 +798,8 @@ const getUnreadCount = async (req, res) => {
   try {
     const [rows] = await db.execute(
       isAdmin
-        ? 'SELECT COUNT(*) AS count FROM notifications WHERE is_read = 0'
-        : 'SELECT COUNT(*) AS count FROM notifications WHERE user_id = ? AND is_read = 0',
+        ? 'SELECT COUNT(*) AS count FROM notifications WHERE is_read_by_admin = 0'
+        : 'SELECT COUNT(*) AS count FROM notifications WHERE user_id = ? AND is_read_by_user = 0',
       isAdmin ? [] : [userId]
     );
     res.status(200).json({ count: rows[0].count });
@@ -811,6 +807,7 @@ const getUnreadCount = async (req, res) => {
     res.status(500).json({ message: 'Error getting unread count' });
   }
 };
+
 
 // دالة لاستخراج المعلومات من الوصف
 function extractInfoFromDescription(description) {

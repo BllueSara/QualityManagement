@@ -205,8 +205,19 @@ function getNotificationTranslation(text) {
     const [, title, dept, folder, date] = expiredDetails;
     return `The content "${title}" in department "${dept}", folder "${folder}" expired on ${date}. Please update or upload a new version.`;
   }
+  // ترجمة إشعار اقتراب انتهاء الصلاحية (قبل شهر أو يوم)
+  const soonMonthDetails = text.match(/^اقترب انتهاء صلاحية المحتوى\s*["«](.+?)["»]\s*في(?:\s*قسم)?\s*["«](.+?)["»][,،]\s*مجلد\s*["«](.+?)["»]\s*بتاريخ\s*(.+?)\.\s*يرجى تحديثه أو رفع نسخة جديدة\.?$/);
+  if (soonMonthDetails) {
+    const [, title, dept, folder, date] = soonMonthDetails;
+    return `The content "${title}" in department "${dept}", folder "${folder}" is expiring soon (on ${date}). Please update or upload a new version.`;
+  }
+  const soonDayDetails = text.match(/^غدًا تنتهي صلاحية المحتوى\s*["«](.+?)["»]\s*في(?:\s*قسم)?\s*["«](.+?)["»][,،]\s*مجلد\s*["«](.+?)["»]\s*بتاريخ\s*(.+?)\.\s*يرجى تحديثه أو رفع نسخة جديدة\.?$/);
+  if (soonDayDetails) {
+    const [, title, dept, folder, date] = soonDayDetails;
+    return `The content "${title}" in department "${dept}", folder "${folder}" will expire tomorrow (${date}). Please update or upload a new version.`;
+  }
   // ترجمة إشعار انتهاء الصلاحية مع تفاصيل القسم والمجلد
-  const expiredContentDetailsMatch = text.match(/^انتهت صلاحية المحتوى "(.+)" في قسم "(.+)"، مجلد "(.+)" بتاريخ ([0-9\-]+). يرجى تحديثه أو رفع نسخة جديدة\.?\n?$/);
+  const expiredContentDetailsMatch = text.match(/^انتهت صلاحية المحتوى "(.+)" في قسم "(.+)", مجلد "(.+)" بتاريخ ([0-9\-]+). يرجى تحديثه أو رفع نسخة جديدة\.?\n?$/);
   if (expiredContentDetailsMatch) {
     return `The content "${expiredContentDetailsMatch[1]}" in department "${expiredContentDetailsMatch[2]}", folder "${expiredContentDetailsMatch[3]}" expired on ${expiredContentDetailsMatch[4]}. Please update or upload a new version.`;
   }

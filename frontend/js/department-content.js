@@ -963,28 +963,43 @@ const approvalStatus = getTranslation(key);
                         
                         // 1) بنية الأيقونات حسب الصلاحيات
                                 let expiredBadge = '';
-        if (content.extra && content.extra.expired && getUserRoleFromToken() === 'admin') {
-          expiredBadge = `<span class="expired-badge" style="color: #fff; background: #d9534f; border-radius: 4px; padding: 2px 8px; margin-right: 8px; font-size: 12px;">${getTranslation('expired-content') || 'منتهي الصلاحية'}</span>`;
-        }
+        // --- بادج برتقالي إذا باقي شهر أو أقل ---
+        let soonExpireBadge = '';
+if (content.end_date) {
+  const now = new Date();
+  const endDate = new Date(content.end_date);
+  const diffMs = endDate.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 
+  console.log(`🎯 ${content.title} → diffDays=${diffDays} expired=${content.extra?.expired}`);
 
-let icons = '';
-if (permissions.canEditContent || permissions.canDeleteContent) {
-  icons = '<div class="item-icons">';
-  // هنا نضيف الشارات أولاً عشان تظهر يسار الأزرار
-  icons += expiredBadge ;
-  if (permissions.canEditContent) {
-    icons += `<a href="#" class="edit-icon" data-id="${content.id}">
-                <img src="../images/edit.svg" alt="تعديل">
-              </a>`;
+  // 🔥 برتقالي يظهر دائمًا إذا باقي 0-30
+  if (diffDays <= 30 && diffDays >= 0) {
+    soonExpireBadge = `<span class="soon-expire-badge" style="color: #fff; background: orange; border-radius: 4px; padding: 2px 8px; margin-right: 8px; font-size: 12px;">${getTranslation('soon-expire') || 'اقترب انتهاء الصلاحية'}</span>`;
+      console.log("🟠 showing soonExpireBadge for:", displayTitle);
+
   }
-  if (permissions.canDeleteContent) {
-    icons += `<a href="#" class="delete-icon" data-id="${content.id}">
-                <img src="../images/delet.svg" alt="حذف">
-              </a>`;
+
+  // 🔥 أحمر يظهر فقط لو extra.expired = true (يرجعه السيرفر للأدمن فقط)
+  if (content.extra && content.extra.expired) {
+    expiredBadge = `<span class="expired-badge" style="color: #fff; background: #d9534f; border-radius: 4px; padding: 2px 8px; margin-right: 8px; font-size: 12px;">${getTranslation('expired-content') || 'منتهي الصلاحية'}</span>`;
   }
-  icons += '</div>';
 }
+
+let icons = '<div class="item-icons">';
+icons += expiredBadge + soonExpireBadge;
+
+if (permissions.canEditContent) {
+  icons += `<a href="#" class="edit-icon" data-id="${content.id}">
+              <img src="../images/edit.svg" alt="تعديل">
+            </a>`;
+}
+if (permissions.canDeleteContent) {
+  icons += `<a href="#" class="delete-icon" data-id="${content.id}">
+              <img src="../images/delet.svg" alt="حذف">
+            </a>`;
+}
+icons += '</div>';
         
 
         // 2) أنشئ العنصر
@@ -2715,4 +2730,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+});
+
+// أضف مفتاح الترجمة للبادج البرتقالي
+window.translations = window.translations || {};
+['ar', 'en'].forEach(lang => {
+  window.translations[lang] = window.translations[lang] || {};
+  if (!window.translations[lang]['soon-expire']) {
+    window.translations[lang]['soon-expire'] = lang === 'ar' ? 'اقترب انتهاء الصلاحية' : 'Expiring soon';
+  }
 });
