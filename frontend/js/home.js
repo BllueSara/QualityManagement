@@ -109,3 +109,28 @@ document.querySelectorAll('.cards-grid .card').forEach(card => {
     // console.warn('فشل جلب عدد الإشعارات:', err);
   }
 });
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'visible') {
+    await updateNotifCount();
+  }
+});
+
+async function updateNotifCount() {
+  const token = localStorage.getItem('token');
+  if (!token) return;
+  const payload = JSON.parse(atob(token.split('.')[1] || '{}'));
+  const userId  = payload.id;
+  try {
+    const notifRes = await fetch(`${apiBase}/users/${userId}/notifications/unread-count`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const { count } = await notifRes.json();
+    const notifBadge = document.getElementById('notificationCount');
+    if (notifBadge) {
+      notifBadge.textContent = count;
+      notifBadge.style.display = count > 0 ? 'block' : 'none';
+    }
+  } catch (err) {
+    console.warn('فشل تحديث عدد الإشعارات عند الرجوع:', err);
+  }
+}
