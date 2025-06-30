@@ -57,21 +57,24 @@ async function maybeNotifyExpiredContents() {
 
 async function notifyExpiredContents() {
   const today = new Date().toISOString().split('T')[0]; // yyyy-mm-dd
+  const now = new Date();
   const connection = await db.getConnection();
 
   try {
-    const [expired] = await connection.execute(`
+    // جلب كل المحتويات التي لها end_date
+    const [contents] = await connection.execute(`
       SELECT c.id, c.title, c.created_by, c.end_date, c.folder_id
       FROM contents c
-      LEFT JOIN notifications n
-        ON n.type = CONCAT('content_expired_', c.id)
-       AND n.user_id = c.created_by
       WHERE c.end_date IS NOT NULL
-        AND c.end_date < ?
-        AND n.id IS NULL
-    `, [today]);
+    `);
 
-    for (const row of expired) {
+    for (const row of contents) {
+      if (!row.end_date) continue;
+      const endDate = new Date(row.end_date);
+      if (isNaN(endDate.getTime())) continue;
+      const diffMs = endDate.getTime() - now.getTime();
+      const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
       // جلب أسماء القسم والمجلد
       const [folderRows] = await connection.execute(
         `SELECT f.name AS folder_name, d.name AS department_name
@@ -80,41 +83,122 @@ async function notifyExpiredContents() {
          WHERE f.id = ?`,
         [row.folder_id]
       );
-
       const folderName = folderRows[0]?.folder_name || '';
       const departmentName = folderRows[0]?.department_name || '';
+  const formattedDate = new Date(row.end_date).toISOString().split('T')[0];
 
-      // بناء النص
-      const notificationMsg = 
-        `انتهت صلاحية المحتوى "${row.title}" في  "${departmentName}"، ` +
-        `مجلد "${folderName}" بتاريخ ${row.end_date}. يرجى تحديثه أو رفع نسخة جديدة.`;
-
-      // 1) أدخل الإشعار
-      const dynamicType = `content_expired_${row.id}`;
-      await insertNotification(
-        row.created_by,
-        'انتهت صلاحية المحتوى',
-        notificationMsg,
-        dynamicType
-      );
-
-      // 2) سجّل الحدث في جدول اللوق مع تتبع الأخطاء
-      const logDescription = {
-        ar: `  إشعار لانتهاء صلاحية المحتوى: ${row.title} في  ${departmentName}، مجلد ${folderName}`,
-        en: `Sent expiration notification for content: ${row.title} in  ${departmentName}, folder ${folderName}`
-      };
-      console.log('⬇️ Calling logAction for content ID', row.id);
-      try {
-        await logAction(
-          row.created_by,                 // user_id
-          'notify_content_expired',       // actionType
-          JSON.stringify(logDescription), // description (JSON string)
-          'content',                      // referenceType
-          row.id                          // referenceId
+      // إشعار قبل شهر (30 يوم)
+      if (diffDays === 30) {
+        // تحقق إذا أُرسل إشعار الشهر مسبقًا
+        const [notMonth] = await connection.execute(
+          `SELECT id FROM notifications WHERE type = ? AND user_id = ?`,
+          [
+            `content_expiry_soon_month_${row.id}`,
+            row.created_by
+          ]
         );
-        console.log('✅ logAction succeeded for content ID', row.id);
-      } catch (err) {
-        console.error('❌ logAction failed for content ID', row.id, err);
+        if (!notMonth.length) {
+          const notificationMsg =
+            `اقترب انتهاء صلاحية المحتوى "${row.title}" في  "${departmentName}"، مجلد "${folderName}" بتاريخ ${formattedDate}. يرجى تحديثه أو رفع نسخة جديدة.`;
+          await insertNotification(
+            row.created_by,
+            'اقترب انتهاء صلاحية المحتوى',
+            notificationMsg,
+            `content_expiry_soon_month_${row.id}`
+          );
+          // سجل في اللوقز
+          const logDescription = {
+            ar: `إشعار اقتراب انتهاء صلاحية المحتوى (شهر): ${row.title} في  ${departmentName}، مجلد ${folderName}`,
+            en: `Sent 1-month expiry soon notification for content: ${row.title} in  ${departmentName}, folder ${folderName}`
+          };
+          try {
+            await logAction(
+              row.created_by,
+              'notify_content_expiry_soon_month',
+              JSON.stringify(logDescription),
+              'content',
+              row.id
+            );
+          } catch (err) {
+            console.error('❌ logAction failed for month notification content ID', row.id, err);
+          }
+        }
+      }
+
+      // إشعار ليلة الانتهاء (قبل يوم)
+      if (diffDays === 1) {
+        // تحقق إذا أُرسل إشعار اليوم مسبقًا
+        const [notDay] = await connection.execute(
+          `SELECT id FROM notifications WHERE type = ? AND user_id = ?`,
+          [
+            `content_expiry_soon_day_${row.id}`,
+            row.created_by
+          ]
+        );
+        if (!notDay.length) {
+          const notificationMsg =
+            `غدًا تنتهي صلاحية المحتوى "${row.title}" في  "${departmentName}"، مجلد "${folderName}" بتاريخ ${formattedDate}. يرجى تحديثه أو رفع نسخة جديدة.`;
+          await insertNotification(
+            row.created_by,
+            'غدًا تنتهي صلاحية المحتوى',
+            notificationMsg,
+            `content_expiry_soon_day_${row.id}`
+          );
+          // سجل في اللوقز
+          const logDescription = {
+            ar: `إشعار اقتراب انتهاء صلاحية المحتوى (ليلة الانتهاء): ${row.title} في  ${departmentName}، مجلد ${folderName}`,
+            en: `Sent 1-day expiry soon notification for content: ${row.title} in  ${departmentName}, folder ${folderName}`
+          };
+          try {
+            await logAction(
+              row.created_by,
+              'notify_content_expiry_soon_day',
+              JSON.stringify(logDescription),
+              'content',
+              row.id
+            );
+          } catch (err) {
+            console.error('❌ logAction failed for day notification content ID', row.id, err);
+          }
+        }
+      }
+
+      // إشعار الانتهاء الفعلي (الأحمر) كما هو سابقًا
+      if (diffDays < 0) {
+        // تحقق إذا أُرسل إشعار الانتهاء مسبقًا
+        const [notExpired] = await connection.execute(
+          `SELECT id FROM notifications WHERE type = ? AND user_id = ?`,
+          [
+            `content_expired_${row.id}`,
+            row.created_by
+          ]
+        );
+        if (!notExpired.length) {
+          const notificationMsg =
+            `انتهت صلاحية المحتوى "${row.title}" في  "${departmentName}"، مجلد "${folderName}" بتاريخ ${formattedDate}. يرجى تحديثه أو رفع نسخة جديدة.`;
+          await insertNotification(
+            row.created_by,
+            'انتهت صلاحية المحتوى',
+            notificationMsg,
+            `content_expired_${row.id}`
+          );
+          // سجل في اللوقز
+          const logDescription = {
+            ar: `إشعار لانتهاء صلاحية المحتوى: ${row.title} في  ${departmentName}، مجلد ${folderName}`,
+            en: `Sent expiration notification for content: ${row.title} in  ${departmentName}, folder ${folderName}`
+          };
+          try {
+            await logAction(
+              row.created_by,
+              'notify_content_expired',
+              JSON.stringify(logDescription),
+              'content',
+              row.id
+            );
+          } catch (err) {
+            console.error('❌ logAction failed for content ID', row.id, err);
+          }
+        }
       }
     }
   } finally {
@@ -213,33 +297,37 @@ const getContentsByFolderId = async (req, res) => {
         const oneDayMs = 24 * 60 * 60 * 1000;
         const isAdmin = decodedToken.role === 'admin';
         // TODO: إذا عندك صلاحية خاصة أضفها هنا
-        const canViewExpired = isAdmin; // أو decodedToken.permissions?.includes('view_expired_content')
 
-        const filtered = contents.filter(item => {
-          if (!item.end_date) return true;
-          const endDate = new Date(item.end_date);
-          if (isNaN(endDate.getTime())) return true; // تجاهل التواريخ غير الصالحة
-          // إذا لم تمر 24 ساعة بعد الانتهاء، أظهر للجميع
-          if (nowMs - endDate.getTime() < oneDayMs) return true;
-          // إذا أدمن أو عنده صلاحية، أظهر له الكل
-          if (canViewExpired) return true;
-          // غير ذلك، أخفِ المحتوى المنتهي
-          return false;
-        }).map(item => {
-          // أضف علامة expired إذا انتهى فعلاً
-          let extra = {};
-          if (item.end_date) {
-            const endDate = new Date(item.end_date);
-            if (!isNaN(endDate.getTime()) && nowMs > endDate.getTime() + oneDayMs) {
-              extra.expired = true;
-            }
-          }
-          // أضف خاصية is_old_content
-          if (item.is_old_content == 1) {
-            extra.is_old_content = true;
-          }
-          return { ...item, extra };
-        });
+const filtered = contents.filter(item => {
+  if (!item.end_date) return true;
+  const endDate = new Date(item.end_date);
+  if (isNaN(endDate.getTime())) return true;
+
+  const diffDays = Math.ceil((endDate.getTime() - nowMs) / (1000 * 60 * 60 * 24));
+
+  if (!isAdmin) {
+    // ✅ يظهر للمستخدم العادي إذا ما انتهى أو انتهى اليوم بالضبط
+    if (diffDays >= 0) return true;
+    // 🚫 لو انتهى من أمس أو قبل
+    return false;
+  }
+
+  // ✅ الأدمن يشوف الكل
+  return true;
+}).map(item => {
+  let extra = {};
+  if (item.end_date) {
+    const endDate = new Date(item.end_date);
+    if (!isNaN(endDate.getTime()) && nowMs > endDate.getTime() + oneDayMs) {
+      extra.expired = true;
+    }
+  }
+  if (item.is_old_content == 1) {
+    extra.is_old_content = true;
+  }
+  return { ...item, extra };
+});
+
 
         res.json({
             status: 'success',
