@@ -332,6 +332,7 @@ const filtered = contents.filter(item => {
         res.json({
             status: 'success',
             message: 'تم جلب المحتويات بنجاح',
+            folderName: folder[0].name,
             folder: {
                 id: folder[0].id,
                 name: folder[0].name,
@@ -1247,20 +1248,98 @@ function getUserLanguageFromToken(token) {
     }
 }
 
-  
-  module.exports = {
-    getMyUploadedContent,
-    getContentsByFolderId,
-    addContent,
-    updateContent,
-    deleteContent,
-    downloadContent,
-    getContentById,
-    approveContent,
-      getContentNames,
+// دالة تسجيل عرض المحتوى
+const logContentView = async (req, res) => {
+  try {
+    const { contentId, contentTitle, folderName, departmentName, committeeName } = req.body;
+    const token = req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({ message: 'Token required' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id;
+    const userLanguage = decoded.language || 'ar';
+
+    // تحديد نوع المحتوى والوصف المناسب
+    let actionType, description;
+    let sourceName = departmentName || committeeName || 'غير محدد';
+    
+    // دالة مساعدة لتحويل الاسم إذا كان JSON
+    function getLocalized(val) {
+      if (!val) return '';
+      if (typeof val === 'string' && val.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(val);
+          return parsed[userLanguage] || parsed['ar'] || parsed['en'] || val;
+        } catch { return val; }
+      }
+      return val;
+    }
+    
+    const folder = getLocalized(folderName) || 'غير محدد';
+    const content = getLocalized(contentTitle) || contentTitle || 'غير محدد';
+    const source = getLocalized(sourceName) || sourceName || 'غير محدد';
+    
+    // تحديد نوع المحتوى بناءً على وجود committeeName
+    if (committeeName) {
+      actionType = 'view_committee_content';
+      description = JSON.stringify({
+        ar: `عرض المحتوى "${content}" في ${source} داخل مجلد "${folder}"`,
+        en: `Viewed content "${content}" in ${source} in folder "${folder}"`
+      });
+    } else {
+      actionType = 'view_department_content';
+      description = JSON.stringify({
+        ar: `عرض المحتوى "${content}" في ${source} داخل مجلد "${folder}"`,
+        en: `Viewed content "${content}" in ${source} in folder "${folder}"`
+      });
+    }
+
+    // استخراج الرقم من contentId إذا كان يحتوي على نص
+    let numericContentId = 0;
+    if (typeof contentId === 'string') {
+      if (contentId.includes('-')) {
+        const match = contentId.match(/\d+$/);
+        numericContentId = match ? parseInt(match[0]) : 0;
+      } else {
+        numericContentId = parseInt(contentId) || 0;
+      }
+    } else {
+      numericContentId = parseInt(contentId) || 0;
+    }
+    
+    // التحقق من صحة الرقم
+    if (numericContentId <= 0) {
+      console.warn('Invalid content ID:', contentId);
+      // لا نوقف العملية، فقط لا نسجل اللوق
+      return res.json({ status: 'success', message: 'View logged successfully' });
+    }
+    
+    const contentType = committeeName ? 'committee' : 'department';
+    await logAction(userId, actionType, description, contentType, numericContentId);
+    res.json({ status: 'success', message: 'View logged successfully' });
+  } catch (error) {
+    console.error('Error logging content view:', error);
+    res.status(500).json({ message: 'Failed to log view' });
+  }
+};
+
+module.exports = {
+  getMyUploadedContent,
+  getContentsByFolderId,
+  addContent,
+  updateContent,
+  deleteContent,
+  downloadContent,
+  getContentById,
+  approveContent,
+  getContentNames,
   addContentName,
   updateContentName,
   deleteContentName,
-    upload
-  };
+  upload,
+  logContentView
+};
   

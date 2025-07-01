@@ -3,6 +3,35 @@
 // سيتم تضمين كل الدوال الخاصة بالإضافة والتعديل والحذف للمجلدات والمحتوى مع التعديلات اللازمة 
 
 const apiBase = 'http://localhost:3006';
+let currentCommitteeId = null;
+let currentCommitteeName = null;
+let currentFolderName = null;
+
+// دالة لتسجيل عرض المحتوى في اللوقز
+async function logContentView(contentId, contentTitle, folderName, committeeName) {
+    try {
+        const response = await fetch(`${apiBase}/api/logs/content-view`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${getToken()}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                contentId: contentId,
+                contentTitle: contentTitle,
+                folderName: folderName,
+                committeeName: committeeName
+            })
+        });
+
+        if (!response.ok) {
+            console.error('Failed to log content view:', response.status);
+        }
+    } catch (error) {
+        console.error('Error logging content view:', error);
+    }
+}
+
 const permissions = {
   canAddFolder:    false,
   canAddFolderName: false,
@@ -794,6 +823,10 @@ async function fetchPermissions() {
   if (keys.includes('edit_content_committee_name'))   permissions.canEditContentName   = true;
   if (keys.includes('delete_content_committee_name')) permissions.canDeleteContentName = true;
 }
+    // متغيرات global
+    let currentCommitteeName = null;
+    let currentFolderName = null;
+    
     // جلب معرف اللجنة من الرابط
     const urlParams = new URLSearchParams(window.location.search);
     const committeeIdFromUrl = urlParams.get('committeeId');
@@ -802,6 +835,17 @@ async function fetchPermissions() {
       return;
     }
     currentCommitteeId = committeeIdFromUrl;
+    
+    // جلب اسم اللجنة
+    try {
+      const response = await fetch(`${apiBase}/api/committees/${currentCommitteeId}`);
+      const committee = await response.json();
+      currentCommitteeName = getLocalizedName(committee.name);
+    } catch (err) {
+      console.error('Error fetching committee name:', err);
+      currentCommitteeName = 'لجنة';
+    }
+    
     fetchFolders(currentCommitteeId);
 
     // متغيرات global لتخزين كل المجلدات وكل الملفات
@@ -811,13 +855,24 @@ async function fetchPermissions() {
     // عدل دالة fetchFolders لتخزين كل المجلدات
     async function fetchFolders(committeeId) {
       if (currentFolderId !== null) return;
+      
+      currentCommitteeId = committeeId; // حفظ معرف اللجنة
+      
       if (foldersSection) foldersSection.style.display = 'block';
       if (folderContentsSection) folderContentsSection.style.display = 'none';
       if (backToFilesContainer) backToFilesContainer.style.display = 'none';
       if (folderContentTitle) folderContentTitle.textContent = 'مجلدات اللجنة';
+      
       try {
         const response = await fetch(`${apiBase}/api/committees/${committeeId}/folders`);
-        const folders = await response.json();
+        const data = await response.json();
+        
+        // حفظ اسم اللجنة إذا كان متوفراً في الاستجابة
+        if (data.committeeName) {
+          currentCommitteeName = data.committeeName;
+        }
+        
+        const folders = data.data || data;
         allFolders = folders; // حفظ كل المجلدات
         renderFolders(folders);
       } catch (err) {
@@ -877,10 +932,22 @@ async function fetchPermissions() {
     // عدل دالة fetchFolderContents لتخزين كل الملفات
     async function fetchFolderContents(folderId, folderName) {
       currentFolderId = folderId;
+      
+      // استخراج اسم المجلد حسب اللغة
+      let displayFolderName = folderName;
+      try {
+          const parsedFolderName = JSON.parse(folderName);
+          const lang = localStorage.getItem('language') || 'ar';
+          displayFolderName = parsedFolderName[lang] || parsedFolderName.ar || folderName;
+      } catch (e) {
+          displayFolderName = folderName;
+      }
+      
+      currentFolderName = displayFolderName; // حفظ اسم المجلد الحالي
       if (foldersSection) foldersSection.style.display = 'none';
       if (folderContentsSection) folderContentsSection.style.display = 'block';
       if (backToFilesContainer) backToFilesContainer.style.display = 'block';
-      if (folderContentTitle) folderContentTitle.textContent = folderName || getTranslation('folder-content-title');
+      if (folderContentTitle) folderContentTitle.textContent = displayFolderName || getTranslation('folder-content-title');
       try {
         const token = getToken();
         const response = await fetch(`${apiBase}/api/committees/folders/${folderId}/contents`, {
@@ -894,6 +961,13 @@ async function fetchPermissions() {
         const isAdmin = decodedToken.role === 'admin';
         const filteredContents = isAdmin ? contents : contents.filter(content => content.approval_status === 'approved');
         allContents = filteredContents; // حفظ كل الملفات
+        
+        // حفظ folderName للاستخدام في renderContents
+        window._lastCommitteeFilesData = {
+          contents: filteredContents,
+          folderName: displayFolderName
+        };
+        
         renderContents(filteredContents);
       } catch (err) {
         console.error('❌ خطأ في fetchFolderContents:', err);
@@ -927,9 +1001,14 @@ async function fetchPermissions() {
             </div>
           `;
           filesList.appendChild(fileItem);
-          fileItem.addEventListener('click', function(e) {
+          fileItem.addEventListener('click', async function(e) {
             if (!e.target.closest('.edit-icon') && !e.target.closest('.delete-icon')) {
               if (content.file_path) {
+                // تسجيل عرض المحتوى في اللوقز
+                const contentTitle = getLocalizedName(content.title);
+                const folderName = currentFolderName || window._lastCommitteeFilesData?.folderName || '';
+                logContentView(content.id, contentTitle, folderName, currentCommitteeName);
+
                 const baseUrl = apiBase.replace('/api', '');
                 window.open(`${baseUrl}/${content.file_path}`, '_blank');
               } else {
@@ -1850,5 +1929,16 @@ document.addEventListener('DOMContentLoaded', function() {
     deleteContentTitleModal.addEventListener('click', e => e.target === deleteContentTitleModal && closeDeleteContentTitleModal());
     const closeBtn = deleteContentTitleModal.querySelector('.close-button');
     if(closeBtn) closeBtn.addEventListener('click', closeDeleteContentTitleModal);
+  }
+
+  // معالجة معرف اللجنة من الـ URL عند تحميل الصفحة
+  const urlParams = new URLSearchParams(window.location.search);
+  const committeeIdFromUrl = urlParams.get('committeeId');
+  console.log('committeeIdFromUrl from URL params:', committeeIdFromUrl);
+
+  if (committeeIdFromUrl) {
+    fetchFolders(committeeIdFromUrl);
+  } else {
+    console.warn('committeeId not found in URL. Cannot fetch folders.');
   }
 }); 
