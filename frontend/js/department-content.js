@@ -1,6 +1,33 @@
 const apiBase      = 'http://localhost:3006/api';
 let currentDepartmentId = null;
 let currentFolderId     = null;
+let currentFolderName   = null;
+let currentDepartmentName = null;
+
+// دالة لتسجيل عرض المحتوى في اللوقز
+async function logContentView(contentId, contentTitle, folderName, departmentName) {
+    try {
+        const response = await fetch(`${apiBase}/logs/content-view`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${getToken()}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                contentId: contentId,
+                contentTitle: contentTitle,
+                folderName: folderName,
+                departmentName: departmentName
+            })
+        });
+
+        if (!response.ok) {
+            console.error('Failed to log content view:', response.status);
+        }
+    } catch (error) {
+        console.error('Error logging content view:', error);
+    }
+}
 
 const permissions = {
   canAddFolder:    false,
@@ -839,6 +866,7 @@ async function fetchFolders(departmentId) {
     const foldersList = document.querySelector('.folders-list');
     foldersList.innerHTML = '';
     folderContentTitle.textContent = data.departmentName || 'مجلدات القسم';
+    currentDepartmentName = data.departmentName || 'قسم';
 
     if (data.data.length) {
       const lang = localStorage.getItem('language') || 'ar';
@@ -941,7 +969,18 @@ async function fetchFolders(departmentId) {
                 const filesList = document.querySelector('.files-list');
                 filesList.innerHTML = '';
                 
-                folderContentTitle.textContent = data.folderName;
+                // استخراج اسم المجلد حسب اللغة
+                let displayFolderName = data.folderName;
+                try {
+                    const parsedFolderName = JSON.parse(data.folderName);
+                    const lang = localStorage.getItem('language') || 'ar';
+                    displayFolderName = parsedFolderName[lang] || parsedFolderName.ar || data.folderName;
+                } catch (e) {
+                    displayFolderName = data.folderName;
+                }
+                
+                folderContentTitle.textContent = displayFolderName;
+                currentFolderName = displayFolderName; // حفظ اسم المجلد الحالي
 
                 if (data.data && data.data.length > 0) {
                     data.data.forEach(content => {
@@ -1039,6 +1078,9 @@ icons += '</div>';
                         fileItem.addEventListener('click', function(e) {
                             if (!e.target.closest('.edit-icon') && !e.target.closest('.delete-icon')) {
                                 if (content.fileUrl) {
+                                    // تسجيل عرض المحتوى في اللوقز
+                                    logContentView(content.id, displayTitle, currentFolderName, currentDepartmentName);
+                                    
                                     const fullFileUrl = `http://localhost:3006/uploads/${content.fileUrl}`;
                                     window.open(fullFileUrl, '_blank');
                                 } else {

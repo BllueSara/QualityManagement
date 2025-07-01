@@ -117,9 +117,38 @@ const canTrack = permissions.canTrack; // أو حط صلاحية خاصة إذا
 
   // ربط الأحداث بعد الإنشاء
   document.querySelectorAll('.view-icon').forEach(icon => {
-    icon.addEventListener('click', e =>
-      window.location.href = `ticket-details.html?id=${e.target.dataset.ticketId}`
-    );
+    icon.addEventListener('click', async e => {
+      const ticketId = e.target.dataset.ticketId;
+      
+      // تسجيل عرض التذكرة
+      try {
+        // تحويل ticketId إلى رقم صحيح
+        const numericTicketId = parseInt(ticketId) || 0;
+        
+        // التحقق من صحة الرقم
+        if (numericTicketId <= 0) {
+          console.warn('Invalid ticket ID:', ticketId);
+          // لا نوقف العملية، فقط لا نسجل اللوق
+        }
+        
+        const res = await fetch(`${apiBase}/tickets/log-view`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({
+            ticketId: numericTicketId,
+            ticketTitle: `تذكرة رقم ${ticketId}`
+          })
+        });
+      } catch (err) {
+        console.error('Failed to log ticket view:', err);
+        // لا نوقف العملية إذا فشل تسجيل اللوق
+      }
+      
+      window.location.href = `ticket-details.html?id=${ticketId}`;
+    });
   });
 
   document.querySelectorAll('.track-icon').forEach(icon => {

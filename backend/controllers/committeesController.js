@@ -355,8 +355,24 @@ exports.deleteCommittee = async (req, res) => {
 // ========== Folders CRUD ==========
 exports.getFolders = async (req, res) => {
     try {
-        const [rows] = await db.execute('SELECT * FROM committee_folders WHERE committee_id = ?', [req.params.committeeId]);
-        res.status(200).json(rows);
+        const committeeId = req.params.committeeId;
+        
+        // جلب المجلدات مع اسم اللجنة
+        const [rows] = await db.execute(`
+            SELECT cf.*, c.name as committee_name 
+            FROM committee_folders cf 
+            JOIN committees c ON cf.committee_id = c.id 
+            WHERE cf.committee_id = ?
+        `, [committeeId]);
+        
+        // جلب اسم اللجنة للاستجابة
+        const [committeeRows] = await db.execute('SELECT name FROM committees WHERE id = ?', [committeeId]);
+        const committeeName = committeeRows.length > 0 ? committeeRows[0].name : '';
+        
+        res.status(200).json({
+            data: rows,
+            committeeName: committeeName
+        });
     } catch (error) {
         res.status(500).json({ message: 'خطأ في جلب المجلدات', error });
     }
@@ -541,6 +557,25 @@ exports.getContents = async (req, res) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const isAdmin = decoded.role === 'admin';
 
+        const folderId = req.params.folderId;
+
+        // جلب معلومات المجلد أولاً
+        const [folderRows] = await db.execute(
+            `SELECT 
+                cf.id,
+                cf.name,
+                cf.committee_id,
+                com.name as committee_name
+            FROM committee_folders cf 
+            JOIN committees com ON cf.committee_id = com.id
+            WHERE cf.id = ?`,
+            [folderId]
+        );
+
+        if (folderRows.length === 0) {
+            return res.status(404).json({ message: 'المجلد غير موجود' });
+        }
+
         // Build query based on user role
         let query = `
             SELECT 
@@ -552,7 +587,7 @@ exports.getContents = async (req, res) => {
             LEFT JOIN users a ON c.approved_by = a.id
             WHERE c.folder_id = ?
         `;
-        let params = [req.params.folderId];
+        let params = [folderId];
 
         // If not admin, only show approved content
         if (!isAdmin) {
@@ -562,7 +597,19 @@ exports.getContents = async (req, res) => {
         query += ' ORDER BY c.created_at DESC';
 
         const [rows] = await db.execute(query, params);
-        res.status(200).json(rows);
+        
+        res.status(200).json({
+            status: 'success',
+            message: 'تم جلب المحتويات بنجاح',
+            folderName: folderRows[0].name,
+            folder: {
+                id: folderRows[0].id,
+                name: folderRows[0].name,
+                committee_id: folderRows[0].committee_id,
+                committee_name: folderRows[0].committee_name
+            },
+            data: rows
+        });
     } catch (error) {
         res.status(500).json({ message: 'خطأ في جلب المحتويات', error });
     }

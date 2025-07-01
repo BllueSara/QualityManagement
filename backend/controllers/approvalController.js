@@ -245,7 +245,7 @@ signed_as_proxy = COALESCE(VALUES(signed_as_proxy), signed_as_proxy),
     res.status(500).json({ status: 'error', message: 'خطأ أثناء معالجة الاعتماد' });
   }
 };
-// توليد نسخة نهائية موقعة من PDF مع دعم “توقيع بالنيابة”
+// توليد نسخة نهائية موقعة من PDF مع دعم "توقيع بالنيابة"
 async function generateFinalSignedPDF(contentId) {
   // 1) جلب مسار الملف
   const [fileRows] = await db.execute(
@@ -431,6 +431,7 @@ const getAssignedApprovals = async (req, res) => {
           c.approval_status,
           GROUP_CONCAT(DISTINCT u2.username) AS assigned_approvers,
           d.name AS source_name,
+          f.name AS folder_name,
           u.username AS created_by_username,
           'department' AS type,
           CAST(c.approvers_required AS CHAR) AS approvers_required,
@@ -452,6 +453,7 @@ const getAssignedApprovals = async (req, res) => {
           c.approval_status,
           GROUP_CONCAT(DISTINCT u2.username) AS assigned_approvers,
           d.name AS source_name,
+          f.name AS folder_name,
           u.username AS created_by_username,
           'department' AS type,
           CAST(c.approvers_required AS CHAR) AS approvers_required,
@@ -477,6 +479,7 @@ const getAssignedApprovals = async (req, res) => {
           cc.approval_status,
           GROUP_CONCAT(DISTINCT u2.username) AS assigned_approvers,
           com.name AS source_name,
+          cf.name AS folder_name,
           u.username AS created_by_username,
           'committee' AS type,
           CAST(cc.approvers_required AS CHAR) AS approvers_required,
@@ -498,6 +501,7 @@ const getAssignedApprovals = async (req, res) => {
           cc.approval_status,
           GROUP_CONCAT(DISTINCT u2.username) AS assigned_approvers,
           com.name AS source_name,
+          cf.name AS folder_name,
           u.username AS created_by_username,
           'committee' AS type,
           CAST(cc.approvers_required AS CHAR) AS approvers_required,

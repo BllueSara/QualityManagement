@@ -655,3 +655,40 @@ exports.getTicketAssignees = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
+// دالة تسجيل عرض التذكرة
+exports.logTicketView = async (req, res) => {
+  try {
+    const { ticketId, ticketTitle } = req.body;
+    const token = req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({ message: 'Token required' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id;
+
+    const actionType = 'view_ticket';
+    const description = JSON.stringify({
+      ar: `عرض الحدث العارض رقم ${ticketId}`,
+      en: `Viewed OVR number ${ticketId}`
+    });
+
+    // تحويل ticketId إلى رقم صحيح
+    const numericTicketId = parseInt(ticketId) || 0;
+    
+    // التحقق من صحة الرقم
+    if (numericTicketId <= 0) {
+      return res.status(400).json({ message: 'Invalid ticket ID' });
+    }
+
+    // تسجيل اللوق
+    await logAction(userId, actionType, description, 'ticket', numericTicketId);
+
+    res.json({ status: 'success', message: 'Ticket view logged successfully' });
+  } catch (error) {
+    console.error('Error logging ticket view:', error);
+    res.status(500).json({ message: 'Failed to log ticket view' });
+  }
+};

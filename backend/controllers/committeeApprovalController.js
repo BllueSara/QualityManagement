@@ -265,6 +265,7 @@ async function getAssignedCommitteeApprovals(req, res) {
         cc.approval_status,
         GROUP_CONCAT(DISTINCT u2.username)    AS assigned_approvers,
         com.name                              AS source_name,
+        cf.name                               AS folder_name,
         u.username                            AS created_by_username,
         'committee'                           AS type,
         CAST(cc.approvers_required AS CHAR)   AS approvers_required,
@@ -512,7 +513,7 @@ async function generateFinalSignedCommitteePDF(contentId) {
   });
   y -= 40;
 
-  // 7) رسم التوقيعات مع “on behalf of”
+  // 7) رسم التوقيعات مع "on behalf of"
   for (const log of logs) {
     if (y < 200) { page = pdfDoc.addPage(); y = 750; }
     const label = log.signed_as_proxy

@@ -15,6 +15,7 @@ const { getMyUploadedContent, addContent } = require('../controllers/contentCont
 const { getContentById } = require('../controllers/contentController');
 const { updateContent } = require('../controllers/contentController');
 const { deleteContent } = require('../controllers/contentController');
+const { logContentView } = require('../controllers/contentController');
 
 
 const router = express.Router();
@@ -118,6 +119,9 @@ router.post(
 
 
 router.put('/:contentId', upload.single('file'), updateContent);
+
+// POST /api/contents/log-view - تسجيل عرض المحتوى
+router.post('/log-view', logContentView);
 
 
 module.exports = router;

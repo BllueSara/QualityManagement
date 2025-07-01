@@ -32,6 +32,7 @@ const committeeApprovalRoutes = require('./routes/committeeApprovalRoutes');
 const globalContentRouter = require('./routes/globalContentRoutes');
 const reportsRoutes = require('./routes/reportsRoutes');
 const ticketReportRoutes = require('./routes/ticketReportRoutes');
+const logsRoutes = require('./routes/logsRoutes');
 
  
 
@@ -82,6 +83,7 @@ app.use('/api/dashboard', dashboardRouter);
 app.use('/api', globalContentRouter); // 👈 هذا يعطيك: /api/content-names
 app.use('/api/reports', reportsRoutes);
 app.use('/api/tickets/report', ticketReportRoutes);
+app.use('/api/logs', logsRoutes);
 
 // Ensure all committee routes are correctly loaded
 
