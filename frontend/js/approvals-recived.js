@@ -327,7 +327,7 @@ function initActions() {
 
 
 document.querySelectorAll('.btn-preview').forEach(btn => {
-  btn.addEventListener('click', e => {
+  btn.addEventListener('click', async e => {
     const tr     = e.target.closest('tr');
     const itemId = tr.dataset.id;
     const item   = allItems.find(i => i.id == itemId);
@@ -335,6 +335,38 @@ document.querySelectorAll('.btn-preview').forEach(btn => {
     if (!item || !item.file_path) {
       alert(getTranslation('no-content'));
       return;
+    }
+
+    // تسجيل عرض المحتوى
+    try {
+      let numericItemId = itemId;
+      if (typeof itemId === 'string') {
+        if (itemId.includes('-')) {
+          const match = itemId.match(/\d+$/);
+          numericItemId = match ? match[0] : itemId;
+        } else {
+          numericItemId = parseInt(itemId) || itemId;
+        }
+      } else {
+        numericItemId = parseInt(itemId) || itemId;
+      }
+      if (!numericItemId || numericItemId <= 0) {
+        console.warn('Invalid content ID:', itemId);
+        return;
+      }
+      await fetchJSON(`${apiBase}/contents/log-view`, {
+        method: 'POST',
+        body: JSON.stringify({
+          contentId: numericItemId,
+          contentType: item.type || 'department',
+          contentTitle: item.title,
+          sourceName: item.source_name,
+          folderName: item.folder_name || item.folderName || ''
+        })
+      });
+    } catch (err) {
+      console.error('Failed to log content view:', err);
+      // لا نوقف العملية إذا فشل تسجيل اللوق
     }
 
 const baseApiUrl = apiBase.replace('/api', '');

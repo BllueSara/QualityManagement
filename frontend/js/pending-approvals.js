@@ -215,8 +215,40 @@ ${parseLocalizedName(item.title)}
     // 5) زوّد مستمع للعرض إذا لزم الأمر
     const viewButton = tr.querySelector('.btn-view');
     if (viewButton) {
-      viewButton.addEventListener('click', e => {
+      viewButton.addEventListener('click', async e => {
         e.stopPropagation();
+
+        // تسجيل عرض المحتوى
+        try {
+          let numericItemId = item.id;
+          if (typeof item.id === 'string') {
+            if (item.id.includes('-')) {
+              const match = item.id.match(/\d+$/);
+              numericItemId = match ? match[0] : item.id;
+            } else {
+              numericItemId = parseInt(item.id) || item.id;
+            }
+          } else {
+            numericItemId = parseInt(item.id) || item.id;
+          }
+          if (!numericItemId || numericItemId <= 0) {
+            console.warn('Invalid content ID:', item.id);
+            return;
+          }
+          await fetchJSON(`${apiBase}/contents/log-view`, {
+            method: 'POST',
+            body: JSON.stringify({
+              contentId: numericItemId,
+              contentType: item.type || 'department',
+              contentTitle: item.title,
+              sourceName: item.source_name,
+              folderName: item.folder_name || item.folderName || ''
+            })
+          });
+        } catch (err) {
+          console.error('Failed to log content view:', err);
+          // لا نوقف العملية إذا فشل تسجيل اللوق
+        }
 
         // خذ المسار من الداتا
         let filePath = e.currentTarget.dataset.filePath; 

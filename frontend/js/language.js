@@ -194,6 +194,11 @@ const translations = {
         'log-user': 'المستخدم',
         'log-action': 'الإجراء',
         'log-details': 'التفاصيل',
+        
+        // Log Actions
+        'view_committee_content': 'عرض محتوى اللجنة',
+        'view_department_content': 'عرض محتوى القسم',
+        'view_ticket': 'عرض التذكرة',
 
         // Permissions
         'permission-list': 'قائمة الصلاحيات',
@@ -1082,6 +1087,11 @@ const translations = {
         'log-user': 'User',
         'log-action': 'Action',
         'log-details': 'Details',
+        
+        // Log Actions
+        'view_committee_content': 'View Committee Content',
+        'view_department_content': 'View Department Content',
+        'view_ticket': 'View Ticket',
 
         // Permissions
         'permission-list': 'Permission List',

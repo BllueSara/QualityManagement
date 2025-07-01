@@ -38,4 +38,7 @@ router.get('/:id/assign', authenticateToken, ticketController.getTicketAssignees
 // GET /api/tickets/assigned
 router.get('/:id/track', authenticateToken, ticketController.trackTicket);
 
+// POST /api/tickets/log-view - تسجيل عرض التذكرة
+router.post('/log-view', authenticateToken, ticketController.logTicketView);
+
 module.exports = router; 

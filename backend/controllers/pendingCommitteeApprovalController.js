@@ -89,6 +89,7 @@ exports.getPendingApprovals = async (req, res) => {
             cc.approval_status,
             GROUP_CONCAT(DISTINCT u2.username) AS assigned_approvers,
             com.name AS source_name,
+            cf.name AS folder_name,
             u.username AS created_by_username,
             'committee' AS type,
             CAST(cc.approvers_required AS CHAR) AS approvers_required,
