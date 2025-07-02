@@ -194,6 +194,17 @@ profileStatus.title = getTranslation(
 
 // 2) ربط حدث التغيير مع التأكيد المترجم
 profileStatus.onclick = async () => {
+  // تحقق: لا يمكن تغيير حالة مستخدم admin
+  if (u.role === 'admin') {
+    return;
+  }
+  // تحقق: فقط admin أو من لديه change_status يمكنه التغيير
+  const payload = JSON.parse(atob(authToken.split('.')[1] || '{}'));
+  const myRole = payload.role;
+  if (!(myRole === 'admin' || myPermsSet.has('change_status'))) {
+    return;
+  }
+
   const newStatus = profileStatus.classList.contains('active')
     ? 'inactive'
     : 'active';
@@ -222,7 +233,7 @@ profileStatus.onclick = async () => {
     );
 
     // 4) طرد نفسك لو عطّلت حسابك
-    if (Number(id) === jwtPayload.id && newStatus === 'inactive') {
+    if (Number(id) === payload.id && newStatus === 'inactive') {
       alert(getTranslation('logout_due_to_deactivation'));
       localStorage.removeItem('token');
       window.location.href = '/frontend/html/login.html';
@@ -739,6 +750,17 @@ async function showEditUserInfoButton(u) {
   const authToken = localStorage.getItem('token') || '';
   const payload = JSON.parse(atob(authToken.split('.')[1] || '{}'));
   const myRole = payload.role;
+  const myId = payload.id;
+  // إذا كان المستخدم المستهدف admin، فقط admin نفسه يمكنه التعديل
+  if (u.role === 'admin') {
+    if (myRole === 'admin' && Number(u.id) === Number(myId)) {
+      btnEditUserInfo.style.display = '';
+    } else {
+      btnEditUserInfo.style.display = 'none';
+    }
+    return;
+  }
+  // غير admin: admin أو من لديه الصلاحية
   if (myRole === 'admin' || myPermsSet.has('change_user_info')) {
     btnEditUserInfo.style.display = '';
   } else {
@@ -752,6 +774,12 @@ if (btnEditUserInfo) {
     if (!selectedUserId) return;
     // جلب بيانات المستخدم الحالي
     const u = await fetchJSON(`${apiBase}/users/${selectedUserId}`);
+    const authToken = localStorage.getItem('token') || '';
+    const payload = JSON.parse(atob(authToken.split('.')[1] || '{}'));
+    // تحقق: إذا كان المستهدف admin، فقط admin نفسه يمكنه التعديل
+    if (u.role === 'admin' && !(payload.role === 'admin' && Number(u.id) === Number(payload.id))) {
+      return;
+    }
     editUserName.value = u.name || '';
     editEmployeeNumber.value = u.employee_number || '';
     editEmail.value = u.email || '';

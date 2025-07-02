@@ -40,7 +40,7 @@ document.querySelectorAll('nav [data-permission], nav [data-role]').forEach(el =
   el.style.display = (hasPerm || hasRole) ? '' : 'none';
 });
 
-const toggleable = ['tickets','departments','approvals','committees'];
+const toggleable = ['tickets','departments','approvals','comittees'];
 
 document.querySelectorAll('.cards-grid .card').forEach(card => {
   const titleEl = card.querySelector('[data-translate]');
@@ -67,22 +67,28 @@ document.querySelectorAll('.cards-grid .card').forEach(card => {
 
 
   // 2.1) بعد إظهار/إخفاء: تمركز البطاقة الأخيرة إن كان عددها فردياً
-  function centerLastVisibleCard() {
-    const grid = document.querySelector('.cards-grid');
-    if (!grid) return;
+function centerLastVisibleCard() {
+  const grid = document.querySelector('.cards-grid');
+  if (!grid) return;
 
-    // نزيل الكلاس من أي بطاقة مسبقاً
-    grid.querySelectorAll('.center-card').forEach(el => el.classList.remove('center-card'));
+  // إزالة الكلاس من كل البطاقات أولاً
+  grid.querySelectorAll('.center-card').forEach(el => el.classList.remove('center-card'));
 
-    // نجمع البطاقات الظاهرة فقط
-    const visible = Array.from(grid.querySelectorAll('.card'))
-      .filter(el => window.getComputedStyle(el).display !== 'none');
+  // جمع البطاقات الظاهرة فقط
+  const visible = Array.from(grid.querySelectorAll('.card'))
+    .filter(el => window.getComputedStyle(el).display !== 'none');
 
-    // إذا عددها فردي: نعلّم الأخيرة
-    if (visible.length % 2 === 1) {
-      visible[visible.length - 1].classList.add('center-card');
-    }
+  // عدد الأعمدة في الشبكة (2)
+  const columns = 2;
+
+  // عدد البطاقات في الصف الأخير
+  const cardsInLastRow = visible.length % columns || columns;
+
+  // إذا كان الصف الأخير فيه بطاقة واحدة فقط (يعني العدد الكلي فردي)
+  if (cardsInLastRow === 1) {
+    visible[visible.length - 1].classList.add('center-card');
   }
+}
   centerLastVisibleCard();
 
 
