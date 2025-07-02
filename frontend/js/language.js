@@ -504,6 +504,7 @@ const translations = {
         'department-report': 'تقرير قسم',
         'back': 'رجوع',
         'home': 'الرئيسية',
+        'change_status': 'تغير حالة المستخدم',
 
         // OVR Page Translations
         'tickets-page-title': 'الاحداث العارضة - نظام إدارة الجودة والسلامة',
@@ -1335,6 +1336,7 @@ const translations = {
         'user-name': 'User Name',
         'select-user': 'Select User',
         'notes': 'Notes',
+        'change_status': 'Change Status',
         'confirm': 'Confirm',
         'cancel': 'Cancel',
         'delegate': 'Delegate',
