@@ -26,12 +26,7 @@ main h1 {
     padding: 0 10px;
 }
 
-.cards-grid .card:last-child:nth-child(odd) {
-    grid-column: 1 / -1;
-    justify-self: center;
-    width: 100%;
-    max-width: 400px;
-}
+
 
 .card {
     background-color: #fff;
