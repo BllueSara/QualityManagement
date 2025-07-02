@@ -99,6 +99,7 @@ const getUserById = async (req, res) => {
          u.status,  
          u.department_id AS departmentId,
          d.name AS departmentName,
+         u.employee_number,
          u.created_at,
          u.updated_at
        FROM users u
@@ -227,7 +228,7 @@ const updateUser = async (req, res) => {
   try {
     // Fetch old user details for logging
     const [[oldUser]] = await db.execute(
-      `SELECT u.username, u.email, u.role, u.department_id, d.name as department_name
+      `SELECT u.username, u.email, u.role, u.department_id, u.employee_number, d.name as department_name
        FROM users u
        LEFT JOIN departments d ON u.department_id = d.id
        WHERE u.id = ?`,
@@ -277,48 +278,46 @@ const updateUser = async (req, res) => {
     }
 
     // Add to logs
-    const changes = [];
+    const changesAr = [];
+    const changesEn = [];
     if (name !== oldUser.username) {
-      changes.push(userLang === 'en' 
-        ? `name: '${oldUser.username}' → '${name}'`
-        : `الاسم: '${oldUser.username}' → '${name}'`);
+      changesAr.push(`الاسم: '${oldUser.username}' ← '${name}'`);
+      changesEn.push(`Name: '${oldUser.username}' → '${name}'`);
     }
     if (email !== oldUser.email) {
-      changes.push(userLang === 'en' 
-        ? `email: '${oldUser.email}' → '${email}'`
-        : `البريد الإلكتروني: '${oldUser.email}' → '${email}'`);
+      changesAr.push(`البريد الإلكتروني: '${oldUser.email}' ← '${email}'`);
+      changesEn.push(`Email: '${oldUser.email}' → '${email}'`);
+    }
+    if (req.body.employee_number !== undefined && req.body.employee_number !== oldUser.employee_number) {
+      changesAr.push(`الرقم الوظيفي: '${oldUser.employee_number || ''}' ← '${req.body.employee_number || ''}'`);
+      changesEn.push(`Employee Number: '${oldUser.employee_number || ''}' → '${req.body.employee_number || ''}'`);
     }
     if (role !== oldUser.role) {
-      changes.push(userLang === 'en' 
-        ? `role: '${oldUser.role}' → '${role}'`
-        : `الدور: '${oldUser.role}' → '${role}'`);
+      changesAr.push(`الدور: '${oldUser.role}' ← '${role}'`);
+      changesEn.push(`Role: '${oldUser.role}' → '${role}'`);
     }
     if (departmentId !== oldUser.department_id) {
-      const oldDeptName = getLocalizedName(oldUser.department_name, userLang);
-      const newDeptName = getLocalizedName(newDepartmentName, userLang);
-      changes.push(userLang === 'en' 
-        ? `department: '${oldDeptName || 'None'}' → '${newDeptName || 'None'}'`
-        : `القسم: '${oldDeptName || 'لا يوجد'}' → '${newDeptName || 'لا يوجد'}'`);
+      const oldDeptNameAr = getLocalizedName(oldUser.department_name, 'ar');
+      const newDeptNameAr = getLocalizedName(newDepartmentName, 'ar');
+      const oldDeptNameEn = getLocalizedName(oldUser.department_name, 'en');
+      const newDeptNameEn = getLocalizedName(newDepartmentName, 'en');
+      changesAr.push(`القسم: '${oldDeptNameAr || 'لا يوجد'}' ← '${newDeptNameAr || 'لا يوجد'}'`);
+      changesEn.push(`Department: '${oldDeptNameEn || 'None'}' → '${newDeptNameEn || 'None'}'`);
     }
-
-    let logMessage;
-    if (changes.length > 0) {
-      logMessage = userLang === 'en' 
-        ? `Updated user '${oldUser.username}': ${changes.join(', ')}`
-        : `حدث المستخدم '${oldUser.username}': ${changes.join(', ')}`;
+    let logMessageAr, logMessageEn;
+    if (changesAr.length > 0) {
+      logMessageAr = `تم تعديل المستخدم '${oldUser.username}':\n${changesAr.join('\n')}`;
+      logMessageEn = `Updated user '${oldUser.username}':\n${changesEn.join('\n')}`;
     } else {
-      logMessage = userLang === 'en' 
-        ? `Updated user '${oldUser.username}' (no changes)`
-        : `حدث المستخدم '${oldUser.username}' (لا توجد تغييرات)`;
+      logMessageAr = `تم تعديل المستخدم '${oldUser.username}' (لا توجد تغييرات)`;
+      logMessageEn = `Updated user '${oldUser.username}' (no changes)`;
     }
-    
     // ✅ تسجيل اللوق بعد نجاح تعديل المستخدم
     try {
         const logDescription = {
-            ar: `تم تعديل مستخدم: ${oldUser.username}`,
-            en: `Updated user: ${oldUser.username}`
+            ar: logMessageAr,
+            en: logMessageEn
         };
-        
         await logAction(adminUserId, 'update_user', JSON.stringify(logDescription), 'user', id);
     } catch (logErr) {
         console.error('logAction error:', logErr);

@@ -768,16 +768,15 @@ select::placeholder {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 80px;
+  /* width: 80px; */
   height: 32px;
-  border-radius: 16px;
+  border-radius: 999px;
   font-size: 0.85em;
   font-weight: 500;
   color: #fff;
   text-align: center;
   white-space: nowrap;
-  padding: 0 8px;
-  /* إضافة مسافة جانبية */
+  padding: 0 16px;
   margin-right: 12px;
   margin-top: 30px;
 }
