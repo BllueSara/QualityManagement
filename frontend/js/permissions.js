@@ -4,6 +4,7 @@ const apiBase      = 'http://localhost:3006/api';
 let authToken      = localStorage.getItem('token') || null;
 let selectedUserId = null;
 let myPermsSet     = new Set(); // صلاحيات المستخدم الحالي
+let editUserRole = null;
 
 // عناصر الـ DOM
 const userList      = document.getElementById('user-list');
@@ -24,6 +25,16 @@ const roleSelect    = document.getElementById('role-select');
 const btnSaveRole   = document.getElementById('btn-save-role');
 const btnCancelRole = document.getElementById('btn-cancel-role');
 const departmentSelect = document.getElementById('department');
+
+// زر تعديل معلومات المستخدم
+const btnEditUserInfo = document.getElementById('btn-edit-user-info');
+const editUserModal = document.getElementById('editUserModal');
+const editUserName = document.getElementById('editUserName');
+const editEmployeeNumber = document.getElementById('editEmployeeNumber');
+const editDepartment = document.getElementById('editDepartment');
+const editEmail = document.getElementById('editEmail');
+const btnCancelEditUser = document.getElementById('cancelEditUser');
+const btnSaveEditUser = document.getElementById('saveEditUser');
 
 // في البداية أخفِ قسم الصلاحيات
 permissionsSection.style.display = 'none';
@@ -313,6 +324,9 @@ document.querySelector('.user-profile-header')?.classList.add('active');
 
   // تحميل اللجان المختارة للمستخدم
   await loadUserCommittees(id);
+
+  // إظهار الزر حسب الصلاحية عند اختيار المستخدم
+  showEditUserInfoButton(u);
 }
 
 
@@ -719,3 +733,104 @@ document.addEventListener('change', (e) => {
     }
   }
 });
+
+// إظهار الزر حسب الصلاحية عند اختيار المستخدم
+async function showEditUserInfoButton(u) {
+  const authToken = localStorage.getItem('token') || '';
+  const payload = JSON.parse(atob(authToken.split('.')[1] || '{}'));
+  const myRole = payload.role;
+  if (myRole === 'admin' || myPermsSet.has('change_user_info')) {
+    btnEditUserInfo.style.display = '';
+  } else {
+    btnEditUserInfo.style.display = 'none';
+  }
+}
+
+// عند الضغط على زر تعديل معلومات المستخدم
+if (btnEditUserInfo) {
+  btnEditUserInfo.addEventListener('click', async () => {
+    if (!selectedUserId) return;
+    // جلب بيانات المستخدم الحالي
+    const u = await fetchJSON(`${apiBase}/users/${selectedUserId}`);
+    editUserName.value = u.name || '';
+    editEmployeeNumber.value = u.employee_number || '';
+    editEmail.value = u.email || '';
+    editUserRole = u.role || null;
+    // جلب الأقسام وتعبئة الدروب داون
+    await fetchDepartmentsForEditModal(u.departmentId, u.departmentName);
+    editUserModal.style.display = 'flex';
+  });
+}
+
+// دالة لجلب الأقسام وتعبئة الدروب داون مع اختيار القسم الحالي
+async function fetchDepartmentsForEditModal(selectedId, selectedName) {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${apiBase}/departments`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    const result = await response.json();
+    if (!Array.isArray(result)) throw new Error('الرد ليس مصفوفة أقسام');
+    const lang = localStorage.getItem('language') || 'ar';
+    const selectText = lang === 'ar' ? 'اختر القسم' : 'Select Department';
+    editDepartment.innerHTML = `<option value="">${selectText}</option>`;
+    result.forEach(dept => {
+      const option = document.createElement('option');
+      option.value = dept.id;
+      let name = dept.name;
+      try {
+        if (typeof name === 'string' && name.trim().startsWith('{')) {
+          name = JSON.parse(name);
+        }
+        option.textContent = typeof name === 'object'
+          ? (name[lang] || name.ar || name.en || '')
+          : name;
+      } catch {
+        option.textContent = '';
+      }
+      if (dept.id == selectedId) option.selected = true;
+      editDepartment.appendChild(option);
+    });
+  } catch (error) {
+    alert('خطأ في جلب الأقسام.');
+  }
+}
+
+// إغلاق المودال
+if (btnCancelEditUser) {
+  btnCancelEditUser.addEventListener('click', () => {
+    editUserModal.style.display = 'none';
+  });
+}
+
+// حفظ التعديلات
+if (btnSaveEditUser) {
+  btnSaveEditUser.addEventListener('click', async () => {
+    if (!selectedUserId) return;
+    // تحقق من الحقول المطلوبة
+    if (!editUserName.value.trim() || !editEmployeeNumber.value.trim() || !editDepartment.value || !editEmail.value.trim()) {
+      alert('جميع الحقول مطلوبة.');
+      return;
+    }
+    const data = {
+      name: editUserName.value,
+      employee_number: editEmployeeNumber.value,
+      departmentId: editDepartment.value,
+      email: editEmail.value,
+      role: editUserRole
+    };
+    try {
+      await fetchJSON(`${apiBase}/users/${selectedUserId}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      });
+      editUserModal.style.display = 'none';
+      await selectUser(selectedUserId); // تحديث بيانات العرض
+      alert('تم تحديث معلومات المستخدم بنجاح');
+    } catch (err) {
+      alert('فشل تحديث معلومات المستخدم: ' + err.message);
+    }
+  });
+}

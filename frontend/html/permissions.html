@@ -58,6 +58,7 @@
     <button class="btn-delete" id="btn-delete-user"><i class="fas fa-trash-alt"></i> <span data-translate="delete">حذف</span></button>
     <button class="btn-primary" id="btn-reset-password"><i class="fas fa-key"></i> <span data-translate="reset-password">إعادة تعيين كلمة المرور</span></button>
     <button class="btn-primary" id="btn-change-role"><i class="fas fa-users-cog"></i> <span data-translate="change-role">تغيير الدور</span></button>
+    <button class="btn-primary" id="btn-edit-user-info" style="display:none;"><i class="fas fa-user-edit"></i> <span data-translate="change-user-info">تغيير معلومات المستخدم</span></button>
   </div>
 
   <div class="profile-extra" id="profile-extra">
@@ -822,6 +823,17 @@
         <span class="slider round"></span>
       </label>
     </div>
+    <div class="permission-item">
+      <div class="permission-details">
+        <div class="text-content">
+          <div class="permission-title" data-translate="change_user_info">تغيير معلومات المستخدم</div>
+        </div>
+      </div>
+      <label class="switch"data-key="change_user_info">
+        <input type="checkbox">
+        <span class="slider round"></span>
+      </label>
+    </div>
   </div>
 </div>
 
@@ -884,6 +896,36 @@
     <div class="role-buttons">
       <button class="btn-primary" id="btn-save-role"><span data-translate="save">حفظ</span></button>
       <button class="btn-secondary" id="btn-cancel-role"><span data-translate="cancel">إلغاء</span></button>
+    </div>
+  </div>
+</div>
+<div id="editUserModal" class="modal">
+  <div class="modal-content">
+    <h2 class="modal-title" data-translate="change-user-info">تعديل معلومات المستخدم</h2>
+    <div class="modal-section">
+      <h3 data-translate="user-info">معلومات المستخدم</h3>
+      <div class="form-group">
+        <label for="editUserName" data-translate="user-name-label">اسم المستخدم</label>
+        <input type="text" id="editUserName" data-translate-placeholder="user-name-placeholder" placeholder="أدخل اسم المستخدم">
+      </div>
+      <div class="form-group">
+        <label for="editEmployeeNumber" data-translate="employee-number-label">الرقم الوظيفي</label>
+        <input type="text" id="editEmployeeNumber" data-translate-placeholder="employee-number-placeholder" placeholder="أدخل الرقم الوظيفي">
+      </div>
+      <div class="form-group">
+        <label for="editDepartment" data-translate="department-label">القسم</label>
+        <select id="editDepartment">
+          <option value="" data-translate="select-department">اختر القسم</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="editEmail" data-translate="email-label">البريد الإلكتروني</label>
+        <input type="email" id="editEmail" data-translate-placeholder="email-placeholder" placeholder="أدخل البريد الإلكتروني">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="cancelEditUser"><span data-translate="cancel">إلغاء</span></button>
+      <button class="btn-primary" id="saveEditUser"><span data-translate="save-user">حفظ التعديلات</span></button>
     </div>
   </div>
 </div>
