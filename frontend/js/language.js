@@ -25,7 +25,7 @@ const translations = {
         'system-title': 'نظام إدارة الجودة والسلامة',
 'dashboard-overview': 'لوحة المعاينة',
 'edit-content-name': 'تعديل اسم المحتوى',
-
+'change-user-info': 'تغيير معلومات المستخدم',
         // Reports Page Translations
         'reports': 'التقارير',
         'reports-title': 'التقارير',
@@ -884,10 +884,12 @@ const translations = {
         'approved-contents': 'محتويات معتمدة',
         'committee-count': 'عدد اللجان',
         'pending-committee-contents': 'محتويات اللجان (قيد الاعتماد)',
+
         // Profile Page
         'profile-title': 'ملفي الشخصي',
         'username-label': 'اسم المستخدم:',
         'email-label': 'البريد الإلكتروني:',
+        'change_user_info': 'تغيير معلومات المستخدم',
         'reset-password': 'إعادة تعيين كلمة المرور',
         'logout': 'تسجيل الخروج',
         'not-available': 'غير متاح',
@@ -1157,7 +1159,7 @@ const translations = {
         'error-updating-committee': 'Error updating committee',
         'error-deleting-committee': 'Error deleting committee',
         'enter-username-only': 'Enter username ',
-
+'change-user-info': 'Change User Info',
         // Department content page and modals
         'department-content-title': 'Department Content',
         'committee-content-title': 'Committee Content',
@@ -1340,6 +1342,7 @@ const translations = {
         'reject': 'Reject',
         'preview': 'Preview',
         'content-type': 'Content Type',
+        'change_user_info': 'Change User Info',
         'committee-file': 'Committee File',
         'department-report': 'Department Report',
         'no-content': 'No content associated',
