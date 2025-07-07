@@ -14,8 +14,8 @@ const db = mysql.createPool({
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.EMAIL_USER || 'medi.servee1@gmail.com',
-    pass: process.env.EMAIL_PASS || 'gfcf qtwc lucm rdfd'
+    user: 'sup.it.system.medical@gmail.com',
+    pass: 'bwub ozwj dzlg uicp' // App Password من Gmail
   }
 });
 
@@ -23,25 +23,22 @@ const sendMail = transporter.sendMail.bind(transporter);
 
 // تصميم HTML احترافي للإشعارات
 function getEmailTemplate(notification) {
-  const { title, message, type, created_at } = notification;
-  
-  // تحديد الألوان حسب النوع
-  const getTypeColor = (type) => {
-    switch(type) {
-      case 'ticket': return '#3B82F6'; // أزرق
-      case 'approval': return '#10B981'; // أخضر
-      case 'signature': return '#8B5CF6'; // بنفسجي
-      case 'proxy': return '#F59E0B'; // برتقالي
-      case 'add': return '#06B6D4'; // سماوي
-      case 'update': return '#F59E0B'; // أصفر
-      case 'delete': return '#EF4444'; // أحمر
-      case 'close': return '#6B7280'; // رمادي
-      case 'alert': return '#F97316'; // برتقالي غامق
-      case 'system': return '#6366F1'; // نيلي
-      default: return '#6B7280';
-    }
-  };
+  const { title, message, type, created_at, userName } = notification;
 
+  // ألوان لكل نوع إشعار
+  const typeColors = {
+    ticket:    { main: '#2563eb' },
+    approval:  { main: '#059669' },
+    signature: { main: '#a21caf' },
+    proxy:     { main: '#f59e42' },
+    add:       { main: '#06b6d4' },
+    update:    { main: '#fbbf24' },
+    delete:    { main: '#ef4444' },
+    close:     { main: '#6b7280' },
+    alert:     { main: '#f97316' },
+    system:    { main: '#6366f1' },
+    default:   { main: '#64748b' }
+  };
   const getTypeIcon = (type) => {
     switch(type) {
       case 'ticket': return '🎫';
@@ -57,10 +54,27 @@ function getEmailTemplate(notification) {
       default: return '🔔';
     }
   };
-
-  const typeColor = getTypeColor(type);
+  const getTypeLabel = (type) => {
+    switch(type) {
+      case 'ticket': return 'تقرير OVR جديد';
+      case 'approval': return 'اعتماد جديد';
+      case 'signature': return 'توقيع جديد';
+      case 'proxy': return 'تفويض جديد';
+      case 'add': return 'إضافة جديدة';
+      case 'update': return 'تحديث جديد';
+      case 'delete': return 'حذف جديد';
+      case 'close': return 'إغلاق';
+      case 'alert': return 'تنبيه';
+      case 'system': return 'إشعار نظام';
+      default: return 'إشعار جديد';
+    }
+  };
+  const color = typeColors[type] ? typeColors[type].main : typeColors.default.main;
   const typeIcon = getTypeIcon(type);
-  const date = new Date(created_at).toLocaleDateString('ar-SA');
+  const typeLabel = getTypeLabel(type);
+  const cleanUserName = userName || '';
+  const cleanMessage = message || '';
+  const currentDate = new Date(created_at || Date.now()).toLocaleDateString('ar-SA', { year: 'numeric', month: '2-digit', day: '2-digit' });
 
   return `
     <!DOCTYPE html>
@@ -68,154 +82,54 @@ function getEmailTemplate(notification) {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>إشعار جديد - نظام الجودة</title>
-      <style>
-        * {
-          margin: 0;
-          padding: 0;
-          box-sizing: border-box;
-        }
-        
-        body {
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-          background-color: #f5f5f5;
-          direction: rtl;
-        }
-        
-        .email-container {
-          max-width: 600px;
-          margin: 0 auto;
-          background-color: #ffffff;
-          border-radius: 12px;
-          overflow: hidden;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        
-        .header {
-          background: linear-gradient(135deg, #1D4ED8 0%, #3B82F6 100%);
-          color: white;
-          padding: 30px 20px;
-          text-align: center;
-        }
-        
-        .header h1 {
-          font-size: 24px;
-          font-weight: 600;
-          margin-bottom: 8px;
-        }
-        
-        .header p {
-          font-size: 14px;
-          opacity: 0.9;
-        }
-        
-        .notification-card {
-          margin: 20px;
-          padding: 25px;
-          border-radius: 8px;
-          border-left: 4px solid ${typeColor};
-          background-color: #fafafa;
-        }
-        
-        .notification-header {
-          display: flex;
-          align-items: center;
-          margin-bottom: 15px;
-        }
-        
-        .notification-icon {
-          font-size: 24px;
-          margin-left: 12px;
-        }
-        
-        .notification-title {
-          font-size: 18px;
-          font-weight: 600;
-          color: #1f2937;
-        }
-        
-        .notification-message {
-          font-size: 14px;
-          color: #4b5563;
-          line-height: 1.6;
-          margin-bottom: 15px;
-        }
-        
-        .notification-meta {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          font-size: 12px;
-          color: #6b7280;
-          border-top: 1px solid #e5e7eb;
-          padding-top: 15px;
-        }
-        
-        .notification-type {
-          background-color: ${typeColor};
-          color: white;
-          padding: 4px 12px;
-          border-radius: 20px;
-          font-size: 11px;
-          font-weight: 500;
-        }
-        
-        .footer {
-          background-color: #f9fafb;
-          padding: 20px;
-          text-align: center;
-          border-top: 1px solid #e5e7eb;
-        }
-        
-        .footer p {
-          font-size: 12px;
-          color: #6b7280;
-          margin-bottom: 8px;
-        }
-        
-        .footer a {
-          color: #3B82F6;
-          text-decoration: none;
-        }
-        
-        @media (max-width: 600px) {
-          .email-container {
-            margin: 10px;
-          }
-          
-          .notification-card {
-            margin: 15px;
-            padding: 20px;
-          }
-        }
-      </style>
+      <title>إشعار جديد - نظام الجودة</title>
+      <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
     </head>
-    <body>
-      <div class="email-container">
-        <div class="header">
-          <h1>نظام الجودة</h1>
-          <p>مستشفى الملك عبد العزيز</p>
+    <body style="margin: 0; padding: 0; font-family: 'Tajawal', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5; direction: rtl;">
+      <div style="max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden;">
+        <!-- Header مع اللون -->
+        <div style="background: linear-gradient(135deg, ${color}, ${color}dd); padding: 25px; text-align: center;">
+          <div style="display: inline-block; background-color: rgba(255,255,255,0.2); border-radius: 50%; width: 60px; height: 60px; line-height: 60px; margin-bottom: 15px;">
+            <span style="font-size: 24px; color: white;">${typeIcon}</span>
+          </div>
+          <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 300; font-family: 'Tajawal', sans-serif;">نظام الجودة</h1>
+          <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 16px;">إشعار جديد</p>
         </div>
-        
-        <div class="notification-card">
-          <div class="notification-header">
-            <span class="notification-icon">${typeIcon}</span>
-            <h2 class="notification-title">${title}</h2>
+        <!-- محتوى الإشعار -->
+        <div style="padding: 30px;">
+          <!-- تحية المستخدم -->
+          <div style="margin-bottom: 25px;">
+            <h2 style="color: #333; margin: 0 0 10px 0; font-size: 20px; font-weight: 500; font-family: 'Tajawal', sans-serif;">مرحباً${cleanUserName ? '، ' + cleanUserName : ''} 👋</h2>
+            <p style="color: #666; margin: 0; line-height: 1.6; font-size: 16px; font-family: 'Tajawal', sans-serif;">لديك إشعار جديد في نظام الجودة</p>
           </div>
-          
-          <div class="notification-message">
-            ${message}
+          <!-- تفاصيل الإشعار -->
+          <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); border-radius: 10px; padding: 25px; margin-bottom: 25px; border-right: 4px solid ${color};">
+            <div style="display: flex; align-items: center; margin-bottom: 15px;">
+              <div style="width: 12px; height: 12px; background-color: ${color}; border-radius: 50%; margin-left: 10px;"></div>
+              <h3 style="color: #333; margin: 0; font-size: 18px; font-weight: 600; font-family: 'Tajawal', sans-serif;">${typeLabel}</h3>
+            </div>
+            <div style="background-color: white; border-radius: 8px; padding: 20px; border: 1px solid #e0e0e0;">
+              <p style="color: #495057; margin: 0; line-height: 1.7; font-size: 15px; text-align: justify; font-family: 'Tajawal', sans-serif;">${cleanMessage}</p>
+            </div>
           </div>
-          
-          <div class="notification-meta">
-            <span class="notification-type">${type}</span>
-            <span>${date}</span>
+          <!-- معلومات إضافية -->
+          <div style="background-color: #f8f9fa; border-radius: 8px; padding: 15px; margin-bottom: 25px; text-align: center;">
+            <p style="color: #6c757d; margin: 0; font-size: 14px; font-family: 'Tajawal', sans-serif;">
+              <span style="font-weight: 600;">التاريخ:</span> ${currentDate}
+            </p>
+          </div>
+          <!-- معلومات النظام -->
+          <div style="background-color: #f8f9fa; border-radius: 8px; padding: 20px; text-align: center; border-top: 3px solid ${color};">
+            <p style="color: #6c757d; margin: 0 0 10px 0; font-size: 13px; line-height: 1.5; font-family: 'Tajawal', sans-serif;">
+              هذا البريد الإلكتروني تم إرساله تلقائياً من نظام الجودة
+            </p>
           </div>
         </div>
-        
-        <div class="footer">
-          <p>هذا الإشعار تم إرساله من نظام الجودة</p>
-          <p>للدخول إلى النظام، <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}">اضغط هنا</a></p>
+        <!-- Footer -->
+        <div style="background-color: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #e0e0e0;">
+          <p style="color: #6c757d; margin: 0; font-size: 12px; font-family: 'Tajawal', sans-serif;">
+            © 2024 نظام الجودة
+          </p>
         </div>
       </div>
     </body>
@@ -248,12 +162,13 @@ async function insertNotification(userId, title, message, type = 'ticket') {
           title,
           message,
           type,
-          created_at: new Date()
+          created_at: new Date(),
+          userName: user.username // تمرير اسم المستخدم
         };
 
         // إرسال البريد الإلكتروني
         await transporter.sendMail({
-          from: process.env.EMAIL_USER || 'medi.servee1@gmail.com',
+          from: process.env.EMAIL_USER || 'sup.it.system.medical@gmail.com',
           to: user.email,
           subject: `إشعار جديد: ${title}`,
           html: getEmailTemplate(notification)
@@ -276,22 +191,22 @@ async function sendTicketNotification(userId, action, ticketId, ticketTitle) {
   const notifications = {
     create: {
       title: 'تم إنشاء تقرير OVR جديد',
-      message: `تم إنشاء تقرير OVR جديد برقم ${ticketId}: ${ticketTitle}`,
+      message: `تم إنشاء تقرير OVR جديد برقم ${ticketId}`,
       type: 'ticket'
     },
     update: {
       title: 'تم تحديث تقرير OVR',
-      message: `تم تحديث تقرير OVR برقم ${ticketId}: ${ticketTitle}`,
+      message: `تم تحديث تقرير OVR برقم ${ticketId}`,
       type: 'update'
     },
     close: {
       title: 'تم إغلاق تقرير OVR',
-      message: `تم إغلاق تقرير OVR برقم ${ticketId}: ${ticketTitle}`,
+      message: `تم إغلاق تقرير OVR برقم ${ticketId}`,
       type: 'close'
     },
     assign: {
       title: 'تم تعيين تقرير OVR لك',
-      message: `تم تعيين تقرير OVR برقم ${ticketId}: ${ticketTitle} لك`,
+      message: `تم تعيين تقرير OVR برقم ${ticketId} لك`,
       type: 'ticket'
     }
   };
@@ -328,9 +243,91 @@ async function sendApprovalNotification(userId, action, contentId, contentTitle)
   }
 }
 
+// دالة إرسال إشعار حذف التذكرة
+async function sendDeleteNotification(userId, ticketId, ticketTitle) {
+  return await insertNotification(
+    userId,
+    'تم حذف تقرير OVR',
+    `تم حذف تقرير OVR برقم ${ticketId}: ${ticketTitle}`,
+    'delete'
+  );
+}
+
+// دالة إرسال إشعار تعيين التذكرة
+async function sendAssignmentNotification(userId, ticketId, assigneesInfo, ticketTitle) {
+  return await insertNotification(
+    userId,
+    'تم تعيين تقرير OVR',
+    `تم تعيين تقرير OVR برقم ${ticketId} إلى: ${assigneesInfo}`,
+    'assignment'
+  );
+}
+
+// دالة إرسال إشعار تفويض (توقيع بالنيابة)
+async function sendProxyNotification(userId, contentId, isCommittee = false) {
+  return await insertNotification(
+    userId,
+    'تم تفويضك للتوقيع',
+    isCommittee
+      ? `تم تفويضك للتوقيع على ملف لجنة جديد رقم ${contentId}`
+      : `تم تفويضك للتوقيع على ملف جديد رقم ${contentId}`,
+    'proxy'
+  );
+}
+
+// دالة إرسال إشعار اعتماد أو رفض ملف (للمالك)
+async function sendOwnerApprovalNotification(userId, fileTitle, approved, isCommittee = false) {
+  return await insertNotification(
+    userId,
+    approved ? 'تم اعتماد ملفك' : 'تم رفض ملفك',
+    isCommittee
+      ? `ملف اللجنة "${fileTitle}" ${approved ? 'تم اعتماده' : 'تم رفضه'} من قبل الإدارة.`
+      : `الملف "${fileTitle}" ${approved ? 'تم اعتماده' : 'تم رفضه'} من قبل الإدارة.`,
+    approved ? 'approval' : 'rejected'
+  );
+}
+
+// دوال إشعارات انتهاء صلاحية المحتوى
+async function sendContentExpirySoonMonthNotification(userId, row, departmentName, folderName, formattedDate) {
+  const notificationMsg = `اقترب انتهاء صلاحية المحتوى "${row.title}" في  "${departmentName}"، مجلد "${folderName}" بتاريخ ${formattedDate}. يرجى تحديثه أو رفع نسخة جديدة.`;
+  return await insertNotification(
+    userId,
+    'اقترب انتهاء صلاحية المحتوى',
+    notificationMsg,
+    `content_expiry_soon_month_${row.id}`
+  );
+}
+
+async function sendContentExpirySoonDayNotification(userId, row, departmentName, folderName, formattedDate) {
+  const notificationMsg = `غدًا تنتهي صلاحية المحتوى "${row.title}" في  "${departmentName}"، مجلد "${folderName}" بتاريخ ${formattedDate}. يرجى تحديثه أو رفع نسخة جديدة.`;
+  return await insertNotification(
+    userId,
+    'غدًا تنتهي صلاحية المحتوى',
+    notificationMsg,
+    `content_expiry_soon_day_${row.id}`
+  );
+}
+
+async function sendContentExpiredNotification(userId, row, departmentName, folderName, formattedDate) {
+  const notificationMsg = `انتهت صلاحية المحتوى "${row.title}" في  "${departmentName}"، مجلد "${folderName}" بتاريخ ${formattedDate}. يرجى تحديثه أو رفع نسخة جديدة.`;
+  return await insertNotification(
+    userId,
+    'انتهت صلاحية المحتوى',
+    notificationMsg,
+    `content_expired_${row.id}`
+  );
+}
+
 module.exports = {
   insertNotification,
   sendTicketNotification,
   sendApprovalNotification,
-  getEmailTemplate
+  getEmailTemplate,
+  sendDeleteNotification,
+  sendAssignmentNotification,
+  sendProxyNotification,
+  sendOwnerApprovalNotification,
+  sendContentExpirySoonMonthNotification,
+  sendContentExpirySoonDayNotification,
+  sendContentExpiredNotification
 };

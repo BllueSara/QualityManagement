@@ -19,12 +19,12 @@ const db = mysql.createPool({
 // إعداد البريد الإلكتروني
 const transporter = nodemailer.createTransport({
   service: 'gmail',
+
   auth: {
-    user: process.env.EMAIL_USER || 'medi.servee1@gmail.com',
-    pass: process.env.EMAIL_PASS || 'gfcf qtwc lucm rdfd'
+    user: 'sup.it.system.medical@gmail.com',
+    pass: 'bwub ozwj dzlg uicp' // App Password من Gmail
   }
 });
-
 
 
 // 1) تسجيل مستخدم جديد
@@ -474,11 +474,12 @@ const forgotPassword = async (req, res) => {
     `;
 
     await transporter.sendMail({
-      from: process.env.EMAIL_USER || 'medi.servee1@gmail.com',
+      from: process.env.EMAIL_USER || 'sup.it.system.medical@gmail.com',
       to: email,
       subject: 'إعادة تعيين كلمة المرور - نظام الجودة',
       html: emailHtml
     });
+
 
     res.json({ 
       status: 'success', 
