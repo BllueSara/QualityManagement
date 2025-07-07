@@ -937,6 +937,8 @@ const updateUserStatus = async (req, res) => {
   }
 };
 
+
+
 module.exports = {
   getUsers,
   getUserById,
@@ -952,5 +954,6 @@ module.exports = {
   markAllAsRead,
   getUnreadCount,
   getActionTypes,
-  updateUserStatus
+  updateUserStatus,
+
 };
