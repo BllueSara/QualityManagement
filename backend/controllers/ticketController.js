@@ -164,7 +164,19 @@ exports.createTicket = async (req, res) => {
         console.error('logAction error:', logErr);
       }
 
-      // 8) أرسل الرد
+      // 8) إرسال إشعار إنشاء التذكرة
+      try {
+        await insertNotification(
+          req.user.id,
+          'تم إنشاء تقرير OVR جديد',
+          `تم إنشاء تقرير OVR جديد برقم ${ticketId}: ${localizedTitle}`,
+          'ticket'
+        );
+      } catch (notificationErr) {
+        console.error('Notification error:', notificationErr);
+      }
+
+      // 9) أرسل الرد
       return res.status(201).json({
         status: 'success',
         message: 'تم إنشاء الحدث العارض بنجاح',
@@ -284,6 +296,19 @@ exports.updateTicket = async (req, res) => {
         );
       }
 
+      // إرسال إشعار تحديث التذكرة
+      try {
+        const ticketTitle = newTicket.title || `تقرير OVR رقم ${req.params.id}`;
+        await insertNotification(
+          req.user.id,
+          'تم تحديث تقرير OVR',
+          `تم تحديث تقرير OVR برقم ${req.params.id}: ${ticketTitle}`,
+          'update'
+        );
+      } catch (notificationErr) {
+        console.error('Notification error:', notificationErr);
+      }
+
       return res.json({ message: 'تم تحديث الحدث العارض بنجاح' });
     });
   } catch (error) {
@@ -333,7 +358,20 @@ exports.deleteTicket = async (req, res) => {
       console.error('logAction error:', logErr);
     }
 
-    // 5) ردّ النجاح
+    // 5) إرسال إشعار حذف التذكرة
+    try {
+      const ticketTitle = ticket?.title || `تقرير OVR رقم ${req.params.id}`;
+      await insertNotification(
+        req.user.id,
+        'تم حذف تقرير OVR',
+        `تم حذف تقرير OVR برقم ${req.params.id}: ${ticketTitle}`,
+        'delete'
+      );
+    } catch (notificationErr) {
+      console.error('Notification error:', notificationErr);
+    }
+
+    // 6) ردّ النجاح
     return res.json({ message: 'تم حذف الحدث العارض بنجاح' });
   } catch (error) {
     console.error('Error in delete OVR:', error);
@@ -392,7 +430,20 @@ exports.assignTicket = async (req, res) => {
       ticketId
     );
 
-    // 6) أرسل الحدث عارض كاملة مع التصنيفات
+    // 6) إرسال إشعار تعيين التذكرة
+    try {
+      const ticketTitle = updatedTicket.title || `تقرير OVR رقم ${ticketId}`;
+      await insertNotification(
+        req.user.id,
+        'تم تعيين تقرير OVR',
+        `تم تعيين تقرير OVR برقم ${ticketId} إلى: ${assigneesInfo}`,
+        'assignment'
+      );
+    } catch (notificationErr) {
+      console.error('Notification error:', notificationErr);
+    }
+
+    // 7) أرسل الحدث عارض كاملة مع التصنيفات
     return res.json({
       status: 'success',
       message: 'تم تعيين الحدث العارض بنجاح',

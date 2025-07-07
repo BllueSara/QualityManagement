@@ -6,6 +6,8 @@ const path    = require('path');
 
 const app = express();
 
+
+
 // Serve static files from all directories
 
 app.use(express.static(path.join(__dirname)));

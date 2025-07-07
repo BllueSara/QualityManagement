@@ -15,7 +15,10 @@ const {
   markAllAsRead,
   getUnreadCount,
   deleteNotification,
-  updateUserStatus
+  updateUserStatus,
+  getNotificationSettings,
+  updateNotificationSettings,
+  resetNotificationSettings
 } = require('../controllers/usersController');
 
 const router = express.Router();
@@ -45,5 +48,7 @@ router.patch(
   authenticateToken,
   updateUserStatus
 );
+
+
 
 module.exports = router;

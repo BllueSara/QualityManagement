@@ -1,13 +1,13 @@
-const express = require('express');
+
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
-const { promisify } = require('util');
+
 const mysql = require('mysql2/promise');
 const { logAction } = require('../models/logger');
 
-const router = express.Router();
+
 
 const db = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
@@ -16,6 +16,7 @@ const db = mysql.createPool({
     database: process.env.DB_NAME || 'Quality'
 });
 
+// إعداد البريد الإلكتروني
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -24,7 +25,7 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-const sendMail = promisify(transporter.sendMail.bind(transporter));
+
 
 // 1) تسجيل مستخدم جديد
 const register = async (req, res) => {
@@ -245,7 +246,7 @@ const forgotPassword = async (req, res) => {
   }
 
   try {
-    const [rows] = await db.execute('SELECT id FROM users WHERE email = ?', [email]);
+    const [rows] = await db.execute('SELECT id, username FROM users WHERE email = ?', [email]);
     if (rows.length === 0) {
       return res.status(404).json({ 
         status: 'error', 
@@ -254,6 +255,7 @@ const forgotPassword = async (req, res) => {
     }
 
     const userId = rows[0].id;
+    const username = rows[0].username;
     const token = crypto.randomBytes(32).toString('hex');
     const expires = new Date(Date.now() + 3600 * 1000);
 
@@ -267,16 +269,215 @@ const forgotPassword = async (req, res) => {
     );
 
     const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
-    await sendMail({
+    
+    // تصميم احترافي لرسالة إعادة تعيين كلمة المرور
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>إعادة تعيين كلمة المرور - نظام الجودة</title>
+        <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          
+          body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            direction: rtl;
+            line-height: 1.6;
+          }
+          
+          .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          }
+          
+          .header {
+            background: linear-gradient(135deg, #1D4ED8 0%, #3B82F6 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+          }
+          
+          .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 8px;
+          }
+          
+          .header p {
+            font-size: 16px;
+            opacity: 0.9;
+          }
+          
+          .content {
+            padding: 40px 30px;
+          }
+          
+          .greeting {
+            font-size: 18px;
+            color: #1f2937;
+            margin-bottom: 20px;
+            font-weight: 500;
+          }
+          
+          .message {
+            font-size: 16px;
+            color: #4b5563;
+            margin-bottom: 30px;
+            line-height: 1.7;
+          }
+          
+          .reset-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            margin: 20px 0;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);
+          }
+          
+          .reset-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(16, 185, 129, 0.3);
+          }
+          
+          .warning {
+            background-color: #FEF3C7;
+            border: 1px solid #F59E0B;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            color: #92400E;
+          }
+          
+          .warning h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: #92400E;
+          }
+          
+          .warning p {
+            font-size: 14px;
+            margin: 0;
+          }
+          
+          .footer {
+            background-color: #f9fafb;
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid #e5e7eb;
+          }
+          
+          .footer p {
+            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 8px;
+          }
+          
+          .footer a {
+            color: #3B82F6;
+            text-decoration: none;
+          }
+          
+          .logo {
+            width: 120px;
+            height: auto;
+            margin-bottom: 20px;
+          }
+          
+          .security-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+          }
+          
+          @media (max-width: 600px) {
+            .email-container {
+              margin: 10px;
+            }
+            
+            .content {
+              padding: 30px 20px;
+            }
+            
+            .header {
+              padding: 30px 15px;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="email-container">
+                  <div class="header">
+          <h1>نظام الجودة</h1>
+          <p>مستشفى الملك عبد العزيز</p>
+        </div>
+        
+        <div class="content">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <div class="security-icon">🔐</div>
+          </div>
+          
+          <div class="greeting">
+            مرحباً ${username}،
+          </div>
+          
+          <div class="message">
+            لقد تلقينا طلباً لإعادة تعيين كلمة المرور الخاصة بحسابك في نظام الجودة.
+            <br><br>
+            إذا كنت أنت من طلب هذا التغيير، يمكنك إعادة تعيين كلمة المرور من خلال الرابط أدناه:
+          </div>
+            
+            <div style="text-align: center;">
+              <a href="${resetLink}" class="reset-button">
+                إعادة تعيين كلمة المرور
+              </a>
+            </div>
+            
+            <div class="warning">
+              <h3>⚠️ تنبيه مهم</h3>
+              <p>
+                • هذا الرابط صالح لمدة ساعة واحدة فقط<br>
+                • لا تشارك هذا الرابط مع أي شخص آخر<br>
+                • إذا لم تطلب إعادة تعيين كلمة المرور، يمكنك تجاهل هذه الرسالة
+              </p>
+            </div>
+            
+            <div class="message">
+              إذا لم يعمل الرابط أعلاه، يمكنك نسخ الرابط التالي ولصقه في متصفحك:
+              <br><br>
+              <a href="${resetLink}" style="color: #3B82F6; word-break: break-all;">${resetLink}</a>
+            </div>
+          </div>
+          
+          <div class="footer">
+            <p>هذا البريد الإلكتروني تم إرساله من نظام الجودة</p>
+            <p>إذا كان لديك أي استفسار، يرجى التواصل مع فريق الدعم الفني</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    await transporter.sendMail({
       from: process.env.EMAIL_USER || 'medi.servee1@gmail.com',
       to: email,
-      subject: 'إعادة ضبط كلمة المرور',
-      html: `
-        <p>لقد طلبت إعادة ضبط كلمة المرور لموقع الجودة. اضغط على الرابط التالي:</p>
-        <a href="${resetLink}">${resetLink}</a>
-        <p>إذا لم تطلب ذلك، يمكنك تجاهل هذه الرسالة.</p>
-        <p>ينتهي الرابط خلال ساعة واحدة.</p>
-      `
+      subject: 'إعادة تعيين كلمة المرور - نظام الجودة',
+      html: emailHtml
     });
 
     res.json({ 
@@ -284,7 +485,8 @@ const forgotPassword = async (req, res) => {
       message: 'تم إرسال رابط إعادة الضبط إلى بريدك الإلكتروني.' 
     });
   } catch (err) {
-    res.status(500).json({ status: 'error', message: 'Failed to send reset link.' });
+    console.error('Forgot password error:', err);
+    res.status(500).json({ status: 'error', message: 'فشل في إرسال رابط إعادة الضبط.' });
   }
 };
 
