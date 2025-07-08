@@ -269,8 +269,8 @@ const forgotPassword = async (req, res) => {
     );
 
     const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
-    
-    // تصميم احترافي لرسالة إعادة تعيين كلمة المرور
+    const currentDate = new Date().toLocaleString('ar-EG', { dateStyle: 'full', timeStyle: 'short' });
+    // تصميم حديث مخصص لنظام الجودة (أحمر)
     const emailHtml = `
       <!DOCTYPE html>
       <html dir="rtl" lang="ar">
@@ -278,195 +278,69 @@ const forgotPassword = async (req, res) => {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>إعادة تعيين كلمة المرور - نظام الجودة</title>
-        <style>
-          * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-          }
-          
-          body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f5f5;
-            direction: rtl;
-            line-height: 1.6;
-          }
-          
-          .email-container {
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: #ffffff;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-          }
-          
-          .header {
-            background: linear-gradient(135deg, #1D4ED8 0%, #3B82F6 100%);
-            color: white;
-            padding: 40px 20px;
-            text-align: center;
-          }
-          
-          .header h1 {
-            font-size: 28px;
-            font-weight: 600;
-            margin-bottom: 8px;
-          }
-          
-          .header p {
-            font-size: 16px;
-            opacity: 0.9;
-          }
-          
-          .content {
-            padding: 40px 30px;
-          }
-          
-          .greeting {
-            font-size: 18px;
-            color: #1f2937;
-            margin-bottom: 20px;
-            font-weight: 500;
-          }
-          
-          .message {
-            font-size: 16px;
-            color: #4b5563;
-            margin-bottom: 30px;
-            line-height: 1.7;
-          }
-          
-          .reset-button {
-            display: inline-block;
-            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
-            color: white;
-            padding: 15px 30px;
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 16px;
-            margin: 20px 0;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);
-          }
-          
-          .reset-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(16, 185, 129, 0.3);
-          }
-          
-          .warning {
-            background-color: #FEF3C7;
-            border: 1px solid #F59E0B;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 20px 0;
-            color: #92400E;
-          }
-          
-          .warning h3 {
-            font-size: 16px;
-            margin-bottom: 8px;
-            color: #92400E;
-          }
-          
-          .warning p {
-            font-size: 14px;
-            margin: 0;
-          }
-          
-          .footer {
-            background-color: #f9fafb;
-            padding: 30px;
-            text-align: center;
-            border-top: 1px solid #e5e7eb;
-          }
-          
-          .footer p {
-            font-size: 14px;
-            color: #6b7280;
-            margin-bottom: 8px;
-          }
-          
-          .footer a {
-            color: #3B82F6;
-            text-decoration: none;
-          }
-          
-          .logo {
-            width: 120px;
-            height: auto;
-            margin-bottom: 20px;
-          }
-          
-          .security-icon {
-            font-size: 48px;
-            margin-bottom: 20px;
-          }
-          
-          @media (max-width: 600px) {
-            .email-container {
-              margin: 10px;
-            }
-            
-            .content {
-              padding: 30px 20px;
-            }
-            
-            .header {
-              padding: 30px 15px;
-            }
-          }
-        </style>
       </head>
-      <body>
-        <div class="email-container">
-                  <div class="header">
-          <h1>نظام الجودة</h1>
-          <p>مستشفى الملك عبد العزيز</p>
-        </div>
-        
-        <div class="content">
-          <div style="text-align: center; margin-bottom: 30px;">
-            <div class="security-icon">🔐</div>
-          </div>
-          
-          <div class="greeting">
-            مرحباً ${username}،
-          </div>
-          
-          <div class="message">
-            لقد تلقينا طلباً لإعادة تعيين كلمة المرور الخاصة بحسابك في نظام الجودة.
-            <br><br>
-            إذا كنت أنت من طلب هذا التغيير، يمكنك إعادة تعيين كلمة المرور من خلال الرابط أدناه:
-          </div>
-            
-            <div style="text-align: center;">
-              <a href="${resetLink}" class="reset-button">
-                إعادة تعيين كلمة المرور
-              </a>
+      <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5; direction: rtl;">
+        <div style="max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden;">
+          <div style="background: linear-gradient(135deg, #dc3545, #dc3545dd); padding: 25px; text-align: center;">
+            <div style="display: inline-block; background-color: rgba(255,255,255,0.2); border-radius: 50%; width: 60px; height: 60px; line-height: 60px; margin-bottom: 15px;">
+              <span style="font-size: 24px; color: white;">🔐</span>
             </div>
-            
-            <div class="warning">
-              <h3>⚠️ تنبيه مهم</h3>
-              <p>
-                • هذا الرابط صالح لمدة ساعة واحدة فقط<br>
-                • لا تشارك هذا الرابط مع أي شخص آخر<br>
-                • إذا لم تطلب إعادة تعيين كلمة المرور، يمكنك تجاهل هذه الرسالة
+            <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 300;">نظام الجودة</h1>
+            <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 16px;">إعادة تعيين كلمة المرور</p>
+          </div>
+          <div style="padding: 30px;">
+            <div style="margin-bottom: 25px;">
+              <h2 style="color: #333; margin: 0 0 10px 0; font-size: 20px; font-weight: 500;">مرحباً ${username} 👋</h2>
+              <p style="color: #666; margin: 0; line-height: 1.6; font-size: 16px;">لقد تلقينا طلباً لإعادة تعيين كلمة المرور الخاصة بحسابك في نظام الجودة.</p>
+            </div>
+            <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); border-radius: 10px; padding: 25px; margin-bottom: 25px; border-right: 4px solid #dc3545;">
+              <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                <div style="width: 12px; height: 12px; background-color: #dc3545; border-radius: 50%; margin-left: 10px;"></div>
+                <h3 style="color: #333; margin: 0; font-size: 18px; font-weight: 600;">طلب إعادة تعيين كلمة المرور</h3>
+              </div>
+              <div style="background-color: white; border-radius: 8px; padding: 20px; border: 1px solid #e0e0e0;">
+                <p style="color: #495057; margin: 0 0 15px 0; line-height: 1.7; font-size: 15px; text-align: justify;">
+                  إذا كنت قد طلبت إعادة تعيين كلمة المرور، يرجى النقر على الزر أدناه لإنشاء كلمة مرور جديدة.
+                </p>
+                <p style="color: #6c757d; margin: 0; line-height: 1.7; font-size: 14px; text-align: justify;">
+                  <strong>ملاحظة:</strong> هذا الرابط صالح لمدة ساعة واحدة فقط. إذا لم تقم بإعادة تعيين كلمة المرور خلال هذه المدة، ستحتاج إلى طلب رابط جديد.
+                </p>
+              </div>
+            </div>
+            <div style="background-color: #f8f9fa; border-radius: 8px; padding: 15px; margin-bottom: 25px; text-align: center;">
+              <p style="color: #6c757d; margin: 0; font-size: 14px;">
+                <span style="font-weight: 600;">تاريخ الطلب:</span> ${currentDate}
               </p>
             </div>
-            
-            <div class="message">
-              إذا لم يعمل الرابط أعلاه، يمكنك نسخ الرابط التالي ولصقه في متصفحك:
-              <br><br>
-              <a href="${resetLink}" style="color: #3B82F6; word-break: break-all;">${resetLink}</a>
+            <div style="text-align: center; margin-bottom: 25px;">
+              <a href="${resetLink}" style="background: linear-gradient(135deg, #dc3545, #dc3545dd); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3); transition: all 0.3s ease;">
+                🔑 إعادة تعيين كلمة المرور
+              </a>
+            </div>
+            <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
+              <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                <span style="font-size: 18px; margin-left: 10px;">⚠️</span>
+                <h4 style="color: #856404; margin: 0; font-size: 16px; font-weight: 600;">تنبيه أمني</h4>
+              </div>
+              <ul style="color: #856404; margin: 0; padding-right: 20px; font-size: 14px; line-height: 1.6;">
+                <li>لا تشارك هذا الرابط مع أي شخص آخر</li>
+                <li>تأكد من أنك على الموقع الصحيح قبل إدخال كلمة المرور الجديدة</li>
+                <li>إذا لم تطلب إعادة تعيين كلمة المرور، يمكنك تجاهل هذا الإيميل</li>
+              </ul>
+            </div>
+            <div style="background-color: #f8f9fa; border-radius: 8px; padding: 20px; text-align: center; border-top: 3px solid #dc3545;">
+              <p style="color: #6c757d; margin: 0 0 10px 0; font-size: 13px; line-height: 1.5;">
+                هذا البريد الإلكتروني تم إرساله تلقائياً من نظام الجودة
+              </p>
+              <p style="color: #6c757d; margin: 0; font-size: 13px; line-height: 1.5;">
+                إذا واجهت أي مشكلة، يرجى التواصل مع فريق الدعم التقني
+              </p>
             </div>
           </div>
-          
-          <div class="footer">
-            <p>هذا البريد الإلكتروني تم إرساله من نظام الجودة</p>
-            <p>إذا كان لديك أي استفسار، يرجى التواصل مع فريق الدعم الفني</p>
+          <div style="background-color: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #e0e0e0;">
+            <p style="color: #6c757d; margin: 0; font-size: 12px;">
+              © 2024 نظام الجودة - Quality Management System
+            </p>
           </div>
         </div>
       </body>

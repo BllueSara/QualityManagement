@@ -18,7 +18,7 @@ const translations = {
         'statistics': 'الإحصائيات',
         'approvals': 'الإعتمادات',
         'permissions': 'الصلاحيات',
-        'committees': 'اللجان والواجهات',
+        'comittees': 'اللجان والواجهات',
         'click-to-enter': 'اضغط للدخول',
         
         // System title
@@ -974,7 +974,7 @@ const translations = {
         'statistics': 'Statistics',
         'approvals': 'Approvals',
         'permissions': 'Permissions',
-        'committees': 'Committees',
+        'comittees': 'Committees',
         'click-to-enter': 'Click to Enter',
         'employee-number-label': 'Employee Number:',
         'department-label': 'Department:',

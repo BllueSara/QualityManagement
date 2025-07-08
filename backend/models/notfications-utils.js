@@ -16,10 +16,39 @@ const transporter = nodemailer.createTransport({
   auth: {
     user: 'sup.it.system.medical@gmail.com',
     pass: 'bwub ozwj dzlg uicp' // App Password من Gmail
-  }
+  },
+  // تحسينات الأداء
+  pool: true, // استخدام pool للاتصالات
+  maxConnections: 5, // عدد أقصى للاتصالات المتزامنة
+  maxMessages: 100, // عدد أقصى للرسائل في الاتصال الواحد
+  rateLimit: 5, // عدد الرسائل في الثانية
+  rateDelta: 1000, // الفاصل الزمني بين الرسائل (ملي ثانية)
+  // إعدادات إضافية للأداء
+  connectionTimeout: 60000, // timeout للاتصال (60 ثانية)
+  greetingTimeout: 30000, // timeout للتحية
+  socketTimeout: 60000, // timeout للـ socket
 });
 
 const sendMail = transporter.sendMail.bind(transporter);
+
+// دالة استخراج النص العربي من JSON string أو إرجاع النص كما هو
+function extractArabic(str) {
+  if (!str) return '';
+  try {
+    const obj = JSON.parse(str);
+    if (obj && obj.ar) return obj.ar;
+  } catch {
+    // ليس JSON
+  }
+  return str;
+}
+
+// دالة استخراج كل النصوص العربية من أي JSON مضمّن داخل النص
+function extractAllArabic(str) {
+  if (!str) return '';
+  // استبدل كل JSON مضمّن بالنص العربي فقط
+  return str.replace(/\{"ar":"(.*?)","en":"(.*?)"\}/g, '$1');
+}
 
 // تصميم HTML احترافي للإشعارات
 function getEmailTemplate(notification) {
@@ -72,8 +101,10 @@ function getEmailTemplate(notification) {
   const color = typeColors[type] ? typeColors[type].main : typeColors.default.main;
   const typeIcon = getTypeIcon(type);
   const typeLabel = getTypeLabel(type);
-  const cleanUserName = userName || '';
-  const cleanMessage = message || '';
+  // استخدم extractAllArabic على الحقول
+  const cleanUserName = extractAllArabic(userName || '');
+  const cleanMessage = extractAllArabic(message || '');
+  const cleanTitle = extractAllArabic(title || '');
   const currentDate = new Date(created_at || Date.now()).toLocaleDateString('ar-SA', { year: 'numeric', month: '2-digit', day: '2-digit' });
 
   return `
@@ -248,7 +279,7 @@ async function sendDeleteNotification(userId, ticketId, ticketTitle) {
   return await insertNotification(
     userId,
     'تم حذف تقرير OVR',
-    `تم حذف تقرير OVR برقم ${ticketId}: ${ticketTitle}`,
+    `تم حذف تقرير OVR برقم ${ticketId}`,
     'delete'
   );
 }
