@@ -231,8 +231,8 @@ function renderApprovals(items) {
     tr.innerHTML = `
       <td class="col-id">${item.id}</td>
       <td>
-${getLocalizedName(item.title)}
-        <div class="content-meta">(${contentType} - ${getLocalizedName(item.source_name)})</div>
+        ${getLocalizedName(item.title)}
+        <div class="content-meta">(${contentType} - ${getLocalizedName(item.source_name)} - ${getLocalizedName(item.folder_name || item.folderName || '')})</div>
       </td>
       <td>${getLocalizedName(item.source_name) || '-'}</td>
       <td class="col-response">${statusLabel(item.approval_status)}</td>

@@ -234,6 +234,51 @@ function getNotificationTranslation(text) {
   if (text==='انتهت صلاحية المحتوى') {
     return 'The content has expired';
   }
+  
+  if (text==='غدًا تنتهي صلاحية المحتوى') {
+    return 'The content has expired tomorrow';
+  }
+  if (text==='اقترب انتهاء صلاحية المحتوى') {
+    return 'The content has expired soon';
+  }
+
+  
+  // إشعارات OVR
+  if (text === 'تم إنشاء تقرير OVR جديد') {
+    return 'A new OVR report has been created';
+  }
+  if (text === 'تم تحديث تقرير OVR') {
+    return 'The OVR report has been updated';
+  }
+  if (text === 'تم إغلاق تقرير OVR') {
+    return 'The OVR report has been closed';
+  }
+  if (text === 'تم تعيين تقرير OVR لك') {
+    return 'An OVR report has been assigned to you';
+  }
+  if (text === 'تم تعيين تقرير OVR') {
+    return 'An OVR report has been assigned';
+  }
+  if (text === 'تم حذف تقرير OVR') {
+    return 'The OVR report has been deleted';
+  }
+  // إشعارات الاعتماد
+  if (text === 'طلب اعتماد جديد') {
+    return 'A new approval request';
+  }
+  if (text === 'تم اعتماد المحتوى') {
+    return 'The content has been approved';
+  }
+  if (text === 'تم رفض المحتوى') {
+    return 'The content has been rejected';
+  }
+  if (text === 'تم اعتماد الملف') {
+    return 'The file has been approved';
+  }
+  if (text === 'تم رفض الملف') {
+    return 'The file has been rejected';
+  }
+
   // ترجمة الجمل التي تحتوي على اسم ملف بين علامات اقتباس
   const fileApprovedMatch = text.match(/^الملف "(.+)" تم اعتماده من قبل الإدارة\.$/);
   if (fileApprovedMatch) {
@@ -276,6 +321,44 @@ function getNotificationTranslation(text) {
     if (text.includes(ar)) {
       return text.replace(ar, translations[ar]);
     }
+  }
+  // ترجمة ديناميكية للجمل التي تحتوي على متغيرات
+  // تم تفويضك للتوقيع بالنيابة عن admin على The file رقم 67
+  // نمط مرن جدًا لأي نص بعد "على" وقبل "رقم"
+  const proxyMatchFlexible = text.match(/^تم تفويضك للتوقيع بالنيابة عن\s+(.+?)\s+على\s+(.+?)\s+رقم\s+(\d+)$/i);
+  if (proxyMatchFlexible) {
+    const [, user, fileType, fileNum] = proxyMatchFlexible;
+    return `You have been delegated to sign on behalf of ${user} on ${fileType} number ${fileNum}`;
+  }
+  // تم إنشاء تقرير OVR جديد برقم 28
+  const createOvrMatch = text.match(/^تم إنشاء تقرير OVR جديد برقم (\d+)$/);
+  if (createOvrMatch) {
+    return `A new OVR report has been created with number ${createOvrMatch[1]}`;
+  }
+  // تم حذف تقرير OVR برقم ...
+  const deleteOvrMatch = text.match(/^تم حذف تقرير OVR برقم (\d+)$/);
+  if (deleteOvrMatch) {
+    return `The OVR report with number ${deleteOvrMatch[1]} has been deleted`;
+  }
+  // تم تحديث تقرير OVR برقم ...
+  const updateOvrMatch = text.match(/^تم تحديث تقرير OVR برقم (\d+)$/);
+  if (updateOvrMatch) {
+    return `The OVR report with number ${updateOvrMatch[1]} has been updated`;
+  }
+  // تم إغلاق تقرير OVR برقم ...
+  const closeOvrMatch = text.match(/^تم إغلاق تقرير OVR برقم (\d+)$/);
+  if (closeOvrMatch) {
+    return `The OVR report with number ${closeOvrMatch[1]} has been closed`;
+  }
+  // تم تعيين تقرير OVR برقم ... لك
+  const assignOvrMatch = text.match(/^تم تعيين تقرير OVR برقم (\d+) لك$/);
+  if (assignOvrMatch) {
+    return `The OVR report with number ${assignOvrMatch[1]} has been assigned to you`;
+  }
+  // تم تعيين تقرير OVR برقم ... إلى: ...
+  const assignOvrToMatch = text.match(/^تم تعيين تقرير OVR برقم (\d+) إلى: (.+)$/);
+  if (assignOvrToMatch) {
+    return `The OVR report with number ${assignOvrToMatch[1]} has been assigned to: ${assignOvrToMatch[2]}`;
   }
   return text;
 }
