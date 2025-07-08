@@ -172,12 +172,7 @@ async function handleCommitteeApproval(req, res) {
     
     // إشعار للمفوض له إذا تم التوقيع بالنيابة
     if (isProxy && approverId) {
-      await insertNotification(
-        approverId,
-        'تم تفويضك للتوقيع',
-        `تم تفويضك للتوقيع بالنيابة عن مستخدم آخر على ملف لجنة رقم ${contentId}`,
-        'proxy'
-      );
+      // لم يعد هناك إشعار هنا
     }
 
     // إشعار لصاحب الملف عند قبول أو رفض التوقيع
@@ -419,6 +414,17 @@ async function delegateCommitteeApproval(req, res) {
       JSON.stringify(logDescription),
       'approval',      // تأكد أن 'approval' موجودة في enum
       contentId
+    );
+
+    // إرسال إشعار فوري للمفوض له
+    let delegatorName = '';
+    const [delegatorRows] = await db.execute('SELECT username FROM users WHERE id = ?', [currentUserId]);
+    delegatorName = delegatorRows.length ? delegatorRows[0].username : '';
+    await insertNotification(
+      delegateTo,
+      'تم تفويضك للتوقيع',
+      `تم تفويضك للتوقيع بالنيابة عن${delegatorName ? ' ' + delegatorName : ''} على ملف لجنة رقم ${contentId}`,
+      'proxy'
     );
 
     // 8) أرسل رد بنجاح

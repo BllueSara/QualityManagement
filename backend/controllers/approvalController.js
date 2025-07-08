@@ -192,12 +192,7 @@ signed_as_proxy = COALESCE(VALUES(signed_as_proxy), signed_as_proxy),
     );
 
     if (isProxy && approverId) {
-      await insertNotification(
-        approverId,
-        'تم تفويضك للتوقيع',
-        `تم تفويضك للتوقيع بالنيابة عن مستخدم آخر على الملف رقم ${contentId}`,
-        'proxy'
-      );
+      // لم يعد هناك إشعار هنا
     }
 
     let [ownerRows] = await db.execute(`SELECT created_by, title FROM ${contentsTable} WHERE id = ?`, [contentId]);
@@ -627,6 +622,17 @@ const delegateApproval = async (req, res) => {
       }),
       'approval',      // يجب أن يكون ضمن enum('content','folder','user','approval','notification')
       contentId
+    );
+
+    // إرسال إشعار فوري للمفوض له
+    let delegatorName = '';
+    const [delegatorRows] = await db.execute('SELECT username FROM users WHERE id = ?', [currentUserId]);
+    delegatorName = delegatorRows.length ? delegatorRows[0].username : '';
+    await insertNotification(
+      delegateTo,
+      'تم تفويضك للتوقيع',
+      `تم تفويضك للتوقيع بالنيابة عن${delegatorName ? ' ' + delegatorName : ''} على الملف رقم ${contentId}`,
+      'proxy'
     );
 
     return res.status(200).json({

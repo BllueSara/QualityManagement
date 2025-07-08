@@ -169,7 +169,7 @@ exports.createTicket = async (req, res) => {
         await insertNotification(
           req.user.id,
           'تم إنشاء تقرير OVR جديد',
-          `تم إنشاء تقرير OVR جديد برقم ${ticketId}: ${localizedTitle}`,
+          `تم إنشاء تقرير OVR جديد برقم ${ticketId}`,
           'ticket'
         );
       } catch (notificationErr) {
@@ -296,17 +296,62 @@ exports.updateTicket = async (req, res) => {
         );
       }
 
-      // إرسال إشعار تحديث التذكرة
-      try {
-        const ticketTitle = newTicket.title || `تقرير OVR رقم ${req.params.id}`;
-        await insertNotification(
-          req.user.id,
-          'تم تحديث تقرير OVR',
-          `تم تحديث تقرير OVR برقم ${req.params.id}: ${ticketTitle}`,
-          'update'
-        );
-      } catch (notificationErr) {
-        console.error('Notification error:', notificationErr);
+      // تحقق إذا التغيير الوحيد هو status من 'جديد' إلى 'تم الإرسال'
+      const onlyStatusChangedToSent =
+        oldTicket.status === 'جديد' &&
+        newTicket.status === 'تم الإرسال' &&
+        oldTicket.event_date === newTicket.event_date &&
+        oldTicket.event_time === newTicket.event_time &&
+        oldTicket.event_location === newTicket.event_location &&
+        oldTicket.reporting_dept_id === newTicket.reporting_dept_id &&
+        oldTicket.responding_dept_id === newTicket.responding_dept_id &&
+        oldTicket.other_depts === newTicket.other_depts &&
+        oldTicket.patient_name === newTicket.patient_name &&
+        oldTicket.medical_record_no === newTicket.medical_record_no &&
+        oldTicket.dob === newTicket.dob &&
+        oldTicket.gender === newTicket.gender &&
+        oldTicket.report_type === newTicket.report_type &&
+        oldTicket.report_short_desc === newTicket.report_short_desc &&
+        oldTicket.event_description === newTicket.event_description &&
+        oldTicket.reporter_name === newTicket.reporter_name &&
+        oldTicket.report_date === newTicket.report_date &&
+        oldTicket.reporter_position === newTicket.reporter_position &&
+        oldTicket.reporter_phone === newTicket.reporter_phone &&
+        oldTicket.reporter_email === newTicket.reporter_email &&
+        oldTicket.actions_taken === newTicket.actions_taken &&
+        oldTicket.had_injury === newTicket.had_injury &&
+        oldTicket.injury_type === newTicket.injury_type;
+
+      // تسجيل اللوق وإرسال الإشعار فقط إذا لم يكن التغيير الوحيد هو status من جديد إلى تم الإرسال
+      if (!onlyStatusChangedToSent) {
+        if (changesAr.length > 0) {
+          const identifierAr = `رقم ${req.params.id}`;
+          const identifierEn = `ID ${req.params.id}`;
+
+          const logDescription = {
+            ar: `تم تحديث الحدث العارض ${identifierAr}: ${changesAr.join(', ')}`,
+            en: `Updated OVR ${identifierEn}: ${changesEn.join(', ')}`
+          };
+
+          await logAction(
+            req.user.id,
+            'update_ticket',
+            JSON.stringify(logDescription),
+            'ticket',
+            req.params.id
+          );
+        }
+        try {
+          const ticketTitle = newTicket.title || `تقرير OVR رقم ${req.params.id}`;
+          await insertNotification(
+            req.user.id,
+            'تم تحديث تقرير OVR',
+            `تم تحديث تقرير OVR برقم ${req.params.id}`,
+            'update'
+          );
+        } catch (notificationErr) {
+          console.error('Notification error:', notificationErr);
+        }
       }
 
       return res.json({ message: 'تم تحديث الحدث العارض بنجاح' });
@@ -364,7 +409,7 @@ exports.deleteTicket = async (req, res) => {
       await insertNotification(
         req.user.id,
         'تم حذف تقرير OVR',
-        `تم حذف تقرير OVR برقم ${req.params.id}: ${ticketTitle}`,
+        `تم حذف تقرير OVR برقم ${req.params.id}`,
         'delete'
       );
     } catch (notificationErr) {
@@ -581,7 +626,18 @@ exports.assignToUsers = async (req, res) => {
     // 5) نفّذ التعيين للمستخدمين الجدد فقط
     await Ticket.assignUsers(ticketId, newAssigneeIds, req.user.id);
 
-    // 6) سجّل اللّوج
+    // 6) إرسال إشعار (مع بريد إلكتروني) لكل مستخدم جديد
+    const { sendAssignmentNotification } = require('../models/notfications-utils');
+    for (const userId of newAssigneeIds) {
+      await sendAssignmentNotification(
+        userId,
+        ticketId,
+        assigneeNames,
+        null // يمكنك تمرير عنوان التذكرة إذا توفر
+      );
+    }
+
+    // 7) سجّل اللّوج
     const identifierAr = `رقم ${ticketId}`;
     const identifierEn = `ID ${ticketId}`;
     const logDescription = {
