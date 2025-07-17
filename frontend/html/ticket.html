@@ -136,17 +136,43 @@
         <div class="section-content">
           <div class="form-group required radio-group full-width">
             <label data-translate="select-report-type">اختر نوع البلاغ</label>
-            <div class="radio-options">
-              <input type="radio" id="reportAccident" name="reportType" value="حادث" required />
-              <label for="reportAccident" data-translate="accident">حادث</label>
-              <input type="radio" id="reportNearMiss" name="reportType" value="حدث قابل للتبليغ" />
-              <label for="reportNearMiss" data-translate="near-miss">حدث قابل للتبليغ</label>
-              <input type="radio" id="reportSerious" name="reportType" value="حدث جسيم" />
-              <label for="reportSerious" data-translate="serious">حدث جسيم</label>
-              <input type="radio" id="reportError" name="reportType" value="تنبيه خطأ" />
-              <label for="reportError" data-translate="error">تنبيه خطأ</label>
-              <input type="radio" id="reportUnsafe" name="reportType" value="وضع غير آمن" />
-              <label for="reportUnsafe" data-translate="unsafe">وضع غير آمن</label>
+            <div class="radio-options report-type-grid">
+              <div>
+                <input type="radio" id="reportCapacityToCauseError" name="reportType" value="capacity-to-cause-error" required />
+                <label for="reportCapacityToCauseError" data-translate="capacity-to-cause-error">الظروف أو الأحداث التي لديها القدرة على التسبب في حدوث خطأ.</label>
+              </div>
+              <div>
+                <input type="radio" id="reportErrorNoPatient" name="reportType" value="error-no-patient" />
+                <label for="reportErrorNoPatient" data-translate="error-no-patient">حدث خطأ ولكن لم يصل أثره إلى المريض.</label>
+              </div>
+              <div>
+                <input type="radio" id="reportErrorNoHarm" name="reportType" value="error-no-harm" />
+                <label for="reportErrorNoHarm" data-translate="error-no-harm">حدث خطأ وصل أثره إلى المريض ولكن لم يسبب ضرراً له.</label>
+              </div>
+              <div>
+                <input type="radio" id="reportErrorMonitor" name="reportType" value="error-monitor" />
+                <label for="reportErrorMonitor" data-translate="error-monitor">حدث خطأ وصل أثره إلى المريض وتطلب المتابعة للتأكد من عدم تسببه في ضرر بالمريض أو تطلب التدخل لمنع الضرر أو الإجراءات معاً.</label>
+              </div>
+              <div>
+                <input type="radio" id="reportErrorMinorHarm" name="reportType" value="error-minor-harm" />
+                <label for="reportErrorMinorHarm" data-translate="error-minor-harm">حدث خطأ قد يكون قد أسهم في حدوث ضرر مؤقت للمريض أو أدى إلى ذلك وتطلب التدخل.</label>
+              </div>
+              <div>
+                <input type="radio" id="reportErrorMinorHarmHospital" name="reportType" value="error-minor-harm-hospital" />
+                <label for="reportErrorMinorHarmHospital" data-translate="error-minor-harm-hospital">حدث خطأ قد يكون قد أسهم في حدوث ضرر مؤقت للمريض أو أدى إلى ذلك وتطلب التنويم بالمستشفى لفترات بسيطة أو لفترات طويلة.</label>
+              </div>
+              <div>
+                <input type="radio" id="reportErrorSeriousHarm" name="reportType" value="error-serious-harm" />
+                <label for="reportErrorSeriousHarm" data-translate="error-serious-harm">حدث خطأ قد يكون قد أسهم في ضرر دائم للمريض أو أدى إلى ذلك الضرر.</label>
+              </div>
+              <div>
+                <input type="radio" id="reportErrorLifeThreatening" name="reportType" value="error-life-threatening" />
+                <label for="reportErrorLifeThreatening" data-translate="error-life-threatening">حدث خطأ يتطلب التدخل الضروري لإنقاذ الحياة.</label>
+              </div>
+              <div>
+                <input type="radio" id="reportErrorDeath" name="reportType" value="error-death" />
+                <label for="reportErrorDeath" data-translate="error-death">حدث خطأ قد يكون قد أسهم في وفاة المريض أو أدى إلى وفاته.</label>
+              </div>
             </div>
           </div>
           <div class="form-group full-width">
@@ -217,112 +243,120 @@
             <label data-translate="event-classification">اختر تصنيف الحدث (واحد على الأقل)</label>
             <div class="classification-grid">
               <div class="checkbox-item">
-                <input type="checkbox" id="catCleaning" name="classification" value="النظافة" />
-                <label for="catCleaning" data-translate="cleaning">النظافة</label>
+                <input type="checkbox" id="catSecurity" name="classification" value="الأمور المتعلقة بالأمن" />
+                <label for="catSecurity" data-translate="security-issues">الأمور المتعلقة بالأمن</label>
               </div>
               <div class="checkbox-item">
-                <input type="checkbox" id="catSkinIntegrity" name="classification" value="تكامل الجلد" />
-                <label for="catSkinIntegrity" data-translate="skin-integrity">تكامل الجلد</label>
+                <input type="checkbox" id="catBehaviour" name="classification" value="السلوك" />
+                <label for="catBehaviour" data-translate="behaviour">السلوك</label>
               </div>
               <div class="checkbox-item">
-                <input type="checkbox" id="catFall" name="classification" value="السقوط" />
-                <label for="catFall" data-translate="fall">السقوط</label>
-              </div>
-              <div class="checkbox-item">
-                <input type="checkbox" id="catSupplyChain" name="classification" value="مشكلات سلسلة الإمداد" />
-                <label for="catSupplyChain" data-translate="supply-chain">مشكلات سلسلة الإمداد</label>
-              </div>
-              <div class="checkbox-item">
-                <input type="checkbox" id="catSecurityIssues" name="classification" value="قضايا أمنية" />
-                <label for="catSecurityIssues" data-translate="security">قضايا أمنية</label>
+                <input type="checkbox" id="catStaff" name="classification" value="الأمور المتعلقة بالموظفين" />
+                <label for="catStaff" data-translate="staff-issues">الأمور المتعلقة بالموظفين</label>
               </div>
               <div class="checkbox-item">
                 <input type="checkbox" id="catPatientCare" name="classification" value="إدارة رعاية المرضى" />
-                <label for="catPatientCare" data-translate="patient-care">إدارة رعاية المرضى</label>
+                <label for="catPatientCare" data-translate="patient-care-management">إدارة رعاية المرضى</label>
               </div>
               <div class="checkbox-item">
-                <input type="checkbox" id="catMedEquipIssues" name="classification" value="مشكلات الأجهزة الطبية" />
-                <label for="catMedEquipIssues" data-translate="medical-equipment">مشكلات الأجهزة الطبية</label>
+                <input type="checkbox" id="catLab" name="classification" value="الأمور المتعلقة بالمختبرات الطبية" />
+                <label for="catLab" data-translate="lab-issues">الأمور المتعلقة بالمختبرات الطبية</label>
               </div>
               <div class="checkbox-item">
-                <input type="checkbox" id="catHousing" name="classification" value="الإسكان" />
-                <label for="catHousing" data-translate="housing">الإسكان</label>
+                <input type="checkbox" id="catProcedural" name="classification" value="الأمور المتعلقة بالإجراءات" />
+                <label for="catProcedural" data-translate="procedural">الأمور المتعلقة بالإجراءات</label>
               </div>
               <div class="checkbox-item">
-                <input type="checkbox" id="catFoodServices" name="classification" value="خدمات الطعام" />
-                <label for="catFoodServices" data-translate="food-services">خدمات الطعام</label>
+                <input type="checkbox" id="catMedEquip" name="classification" value="مشكلات الأجهزة الطبية" />
+                <label for="catMedEquip" data-translate="medical-equipment-issues">مشكلات الأجهزة الطبية</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" id="catFacilityMaintenance" name="classification" value="صيانة المنشآت الصحية" />
+                <label for="catFacilityMaintenance" data-translate="facility-maintenance">صيانة المنشآت الصحية</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" id="catEnvironmentSafety" name="classification" value="السلامة البيئية" />
+                <label for="catEnvironmentSafety" data-translate="environment-safety">السلامة البيئية</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" id="catAccommodation" name="classification" value="الأمور المتعلقة بالإقامة والسكن" />
+                <label for="catAccommodation" data-translate="accommodation-issues">الأمور المتعلقة بالإقامة والسكن</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" id="catIT" name="classification" value="االأمور المتعلقة بتقنية المعلومات" />
+                <label for="catIT" data-translate="it-issues">االأمور المتعلقة بتقنية المعلومات</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" id="catImaging" name="classification" value="التصوير الطبي والإجراءات التشخيصية" />
+                <label for="catImaging" data-translate="medical-imaging-diagnostic">التصوير الطبي والإجراءات التشخيصية</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" id="catFoodServices" name="classification" value="خدمات التغذية" />
+                <label for="catFoodServices" data-translate="food-services">خدمات التغذية</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" id="catClinicalNutrition" name="classification" value="التغذية السريرية" />
+                <label for="catClinicalNutrition" data-translate="clinical-nutrition">التغذية السريرية</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" id="catInfectionControl" name="classification" value="الأمور ذات العلاقة بمكافحة العدوى" />
+                <label for="catInfectionControl" data-translate="infection-control-issues">الأمور ذات العلاقة بمكافحة العدوى</label>
               </div>
               <div class="checkbox-item">
                 <input type="checkbox" id="catOccupationalHealth" name="classification" value="الصحة المهنية" />
                 <label for="catOccupationalHealth" data-translate="occupational-health">الصحة المهنية</label>
               </div>
               <div class="checkbox-item">
-                <input type="checkbox" id="catHypertension" name="classification" value="فرط الضغط" />
-                <label for="catHypertension" data-translate="hypertension">فرط الضغط</label>
+                <input type="checkbox" id="catHousekeeping" name="classification" value="الخدمة والتنظيف" />
+                <label for="catHousekeeping" data-translate="housekeeping">الخدمة والتنظيف</label>
               </div>
               <div class="checkbox-item">
-                <input type="checkbox" id="catCommunicationIssues" name="classification" value="مشاكل التواصل" />
-                <label for="catCommunicationIssues" data-translate="communication">مشاكل التواصل</label>
+                <input type="checkbox" id="catIV" name="classification" value="أمور متعلقة بالحقن الوريدي" />
+                <label for="catIV" data-translate="intravenous">أمور متعلقة بالحقن الوريدي</label>
               </div>
               <div class="checkbox-item">
-                <input type="checkbox" id="catMaternalIssues" name="classification" value="قضايا الولادة" />
-                <label for="catMaternalIssues" data-translate="maternal">قضايا الولادة</label>
+                <input type="checkbox" id="catPressureUlcer" name="classification" value="تقرحات السرير (إصابة)" />
+                <label for="catPressureUlcer" data-translate="pressure-ulcer">تقرحات السرير (إصابة)</label>
               </div>
               <div class="checkbox-item">
-                <input type="checkbox" id="catSeriousIncidents" name="classification" value="أحداث جسيمة" />
-                <label for="catSeriousIncidents" data-translate="serious-incidents">أحداث جسيمة</label>
+                <input type="checkbox" id="catSkinLesions" name="classification" value="أمور متعلقة بسلامة الجلد / الإصابات الجلدية" />
+                <label for="catSkinLesions" data-translate="skin-lesions">أمور متعلقة بسلامة الجلد / الإصابات الجلدية</label>
               </div>
               <div class="checkbox-item">
-                <input type="checkbox" id="catStaffIssues" name="classification" value="قضايا الموظفين" />
-                <label for="catStaffIssues" data-translate="staff-issues">قضايا الموظفين</label>
+                <input type="checkbox" id="catMedication" name="classification" value="الأدوية" />
+                <label for="catMedication" data-translate="medication">الأدوية</label>
               </div>
               <div class="checkbox-item">
-                <input type="checkbox" id="catMedicalProcedures" name="classification" value="إجراءات طبية" />
-                <label for="catMedicalProcedures" data-translate="medical-procedures">إجراءات طبية</label>
+                <input type="checkbox" id="catCommunication" name="classification" value="أمور متعلقة بالتواصل" />
+                <label for="catCommunication" data-translate="communication-issues">أمور متعلقة بالتواصل</label>
               </div>
               <div class="checkbox-item">
-                <input type="checkbox" id="catEnvironmentSafety" name="classification" value="البيئة / السلامة" />
-                <label for="catEnvironmentSafety" data-translate="environment-safety">البيئة / السلامة</label>
+                <input type="checkbox" id="catFall" name="classification" value="السقوط" />
+                <label for="catFall" data-translate="fall">السقوط</label>
               </div>
               <div class="checkbox-item">
-                <input type="checkbox" id="catMedicalImaging" name="classification" value="التصوير الطبي" />
-                <label for="catMedicalImaging" data-translate="medical-imaging">التصوير الطبي</label>
+                <input type="checkbox" id="catRadiation" name="classification" value="العلاج الإشعاعي (الأمور المتعلقة بالأشعة)" />
+                <label for="catRadiation" data-translate="radiation-treatment">العلاج الإشعاعي (الأمور المتعلقة بالأشعة)</label>
               </div>
               <div class="checkbox-item">
-                <input type="checkbox" id="catIdentityDocs" name="classification" value="الهوية / المستندات / الموافقات" />
-                <label for="catIdentityDocs" data-translate="identity-docs">الهوية / المستندات / الموافقات</label>
+                <input type="checkbox" id="catLaborDelivery" name="classification" value="الأمور المتعلقة بالولادة وألم الولادة" />
+                <label for="catLaborDelivery" data-translate="labor-delivery-issues">الأمور المتعلقة بالولادة وألم الولادة</label>
               </div>
               <div class="checkbox-item">
-                <input type="checkbox" id="catInfectionControl" name="classification" value="قضايا مكافحة العدوى" />
-                <label for="catInfectionControl" data-translate="infection-control">قضايا مكافحة العدوى</label>
+                <input type="checkbox" id="catSupplyChain" name="classification" value="الأمور المتعلقة بسلاسل الإمداد" />
+                <label for="catSupplyChain" data-translate="supply-chain-issues">الأمور المتعلقة بسلاسل الإمداد</label>
               </div>
               <div class="checkbox-item">
-                <input type="checkbox" id="catIVInjection" name="classification" value="الحقن الوريدي" />
-                <label for="catIVInjection" data-translate="iv-injection">الحقن الوريدي</label>
+                <input type="checkbox" id="catLaundry" name="classification" value="خدمات مغسلة الملاءات" />
+                <label for="catLaundry" data-translate="laundry-services">خدمات مغسلة الملاءات</label>
               </div>
               <div class="checkbox-item">
-                <input type="checkbox" id="catMedication" name="classification" value="الدواء" />
-                <label for="catMedication" data-translate="medication">الدواء</label>
+                <input type="checkbox" id="catSentinelEvents" name="classification" value="الأحداث الجسيمة" />
+                <label for="catSentinelEvents" data-translate="sentinel-events">الأحداث الجسيمة</label>
               </div>
               <div class="checkbox-item">
-                <input type="checkbox" id="catRadiationTherapy" name="classification" value="العلاج الإشعاعي" />
-                <label for="catRadiationTherapy" data-translate="radiation-therapy">العلاج الإشعاعي</label>
-              </div>
-              <div class="checkbox-item">
-                <input type="checkbox" id="catLabServices" name="classification" value="خدمات المختبر" />
-                <label for="catLabServices" data-translate="lab-services">خدمات المختبر</label>
-              </div>
-              <div class="checkbox-item">
-                <input type="checkbox" id="catFacilityMaintenance" name="classification" value="صيانة المنشأة" />
-                <label for="catFacilityMaintenance" data-translate="facility-maintenance">صيانة المنشأة</label>
-              </div>
-              <div class="checkbox-item">
-                <input type="checkbox" id="catITIssues" name="classification" value="قضايا تقنية المعلومات" />
-                <label for="catITIssues" data-translate="it-issues">قضايا تقنية المعلومات</label>
-              </div>
-              <div class="checkbox-item">
-                <input type="checkbox" id="catClinicalNutrition" name="classification" value="التغذية السريرية" />
-                <label for="catClinicalNutrition" data-translate="clinical-nutrition">التغذية السريرية</label>
+                <input type="checkbox" id="catIDDocs" name="classification" value="الهوية / المستندات والوثائق / الإقرارات" />
+                <label for="catIDDocs" data-translate="id-docs-consent">الهوية / المستندات والوثائق / الإقرارات</label>
               </div>
             </div>
           </div>

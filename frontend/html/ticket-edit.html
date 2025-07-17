@@ -122,13 +122,17 @@
           <h2 class="section-title" data-translate="report-type">نوع البلاغ</h2>
         </div>
         <div class="section-content">
-          <select id="report_type" name="report_type" class="field-input" required>
-            <option value="حادث" data-translate="accident">حادث</option>
-            <option value="حدث قابل للتبليغ" data-translate="near-miss">حدث قابل للتبليغ</option>
-            <option value="حدث جسيم" data-translate="serious">حدث جسيم</option>
-            <option value="تنبيه خطأ" data-translate="error">تنبيه خطأ</option>
-            <option value="وضع غير آمن" data-translate="unsafe">وضع غير آمن</option>
-          </select>
+            <select id="report_type" name="report_type" class="field-input" required>
+              <option value="capacity-to-cause-error" data-translate="capacity-to-cause-error">الظروف أو الأحداث التي لديها القدرة على التسبب في حدوث خطأ.</option>
+              <option value="error-no-patient" data-translate="error-no-patient">حدث خطأ ولكن لم يصل أثره إلى المريض.</option>
+              <option value="error-no-harm" data-translate="error-no-harm">حدث خطأ وصل أثره إلى المريض ولكن لم يسبب ضرراً له.</option>
+              <option value="error-monitor" data-translate="error-monitor">حدث خطأ وصل أثره إلى المريض وتطلب المتابعة للتأكد من عدم تسببه في ضرر بالمريض أو تطلب التدخل لمنع الضرر أو الإجراءات معاً.</option>
+              <option value="error-minor-harm" data-translate="error-minor-harm">حدث خطأ قد يكون قد أسهم في حدوث ضرر مؤقت للمريض أو أدى إلى ذلك وتطلب التدخل.</option>
+              <option value="error-minor-harm-hospital" data-translate="error-minor-harm-hospital">حدث خطأ قد يكون قد أسهم في حدوث ضرر مؤقت للمريض أو أدى إلى ذلك وتطلب التنويم بالمستشفى لفترات بسيطة أو لفترات طويلة.</option>
+              <option value="error-serious-harm" data-translate="error-serious-harm">حدث خطأ قد يكون قد أسهم في ضرر دائم للمريض أو أدى إلى ذلك الضرر.</option>
+              <option value="error-life-threatening" data-translate="error-life-threatening">حدث خطأ يتطلب التدخل الضروري لإنقاذ الحياة.</option>
+              <option value="error-death" data-translate="error-death">حدث خطأ قد يكون قد أسهم في وفاة المريض أو أدى إلى وفاته.</option>
+            </select>
         </div>
       </section>
 
@@ -207,32 +211,35 @@
         </div>
         <div class="section-content tags-container" id="classificationContainer">
           <div class="checkbox-group" style="display:flex;flex-wrap:wrap;gap:12px;">
-            <label><input type="checkbox" name="classification" value="الأجهزة الطبية" checked data-translate="medical-equipment"> <span data-translate="medical-equipment">الأجهزة الطبية</span></label>
-            <label><input type="checkbox" name="classification" value="البنية"> <span data-translate="infrastructure">البنية</span></label>
-            <label><input type="checkbox" name="classification" value="قضايا أمنية"> <span data-translate="security-issues">قضايا أمنية</span></label>
-            <label><input type="checkbox" name="classification" value="النظافة"> <span data-translate="cleaning">النظافة</span></label>
-            <label><input type="checkbox" name="classification" value="السقوط"> <span data-translate="fall">السقوط</span></label>
-            <label><input type="checkbox" name="classification" value="مشكلات سلسلة الإمداد"> <span data-translate="supply-chain">مشكلات سلسلة الإمداد</span></label>
-            <label><input type="checkbox" name="classification" value="إدارة رعاية المرضى"> <span data-translate="patient-care">إدارة رعاية المرضى</span></label>
-            <label><input type="checkbox" name="classification" value="خدمات الطعام"> <span data-translate="food-services">خدمات الطعام</span></label>
-            <label><input type="checkbox" name="classification" value="الصحة المهنية"> <span data-translate="occupational-health">الصحة المهنية</span></label>
-            <label><input type="checkbox" name="classification" value="تكامل الجلد"> <span data-translate="skin-integrity">تكامل الجلد</span></label>
-            <label><input type="checkbox" name="classification" value="مشاكل التواصل"> <span data-translate="communication">مشاكل التواصل</span></label>
-            <label><input type="checkbox" name="classification" value="قضايا الولادة"> <span data-translate="maternal">قضايا الولادة</span></label>
-            <label><input type="checkbox" name="classification" value="أحداث جسيمة"> <span data-translate="serious-incidents">أحداث جسيمة</span></label>
-            <label><input type="checkbox" name="classification" value="قضايا الموظفين"> <span data-translate="staff-issues">قضايا الموظفين</span></label>
-            <label><input type="checkbox" name="classification" value="إجراءات طبية"> <span data-translate="medical-procedures">إجراءات طبية</span></label>
-            <label><input type="checkbox" name="classification" value="البيئة / السلامة"> <span data-translate="environment-safety">البيئة / السلامة</span></label>
-            <label><input type="checkbox" name="classification" value="التصوير الطبي"> <span data-translate="medical-imaging">التصوير الطبي</span></label>
-            <label><input type="checkbox" name="classification" value="الهوية / المستندات / الموافقات"> <span data-translate="identity-docs">الهوية / المستندات / الموافقات</span></label>
-            <label><input type="checkbox" name="classification" value="قضايا مكافحة العدوى"> <span data-translate="infection-control">قضايا مكافحة العدوى</span></label>
-            <label><input type="checkbox" name="classification" value="الحقن الوريدي"> <span data-translate="iv-injection">الحقن الوريدي</span></label>
-            <label><input type="checkbox" name="classification" value="الدواء"> <span data-translate="medication">الدواء</span></label>
-            <label><input type="checkbox" name="classification" value="العلاج الإشعاعي"> <span data-translate="radiation-therapy">العلاج الإشعاعي</span></label>
-            <label><input type="checkbox" name="classification" value="خدمات المختبر"> <span data-translate="lab-services">خدمات المختبر</span></label>
-            <label><input type="checkbox" name="classification" value="صيانة المنشأة"> <span data-translate="facility-maintenance">صيانة المنشأة</span></label>
-            <label><input type="checkbox" name="classification" value="قضايا تقنية المعلومات"> <span data-translate="it-issues">قضايا تقنية المعلومات</span></label>
-            <label><input type="checkbox" name="classification" value="التغذية السريرية"> <span data-translate="clinical-nutrition">التغذية السريرية</span></label>
+            <label><input type="checkbox" name="classification" value="الأمور المتعلقة بالأمن" data-translate="security-issues"> <span data-translate="security-issues">الأمور المتعلقة بالأمن</span></label>
+            <label><input type="checkbox" name="classification" value="السلوك" data-translate="behaviour"> <span data-translate="behaviour">السلوك</span></label>
+            <label><input type="checkbox" name="classification" value="الأمور المتعلقة بالموظفين" data-translate="staff-issues"> <span data-translate="staff-issues">الأمور المتعلقة بالموظفين</span></label>
+            <label><input type="checkbox" name="classification" value="إدارة رعاية المرضى" data-translate="patient-care-management"> <span data-translate="patient-care-management">إدارة رعاية المرضى</span></label>
+            <label><input type="checkbox" name="classification" value="الأمور المتعلقة بالمختبرات الطبية" data-translate="lab-issues"> <span data-translate="lab-issues">الأمور المتعلقة بالمختبرات الطبية</span></label>
+            <label><input type="checkbox" name="classification" value="الأمور المتعلقة بالإجراءات" data-translate="procedural"> <span data-translate="procedural">الأمور المتعلقة بالإجراءات</span></label>
+            <label><input type="checkbox" name="classification" value="مشكلات الأجهزة الطبية" data-translate="medical-equipment-issues"> <span data-translate="medical-equipment-issues">مشكلات الأجهزة الطبية</span></label>
+            <label><input type="checkbox" name="classification" value="صيانة المنشآت الصحية" data-translate="facility-maintenance"> <span data-translate="facility-maintenance">صيانة المنشآت الصحية</span></label>
+            <label><input type="checkbox" name="classification" value="السلامة البيئية" data-translate="environment-safety"> <span data-translate="environment-safety">السلامة البيئية</span></label>
+            <label><input type="checkbox" name="classification" value="الأمور المتعلقة بالإقامة والسكن" data-translate="accommodation-issues"> <span data-translate="accommodation-issues">الأمور المتعلقة بالإقامة والسكن</span></label>
+            <label><input type="checkbox" name="classification" value="االأمور المتعلقة بتقنية المعلومات" data-translate="it-issues"> <span data-translate="it-issues">االأمور المتعلقة بتقنية المعلومات</span></label>
+            <label><input type="checkbox" name="classification" value="التصوير الطبي والإجراءات التشخيصية" data-translate="medical-imaging-diagnostic"> <span data-translate="medical-imaging-diagnostic">التصوير الطبي والإجراءات التشخيصية</span></label>
+            <label><input type="checkbox" name="classification" value="خدمات التغذية" data-translate="food-services"> <span data-translate="food-services">خدمات التغذية</span></label>
+            <label><input type="checkbox" name="classification" value="التغذية السريرية" data-translate="clinical-nutrition"> <span data-translate="clinical-nutrition">التغذية السريرية</span></label>
+            <label><input type="checkbox" name="classification" value="الأمور ذات العلاقة بمكافحة العدوى" data-translate="infection-control-issues"> <span data-translate="infection-control-issues">الأمور ذات العلاقة بمكافحة العدوى</span></label>
+            <label><input type="checkbox" name="classification" value="الصحة المهنية" data-translate="occupational-health"> <span data-translate="occupational-health">الصحة المهنية</span></label>
+            <label><input type="checkbox" name="classification" value="الخدمة والتنظيف" data-translate="housekeeping"> <span data-translate="housekeeping">الخدمة والتنظيف</span></label>
+            <label><input type="checkbox" name="classification" value="أمور متعلقة بالحقن الوريدي" data-translate="intravenous"> <span data-translate="intravenous">أمور متعلقة بالحقن الوريدي</span></label>
+            <label><input type="checkbox" name="classification" value="تقرحات السرير (إصابة)" data-translate="pressure-ulcer"> <span data-translate="pressure-ulcer">تقرحات السرير (إصابة)</span></label>
+            <label><input type="checkbox" name="classification" value="أمور متعلقة بسلامة الجلد / الإصابات الجلدية" data-translate="skin-lesions"> <span data-translate="skin-lesions">أمور متعلقة بسلامة الجلد / الإصابات الجلدية</span></label>
+            <label><input type="checkbox" name="classification" value="الأدوية" data-translate="medication"> <span data-translate="medication">الأدوية</span></label>
+            <label><input type="checkbox" name="classification" value="أمور متعلقة بالتواصل" data-translate="communication-issues"> <span data-translate="communication-issues">أمور متعلقة بالتواصل</span></label>
+            <label><input type="checkbox" name="classification" value="السقوط" data-translate="fall"> <span data-translate="fall">السقوط</span></label>
+            <label><input type="checkbox" name="classification" value="العلاج الإشعاعي (الأمور المتعلقة بالأشعة)" data-translate="radiation-treatment"> <span data-translate="radiation-treatment">العلاج الإشعاعي (الأمور المتعلقة بالأشعة)</span></label>
+            <label><input type="checkbox" name="classification" value="الأمور المتعلقة بالولادة وألم الولادة" data-translate="labor-delivery-issues"> <span data-translate="labor-delivery-issues">الأمور المتعلقة بالولادة وألم الولادة</span></label>
+            <label><input type="checkbox" name="classification" value="الأمور المتعلقة بسلاسل الإمداد" data-translate="supply-chain-issues"> <span data-translate="supply-chain-issues">الأمور المتعلقة بسلاسل الإمداد</span></label>
+            <label><input type="checkbox" name="classification" value="خدمات مغسلة الملاءات" data-translate="laundry-services"> <span data-translate="laundry-services">خدمات مغسلة الملاءات</span></label>
+            <label><input type="checkbox" name="classification" value="الأحداث الجسيمة" data-translate="sentinel-events"> <span data-translate="sentinel-events">الأحداث الجسيمة</span></label>
+            <label><input type="checkbox" name="classification" value="الهوية / المستندات والوثائق / الإقرارات" data-translate="id-docs-consent"> <span data-translate="id-docs-consent">الهوية / المستندات والوثائق / الإقرارات</span></label>
           </div>
           <small class="hint" data-translate="classification-hint">افصل بين التصنيفات بفواصل</small>
         </div>
