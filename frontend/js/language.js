@@ -883,6 +883,10 @@ const translations = {
         'notifications-load-failed': 'فشل تحميل الإشعارات',
         'notifications-no-match': 'لا توجد إشعارات مطابقة.',
         'notifications-delete-failed': 'فشل حذف الإشعار',
+
+                'disable_notifications': 'إلغاء الإشعارات',
+        'disable_emails': 'إلغاء الإيميلات',
+        'disable_logs': 'إلغاء اللوقز',
         // Dashboard Page
         'dashboard-title': 'إحصائيات الاحداث العارضة',
         'closed-tickets': 'الاحداث العارضة المغلقة',
@@ -1249,6 +1253,10 @@ const translations = {
         'delete-department-confirm': 'Are you sure you want to delete this department?',
 'delete-content-name': 'Delete Content Name',
         // Committees
+                'disable_notifications': 'Disable Notifications',
+        'disable_emails': 'Disable Emails',
+        'disable_logs': 'Disable Logs',
+
         'add-committee': 'Add New Committee',
         'edit-committee': 'Edit Committee',
         'committee-name': 'Committee Name',
