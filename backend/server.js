@@ -3,10 +3,9 @@ require('dotenv').config();
 const express = require('express');
 const cors    = require('cors');
 const path    = require('path');
+const mysql = require('mysql2/promise');
 
 const app = express();
-
-
 
 // Serve static files from all directories
 

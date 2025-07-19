@@ -170,12 +170,75 @@ exports.sendApprovalRequest = async (req, res) => {
         [contentId]
     );
 
+    // معالجة التفويضات - تحديد المعتمدين النهائيين
+    const finalApprovers = [];
+    for (const approverId of approvers) {
+      // تحقق إذا كان هذا المعتمد مفوض له لشخص آخر (من قاعدة البيانات)
+      const [proxyRows] = await conn.execute(
+        'SELECT id FROM users WHERE permanent_delegate_id = ?',
+        [approverId]
+      );
+      
+      if (proxyRows.length > 0) {
+        // هذا المعتمد مفوض له، أضف المفوض له بدلاً منه
+        const delegateeId = proxyRows[0].id;
+        if (!finalApprovers.includes(delegateeId)) {
+          finalApprovers.push(delegateeId);
+        }
+      } else {
+        // تحقق إذا كان هذا المعتمد مفوض له لشخص آخر (من قاعدة البيانات)
+        const [delegationRows] = await conn.execute(
+          'SELECT permanent_delegate_id FROM users WHERE id = ?',
+          [approverId]
+        );
+        
+        if (delegationRows.length && delegationRows[0].permanent_delegate_id) {
+          // هذا مفوض له، أضفه هو والمفوض الأصلي معاً
+          if (!finalApprovers.includes(approverId)) {
+            finalApprovers.push(approverId); // أضف المفوض له
+          }
+          const delegatorId = delegationRows[0].permanent_delegate_id;
+          if (!finalApprovers.includes(delegatorId)) {
+            finalApprovers.push(delegatorId); // أضف المفوض الأصلي
+          }
+        } else {
+          // هذا ليس مفوض له، أضفه
+          if (!finalApprovers.includes(approverId)) {
+            finalApprovers.push(approverId);
+          }
+        }
+      }
+    }
+    
+    // إضافة التفويض المزدوج - إذا كان المستخدم في قائمة المعتمدين ومفوض له أيضاً
+    for (const approverId of approvers) {
+      // تحقق إذا كان هذا المعتمد مفوض له لشخص آخر
+      const [proxyRows] = await conn.execute(
+        'SELECT id FROM users WHERE permanent_delegate_id = ?',
+        [approverId]
+      );
+      
+      if (proxyRows.length > 0) {
+        // هذا المعتمد مفوض له، أضفه مرة ثانية للتفويض المزدوج
+        const delegateeId = proxyRows[0].id;
+        if (finalApprovers.includes(delegateeId)) {
+          // أضف نسخة ثانية للتفويض المزدوج
+          finalApprovers.push(delegateeId);
+        }
+      }
+    }
+    // حماية ضد قائمة فارغة
+    console.log('DEBUG approvers:', approvers);
+    console.log('DEBUG finalApprovers:', finalApprovers);
+    if (finalApprovers.length === 0) {
+      return res.status(400).json({ status: 'error', message: 'لا يوجد معتمدين صالحين بعد معالجة التفويضات.' });
+    }
+
     const [approverUsers] = await conn.query(
       `SELECT username FROM users WHERE id IN (?)`,
-      [approvers]
+      [finalApprovers]
     );
     const approverNames = approverUsers.map(u => u.username).join(', ');
-
 
     await conn.beginTransaction();
 
@@ -187,20 +250,48 @@ exports.sendApprovalRequest = async (req, res) => {
     const existing = rows.map(r => r.user_id);
 
     // 2) احسب الجدد فقط
-    const toAdd = approvers.filter(id => !existing.includes(id));
+    const toAdd = finalApprovers.filter(id => !existing.includes(id));
+    
+    // 2.5) إزالة التكرار من toAdd
+    const uniqueToAdd = [...new Set(toAdd)];
 
     // 3) أدخل الجدد فقط، وسجّل لهم سجلّ اعتماد
-    for (const userId of toAdd) {
+    const processedUsers = new Set(); // لتجنب التكرار
+    
+    for (const userId of uniqueToAdd) {
+      if (processedUsers.has(userId)) continue; // تجنب التكرار
+      
       await conn.execute(
         `INSERT INTO content_approvers (content_id, user_id) VALUES (?, ?)`,
         [contentId, userId]
       );
-      await conn.execute(
-        `INSERT INTO approval_logs
-           (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, created_at)
-         VALUES (?, ?, 'pending', NULL, 0, NULL, CURRENT_TIMESTAMP)`,
-        [contentId, userId]
+      
+      // تحقق إذا كان هذا المستخدم مفوض له
+      const [delegationRows] = await conn.execute(
+        'SELECT permanent_delegate_id FROM users WHERE id = ?',
+        [userId]
       );
+      
+      if (delegationRows.length && delegationRows[0].permanent_delegate_id) {
+        // هذا مفوض له، أضف سجل بالنيابة فقط
+        await conn.execute(
+          `INSERT INTO approval_logs
+             (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, created_at)
+           VALUES (?, ?, 'pending', NULL, 1, ?, CURRENT_TIMESTAMP)`,
+          [contentId, userId, delegationRows[0].permanent_delegate_id]
+        );
+      } else {
+        // هذا معتمد عادي، أضف سجل عادي
+        await conn.execute(
+          `INSERT INTO approval_logs
+             (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, created_at)
+           VALUES (?, ?, 'pending', NULL, 0, NULL, CURRENT_TIMESTAMP)`,
+          [contentId, userId]
+        );
+      }
+      
+      processedUsers.add(userId);
+      
       await insertNotification(
         userId,
         'تم تفويضك للتوقيع',
@@ -208,9 +299,35 @@ exports.sendApprovalRequest = async (req, res) => {
         'proxy'
       );
     }
+    
+    // 3.5) إضافة سجلات التفويض المزدوج - إذا كان المستخدم موجود مرتين في finalApprovers
+    const userCounts = {};
+    finalApprovers.forEach(id => {
+      userCounts[id] = (userCounts[id] || 0) + 1;
+    });
+    
+    for (const [userId, count] of Object.entries(userCounts)) {
+      if (count > 1 && !processedUsers.has(parseInt(userId))) {
+        // هذا المستخدم موجود مرتين، أضف سجل بالنيابة إضافي
+        const [delegationRows] = await conn.execute(
+          'SELECT permanent_delegate_id FROM users WHERE id = ?',
+          [userId]
+        );
+        
+        if (delegationRows.length && delegationRows[0].permanent_delegate_id) {
+          // أضف سجل بالنيابة إضافي
+          await conn.execute(
+            `INSERT INTO approval_logs
+               (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, created_at)
+             VALUES (?, ?, 'pending', NULL, 1, ?, CURRENT_TIMESTAMP)`,
+            [contentId, userId, delegationRows[0].permanent_delegate_id]
+          );
+        }
+      }
+    }
 
     // 4) دمج القديم مع القادم في الحقل approvers_required
-    const merged = Array.from(new Set([...existing, ...approvers]));
+    const merged = Array.from(new Set([...existing, ...finalApprovers]));
     await conn.execute(
       `UPDATE contents 
          SET approval_status     = 'pending', 
@@ -236,7 +353,8 @@ exports.sendApprovalRequest = async (req, res) => {
     res.status(200).json({ status: 'success', message: 'تم الإرسال بنجاح' });
   } catch (err) {
     await conn.rollback();
-    res.status(500).json({ status: 'error', message: 'فشل إرسال طلب الاعتماد' });
+    console.error('Send Approval Error:', err); // أضف هذه السطر
+    res.status(500).json({ status: 'error', message: 'فشل إرسال طلب الاعتماد', error: err.message }); // أضف err.message مؤقتًا
   } finally {
     conn.release();
     await pool.end();

@@ -250,21 +250,26 @@ ${parseLocalizedName(item.title)}
           // لا نوقف العملية إذا فشل تسجيل اللوق
         }
 
-        // خذ المسار من الداتا
-        let filePath = e.currentTarget.dataset.filePath; 
-        
-        // تحديد baseUrl حسب نوع المحتوى
+        // تحقق من وجود dataset وfilePath
+        let filePath = (e.currentTarget && e.currentTarget.dataset) ? e.currentTarget.dataset.filePath : null;
+        if (!filePath) {
+          showToast(getTranslation('file-link-unavailable'), 'error');
+          return;
+        }
+
+        // تحديد baseUrl حسب نوع المسار
         let baseUrl;
         if (filePath.startsWith('backend/uploads/')) {
-          // ملفات اللجان: backend/uploads/content_files/...
           baseUrl = apiBase.replace('/api', '') + '/backend/uploads';
           filePath = filePath.replace(/^backend\/uploads\//, '');
         } else if (filePath.startsWith('uploads/')) {
-          // ملفات الأقسام: uploads/content_files/...
           baseUrl = apiBase.replace('/api', '') + '/uploads';
           filePath = filePath.replace(/^uploads\//, '');
+        } else if (filePath.startsWith('content_files/')) {
+          // الحل: أضف uploads/ قبل المسار
+          baseUrl = apiBase.replace('/api', '') + '/uploads';
+          // لا تغير filePath هنا
         } else {
-          // مسار غير معروف
           baseUrl = apiBase.replace('/api', '') + '/uploads';
         }
 
@@ -438,9 +443,18 @@ async function initDropdowns() {
 
     // داخل initDropdowns، بعد ربط الـ dropdowns وأيقونة Send
     sendBtn.addEventListener('click', async () => {
+      // تحقق من وجود row قبل المتابعة
+      if (!row) {
+        showToast('حدث خطأ: لم يتم العثور على الصف.', 'error');
+        return;
+      }
       // 1) أقرأ الأسماء المخزّنة حالياً
-      const existingAssignedNames = JSON.parse(row.dataset.assignedNames || '[]');
-      const existingIds           = JSON.parse(row.dataset.assignedIds   || '[]');
+      const existingAssignedNames = row.dataset.assignedNames
+        ? JSON.parse(row.dataset.assignedNames)
+        : [];
+      const existingIds = row.dataset.assignedIds
+        ? JSON.parse(row.dataset.assignedIds)
+        : [];
 
       // 2) جلب اللي اختارهم المستخدم
       const userItems = row.querySelectorAll('[data-type="users"] .dropdown-item.selected');
@@ -470,12 +484,33 @@ async function initDropdowns() {
         if (resp.status === 'success') {
           // 5) حدّث الواجهة
           const selCell = row.querySelector('.selected-cell');
-          newUsers.forEach(u => {
+          if (!selCell) {
+            showToast('حدث خطأ: لم يتم العثور على خلية المختارين.', 'error');
+            return;
+          }
+          
+          // أضف الأسماء الجديدة مع إشارة للتفويض إذا كان موجود
+          for (const u of newUsers) {
             const badge = document.createElement('span');
-            badge.className   = 'badge';
-            badge.textContent = u.name;
+            badge.className = 'badge';
+            
+            // تحقق إذا كان هذا المستخدم مفوض له
+            try {
+              const delegationResponse = await fetchJSON(`${apiBase}/users/${u.id}/delegation-status`);
+              if (delegationResponse && delegationResponse.permanent_delegate_id) {
+                // هذا مفوض له، أضف إشارة
+                badge.textContent = `${u.name} (مفوض له)`;
+                badge.style.backgroundColor = '#ff6b6b'; // لون مختلف للمفوض له
+              } else {
+                badge.textContent = u.name;
+              }
+            } catch (err) {
+              // إذا فشل التحقق، استخدم الاسم العادي
+              badge.textContent = u.name;
+            }
+            
             selCell.appendChild(badge);
-          });
+          }
 
           // 6) خزّن القيم الجديدة في الـ data-attributes
           row.dataset.assignedNames = JSON.stringify(allNames);

@@ -102,10 +102,19 @@ exports.getPendingApprovals = async (req, res) => {
         LEFT JOIN users u2 ON cca.user_id = u2.id
         WHERE cc.approval_status = 'pending'
         ${!canViewAll ? `AND (EXISTS (SELECT 1 FROM committee_content_approvers WHERE content_id = cc.id AND user_id = ?) OR cc.created_by = ?)` : ''}
+        AND NOT EXISTS (
+          SELECT 1 FROM committee_approval_logs cal
+          WHERE cal.content_id = cc.id
+            AND cal.delegated_by = ?
+            AND cal.signed_as_proxy = 1
+            AND cal.status = 'pending'
+        )
         GROUP BY cc.id
     `;
 
     if (!canViewAll) {
+        params.push(userId, userId, userId);
+    } else {
         params.push(userId, userId);
     }
 
@@ -180,13 +189,77 @@ exports.sendApprovalRequest = async (req, res) => {
 
     const [approverUsers] = await conn.query(
       `SELECT username FROM users WHERE id IN (?)`,
-      [approvers]
+      [finalApprovers]
     );
     const approverNames = approverUsers.map(u => u.username).join(', ');
 
+    // معالجة التفويضات - تحديد المعتمدين النهائيين
+    const finalApprovers = [];
+    for (const approverId of approvers) {
+      // تحقق من وجود تفويض دائم في قاعدة البيانات
+      const [delegationRows] = await conn.execute(
+        'SELECT permanent_delegate_id FROM users WHERE id = ?',
+        [approverId]
+      );
+      
+      if (delegationRows.length && delegationRows[0].permanent_delegate_id) {
+        // هذا مفوض له، أضفه هو والمفوض الأصلي معاً
+        if (!finalApprovers.includes(approverId)) {
+          finalApprovers.push(approverId); // أضف المفوض له
+        }
+        const delegatorId = delegationRows[0].permanent_delegate_id;
+        if (!finalApprovers.includes(delegatorId)) {
+          finalApprovers.push(delegatorId); // أضف المفوض الأصلي
+        }
+      } else {
+        // تحقق إذا كان هذا المعتمد مفوض له لشخص آخر (من قاعدة البيانات)
+        const [proxyRows] = await conn.execute(
+          'SELECT id FROM users WHERE permanent_delegate_id = ?',
+          [approverId]
+        );
+        
+        if (proxyRows.length > 0) {
+          // هذا المعتمد مفوض له، أضف المفوض له بدلاً منه
+          const delegateeId = proxyRows[0].id;
+          if (!finalApprovers.includes(delegateeId)) {
+            finalApprovers.push(delegateeId);
+          }
+        } else {
+          if (!finalApprovers.includes(approverId)) {
+            finalApprovers.push(approverId);
+          }
+        }
+      }
+    }
+    
+    // إضافة التفويض المزدوج - إذا كان المستخدم في قائمة المعتمدين ومفوض له أيضاً
+    for (const approverId of approvers) {
+      // تحقق إذا كان هذا المعتمد مفوض له لشخص آخر
+      const [proxyRows] = await conn.execute(
+        'SELECT id FROM users WHERE permanent_delegate_id = ?',
+        [approverId]
+      );
+      
+      if (proxyRows.length > 0) {
+        // هذا المعتمد مفوض له، أضفه مرة ثانية للتفويض المزدوج
+        const delegateeId = proxyRows[0].id;
+        if (finalApprovers.includes(delegateeId)) {
+          // أضف نسخة ثانية للتفويض المزدوج
+          finalApprovers.push(delegateeId);
+        }
+      }
+    }
+
+    // حماية ضد قائمة فارغة
+    console.log('DEBUG approvers:', approvers);
+    console.log('DEBUG finalApprovers:', finalApprovers);
+    if (finalApprovers.length === 0) {
+      return res.status(400).json({ status: 'error', message: 'لا يوجد معتمدين صالحين بعد معالجة التفويضات.' });
+    }
+
     await conn.beginTransaction();
 
-    // 1) اقرأ المعتمدين الحاليين
+    // 1) اقرأ المعتمدين الحاليين (IDs) من committee_content_approvers
     const [rows] = await conn.execute(
       `SELECT user_id FROM committee_content_approvers WHERE content_id = ?`,
       [contentId]
@@ -194,21 +267,39 @@ exports.sendApprovalRequest = async (req, res) => {
     const existing = rows.map(r => r.user_id);
 
     // 2) احسب الجدد فقط
-    const toAdd = approvers.filter(id => !existing.includes(id));
+    const toAdd = finalApprovers.filter(id => !existing.includes(id));
 
-    // 3) أضف الجدد دون حذف القدم
+    // 3) أدخل الجدد فقط، وسجّل لهم سجلّ اعتماد
     for (const userId of toAdd) {
       await conn.execute(
-        `INSERT INTO committee_content_approvers (content_id, user_id, assigned_at)
-         VALUES (?, ?, NOW())`,
+        `INSERT INTO committee_content_approvers (content_id, user_id) VALUES (?, ?)`,
         [contentId, userId]
       );
-      await conn.execute(
-        `INSERT INTO committee_approval_logs
-           (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, created_at)
-         VALUES (?, ?, 'pending', NULL, 0, NULL, CURRENT_TIMESTAMP)`,
-        [contentId, userId]
+      
+      // تحقق إذا كان هذا المستخدم مفوض له (يجب أن يكون signed_as_proxy = 1)
+      const [delegationRows] = await conn.execute(
+        'SELECT permanent_delegate_id FROM users WHERE id = ?',
+        [userId]
       );
+      
+      if (delegationRows.length && delegationRows[0].permanent_delegate_id) {
+        // هذا مفوض له، أضف سجل بالنيابة
+        await conn.execute(
+          `INSERT INTO committee_approval_logs
+             (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, created_at)
+           VALUES (?, ?, 'pending', NULL, 1, ?, CURRENT_TIMESTAMP)`,
+          [contentId, userId, delegationRows[0].permanent_delegate_id]
+        );
+      } else {
+        // هذا معتمد عادي
+        await conn.execute(
+          `INSERT INTO committee_approval_logs
+             (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, created_at)
+           VALUES (?, ?, 'pending', NULL, 0, NULL, CURRENT_TIMESTAMP)`,
+          [contentId, userId]
+        );
+      }
+      
       await insertNotification(
         userId,
         'تم تفويضك للتوقيع',
@@ -218,14 +309,14 @@ exports.sendApprovalRequest = async (req, res) => {
     }
 
     // 4) دمج القديم مع القادم في الحقل approvers_required
-    const merged = Array.from(new Set([...existing, ...approvers]));
+    const merged = Array.from(new Set([...existing, ...finalApprovers]));
     await conn.execute(
-      `UPDATE committee_contents
-         SET approval_status     = 'pending',
-             approvers_required  = ?,
-             updated_at          = CURRENT_TIMESTAMP
+      `UPDATE committee_contents 
+         SET approval_status     = 'pending', 
+             approvers_required  = ?, 
+             updated_at          = CURRENT_TIMESTAMP 
        WHERE id = ?`,
-      [ JSON.stringify(merged), contentId ]
+      [JSON.stringify(merged), contentId]
     );
 
     // Add to logs
@@ -244,7 +335,8 @@ exports.sendApprovalRequest = async (req, res) => {
     res.json({ status:'success', message:'تم الإرسال بنجاح' });
   } catch (err) {
     await conn.rollback();
-    res.status(500).json({ status:'error', message:'فشل إرسال طلب الاعتماد' });
+    console.error('Send Committee Approval Error:', err); // أضف هذه السطر
+    res.status(500).json({ status: 'error', message: 'فشل إرسال طلب الاعتماد', error: err.message }); // أضف err.message مؤقتًا
   } finally {
     conn.release();
     await pool.end();

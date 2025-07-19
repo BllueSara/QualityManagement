@@ -278,6 +278,22 @@ function getNotificationTranslation(text) {
   if (text === 'تم رفض الملف') {
     return 'The file has been rejected';
   }
+  if (text === 'اعتماد جزئي لملف') {
+    return 'Partial file approval';
+  }
+  if (text === 'اعتماد جزئي لملف لجنة') {
+    return 'Partial committee file approval';
+  }
+  // ترجمة إشعار اعتماد جزئي لملف
+  const partialFileMatch = text.match(/^تم اعتماد الملف "(.+)" جزئياً من قبل (.+)\.$/);
+  if (partialFileMatch) {
+    return `The file "${partialFileMatch[1]}" was partially approved by ${partialFileMatch[2]}.`;
+  }
+  // ترجمة إشعار اعتماد جزئي لملف لجنة
+  const partialCommitteeMatch = text.match(/^تم اعتماد ملف اللجنة "(.+)" جزئياً من قبل (.+)\.$/);
+  if (partialCommitteeMatch) {
+    return `The committee file "${partialCommitteeMatch[1]}" was partially approved by ${partialCommitteeMatch[2]}.`;
+  }
 
   // ترجمة الجمل التي تحتوي على اسم ملف بين علامات اقتباس
   const fileApprovedMatch = text.match(/^الملف "(.+)" تم اعتماده من قبل الإدارة\.$/);
@@ -327,7 +343,11 @@ function getNotificationTranslation(text) {
   // نمط مرن جدًا لأي نص بعد "على" وقبل "رقم"
   const proxyMatchFlexible = text.match(/^تم تفويضك للتوقيع بالنيابة عن\s+(.+?)\s+على\s+(.+?)\s+رقم\s+(\d+)$/i);
   if (proxyMatchFlexible) {
-    const [, user, fileType, fileNum] = proxyMatchFlexible;
+    let [, user, fileType, fileNum] = proxyMatchFlexible;
+    // Special translation for known terms
+    if (user === 'مستخدم آخر') user = 'another user';
+    if (fileType === 'ملف لجنة') fileType = 'committee file';
+    if (fileType === 'The file') fileType = 'file';
     return `You have been delegated to sign on behalf of ${user} on ${fileType} number ${fileNum}`;
   }
   // تم إنشاء تقرير OVR جديد برقم 28
@@ -359,6 +379,45 @@ function getNotificationTranslation(text) {
   const assignOvrToMatch = text.match(/^تم تعيين تقرير OVR برقم (\d+) إلى: (.+)$/);
   if (assignOvrToMatch) {
     return `The OVR report with number ${assignOvrToMatch[1]} has been assigned to: ${assignOvrToMatch[2]}`;
+  }
+  if (text === 'طلب تفويض بالنيابة') {
+    return 'Proxy delegation request';
+  }
+  if (text === 'طلب تفويض بالنيابة للجان') {
+    return 'Committee proxy delegation request';
+  }
+  // ترجمة إشعار طلب تفويض بالنيابة لكل الملفات
+  const proxyBulkMatch = text.match(/^تم طلب تفويضك للتوقيع بالنيابة عن مستخدم آخر على جميع الملفات \((\d+) ملف\)\.$/);
+  if (proxyBulkMatch) {
+    return `You have been requested to sign on behalf of another user for all files (${proxyBulkMatch[1]} files).`;
+  }
+  // ترجمة إشعار طلب تفويض بالنيابة لكل ملفات اللجان
+  const proxyBulkCommitteeMatch = text.match(/^تم طلب تفويضك للتوقيع بالنيابة عن مستخدم آخر على جميع ملفات اللجان \((\d+) ملف\)\.$/);
+  if (proxyBulkCommitteeMatch) {
+    return `You have been requested to sign on behalf of another user for all committee files (${proxyBulkCommitteeMatch[1]} files).`;
+  }
+  // ترجمة إشعار طلب تفويض بالنيابة مع اسم الشخص (مرن لأي نوع ملفات)
+  const proxyBulkNameFlexibleMatch = text.match(/^تم طلب تفويضك للتوقيع بالنيابة عن (.+?) على جميع (.+?)(?:ات|ات\.|\.|)\.?$/);
+  if (proxyBulkNameFlexibleMatch) {
+    let [, user, fileType] = proxyBulkNameFlexibleMatch;
+    // Special translation for known terms
+    if (user === 'مستخدم آخر') user = 'another user';
+    if (fileType === 'ملفات اللجان') fileType = 'committee files';
+    if (fileType === 'The file') fileType = 'files';
+    if (fileType === 'الملفات') fileType = 'files';
+    return `You have been requested to sign on behalf of ${user} for all ${fileType}.`;
+  }
+  // ترجمة أي إشعار فيه "تم طلب تفويضك للتوقيع بالنيابة عن" و"على جميع"
+  if (/تم طلب تفويضك للتوقيع بالنيابة عن/.test(text) && /على جميع/.test(text)) {
+    // استخراج اسم المستخدم
+    const userMatch = text.match(/تم طلب تفويضك للتوقيع بالنيابة عن\s+([^\s]+)\s+على جميع/);
+    let user = userMatch ? userMatch[1] : 'another user';
+    if (user === 'مستخدم آخر') user = 'another user';
+    return `You have been requested to sign on behalf of ${user} for all files.`;
+  }
+  const proxyBulkCommitteeNameMatch = text.match(/^تم طلب تفويضك للتوقيع بالنيابة عن (.+?) على جميع ملفات اللجان \((\d+) ملف\)\.$/);
+  if (proxyBulkCommitteeNameMatch) {
+    return `You have been requested to sign on behalf of ${proxyBulkCommitteeNameMatch[1]} for all committee files (${proxyBulkCommitteeNameMatch[2]} files).`;
   }
   return text;
 }

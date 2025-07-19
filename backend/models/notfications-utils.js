@@ -169,14 +169,14 @@ function getEmailTemplate(notification) {
 }
 
 // دالة إدراج إشعار مع إرسال بريد إلكتروني
-async function insertNotification(userId, title, message, type = 'ticket') {
+async function insertNotification(userId, title, message, type = 'ticket', messageData = null) {
   try {
     // 1) إدراج الإشعار في قاعدة البيانات
     const [result] = await db.execute(
       `INSERT INTO notifications 
-       (user_id, title, message, type, created_at)
-       VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-      [userId, title, message, type]
+       (user_id, title, message, type, message_data, created_at)
+       VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+      [userId, title, message, type, messageData]
     );
 
     // 2) إرسال البريد الإلكتروني
@@ -349,6 +349,28 @@ async function sendContentExpiredNotification(userId, row, departmentName, folde
   );
 }
 
+async function sendPartialApprovalNotification(userId, fileTitle, approverName, isCommittee = false) {
+  return await insertNotification(
+    userId,
+    isCommittee ? 'اعتماد جزئي لملف لجنة' : 'اعتماد جزئي لملف',
+    isCommittee
+      ? `تم اعتماد ملف اللجنة "${fileTitle}" جزئياً من قبل ${approverName}.`
+      : `تم اعتماد الملف "${fileTitle}" جزئياً من قبل ${approverName}.`,
+    'approval'
+  );
+}
+
+async function sendBulkProxyNotification(userId, delegatorName, isCommittee = false) {
+  return await insertNotification(
+    userId,
+    isCommittee ? 'طلب تفويض بالنيابة للجان' : 'طلب تفويض بالنيابة',
+    isCommittee
+      ? `تم طلب تفويضك للتوقيع بالنيابة عن ${delegatorName} على جميع ملفات اللجان.`
+      : `تم طلب تفويضك للتوقيع بالنيابة عن ${delegatorName} على جميع الملفات.`,
+    isCommittee ? 'proxy_bulk_committee' : 'proxy_bulk'
+  );
+}
+
 module.exports = {
   insertNotification,
   sendTicketNotification,
@@ -358,6 +380,8 @@ module.exports = {
   sendAssignmentNotification,
   sendProxyNotification,
   sendOwnerApprovalNotification,
+  sendPartialApprovalNotification,
+  sendBulkProxyNotification,
   sendContentExpirySoonMonthNotification,
   sendContentExpirySoonDayNotification,
   sendContentExpiredNotification

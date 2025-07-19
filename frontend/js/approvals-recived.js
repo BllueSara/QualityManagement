@@ -69,10 +69,42 @@ function setupCloseButtons() {
     });
   });
 }
+// تعريف deptFilter مرة واحدة في الأعلى
+const deptFilter = document.getElementById('deptFilter');
+
 document.addEventListener('DOMContentLoaded', async () => {
   if (!token) return alert(getTranslation('please-login'));
 
   await fetchPermissions();
+
+  // تعريف وإضافة زر تفويض جميع الملفات بالنيابة بعد فلتر الأقسام
+  let btnAll = document.getElementById('delegateAllBtn');
+  if (btnAll) btnAll.remove();
+  // تحقق من الصلاحية قبل إنشاء الزر
+  const canBulkDelegate = permissionsKeys.includes('*') || permissionsKeys.includes('grant_permissions') || permissionsKeys.includes('delegate_all');
+  if (canBulkDelegate) {
+    btnAll = document.createElement('button');
+    btnAll.id = 'delegateAllBtn';
+    btnAll.className = 'btn-delegate-all';
+    btnAll.type = 'button';
+    btnAll.innerHTML = `<i class="fas fa-user-friends"></i> ${getTranslation('delegate-all') || 'تفويض جميع الملفات بالنيابة'}`;
+    btnAll.style = 'background: #2563eb; color: #fff; padding: 8px 18px; border-radius: 6px; border: none; font-size: 1rem; margin-right: 8px; cursor: pointer; vertical-align: middle;';
+    const deptFilter = document.getElementById('deptFilter');
+    if (deptFilter && deptFilter.parentNode) {
+      deptFilter.parentNode.insertBefore(btnAll, deptFilter.nextSibling);
+    }
+    // ربط حدث فتح مودال التفويض الجماعي (نفس مودال التفويض العادي)
+    btnAll.onclick = function() {
+      isBulkDelegation = true;
+      selectedContentId = null;
+      document.getElementById('delegateDept').value = '';
+      document.getElementById('delegateUser').innerHTML = '<option value="" disabled selected>' + (getTranslation('select-user') || 'اختر المستخدم') + '</option>';
+      document.getElementById('delegateNotes').value = '';
+      openModal('delegateModal');
+      loadDepartments();
+      document.getElementById('delegateNotes').placeholder = getTranslation('notes-bulk') || 'ملاحظات (تنطبق على جميع الملفات)';
+    };
+  }
 
   try {
     const deptResp      = await fetchJSON(`${apiBase}/approvals/assigned-to-me`);
@@ -301,9 +333,11 @@ function initActions() {
 
   document.querySelectorAll('.btn-delegate').forEach(btn => {
     btn.addEventListener('click', (e) => {
+      isBulkDelegation = false;
       selectedContentId = e.target.closest('tr').dataset.id;
       openModal('delegateModal');
       loadDepartments();
+      document.getElementById('delegateNotes').placeholder = getTranslation('notes') || 'ملاحظات (اختياري)';
     });
   });
   
@@ -398,74 +432,83 @@ else {
 
 }
 
-document.getElementById('btnElectronicApprove')?.addEventListener('click', async () => {
-  if (!selectedContentId) return alert(getTranslation('please-select-user'));
-
-  const contentType = document.querySelector(`tr[data-id="${selectedContentId}"]`).dataset.type;
-  const endpoint = contentType === 'committee' ? 'committee-approvals' : 'approvals';
-
-  try {
-    await fetchJSON(`${apiBase}/${endpoint}/${selectedContentId}/approve`, {
-      method: 'POST',
-      body: JSON.stringify({
-        approved: true,
-        signature: null,
-        electronic_signature: true,
-        notes: ''
-      })
+// 1. دالة لجلب سجل الاعتمادات للملف
+async function fetchApprovalLog(contentId, type) {
+  // إزالة البادئة إن وجدت
+  let cleanId = contentId;
+  if (typeof cleanId === 'string' && (cleanId.startsWith('dept-') || cleanId.startsWith('comm-'))) {
+    cleanId = cleanId.split('-')[1];
+  }
+  if (type === 'committee') {
+    // لجلب سجل اعتماد اللجنة
+    const res = await fetch(`${apiBase}/committee-approvals/${cleanId}/approvals`, {
+      headers: { 'Authorization': `Bearer ${token}` }
     });
-    alert(getTranslation('success-approved'));
-    closeModal('qrModal');
-    updateApprovalStatusInUI(selectedContentId, 'approved');
-    disableActionsFor(selectedContentId);
-  } catch (err) {
-    console.error('Failed to electronically approve:', err);
-    alert(getTranslation('error-sending'));
-  }
-});
-
-function openSignatureModal(contentId) {
-  selectedContentId = contentId;
-  const modal = document.getElementById('signatureModal');
-  modal.style.display = 'flex';
-
-  setTimeout(() => {
-    resizeCanvas();
-    clearCanvas();
-  }, 50);
-}
-
-function closeSignatureModal() {
-  document.getElementById('signatureModal').style.display = 'none';
-  clearCanvas();
-}
-
-function clearCanvas() {
-  if (ctx && canvas) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!res.ok) return null;
+    return await res.json();
+  } else {
+    // لجلب تفاصيل القسم من /api/contents/:id واستخراج approvals_log
+    const res = await fetch(`${apiBase}/contents/${cleanId}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    // approvals_log غالبًا يكون JSON string
+    let log = [];
+    try {
+      log = JSON.parse(json.data?.approvals_log || json.approvals_log || '[]');
+    } catch { log = []; }
+    return log;
   }
 }
 
-function resizeCanvas() {
-  const wrapper = canvas.parentElement;
-  const rect = wrapper.getBoundingClientRect();
-  canvas.width = rect.width;
-  canvas.height = rect.height;
-
-  ctx.lineWidth = 2;
-  ctx.lineCap = 'round';
-  ctx.strokeStyle = '#000';
+// 2. تعديل زر التوقيع الإلكتروني
+const btnElectronicApprove = document.getElementById('btnElectronicApprove');
+if (btnElectronicApprove) {
+  btnElectronicApprove.addEventListener('click', async () => {
+    if (!selectedContentId) return alert(getTranslation('please-select-user'));
+    const contentType = document.querySelector(`tr[data-id="${selectedContentId}"]`).dataset.type;
+    const endpoint = contentType === 'committee' ? 'committee-approvals' : 'approvals';
+    let approvalLog = await fetchApprovalLog(selectedContentId, contentType);
+    const payload = {
+      approved: true,
+      signature: null,
+      electronic_signature: true,
+      notes: ''
+    };
+    const tokenPayload = JSON.parse(atob(token.split('.')[1] || '{}'));
+    const myLog = Array.isArray(approvalLog) ? approvalLog.find(l => l.approver_id == tokenPayload.id) : null;
+    console.log('[SIGN] approvalLog:', approvalLog);
+    console.log('[SIGN] myLog:', myLog);
+    if (myLog && (myLog.signed_as_proxy == 1 || myLog.delegated_by)) {
+      payload.on_behalf_of = myLog.delegated_by;
+      console.log('[SIGN] Sending on_behalf_of:', myLog.delegated_by);
+    }
+    console.log('[SIGN] payload being sent:', payload);
+    try {
+      const response = await fetchJSON(`${apiBase}/${endpoint}/${selectedContentId}/approve`, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      console.log('[SIGN] response:', response);
+      alert(getTranslation('success-approved'));
+      closeModal('qrModal');
+      updateApprovalStatusInUI(selectedContentId, 'approved');
+      disableActionsFor(selectedContentId);
+    } catch (err) {
+      console.error('Failed to electronically approve:', err);
+      alert(getTranslation('error-sending'));
+    }
+  });
 }
 
+// 3. تعديل زر التوقيع اليدوي (التوقيع بالرسم)
 function setupSignatureModal() {
   canvas = document.getElementById('signatureCanvas');
   if (!canvas) return;
-
   ctx = canvas.getContext('2d');
   let drawing = false;
-
   window.addEventListener('resize', resizeCanvas);
-
   function getPos(e) {
     const rect = canvas.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -475,58 +518,61 @@ function setupSignatureModal() {
       y: clientY - rect.top
     };
   }
-
   canvas.addEventListener('mousedown', e => {
     drawing = true;
     const pos = getPos(e);
     ctx.beginPath();
     ctx.moveTo(pos.x, pos.y);
   });
-
   canvas.addEventListener('mousemove', e => {
     if (!drawing) return;
     const pos = getPos(e);
     ctx.lineTo(pos.x, pos.y);
     ctx.stroke();
   });
-
   canvas.addEventListener('mouseup', () => drawing = false);
   canvas.addEventListener('mouseleave', () => drawing = false);
-
   canvas.addEventListener('touchstart', e => {
     drawing = true;
     const pos = getPos(e);
     ctx.beginPath();
     ctx.moveTo(pos.x, pos.y);
   });
-
   canvas.addEventListener('touchmove', e => {
     if (!drawing) return;
     const pos = getPos(e);
     ctx.lineTo(pos.x, pos.y);
     ctx.stroke();
   });
-
   canvas.addEventListener('touchend', () => drawing = false);
-
   document.getElementById('btnClear').addEventListener('click', () => {
     clearCanvas();
   });
-
   document.getElementById('btnConfirmSignature').addEventListener('click', async () => {
     const base64Signature = canvas.toDataURL('image/png');
     const contentType = document.querySelector(`tr[data-id="${selectedContentId}"]`).dataset.type;
     const endpoint = contentType === 'committee' ? 'committee-approvals' : 'approvals';
-
+    let approvalLog = await fetchApprovalLog(selectedContentId, contentType);
+    const payload = {
+      approved: true,
+      signature: base64Signature,
+      notes: ''
+    };
+    const tokenPayload = JSON.parse(atob(token.split('.')[1] || '{}'));
+    const myLog = Array.isArray(approvalLog) ? approvalLog.find(l => l.approver_id == tokenPayload.id) : null;
+    console.log('[SIGN] approvalLog:', approvalLog);
+    console.log('[SIGN] myLog:', myLog);
+    if (myLog && (myLog.signed_as_proxy == 1 || myLog.delegated_by)) {
+      payload.on_behalf_of = myLog.delegated_by;
+      console.log('[SIGN] Sending on_behalf_of:', myLog.delegated_by);
+    }
+    console.log('[SIGN] payload being sent:', payload);
     try {
-      await fetchJSON(`${apiBase}/${endpoint}/${selectedContentId}/approve`, {
+      const response = await fetchJSON(`${apiBase}/${endpoint}/${selectedContentId}/approve`, {
         method: 'POST',
-        body: JSON.stringify({
-          approved: true,
-          signature: base64Signature,
-          notes: ''
-        })
+        body: JSON.stringify(payload)
       });
+      console.log('[SIGN] response:', response);
       alert(getTranslation('success-sent'));
       closeSignatureModal();
       updateApprovalStatusInUI(selectedContentId, 'approved');
@@ -597,31 +643,86 @@ document.getElementById('delegateDept').addEventListener('change', async (e) => 
   }
 });
 
-document.getElementById('btnDelegateConfirm').addEventListener('click', async () => {
-  const userId = document.getElementById('delegateUser').value;
-  const notes = document.getElementById('delegateNotes').value;
+let isBulkDelegation = false;
 
-  if (!userId) return alert(getTranslation('please-select-user'));
+// عند الضغط على زر تفويض جميع الملفات بالنيابة
+// btnAll.onclick = function() {
+//   isBulkDelegation = true;
+//   selectedContentId = null;
+//   // صفّر الحقول
+//   document.getElementById('delegateDept').value = '';
+//   document.getElementById('delegateUser').innerHTML = '<option value="" disabled selected>' + (getTranslation('select-user') || 'اختر المستخدم') + '</option>';
+//   document.getElementById('delegateNotes').value = '';
+//   openModal('delegateModal');
+//   loadDepartments();
+//   document.getElementById('delegateNotes').placeholder = getTranslation('notes-bulk') || 'ملاحظات (تنطبق على جميع الملفات)';
+// };
 
-  const contentType = document.querySelector(`tr[data-id="${selectedContentId}"]`).dataset.type;
-  const endpoint = contentType === 'committee' ? 'committee-approvals' : 'approvals';
-
-  try {
-    await fetchJSON(`${apiBase}/${endpoint}/${selectedContentId}/delegate`, {
-      method: 'POST',
-      body: JSON.stringify({
-        delegateTo: userId,
-        notes: notes
-      })
-    });
-    alert(getTranslation('success-delegated'));
-    closeModal('delegateModal');
-    disableActionsFor(selectedContentId);
-  } catch (err) {
-    console.error('Failed to delegate:', err);
-    alert(getTranslation('error-sending'));
-  }
+// عند الضغط على زر تفويض فردي
+// (تأكد أن هذا الكود موجود فقط مرة واحدة)
+document.querySelectorAll('.btn-delegate').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    isBulkDelegation = false;
+    selectedContentId = e.target.closest('tr').dataset.id;
+    openModal('delegateModal');
+    loadDepartments();
+    document.getElementById('delegateNotes').placeholder = getTranslation('notes') || 'ملاحظات (اختياري)';
+  });
 });
+
+// عند التأكيد في مودال التفويض
+const btnDelegateConfirm = document.getElementById('btnDelegateConfirm');
+if (btnDelegateConfirm) {
+  btnDelegateConfirm.addEventListener('click', async () => {
+    const userId = document.getElementById('delegateUser').value;
+    const notes = document.getElementById('delegateNotes').value;
+    if (!userId) return alert(getTranslation('please-select-user'));
+    if (isBulkDelegation) {
+      // تفويض جماعي
+      try {
+        const [res1, res2] = await Promise.all([
+          fetch(`${apiBase}/approvals/delegate-all`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ delegateTo: userId, notes })
+          }),
+          fetch(`${apiBase}/committee-approvals/delegate-all`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ delegateTo: userId, notes })
+          })
+        ]);
+        const json1 = await res1.json();
+        const json2 = await res2.json();
+        alert((json1.message || '') + '\n' + (json2.message || ''));
+        closeModal('delegateModal');
+        window.location.reload();
+      } catch (err) {
+        alert(getTranslation('error-sending') || 'حدث خطأ أثناء التفويض الجماعي');
+      }
+    } else {
+      // تفويض فردي
+      const contentType = document.querySelector(`tr[data-id="${selectedContentId}"]`).dataset.type;
+      const endpoint = contentType === 'committee' ? 'committee-approvals' : 'approvals';
+      try {
+        await fetchJSON(`${apiBase}/${endpoint}/${selectedContentId}/delegate`, {
+          method: 'POST',
+          body: JSON.stringify({
+            delegateTo: userId,
+            notes: notes
+          })
+        });
+        alert(getTranslation('success-delegated'));
+        closeModal('delegateModal');
+        disableActionsFor(selectedContentId);
+      } catch (err) {
+        console.error('Failed to delegate:', err);
+        alert(getTranslation('error-sending'));
+      }
+    }
+    isBulkDelegation = false;
+  });
+}
 
 function disableActionsFor(contentId) {
   const row = document.querySelector(`tr[data-id="${contentId}"]`);
@@ -633,4 +734,72 @@ function updateRecordsInfo(totalItems, startIdx, endIdx) {
   document.getElementById('startRecord').textContent = totalItems === 0 ? 0 : startIdx + 1;
   document.getElementById('endRecord').textContent   = endIdx;
   document.getElementById('totalCount').textContent  = totalItems;
+}
+
+// Popup تأكيد قبول جميع التفويضات
+function showApprovalsProxyPopup() {
+  // إذا لديك modal مخصص استخدمه، وإلا استخدم window.confirm
+  if (window.showPopup) {
+    showPopup(
+      getTranslation('accept-all-proxy-confirm') || 'هل توافق على أن تصبح مفوضًا بالنيابة عن جميع الملفات المحولة لك؟',
+      async () => {
+        try {
+          await Promise.all([
+            fetch('http://localhost:3006/api/approvals/proxy/accept-all', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } }),
+            fetch('http://localhost:3006/api/committee-approvals/proxy/accept-all', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } })
+          ]);
+          alert(getTranslation('accept-all-proxy-success') || 'تم قبول جميع التفويضات بنجاح!');
+          window.location.reload();
+        } catch (err) {
+          alert(getTranslation('accept-all-proxy-error') || 'حدث خطأ أثناء قبول جميع التفويضات');
+        }
+      }
+    );
+  } else {
+    if (window.confirm(getTranslation('accept-all-proxy-confirm') || 'هل توافق على أن تصبح مفوضًا بالنيابة عن جميع الملفات المحولة لك؟')) {
+      Promise.all([
+        fetch('http://localhost:3006/api/approvals/proxy/accept-all', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('http://localhost:3006/api/committee-approvals/proxy/accept-all', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } })
+      ]).then(() => {
+        alert(getTranslation('accept-all-proxy-success') || 'تم قبول جميع التفويضات بنجاح!');
+        window.location.reload();
+      }).catch(() => {
+        alert(getTranslation('accept-all-proxy-error') || 'حدث خطأ أثناء قبول جميع التفويضات');
+      });
+    }
+  }
+}
+
+// دالة مسح التوقيع
+function clearCanvas() {
+  if (ctx && canvas) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+}
+// دالة تغيير حجم الكانفس
+function resizeCanvas() {
+  if (!canvas) return;
+  const wrapper = canvas.parentElement;
+  const rect = wrapper.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = rect.height;
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#000';
+}
+// دالة فتح مودال التوقيع
+function openSignatureModal(contentId) {
+  selectedContentId = contentId;
+  const modal = document.getElementById('signatureModal');
+  modal.style.display = 'flex';
+  setTimeout(() => {
+    resizeCanvas();
+    clearCanvas();
+  }, 50);
+}
+
+// دالة إغلاق مودال التوقيع
+function closeSignatureModal() {
+  document.getElementById('signatureModal').style.display = 'none';
+  clearCanvas();
 }

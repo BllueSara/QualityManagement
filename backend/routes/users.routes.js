@@ -18,7 +18,8 @@ const {
   updateUserStatus,
   getNotificationSettings,
   updateNotificationSettings,
-  resetNotificationSettings
+  resetNotificationSettings,
+  getDelegationStatus
 } = require('../controllers/usersController');
 
 const router = express.Router();
@@ -37,6 +38,7 @@ router.get('/:id/notifications', authenticateToken, getNotifications);
 
 // 3) الراوتات الباقية
 router.get('/:id', authenticateToken, getUserById);
+router.get('/:id/delegation-status', authenticateToken, getDelegationStatus);
 router.post('/', authenticateToken, addUser);
 router.put('/:id', authenticateToken, updateUser);
 router.delete('/:id', authenticateToken, deleteUser);

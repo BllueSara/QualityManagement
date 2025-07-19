@@ -7,7 +7,9 @@ const {
   getAssignedCommitteeApprovals,
   delegateCommitteeApproval,
   getProxyCommitteeApprovals,
-  acceptProxyDelegationCommittee
+  acceptProxyDelegationCommittee,
+  acceptAllProxyDelegationsCommittee,
+  revokeAllCommitteeDelegations
 } = require('../controllers/committeeApprovalController');
 
 // 1. Pending approvals for the user
@@ -27,5 +29,21 @@ router.get('/proxy', getProxyCommitteeApprovals);
 
 // 6. Accept proxy delegation
 router.post('/proxy/accept/:id', acceptProxyDelegationCommittee);
+
+router.post('/proxy/accept-all', acceptAllProxyDelegationsCommittee);
+
+router.post('/delegate-all', require('../controllers/committeeApprovalController').delegateAllCommitteeApprovals);
+
+// إلغاء جميع تفويضات اللجان التي أعطاها مستخدم معيّن
+router.delete('/delegations/by-user/:userId', revokeAllCommitteeDelegations);
+
+// إلغاء تفويض ملف لجنة واحد
+router.delete('/:id/delegation', require('../controllers/committeeApprovalController').revokeCommitteeDelegation);
+
+// جلب كل تفويضات اللجان النشطة التي أعطاها مستخدم معيّن
+router.get('/delegated-by/:userId', require('../controllers/committeeApprovalController').getCommitteeDelegationsByUser);
+
+// جلب ملخص الأشخاص الذين تم تفويضهم من المستخدم الحالي في تفويضات اللجان
+router.get('/delegation-summary/:userId', require('../controllers/committeeApprovalController').getCommitteeDelegationSummaryByUser);
 
 module.exports = router;

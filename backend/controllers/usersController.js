@@ -688,6 +688,7 @@ const getNotifications = async (req, res) => {
           u.username AS user_name,
           n.title,
           n.message,
+          n.message_data,         -- أضف هذا السطر
           n.is_read_by_admin AS is_read,
           n.created_at,
           n.type
@@ -702,6 +703,7 @@ const getNotifications = async (req, res) => {
           u.username AS user_name,
           n.title,
           n.message,
+          n.message_data,         -- أضف هذا السطر
           n.is_read_by_user AS is_read,
           n.created_at,
           n.type
@@ -937,6 +939,34 @@ const updateUserStatus = async (req, res) => {
   }
 };
 
+// إضافة endpoint جديد للتحقق من حالة التفويض
+const getDelegationStatus = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    if (!userId) {
+      return res.status(400).json({ status: 'error', message: 'معرف المستخدم مطلوب' });
+    }
+
+    const [rows] = await db.execute(
+      'SELECT permanent_delegate_id FROM users WHERE id = ?',
+      [userId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ status: 'error', message: 'المستخدم غير موجود' });
+    }
+
+    res.json({ 
+      status: 'success', 
+      data: {
+        permanent_delegate_id: rows[0].permanent_delegate_id
+      }
+    });
+  } catch (err) {
+    console.error('Error getting delegation status:', err);
+    res.status(500).json({ status: 'error', message: 'خطأ في جلب حالة التفويض' });
+  }
+};
 
 
 module.exports = {
@@ -955,5 +985,5 @@ module.exports = {
   getUnreadCount,
   getActionTypes,
   updateUserStatus,
-
+  getDelegationStatus
 };

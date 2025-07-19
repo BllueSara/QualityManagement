@@ -677,6 +677,9 @@ const translations = {
         'reporter-email': 'البريد الإلكتروني',
         
         'actions-taken': 'الإجراءات المتخذة',
+        'delegate-all': 'توقيع بالنيابة لجميع الملفات',
+
+        'accept-all-proxy': 'قبول جميع التفويضات بالنيابة عن الشخص',
         
         'event-classification': 'تصنيف الحدث',
         'medical-equipment': 'الأجهزة الطبية',
@@ -769,6 +772,7 @@ const translations = {
         // Permissions Page (Groups)
         'general-group': 'عامّ',
         'departments-group': 'الأقسام',
+        'delegate_all' : 'تفويض جميع الملفات بالنيابة',
         'folder-group': 'المجلد',
         'content-group': 'المحتوى',
         'committees-group': 'اللجان',
@@ -823,6 +827,13 @@ const translations = {
         'track_credits': 'تتبع اعتمادات',
         'sign_on_behalf': 'توقيع بالنيابة',
         'add_user': 'إضافة مستخدم',
+                'by-person': 'حسب الأشخاص',
+        'no-active-delegations': 'لا يوجد تفويضات نشطة لهذا المستخدم.',
+        'file-delegations': 'تفويضات الملفات',
+        'committee-delegations': 'تفويضات اللجان',
+        'files-count': 'عدد الملفات',
+        'confirm-revoke-all': 'هل أنت متأكد من إلغاء جميع التفويضات لهذا الشخص؟',
+        'revoked': 'تم الإلغاء',
         'change_role': 'تغيير الدور',
         'delete_user': 'حذف حساب',
         'change_password': 'تغيير كلمة السر',
@@ -877,6 +888,8 @@ const translations = {
         'closed-tickets': 'الاحداث العارضة المغلقة',
         'inprogress-tickets': 'الاحداث العارضة الجارية',
         'closed-last-7days': 'الاحداث العارضة المغلقة خلال آخر 7 أيام',
+
+        'notes-bulk': 'ملاحظات (تعمل على جميع الملفات)',
         // Dashboard Stats Cards
         'new-tickets': 'الاحداث العارضة الجديدة',
         'total-users': 'عدد المستخدمين',
@@ -885,8 +898,10 @@ const translations = {
         'approved-contents': 'محتويات معتمدة',
         'committee-count': 'عدد اللجان',
         'pending-committee-contents': 'محتويات اللجان (قيد الاعتماد)',
-
-        // Profile Page
+  'accept-all-proxy-confirm': 'هل توافق على قبول جميع التفويضات بالنيابة عن الشخص في جميع الملفات؟',
+'revoke_delegations':'الغاء جميع التفويضات',
+'revoke-delegations':'الغاء جميع التفويضات',
+        // Profile Pag
         'profile-title': 'ملفي الشخصي',
         'username-label': 'اسم المستخدم:',
         'email-label': 'البريد الإلكتروني:',
@@ -997,6 +1012,8 @@ const translations = {
         'medication': 'Medication.',
         'communication-issues': 'Communication Issues.',
         'fall': 'Fall.',
+
+        'delegate-all' : 'Delegate All Files',
         'radiation-treatment': 'Radiation treatment (Ionizing radiation Non-Ionizing (Us, UV, Laser, Other).',
         'labor-delivery-issues': 'Labor and delivery related issues.',
         'supply-chain-issues': 'Supply Chain issues (logistics).',
@@ -1113,8 +1130,15 @@ const translations = {
         'new': 'New',
         'sent': 'Sent',
         'change-role': 'Change Role',
+        'delegate_all': 'Delegate All Files On Behalf',
 
-
+        'by-person': 'By Person',
+        'no-active-delegations': 'No active delegations for this user.',
+        'file-delegations': 'File Delegations',
+        'committee-delegations': 'Committee Delegations',
+        'files-count': 'Files Count',
+        'confirm-revoke-all': 'Are you sure you want to revoke all delegations for this person?',
+        'revoked': 'Revoked',
         // Departments
         'department-list': 'Department List',
         'department-details': 'Department Details',
@@ -1123,7 +1147,10 @@ const translations = {
         'department-members': 'Department Members',
         'add-department': 'Add Department',
         'edit-department': 'Edit Department',
+        'revoke_delegations': 'Revoke All Delegations On Behalf',
+        'revoke-delegations': 'Revoke All Delegations On Behalf',
         'employee-number-placeholder': 'Enter Employee Number',
+        'notes-bulk': 'Notes (applied to all files)',
         'at':'at',
         'transfer-tickets-desc': 'Manage and transfer current OVR smoothly',
 'edit-content-name': 'Edit Content Name',
@@ -1213,6 +1240,9 @@ const translations = {
         'placeholder-event-description': 'Write a detailed description of the event here',
         'placeholder-actions': 'Describe the actions taken',
         'placeholder-short-desc': 'Any brief details about the event',
+'accept-all-proxy-confirm': 'Accept All Proxy For Approval user ?',
+        
+        'accept-all-proxy': 'Accept All Proxy For Approval user',
         // Departments modals and search
         'search-department': 'Search department',
         'delete-department-title': 'Delete Department Confirmation',
