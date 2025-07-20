@@ -193,13 +193,9 @@ exports.sendApprovalRequest = async (req, res) => {
         );
         
         if (delegationRows.length) {
-          // هذا مفوض له، أضفه هو والمفوض الأصلي معاً
+          // هذا مفوض له، أضفه فقط (لا تضيف المفوض الأصلي)
           if (!finalApprovers.includes(approverId)) {
-            finalApprovers.push(approverId); // أضف المفوض له
-          }
-          const delegatorId = delegationRows[0].user_id;
-          if (!finalApprovers.includes(delegatorId)) {
-            finalApprovers.push(delegatorId); // أضف المفوض الأصلي
+            finalApprovers.push(approverId); // أضف المفوض له فقط
           }
         } else {
           // هذا ليس مفوض له، أضفه

@@ -53,6 +53,7 @@ const getUserPendingApprovals = async (req, res) => {
       const delegatorId = delegationRows[0].user_id;
       
       // جلب الملفات المكلف بها المستخدم (شخصياً أو بالنيابة)
+      // المهم: لا تظهر الملف للمفوض الأصلي، فقط للمفوض له
       const [delegatedRows] = await db.execute(`
         SELECT 
           CONCAT('dept-', c.id) AS id, 
@@ -73,7 +74,7 @@ const getUserPendingApprovals = async (req, res) => {
         JOIN content_approvers ca ON ca.content_id = c.id
         LEFT JOIN users u2 ON ca.user_id = u2.id
         WHERE c.is_approved = 0
-          AND (ca.user_id = ? OR ca.user_id = ?)
+          AND ca.user_id = ?
           AND NOT EXISTS (
             SELECT 1 FROM approval_logs
             WHERE content_id = c.id
@@ -81,7 +82,7 @@ const getUserPendingApprovals = async (req, res) => {
               AND status = 'approved'
           )
         GROUP BY c.id
-      `, [userId, delegatorId, userId]);
+      `, [userId, userId]);
 
       rows = delegatedRows;
     } else {
@@ -862,21 +863,22 @@ const getAssignedApprovals = async (req, res) => {
     let [rows] = await db.execute(finalQuery, params);
 
     // إذا كان المستخدم مفوض له (من جدول active_delegations)
-    const [delegationRows] = await db.execute(
-      'SELECT user_id FROM active_delegations WHERE delegate_id = ?',
-      [userId]
-    );
-    if (delegationRows.length) {
-      const delegatorId = delegationRows[0].user_id;
-      // جلب ملفات المفوض الأصلي بنفس الاستعلام
-      let delegatorParams = canViewAll ? [delegatorId, delegatorId] : [delegatorId, delegatorId, delegatorId, delegatorId];
-      let [delegatorRows] = await db.execute(finalQuery, delegatorParams);
-      // دمج النتائج بدون تكرار (حسب id)
-      const existingIds = new Set(rows.map(r => r.id));
-      delegatorRows.forEach(r => {
-        if (!existingIds.has(r.id)) rows.push(r);
-      });
-    }
+    // لا نحتاج لجلب ملفات المفوض الأصلي لأن المفوض له هو من سيعتمد
+    // const [delegationRows] = await db.execute(
+    //   'SELECT user_id FROM active_delegations WHERE delegate_id = ?',
+    //   [userId]
+    // );
+    // if (delegationRows.length) {
+    //   const delegatorId = delegationRows[0].user_id;
+    //   // جلب ملفات المفوض الأصلي بنفس الاستعلام
+    //   let delegatorParams = canViewAll ? [delegatorId, delegatorId] : [delegatorId, delegatorId, delegatorId, delegatorId];
+    //   let [delegatorRows] = await db.execute(finalQuery, delegatorParams);
+    //   // دمج النتائج بدون تكرار (حسب id)
+    //   const existingIds = new Set(rows.map(r => r.id));
+    //   delegatorRows.forEach(r => {
+    //     if (!existingIds.has(r.id)) rows.push(r);
+    //   });
+    // }
 
     // تحويل الحقل من نص JSON إلى مصفوفة
     rows.forEach(row => {
@@ -1265,9 +1267,17 @@ const revokeAllDelegations = async (req, res) => {
       `SELECT content_id, approver_id FROM approval_logs WHERE delegated_by = ? AND signed_as_proxy = 1 AND status = 'pending'`,
       [userId]
     );
-    if (!rows.length) {
+    
+    // التحقق من وجود سجلات في active_delegations
+    const [activeDelegations] = await db.execute(
+      `SELECT * FROM active_delegations WHERE user_id = ?`,
+      [userId]
+    );
+    
+    if (!rows.length && !activeDelegations.length) {
       return res.status(200).json({ status: 'success', message: 'لا يوجد تفويضات نشطة لهذا المستخدم.' });
     }
+    
     // حذف أو تعديل كل التفويضات (إرجاعها للوضع الطبيعي)
     for (const row of rows) {
       // حذف سجل التفويض من approval_logs
@@ -1295,8 +1305,10 @@ const revokeAllDelegations = async (req, res) => {
         );
       }
     }
-    // حذف سجلات active_delegations
+    
+    // حذف سجلات active_delegations (حتى لو لم يكن لديه ملفات نشطة)
     await db.execute('DELETE FROM active_delegations WHERE user_id = ?', [userId]);
+    
     // تسجيل لوق
     await logAction(adminId, 'revoke_all_delegations', JSON.stringify({ ar: `تم إلغاء جميع التفويضات التي أعطاها المستخدم رقم ${userId}` }), 'user', userId);
     res.status(200).json({ status: 'success', message: 'تم إلغاء جميع التفويضات بنجاح.' });

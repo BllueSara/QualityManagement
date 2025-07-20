@@ -197,13 +197,9 @@ exports.sendApprovalRequest = async (req, res) => {
       );
       
       if (delegationRows.length && delegationRows[0].permanent_delegate_id) {
-        // هذا مفوض له، أضفه هو والمفوض الأصلي معاً
+        // هذا مفوض له، أضفه فقط (لا تضيف المفوض الأصلي)
         if (!finalApprovers.includes(approverId)) {
-          finalApprovers.push(approverId); // أضف المفوض له
-        }
-        const delegatorId = delegationRows[0].permanent_delegate_id;
-        if (!finalApprovers.includes(delegatorId)) {
-          finalApprovers.push(delegatorId); // أضف المفوض الأصلي
+          finalApprovers.push(approverId); // أضف المفوض له فقط
         }
       } else {
         // تحقق إذا كان هذا المعتمد مفوض له لشخص آخر (من قاعدة البيانات)

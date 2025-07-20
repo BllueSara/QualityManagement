@@ -41,6 +41,7 @@ async function getUserPendingCommitteeApprovals(req, res) {
       const delegatorId = delegationRows[0].user_id;
       
       // جلب الملفات المكلف بها المستخدم (شخصياً أو بالنيابة)
+      // المهم: لا تظهر الملف للمفوض الأصلي، فقط للمفوض له
       const [delegatedRows] = await db.execute(`
         SELECT
           CONCAT('comm-', cc.id) AS id,
@@ -61,7 +62,7 @@ async function getUserPendingCommitteeApprovals(req, res) {
         LEFT JOIN committee_content_approvers cca ON cca.content_id = cc.id
         LEFT JOIN users u2            ON cca.user_id = u2.id
         WHERE cc.is_approved = 0
-          AND (JSON_CONTAINS(cc.approvers_required, JSON_ARRAY(?)) OR JSON_CONTAINS(cc.approvers_required, JSON_ARRAY(?)))
+          AND JSON_CONTAINS(cc.approvers_required, JSON_ARRAY(?))
           AND NOT EXISTS (
             SELECT 1 FROM committee_approval_logs cal
             WHERE cal.content_id = cc.id
@@ -70,7 +71,7 @@ async function getUserPendingCommitteeApprovals(req, res) {
           )
         GROUP BY cc.id
         ORDER BY cc.created_at DESC
-      `, [userId, delegatorId, userId]);
+      `, [userId, userId]);
 
       rows = delegatedRows;
     } else {
@@ -597,21 +598,22 @@ async function getAssignedCommitteeApprovals(req, res) {
     const [rows] = await db.execute(baseQuery, params);
 
     // إذا كان المستخدم مفوض له (من جدول active_delegations)
-    const [delegationRows] = await db.execute(
-      'SELECT user_id FROM active_delegations WHERE delegate_id = ?',
-      [userId]
-    );
-    if (delegationRows.length) {
-      const delegatorId = delegationRows[0].user_id;
-      // جلب ملفات المفوض الأصلي بنفس الاستعلام
-      let delegatorParams = canViewAll ? [delegatorId] : [delegatorId, delegatorId];
-      const [delegatorRows] = await db.execute(baseQuery, delegatorParams);
-      // دمج النتائج بدون تكرار (حسب id)
-      const existingIds = new Set(rows.map(r => r.id));
-      delegatorRows.forEach(r => {
-        if (!existingIds.has(r.id)) rows.push(r);
-      });
-    }
+    // لا نحتاج لجلب ملفات المفوض الأصلي لأن المفوض له هو من سيعتمد
+    // const [delegationRows] = await db.execute(
+    //   'SELECT user_id FROM active_delegations WHERE delegate_id = ?',
+    //   [userId]
+    // );
+    // if (delegationRows.length) {
+    //   const delegatorId = delegationRows[0].user_id;
+    //   // جلب ملفات المفوض الأصلي بنفس الاستعلام
+    //   let delegatorParams = canViewAll ? [delegatorId] : [delegatorId, delegatorId];
+    //   const [delegatorRows] = await db.execute(baseQuery, delegatorParams);
+    //   // دمج النتائج بدون تكرار (حسب id)
+    //   const existingIds = new Set(rows.map(r => r.id));
+    //   delegatorRows.forEach(r => {
+    //     if (!existingIds.has(r.id)) rows.push(r);
+    //   });
+    // }
 
     // 7) تحويل الحقل من JSON نصي إلى مصفوفة
     rows.forEach(r => {
@@ -1210,9 +1212,17 @@ const revokeAllCommitteeDelegations = async (req, res) => {
       `SELECT content_id, approver_id FROM committee_approval_logs WHERE delegated_by = ? AND signed_as_proxy = 1 AND status = 'pending'`,
       [userId]
     );
-    if (!rows.length) {
+    
+    // التحقق من وجود سجلات في active_delegations
+    const [activeDelegations] = await db.execute(
+      `SELECT * FROM active_delegations WHERE user_id = ?`,
+      [userId]
+    );
+    
+    if (!rows.length && !activeDelegations.length) {
       return res.status(200).json({ status: 'success', message: 'لا يوجد تفويضات لجان نشطة لهذا المستخدم.' });
     }
+    
     // حذف أو تعديل كل التفويضات (إرجاعها للوضع الطبيعي)
     for (const row of rows) {
       // حذف سجل التفويض من committee_approval_logs
@@ -1240,8 +1250,10 @@ const revokeAllCommitteeDelegations = async (req, res) => {
         );
       }
     }
-    // حذف سجلات active_delegations
+    
+    // حذف سجلات active_delegations (حتى لو لم يكن لديه ملفات نشطة)
     await db.execute('DELETE FROM active_delegations WHERE user_id = ?', [userId]);
+    
     // تسجيل لوق
     await logAction(adminId, 'revoke_all_committee_delegations', JSON.stringify({ ar: `تم إلغاء جميع تفويضات اللجان التي أعطاها المستخدم رقم ${userId}` }), 'user', userId);
     res.status(200).json({ status: 'success', message: 'تم إلغاء جميع تفويضات اللجان بنجاح.' });
