@@ -990,9 +990,13 @@ const translations = {
         'laundry-services': 'خدمات مغسلة الملاءات',
         'sentinel-events': 'الأحداث الجسيمة',
         'id-docs-consent': 'الهوية / المستندات والوثائق / الإقرارات',
-
+'revoke_files': 'سحب الملفات',
+'select-files-to-revoke': 'حدد الملفات لسحبها',
+'department-or-committee': 'القسم او اللجنة',
     },
     en: {
+      'department-or-committee': 'Department or Committee',
+      'select-files-to-revoke': 'Select files to revoke',
               'security-issues': 'Security related issues.',
         'behaviour': 'Behaviour',
         'staff-issues': 'Staff related issues.',
@@ -1245,7 +1249,7 @@ const translations = {
         'placeholder-actions': 'Describe the actions taken',
         'placeholder-short-desc': 'Any brief details about the event',
 'accept-all-proxy-confirm': 'Accept All Proxy For Approval user ?',
-        
+        'revoke_files': 'Revoke Files',
         'accept-all-proxy': 'Accept All Proxy For Approval user',
         // Departments modals and search
         'search-department': 'Search department',

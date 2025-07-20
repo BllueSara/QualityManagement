@@ -307,7 +307,7 @@ const updateUser = async (req, res) => {
     let logMessageAr, logMessageEn;
     if (changesAr.length > 0) {
       logMessageAr = `تم تعديل المستخدم '${oldUser.username}':\n${changesAr.join('\n')}`;
-      logMessageEn = `Updated user '${oldUser.username}':\n${changesEn.join('\n')}`;
+      logMessageEn = `Updated user '${oldUser.username}' (no changes)`;
     } else {
       logMessageAr = `تم تعديل المستخدم '${oldUser.username}' (لا توجد تغييرات)`;
       logMessageEn = `Updated user '${oldUser.username}' (no changes)`;
@@ -948,23 +948,140 @@ const getDelegationStatus = async (req, res) => {
     }
 
     const [rows] = await db.execute(
-      'SELECT permanent_delegate_id FROM users WHERE id = ?',
+      'SELECT user_id FROM active_delegations WHERE delegate_id = ?',
       [userId]
     );
 
     if (rows.length === 0) {
-      return res.status(404).json({ status: 'error', message: 'المستخدم غير موجود' });
+      return res.json({ 
+        status: 'success', 
+        data: {
+          delegated_by: null
+        }
+      });
     }
 
     res.json({ 
       status: 'success', 
       data: {
-        permanent_delegate_id: rows[0].permanent_delegate_id
+        delegated_by: rows[0].user_id
       }
     });
   } catch (err) {
     console.error('Error getting delegation status:', err);
     res.status(500).json({ status: 'error', message: 'خطأ في جلب حالة التفويض' });
+  }
+};
+
+// جلب الملفات التي المستخدم في تسلسل اعتمادها
+const getUserApprovalSequenceFiles = async (req, res) => {
+  const userId = parseInt(req.params.id, 10);
+  if (isNaN(userId)) return res.status(400).json({ status: 'error', message: 'معرّف المستخدم غير صالح' });
+  
+  // تحديد لغة المستخدم
+  const userLang = getUserLang(req);
+  
+  try {
+    // ملفات القسم
+    const [deptRows] = await db.execute(`
+      SELECT 
+        c.id, c.title, d.name as departmentName, f.name as folderName, d.id as departmentId, f.id as folderId,
+        'department' as fileType
+      FROM contents c
+      JOIN folders f ON c.folder_id = f.id
+      JOIN departments d ON f.department_id = d.id
+      JOIN content_approvers ca ON ca.content_id = c.id
+      WHERE ca.user_id = ?
+    `, [userId]);
+
+    // ملفات اللجان
+    const [commRows] = await db.execute(`
+      SELECT 
+        cc.id, cc.title, com.name as committeeName, cf.name as folderName, com.id as committeeId, cf.id as folderId,
+        'committee' as fileType
+      FROM committee_contents cc
+      JOIN committee_folders cf ON cc.folder_id = cf.id
+      JOIN committees com ON cf.committee_id = com.id
+      JOIN committee_content_approvers cca ON cca.content_id = cc.id
+      WHERE cca.user_id = ?
+    `, [userId]);
+
+    // توحيد النتائج مع فلترة اللغة
+    const deptFiles = deptRows.map(row => ({
+      id: row.id,
+      title: getLocalizedName(row.title, userLang),
+      type: 'department',
+      departmentName: getLocalizedName(row.departmentName, userLang),
+      committeeName: null,
+      folderName: getLocalizedName(row.folderName, userLang),
+      departmentId: row.departmentId,
+      committeeId: null,
+      folderId: row.folderId
+    }));
+    const commFiles = commRows.map(row => ({
+      id: row.id,
+      title: getLocalizedName(row.title, userLang),
+      type: 'committee',
+      departmentName: null,
+      committeeName: getLocalizedName(row.committeeName, userLang),
+      folderName: getLocalizedName(row.folderName, userLang),
+      departmentId: null,
+      committeeId: row.committeeId,
+      folderId: row.folderId
+    }));
+    const allFiles = [...deptFiles, ...commFiles];
+    res.json({ status: 'success', data: allFiles });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: 'خطأ في جلب الملفات' });
+  }
+};
+
+const revokeUserFromFiles = async (req, res) => {
+  const userId = parseInt(req.params.id, 10);
+  const { fileIds } = req.body;
+  
+  // جلب بيانات المستخدم الذي قام بالسحب
+  const auth = req.headers.authorization;
+  let performedBy = null;
+  if (auth?.startsWith('Bearer ')) {
+    try {
+      const token = auth.slice(7);
+      const payload = jwt.verify(token, process.env.JWT_SECRET);
+      performedBy = payload.id;
+    } catch {}
+  }
+  
+  if (!Array.isArray(fileIds) || !fileIds.length) {
+    return res.status(400).json({ status: 'error', message: 'حدد الملفات المراد سحبها' });
+  }
+  
+  try {
+    for (const fileId of fileIds) {
+      // حذف من content_approvers (ملفات القسم)
+      await db.execute(
+        'DELETE FROM content_approvers WHERE content_id = ? AND user_id = ?',
+        [fileId, userId]
+      );
+      
+      // حذف من committee_content_approvers (ملفات اللجان)
+      await db.execute(
+        'DELETE FROM committee_content_approvers WHERE content_id = ? AND user_id = ?',
+        [fileId, userId]
+      );
+      
+      // سجل العملية في اللوقز
+      if (performedBy) {
+        const logDescription = {
+          ar: `تم سحب المستخدم ذو المعرف ${userId} من ملف رقم ${fileId}`,
+          en: `User with ID ${userId} was revoked from file ID ${fileId}`
+        };
+        await logAction(performedBy, 'revoke_user_from_file', JSON.stringify(logDescription), 'content', fileId);
+      }
+    }
+    res.json({ status: 'success', message: 'تم سحب المستخدم من الملفات المحددة' });
+  } catch (err) {
+    console.error('Error in revokeUserFromFiles:', err);
+    res.status(500).json({ status: 'error', message: 'خطأ أثناء السحب' });
   }
 };
 
@@ -985,5 +1102,7 @@ module.exports = {
   getUnreadCount,
   getActionTypes,
   updateUserStatus,
-  getDelegationStatus
+  getDelegationStatus,
+  getUserApprovalSequenceFiles,
+  revokeUserFromFiles
 };

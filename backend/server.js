@@ -97,7 +97,36 @@ app.use((err, req, res, next) => {
   res.status(500).json({ status: 'error', message: 'Internal Server Error' });
 });
 
+// دالة تنظيف السجلات القديمة عند بدء التطبيق
+const cleanupOldLogs = async () => {
+  try {
+    const pool = mysql.createPool({
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME
+    });
+    
+    // حذف جميع السجلات بالنيابة التي لا تتوافق مع active_delegations
+    await pool.execute(`
+      DELETE FROM approval_logs 
+      WHERE signed_as_proxy = 1 
+      AND delegated_by IS NOT NULL
+      AND (delegated_by, approver_id) NOT IN (
+        SELECT ad.user_id, ad.delegate_id 
+        FROM active_delegations ad
+      )
+    `);
+    console.log('✅ تم تنظيف السجلات القديمة من approval_logs عند بدء التطبيق');
+    await pool.end();
+  } catch (err) {
+    console.error('❌ خطأ في تنظيف approval_logs:', err);
+  }
+};
+
 const PORT = process.env.PORT || 3006;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  // تنظيف السجلات القديمة عند بدء التطبيق
+  await cleanupOldLogs();
 });

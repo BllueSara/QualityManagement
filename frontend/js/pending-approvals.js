@@ -497,7 +497,7 @@ async function initDropdowns() {
             // تحقق إذا كان هذا المستخدم مفوض له
             try {
               const delegationResponse = await fetchJSON(`${apiBase}/users/${u.id}/delegation-status`);
-              if (delegationResponse && delegationResponse.permanent_delegate_id) {
+              if (delegationResponse && delegationResponse.delegated_by) {
                 // هذا مفوض له، أضف إشارة
                 badge.textContent = `${u.name} (مفوض له)`;
                 badge.style.backgroundColor = '#ff6b6b'; // لون مختلف للمفوض له

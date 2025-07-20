@@ -187,12 +187,6 @@ exports.sendApprovalRequest = async (req, res) => {
         [contentId]
     );
 
-    const [approverUsers] = await conn.query(
-      `SELECT username FROM users WHERE id IN (?)`,
-      [finalApprovers]
-    );
-    const approverNames = approverUsers.map(u => u.username).join(', ');
-
     // معالجة التفويضات - تحديد المعتمدين النهائيين
     const finalApprovers = [];
     for (const approverId of approvers) {
@@ -257,6 +251,13 @@ exports.sendApprovalRequest = async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'لا يوجد معتمدين صالحين بعد معالجة التفويضات.' });
     }
 
+    // جلب أسماء المعتمدين للـ logging
+    const [approverUsers] = await conn.query(
+      `SELECT username FROM users WHERE id IN (?)`,
+      [finalApprovers]
+    );
+    const approverNames = approverUsers.map(u => u.username).join(', ');
+
     await conn.beginTransaction();
 
     // 1) اقرأ المعتمدين الحاليين (IDs) من committee_content_approvers
@@ -270,28 +271,32 @@ exports.sendApprovalRequest = async (req, res) => {
     const toAdd = finalApprovers.filter(id => !existing.includes(id));
 
     // 3) أدخل الجدد فقط، وسجّل لهم سجلّ اعتماد
+    const processedUsers = new Set(); // لتجنب التكرار
+    
     for (const userId of toAdd) {
+      if (processedUsers.has(userId)) continue; // تجنب التكرار
+      
       await conn.execute(
         `INSERT INTO committee_content_approvers (content_id, user_id) VALUES (?, ?)`,
         [contentId, userId]
       );
       
-      // تحقق إذا كان هذا المستخدم مفوض له (يجب أن يكون signed_as_proxy = 1)
+      // تحقق إذا كان هذا المستخدم مفوض له
       const [delegationRows] = await conn.execute(
-        'SELECT permanent_delegate_id FROM users WHERE id = ?',
+        'SELECT user_id FROM active_delegations WHERE delegate_id = ?',
         [userId]
       );
       
-      if (delegationRows.length && delegationRows[0].permanent_delegate_id) {
-        // هذا مفوض له، أضف سجل بالنيابة
+      if (delegationRows.length) {
+        // هذا مفوض له، أضف سجل بالنيابة فقط
         await conn.execute(
           `INSERT INTO committee_approval_logs
              (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, created_at)
            VALUES (?, ?, 'pending', NULL, 1, ?, CURRENT_TIMESTAMP)`,
-          [contentId, userId, delegationRows[0].permanent_delegate_id]
+          [contentId, userId, delegationRows[0].user_id]
         );
       } else {
-        // هذا معتمد عادي
+        // هذا معتمد عادي، أضف سجل عادي
         await conn.execute(
           `INSERT INTO committee_approval_logs
              (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, created_at)
@@ -300,12 +305,40 @@ exports.sendApprovalRequest = async (req, res) => {
         );
       }
       
+      processedUsers.add(userId);
+      
       await insertNotification(
         userId,
         'تم تفويضك للتوقيع',
         `تم تفويضك للتوقيع على ملف لجنة جديد رقم ${contentId}`,
         'proxy'
       );
+    }
+    
+    // 3.5) إضافة سجلات التفويض المزدوج - إذا كان المستخدم موجود مرتين في finalApprovers
+    const userCounts = {};
+    finalApprovers.forEach(id => {
+      userCounts[id] = (userCounts[id] || 0) + 1;
+    });
+    
+    for (const [userId, count] of Object.entries(userCounts)) {
+      if (count > 1 && !processedUsers.has(parseInt(userId))) {
+        // هذا المستخدم موجود مرتين، أضف سجل بالنيابة إضافي
+        const [delegationRows] = await conn.execute(
+          'SELECT permanent_delegate_id FROM users WHERE id = ?',
+          [userId]
+        );
+        
+        if (delegationRows.length && delegationRows[0].permanent_delegate_id) {
+          // أضف سجل بالنيابة إضافي
+          await conn.execute(
+            `INSERT INTO committee_approval_logs
+               (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, created_at)
+             VALUES (?, ?, 'pending', NULL, 1, ?, CURRENT_TIMESTAMP)`,
+            [contentId, userId, delegationRows[0].permanent_delegate_id]
+          );
+        }
+      }
     }
 
     // 4) دمج القديم مع القادم في الحقل approvers_required

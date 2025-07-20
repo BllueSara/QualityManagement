@@ -173,31 +173,31 @@ exports.sendApprovalRequest = async (req, res) => {
     // معالجة التفويضات - تحديد المعتمدين النهائيين
     const finalApprovers = [];
     for (const approverId of approvers) {
-      // تحقق إذا كان هذا المعتمد مفوض له لشخص آخر (من قاعدة البيانات)
+      // تحقق إذا كان هذا المعتمد مفوض له لشخص آخر (من active_delegations)
       const [proxyRows] = await conn.execute(
-        'SELECT id FROM users WHERE permanent_delegate_id = ?',
+        'SELECT delegate_id FROM active_delegations WHERE user_id = ?',
         [approverId]
       );
       
       if (proxyRows.length > 0) {
         // هذا المعتمد مفوض له، أضف المفوض له بدلاً منه
-        const delegateeId = proxyRows[0].id;
+        const delegateeId = proxyRows[0].delegate_id;
         if (!finalApprovers.includes(delegateeId)) {
           finalApprovers.push(delegateeId);
         }
       } else {
-        // تحقق إذا كان هذا المعتمد مفوض له لشخص آخر (من قاعدة البيانات)
+        // تحقق إذا كان هذا المعتمد مفوض له لشخص آخر (من active_delegations)
         const [delegationRows] = await conn.execute(
-          'SELECT permanent_delegate_id FROM users WHERE id = ?',
+          'SELECT user_id FROM active_delegations WHERE delegate_id = ?',
           [approverId]
         );
         
-        if (delegationRows.length && delegationRows[0].permanent_delegate_id) {
+        if (delegationRows.length) {
           // هذا مفوض له، أضفه هو والمفوض الأصلي معاً
           if (!finalApprovers.includes(approverId)) {
             finalApprovers.push(approverId); // أضف المفوض له
           }
-          const delegatorId = delegationRows[0].permanent_delegate_id;
+          const delegatorId = delegationRows[0].user_id;
           if (!finalApprovers.includes(delegatorId)) {
             finalApprovers.push(delegatorId); // أضف المفوض الأصلي
           }
@@ -214,13 +214,13 @@ exports.sendApprovalRequest = async (req, res) => {
     for (const approverId of approvers) {
       // تحقق إذا كان هذا المعتمد مفوض له لشخص آخر
       const [proxyRows] = await conn.execute(
-        'SELECT id FROM users WHERE permanent_delegate_id = ?',
+        'SELECT delegate_id FROM active_delegations WHERE user_id = ?',
         [approverId]
       );
       
       if (proxyRows.length > 0) {
         // هذا المعتمد مفوض له، أضفه مرة ثانية للتفويض المزدوج
-        const delegateeId = proxyRows[0].id;
+        const delegateeId = proxyRows[0].delegate_id;
         if (finalApprovers.includes(delegateeId)) {
           // أضف نسخة ثانية للتفويض المزدوج
           finalApprovers.push(delegateeId);
@@ -268,17 +268,17 @@ exports.sendApprovalRequest = async (req, res) => {
       
       // تحقق إذا كان هذا المستخدم مفوض له
       const [delegationRows] = await conn.execute(
-        'SELECT permanent_delegate_id FROM users WHERE id = ?',
+        'SELECT user_id FROM active_delegations WHERE delegate_id = ?',
         [userId]
       );
       
-      if (delegationRows.length && delegationRows[0].permanent_delegate_id) {
+      if (delegationRows.length) {
         // هذا مفوض له، أضف سجل بالنيابة فقط
         await conn.execute(
           `INSERT INTO approval_logs
              (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, created_at)
            VALUES (?, ?, 'pending', NULL, 1, ?, CURRENT_TIMESTAMP)`,
-          [contentId, userId, delegationRows[0].permanent_delegate_id]
+          [contentId, userId, delegationRows[0].user_id]
         );
       } else {
         // هذا معتمد عادي، أضف سجل عادي
@@ -310,17 +310,17 @@ exports.sendApprovalRequest = async (req, res) => {
       if (count > 1 && !processedUsers.has(parseInt(userId))) {
         // هذا المستخدم موجود مرتين، أضف سجل بالنيابة إضافي
         const [delegationRows] = await conn.execute(
-          'SELECT permanent_delegate_id FROM users WHERE id = ?',
+          'SELECT user_id FROM active_delegations WHERE delegate_id = ?',
           [userId]
         );
         
-        if (delegationRows.length && delegationRows[0].permanent_delegate_id) {
+        if (delegationRows.length) {
           // أضف سجل بالنيابة إضافي
           await conn.execute(
             `INSERT INTO approval_logs
                (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, created_at)
              VALUES (?, ?, 'pending', NULL, 1, ?, CURRENT_TIMESTAMP)`,
-            [contentId, userId, delegationRows[0].permanent_delegate_id]
+            [contentId, userId, delegationRows[0].user_id]
           );
         }
       }

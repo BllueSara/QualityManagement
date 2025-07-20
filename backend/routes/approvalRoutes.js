@@ -8,7 +8,8 @@ const {
   getProxyApprovals,
   acceptProxyDelegation,
   acceptAllProxyDelegations,
-  revokeAllDelegations
+  revokeAllDelegations,
+  cleanupOldApprovalLogs
 } = require('../controllers/approvalController');
 
 
@@ -29,5 +30,8 @@ router.delete('/:id/delegation', require('../controllers/approvalController').re
 router.get('/delegated-by/:userId', require('../controllers/approvalController').getDelegationsByUser);
 // جلب ملخص الأشخاص الذين تم تفويضهم من المستخدم الحالي
 router.get('/delegation-summary/:userId', require('../controllers/approvalController').getDelegationSummaryByUser);
+
+// تنظيف السجلات القديمة من approval_logs (للمشرفين فقط)
+router.post('/cleanup-old-logs', cleanupOldApprovalLogs);
 
 module.exports = router;

@@ -32,6 +32,116 @@ if (btnAddUser && btnAddUser.parentNode) {
 // إظهار الزر فقط إذا كان للمستخدم صلاحية (admin أو من لديه صلاحية revoke_delegations)
 btnRevokeDelegations.style.display = 'none';
 
+// زر سحب الملفات
+const btnRevokeFiles = document.getElementById('btn-revoke-files');
+if (btnRevokeFiles) {
+  btnRevokeFiles.onclick = async () => {
+    if (!selectedUserId) return alert(getTranslation('please-select-user') || 'الرجاء اختيار مستخدم أولاً');
+    
+    try {
+      // جلب الملفات من API
+      const files = await fetchJSON(`${apiBase}/users/${selectedUserId}/approvals-sequence-files`);
+      
+      // بناء Popup
+      const overlay = document.createElement('div');
+      overlay.style = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.35);z-index:9999;display:flex;align-items:center;justify-content:center;';
+      
+      const box = document.createElement('div');
+      box.style = 'background:#fff;padding:38px 38px 28px 38px;border-radius:18px;max-width:700px;min-width:420px;text-align:center;box-shadow:0 4px 32px #0003;max-height:80vh;overflow:auto;display:flex;flex-direction:column;align-items:center;';
+      
+      box.innerHTML = `
+        <div style='display:flex;align-items:center;justify-content:center;margin-bottom:22px;'>
+          <i class="fas fa-exclamation-triangle" style="color:#e53e3e;font-size:2em;margin-left:14px;"></i>
+          <span style='font-size:1.45rem;font-weight:700;'>${getTranslation('revoke_files') || 'سحب الملفات من المستخدم'}</span>
+        </div>
+      `;
+      
+      if (!files.length) {
+        box.innerHTML += `<div style='margin:24px 0 12px 0;color:#888;font-size:1.05em;'>${getTranslation('no-contents') || 'لا يوجد ملفات في التسلسل'}</div>`;
+        // زر إغلاق إذا لا يوجد ملفات
+        const btnClose = document.createElement('button');
+        btnClose.textContent = getTranslation('cancel') || 'إغلاق';
+        btnClose.style = 'margin-top:18px;background:#888;color:#fff;border:none;border-radius:6px;padding:8px 24px;font-size:1rem;cursor:pointer;';
+        btnClose.onclick = () => document.body.removeChild(overlay);
+        box.appendChild(btnClose);
+      } else {
+        box.innerHTML += `<div style='width:100%;text-align:right;margin-bottom:16px;font-size:1.13em;'>${getTranslation('select-files-to-revoke') || 'اختر الملفات التي تريد سحبها:'}</div>`;
+        
+        // شبكة الملفات (جدول)
+        const table = document.createElement('table');
+        table.style = 'width:100%;margin-bottom:18px;border-collapse:collapse;text-align:right;';
+        table.innerHTML = `
+          <thead>
+            <tr style="background:#f5f5f5;">
+              <th style="padding:12px 8px;border-bottom:2px solid #ddd;"></th>
+              <th style="padding:12px 8px;border-bottom:2px solid #ddd;">${getTranslation('file-name') || 'اسم الملف'}</th>
+              <th style="padding:12px 8px;border-bottom:2px solid #ddd;">${getTranslation('department-or-committee') || 'القسم/اللجنة'}</th>
+              <th style="padding:12px 8px;border-bottom:2px solid #ddd;">${getTranslation('folder-name') || 'المجلد'}</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        `;
+        const tbody = table.querySelector('tbody');
+        files.forEach(f => {
+          const tr = document.createElement('tr');
+          tr.style = 'border-bottom:1px solid #eee;';
+          tr.innerHTML = `
+            <td style="padding:10px 8px;text-align:center;"><input type='checkbox' id='file-chk-${f.id}' value='${f.id}' style='accent-color:#e53e3e;width:18px;height:18px;cursor:pointer;'></td>
+            <td style="padding:10px 8px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><label for='file-chk-${f.id}' style='cursor:pointer;font-weight:500;'>${f.title}</label></td>
+            <td style="padding:10px 8px;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${f.type === 'department' ? (f.departmentName || '—') : (f.committeeName || '—')}</td>
+            <td style="padding:10px 8px;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${f.folderName || '—'}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+        box.appendChild(table);
+        
+        // أزرار بجانب بعض
+        const btnsRow = document.createElement('div');
+        btnsRow.style = 'display:flex;gap:18px;justify-content:center;margin-top:16px;width:100%';
+        
+        const btnConfirm = document.createElement('button');
+        btnConfirm.id = 'confirm-revoke-files';
+        btnConfirm.textContent = getTranslation('revoke_files') || 'سحب المحدد';
+        btnConfirm.style = 'background:#e53e3e;color:#fff;border:none;border-radius:10px;padding:13px 40px;font-size:1.13em;font-weight:600;cursor:pointer;transition:background 0.2s;';
+        
+        const btnClose = document.createElement('button');
+        btnClose.textContent = getTranslation('cancel') || 'إغلاق';
+        btnClose.style = 'background:#888;color:#fff;border:none;border-radius:10px;padding:10px 38px;font-size:1.08em;cursor:pointer;transition:background 0.2s;';
+        btnClose.onmouseover = () => btnClose.style.background = '#555';
+        btnClose.onmouseout = () => btnClose.style.background = '#888';
+        btnClose.onclick = () => document.body.removeChild(overlay);
+        
+        btnsRow.appendChild(btnConfirm);
+        btnsRow.appendChild(btnClose);
+        box.appendChild(btnsRow);
+        
+        // إضافة حدث الضغط بعد تعريف الزر وإضافته للـ DOM
+        btnConfirm.addEventListener('click', async () => {
+          const checked = Array.from(box.querySelectorAll('input[type=checkbox]:checked')).map(i => i.value);
+          if (!checked.length) return alert('اختر ملف واحد على الأقل');
+          
+          try {
+            await fetchJSON(`${apiBase}/users/${selectedUserId}/revoke-files`, {
+              method: 'POST',
+              body: JSON.stringify({ fileIds: checked })
+            });
+            alert('تم سحب الملفات المحددة');
+            document.body.removeChild(overlay);
+          } catch (error) {
+            alert('فشل في سحب الملفات: ' + error.message);
+          }
+        });
+      }
+      
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+      
+    } catch (error) {
+      alert('فشل في جلب الملفات: ' + error.message);
+    }
+  };
+}
+
 // popup تعديل الدور
 const rolePopup     = document.getElementById('role-popup');
 const roleSelect    = document.getElementById('role-select');
@@ -49,8 +159,13 @@ const editEmail = document.getElementById('editEmail');
 const btnCancelEditUser = document.getElementById('cancelEditUser');
 const btnSaveEditUser = document.getElementById('saveEditUser');
 
-// في البداية أخفِ قسم الصلاحيات
-permissionsSection.style.display = 'none';
+  // في البداية أخفِ قسم الصلاحيات
+  permissionsSection.style.display = 'none';
+  
+  // إخفاء زر سحب الملفات في البداية
+  if (btnRevokeFiles) {
+    btnRevokeFiles.style.display = 'none';
+  }
 
 // =====================
 // Helper: fetch with auth
@@ -99,6 +214,17 @@ async function loadMyPermissions() {
     const myId = payload.id;
     const perms = await fetchJSON(`${apiBase}/users/${myId}/permissions`);
     myPermsSet = new Set(perms);
+    
+    // إظهار زر سحب الملفات إذا كان admin أو لديه صلاحية revoke_files
+    const myRole = payload.role;
+    if (btnRevokeFiles) {
+      if (myRole === 'admin' || myPermsSet.has('revoke_files')) {
+        // لا نعرض الزر هنا، سيتم عرضه عند اختيار مستخدم
+        // btnRevokeFiles.style.display = '';
+      } else {
+        btnRevokeFiles.style.display = 'none';
+      }
+    }
   } catch (e) {
     alert('فشل جلب صلاحياتي.');
   }
@@ -175,6 +301,11 @@ async function loadUsers() {
     div.addEventListener('click', () => selectUser(u.id));
     userList.append(div);
   });
+  
+  // إخفاء زر سحب الملفات عند تحميل المستخدمين
+  if (btnRevokeFiles) {
+    btnRevokeFiles.style.display = 'none';
+  }
 }
 
 // =====================
@@ -188,6 +319,14 @@ async function selectUser(id) {
   selectedUserId = id;
   document.querySelectorAll('.user-item')
     .forEach(el => el.classList.toggle('active', el.dataset.id == id));
+    
+  // إخفاء زر سحب الملفات مؤقتاً حتى يتم تحميل بيانات المستخدم
+  if (btnRevokeFiles) {
+    btnRevokeFiles.style.display = 'none';
+  }
+  
+  // إخفاء قسم الصلاحيات مؤقتاً
+  permissionsSection.style.display = 'none';
 
   // 3) جلب بيانات المستخدم وتحديث الواجهة
   const u = await fetchJSON(`${apiBase}/users/${id}`);
@@ -284,6 +423,9 @@ document.querySelector('.user-profile-header')?.classList.add('active');
     btnDeleteUser.style.display = 'none';
     btnResetPwd.style.display   = 'none';
     btnChangeRole.style.display = 'none';
+    if (btnRevokeFiles) {
+      btnRevokeFiles.style.display = 'none';
+    }
     return;
   }
 
@@ -294,6 +436,11 @@ document.querySelector('.user-profile-header')?.classList.add('active');
   btnDeleteUser.style.display = (isAdmin || myPermsSet.has('delete_user')) ? '' : 'none';
   btnResetPwd.style.display   = (isAdmin || myPermsSet.has('change_password')) ? '' : 'none';
   btnChangeRole.style.display = (isAdmin || myPermsSet.has('change_role')) ? '' : 'none';
+  
+  // إظهار زر سحب الملفات إذا كان admin أو لديه صلاحية revoke_files
+  if (btnRevokeFiles) {
+    btnRevokeFiles.style.display = (isAdmin || myPermsSet.has('revoke_files')) ? '' : 'none';
+  }
 
   // جلب الأدوار للمستخدمين غير Admin
   const roles = await fetchJSON(`${apiBase}/users/roles`);
@@ -354,6 +501,15 @@ document.querySelector('.user-profile-header')?.classList.add('active');
 
   // إظهار زر إلغاء التفويضات فقط إذا كان admin أو لديه صلاحية grant_permissions
   btnRevokeDelegations.style.display = (isAdmin || myPermsSet.has('grant_permissions')) ? '' : 'none';
+  
+  // إظهار زر سحب الملفات إذا كان admin أو لديه صلاحية revoke_files
+  if (btnRevokeFiles) {
+    if (isAdmin || myPermsSet.has('revoke_files')) {
+      btnRevokeFiles.style.display = '';
+    } else {
+      btnRevokeFiles.style.display = 'none';
+    }
+  }
 }
 
 
@@ -498,6 +654,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   loadUsers();
   initializeCommitteesDropdown();
+  
+  // إخفاء زر سحب الملفات في البداية
+  if (btnRevokeFiles) {
+    btnRevokeFiles.style.display = 'none';
+  }
 });
 
 // =====================
