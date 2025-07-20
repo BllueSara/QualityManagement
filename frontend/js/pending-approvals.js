@@ -250,34 +250,41 @@ ${parseLocalizedName(item.title)}
           // لا نوقف العملية إذا فشل تسجيل اللوق
         }
 
-        // تحقق من وجود dataset وfilePath
-        let filePath = (e.currentTarget && e.currentTarget.dataset) ? e.currentTarget.dataset.filePath : null;
-        if (!filePath) {
+        // تحقق من وجود file_path في item مباشرة (مثل approvals-recived.js)
+        if (!item || !item.file_path) {
           showToast(getTranslation('file-link-unavailable'), 'error');
           return;
         }
+        
+        let filePath = item.file_path;
+        
+        // للتأكد من القيمة
+        console.log('DEBUG: item.file_path =', filePath);
 
-        // تحديد baseUrl حسب نوع المسار
-        let baseUrl;
+        // استخدام نفس منطق approvals-recived.js
+        const baseApiUrl = apiBase.replace('/api', '');
+        let fileBaseUrl;
+
+        // حالة ملفات اللجان (مسار يبدأ بـ backend/uploads/)
         if (filePath.startsWith('backend/uploads/')) {
-          baseUrl = apiBase.replace('/api', '') + '/backend/uploads';
+          fileBaseUrl = `${baseApiUrl}/backend/uploads`;
+          // شيل البادئة بالكامل
           filePath = filePath.replace(/^backend\/uploads\//, '');
-        } else if (filePath.startsWith('uploads/')) {
-          baseUrl = apiBase.replace('/api', '') + '/uploads';
+        }
+        // حالة ملفات الأقسام (مسار يبدأ بـ uploads/)
+        else if (filePath.startsWith('uploads/')) {
+          fileBaseUrl = `${baseApiUrl}/uploads`;
+          // شيل البادئة
           filePath = filePath.replace(/^uploads\//, '');
-        } else if (filePath.startsWith('content_files/')) {
-          // الحل: أضف uploads/ قبل المسار
-          baseUrl = apiBase.replace('/api', '') + '/uploads';
-          // لا تغير filePath هنا
-        } else {
-          baseUrl = apiBase.replace('/api', '') + '/uploads';
+        }
+        // أي حالة ثانية نفترض نفس مجلد uploads
+        else {
+          fileBaseUrl = `${baseApiUrl}/uploads`;
         }
 
-        if (filePath) {
-          window.open(`${baseUrl}/${filePath}`, '_blank');
-        } else {
-          showToast(getTranslation('file-link-unavailable'), 'error');
-        }
+        const url = `${fileBaseUrl}/${filePath}`;
+        console.log('DEBUG: Final URL =', url);
+        window.open(url, '_blank');
       });
     }
   });
