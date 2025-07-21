@@ -3,6 +3,7 @@ let currentDepartmentId = null;
 let currentFolderId     = null;
 let currentFolderName   = null;
 let currentDepartmentName = null;
+let isOldContentMode = false;
 
 // دالة لتسجيل عرض المحتوى في اللوقز
 async function logContentView(contentId, contentTitle, folderName, departmentName) {
@@ -262,235 +263,6 @@ function renderEditFolderNames(list) {
   });
 }
 
-// 3) فتح/غلق الدروبدَاون
-// حالة الأسماء والاختيار
-let contentNames = [];
-let selectedContentNameId = null;
-
-// 1) جلب أسماء المحتوى
-async function loadContentNames() {
-  try {
-    const res = await fetch(
-      `${apiBase}/content-names`, // ✅ التعديل هنا
-      {
-        headers: { 'Authorization': `Bearer ${getToken()}` }
-      }
-    );
-    if (!res.ok) throw new Error(`Status ${res.status}`);
-    const { data } = await res.json();
-    contentNames = data || [];
-    renderContentNames(contentNames);
-    document.getElementById('contentNameSearch').classList.remove('hidden');
- if (permissions.canAddContentName) {
-      document.getElementById('addNewContentNameLink').classList.remove('hidden');
-    }  } catch (err) {
-    console.error('Error loading content names:', err);
-  }
-}
-
-
-
-// 2) عرض القائمة
-function renderContentNames(list) {
-  const container = document.getElementById('contentNamesContainer');
-  container.innerHTML = '';
-  // في عرض أسماء المحتوى (عند عدم وجود محتوى)
-  if (!list.length) {
-    container.innerHTML = `<div class="no-content" data-translate="no-contents">${getTranslation('no-contents')}</div>`;
-    return;
-  }
-  list.forEach(item => {
-    const div = document.createElement('div');
-    div.className = 'folder-item';
-
-    // عرض الاسم حسب اللغة المختارة
-    const lang = localStorage.getItem('language') || 'ar';
-    let contentDisplayName;
-    try {
-      const parsedName = JSON.parse(item.name);
-      contentDisplayName = parsedName[lang] || parsedName.ar;
-    } catch (e) {
-      contentDisplayName = item.name; // Fallback for old data
-    }
-
-    div.innerHTML = `
-      <span class="label">${contentDisplayName}</span>
-      <span class="actions">
-        ${permissions.canEditContentName ? `<button class="edit-name"   data-id="${item.id}" data-name='${item.name}'>✎</button>` : ''}
-        ${permissions.canDeleteContentName ? `<button class="delete-name" data-id="${item.id}">🗑️</button>` : ''}
-      </span>
-    `;
-
-    // ✅ اختيار الاسم عند الضغط
-    div.addEventListener('click', e => {
-      if (e.target.closest('.actions')) return; // تجاهل الضغط على أزرار التعديل/الحذف
-      document.getElementById('contentNameToggle').innerHTML =
-        `${contentDisplayName} <span class="arrow">▾</span>`;
-
-      const hiddenInput = document.getElementById('selectedContentNameId');
-      if (hiddenInput) {
-        hiddenInput.value = contentDisplayName; // ← نرسل الاسم المعروض مو الـ ID
-        console.log('✅ تم اختيار اسم محتوى:', contentDisplayName);
-      }
-
-      closeContentDropdown();
-    });
-
-    // ✏️ زر التعديل
-    if (permissions.canEditContentName) {
-      div.querySelector('.edit-name')?.addEventListener('click', async e => {
-        e.stopPropagation();
-        const contentNameId = item.id;
-        const contentNameData = e.currentTarget.dataset.name;
-        
-        const editContentNameModal = document.getElementById('editContentNameModal');
-        document.getElementById('editContentNameId').value = contentNameId;
-
-        try {
-            const parsed = JSON.parse(contentNameData);
-            document.getElementById('editContentNameAr').value = parsed.ar || '';
-            document.getElementById('editContentNameEn').value = parsed.en || '';
-        } catch (ex) {
-            document.getElementById('editContentNameAr').value = contentNameData;
-            document.getElementById('editContentNameEn').value = '';
-        }
-
-        editContentNameModal.style.display = 'flex';
-        closeContentDropdown();
-      });
-    }
-
-    // 🗑️ زر الحذف
-    if (permissions.canDeleteContentName) {
-      div.querySelector('.delete-name')?.addEventListener('click', async e => {
-        e.stopPropagation();
-        const contentNameId = item.id;
-        const deleteContentNameModal = document.getElementById('deleteContentNameModal');
-        document.getElementById('deleteContentNameId').value = contentNameId;
-        deleteContentNameModal.style.display = 'flex';
-        closeContentDropdown();
-      });
-    }
-
-    container.appendChild(div);
-  });
-}
-
-
-
-// 3) فتح/غلق الدروبدَاون
-function toggleContentDropdown() {
-  const menu = document.getElementById('contentNameMenu');
-  const search = document.getElementById('contentNameSearch');
-  const addLink = document.getElementById('addNewContentNameLink');
-
-  const isVisible = menu.classList.contains('hidden');
-
-  if (isVisible) {
-    menu.classList.remove('hidden');
-    search.classList.remove('hidden');
-
-    if (permissions.canAddContentName) {
-      addLink.classList.remove('hidden');
-    } else {
-      addLink.classList.add('hidden');
-    }
-
-  } else {
-    menu.classList.add('hidden');
-    search.classList.add('hidden');
-    addLink.classList.add('hidden');
-  }
-}
-
-
-function closeContentDropdown() {
-  document.getElementById('contentNameMenu').classList.add('hidden');
-  document.getElementById('contentNameSearch').classList.add('hidden');
-  document.getElementById('addNewContentNameLink').classList.add('hidden');
-}
-
-function renderEditContentNames(list) {
-  const container = document.getElementById('editContentNamesContainer');
-  container.innerHTML = '';
-
-  list.forEach(item => {
-    const div = document.createElement('div');
-    div.className = 'folder-item';
-
-    // عرض الاسم حسب اللغة المختارة
-    const lang = localStorage.getItem('language') || 'ar';
-    let contentDisplayName;
-    try {
-      const parsedName = JSON.parse(item.name);
-      contentDisplayName = parsedName[lang] || parsedName.ar;
-    } catch (e) {
-      contentDisplayName = item.name; // Fallback for old data
-    }
-
-    // 1) بناء المحتوى: الاسم + مساحة للأزرار
-    div.innerHTML = `
-      <span class="label">${contentDisplayName}</span>
-      <span class="actions">
-        ${permissions.canEditContentName   ? `<button class="edit-name"   data-id="${item.id}" data-name='${item.name}'>✎</button>` : ''}
-        ${permissions.canDeleteContentName ? `<button class="delete-name" data-id="${item.id}">🗑️</button>` : ''}
-      </span>
-    `;
-
-    // 2) اختيار الاسم عند الضغط على السطر (ما عدا الأزرار)
-    div.addEventListener('click', e => {
-      if (e.target.closest('.actions')) return; // تجاهل الضغط على الأزرار
-      document.getElementById('editContentNameToggle').innerHTML =
-        `${contentDisplayName} <span class="arrow">▾</span>`;
-      document.getElementById('editSelectedContentNameId').value = contentDisplayName;
-      // إخفاء القائمة
-      document.getElementById('editContentNameMenu').classList.add('hidden');
-      document.getElementById('editContentNameSearch').classList.add('hidden');
-      if (permissions.canAddContentName){
-        document.getElementById('editAddNewContentNameLink').classList.remove('hidden');
-      }
-    });
-
-    // 3) زر تعديل الاسم
-    if (permissions.canEditContentName) {
-      div.querySelector('.edit-name').addEventListener('click', async e => {
-        e.stopPropagation();
-        const contentNameId = item.id;
-        const contentNameData = e.currentTarget.dataset.name;
-        
-        const editContentNameModal = document.getElementById('editContentNameModal');
-        document.getElementById('editContentNameId').value = contentNameId;
-
-        try {
-            const parsed = JSON.parse(contentNameData);
-            document.getElementById('editContentNameAr').value = parsed.ar || '';
-            document.getElementById('editContentNameEn').value = parsed.en || '';
-        } catch (ex) {
-            document.getElementById('editContentNameAr').value = contentNameData;
-            document.getElementById('editContentNameEn').value = '';
-        }
-
-        editContentNameModal.style.display = 'flex';
-        closeEditDropdown();
-      });
-    }
-
-    // 4) زر حذف الاسم
-    if (permissions.canDeleteContentName) {
-      div.querySelector('.delete-name').addEventListener('click', async e => {
-        e.stopPropagation();
-        const contentNameId = item.id;
-        const deleteContentNameModal = document.getElementById('deleteContentNameModal');
-        document.getElementById('deleteContentNameId').value = contentNameId;
-        deleteContentNameModal.style.display = 'flex';
-        closeEditDropdown();
-      });
-    }
-
-    container.appendChild(div);
-  });
-}
-
 
 document.addEventListener('DOMContentLoaded',async function() {
     // console.log('DOMContentLoaded event fired in department-content.js');
@@ -590,101 +362,7 @@ edtAddLink.addEventListener('click', async (e) => {
     document.getElementById('addFolderNameModal').style.display = 'flex';
     closeEditDropdown();
 });
-// ——— Content-name dropdown setup ———
-  const contentToggleBtn    = document.getElementById('contentNameToggle');
-  const contentMenu         = document.getElementById('contentNameMenu');
-  const contentSearchInput  = document.getElementById('contentNameSearch');
-  const contentAddLink      = document.getElementById('addNewContentNameLink');
 
-  contentToggleBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    toggleContentDropdown();
-    if (!contentNames.length) loadContentNames();
-  });
-
-  contentSearchInput.addEventListener('input', e => {
-    const q = e.target.value.trim().toLowerCase();
-    renderContentNames(
-      contentNames.filter(f => {
-        try {
-          const parsed = JSON.parse(f.name);
-          return (parsed.ar && parsed.ar.toLowerCase().includes(q)) || (parsed.en && parsed.en.toLowerCase().includes(q));
-        } catch (e) {
-          return f.name.toLowerCase().includes(q);
-        }
-      })
-    );
-  });
-
-  contentAddLink.addEventListener('click', async () => {
-    // فتح مودال إضافة اسم محتوى جديد
-    document.getElementById('addContentNameModal').style.display = 'flex';
-    closeContentDropdown();
-  });
-
-  // Close on outside click
-  document.addEventListener('click', e => {
-    if (!e.target.closest('#contentNameDropdown')) {
-      closeContentDropdown();
-    }
-  });
-// عناصر دروبداون تعديل المحتوى
-const editContentNameToggleBtn   = document.getElementById('editContentNameToggle');
-const editContentNameMenu        = document.getElementById('editContentNameMenu');
-const editContentNameSearchInput = document.getElementById('editContentNameSearch');
-const editAddNewContentNameLink  = document.getElementById('editAddNewContentNameLink');
-
-// فتح/إغلاق القائمة وعرض الأسماء
-editContentNameToggleBtn.addEventListener('click', async e => {
-  e.stopPropagation();
-  editContentNameMenu.classList.toggle('hidden');
-  editContentNameSearchInput.classList.toggle('hidden');
-
-  // بدلًا من التبديل الدائم، فقط إذا كان مسموحًا:
-  if (permissions.canAddContentName) {
-    editAddNewContentNameLink.classList.toggle('hidden');
-  }
-
-  if (!contentNames.length) {
-    await loadContentNames();
-  }
-  renderEditContentNames(contentNames);
-});
-
-
-// إغلاق الدروبدَاون عند الضغط خارج
-document.addEventListener('click', e => {
-  if (!e.target.closest('#editContentNameDropdown')) {
-    editContentNameMenu.classList.add('hidden');
-    editContentNameSearchInput.classList.add('hidden');
-    editAddNewContentNameLink.classList.add('hidden');
-  }
-});
-
-// فلترة البحث
-editContentNameSearchInput.addEventListener('input', e => {
-  const q = e.target.value.trim().toLowerCase();
-  renderEditContentNames(
-    contentNames.filter(c => {
-      try {
-        const parsed = JSON.parse(c.name);
-        return (parsed.ar && parsed.ar.toLowerCase().includes(q)) || (parsed.en && parsed.en.toLowerCase().includes(q));
-      } catch (e) {
-        return c.name.toLowerCase().includes(q);
-      }
-    })
-  );
-});
-
-// إضافة اسم جديد
-editAddNewContentNameLink.addEventListener('click', async () => {
-  // فتح مودال إضافة اسم محتوى جديد
-  document.getElementById('addContentNameModal').style.display = 'flex';
-  // إغلاق الدروبداون
-  editContentNameMenu.classList.add('hidden');
-  editContentNameSearchInput.classList.add('hidden');
-  editAddNewContentNameLink.classList.add('hidden');
-});
 
       let isInitialFetch = true;  // ← الفلاج
 
@@ -1182,27 +860,6 @@ function closeAddFolderModal() {
         }
     }
 
-    // Function to open the Add Content modal
-    async function openAddContentModal() {
-        if (addContentModal) {
-            const folderIdToOpenModalWith = document.getElementById('addContentBtn').dataset.folderId;
-            if (!folderIdToOpenModalWith) {
-                showToast(getTranslation('select-folder'), 'error');
-                console.error('openAddContentModal: No folderId found on addContentBtn.');
-                return; // Prevent modal from opening if no folderId is set
-            }
-            
-            // تأكد من تحميل أسماء المحتوى
-            if (!contentNames.length) {
-                await loadContentNames();
-            }
-            
-            addContentModal.style.display = 'flex';
-            document.getElementById('addContentFolderId').value = folderIdToOpenModalWith; // Set the hidden input value
-            console.log('openAddContentModal: Setting addContentFolderId to:', folderIdToOpenModalWith);
-        }
-    }
-
     // Function to handle file selection and display file name
     function handleFileSelection(inputElement) {
         const fileDropArea = inputElement.closest('.file-drop-area');
@@ -1249,98 +906,37 @@ fileUploadText.innerHTML = `
 function closeAddContentModal() {
     if (addContentModal) {
         addContentModal.style.display = 'none';
-        // إعادة دروبداون الاسم لوضعيته الافتراضية
-        document.getElementById('contentNameToggle').innerHTML = `<span data-translate="choose-name">${getTranslation('choose-name')}</span> <span class="arrow">▾</span>`;
-        // مسح قيمة الـ hidden input
-        document.getElementById('selectedContentNameId').value = '';
-        // مسح الملف
+        
+        // مسح الحقول
+        const folderIdInput = document.getElementById('addContentFolderId');
+        if (folderIdInput) folderIdInput.value = '';
+        
         document.getElementById('contentFile').value = '';
+        
+        const startDateInput = document.getElementById('contentStartDate');
+        if (startDateInput) startDateInput.value = '';
+        
+        const endDateInput = document.getElementById('contentEndDate');
+        if (endDateInput) endDateInput.value = '';
+
+        // إعادة منطقة رفع الملفات
         const fileDropArea = document.querySelector('#addContentModal .file-drop-area');
-        const fileUploadText = fileDropArea.querySelector('.file-upload-text');
-fileUploadText.innerHTML = `
-  <span 
-    class="supported-files" 
-    data-translate="supported-files"
-  >
-    ${getTranslation('supported-files')}
-  </span>
-`;
-        fileDropArea.classList.remove('has-file');
+        if (fileDropArea) {
+            const fileUploadText = fileDropArea.querySelector('.file-upload-text');
+            if (fileUploadText) {
+                fileUploadText.innerHTML = `
+                  <span 
+                    class="supported-files" 
+                    data-translate="supported-files"
+                  >
+                    ${getTranslation('supported-files')}
+                  </span>
+                `;
+            }
+            fileDropArea.classList.remove('has-file');
+        }
     }
 }
-
-
-    // Function to handle Create Content
-async function handleCreateContent() {
-    console.log('isOldContentMode:', isOldContentMode);
-  const folderIdToUpload = document.getElementById('addContentFolderId')?.value;
-  const contentFile      = document.getElementById('contentFile')?.files[0];
-  const selectedContentName = document.getElementById('selectedContentNameId')?.value;
-  // 🟢 حقول التواريخ
-  const startDate = document.getElementById('contentStartDate')?.value;
-  const endDate   = document.getElementById('contentEndDate')?.value;
-
-  if (!folderIdToUpload || !selectedContentName || !contentFile || selectedContentName === getTranslation('choose-name')) {
-    showToast(getTranslation('select-content'), 'error');
-    return;
-  }
-
-  let titlePayload;
-  const selectedTemplate = contentNames.find(template => {
-    try {
-      const parsed = JSON.parse(template.name);
-      const lang = localStorage.getItem('language') || 'ar';
-      const displayName = parsed[lang] || parsed.ar;
-      return displayName === selectedContentName;
-    } catch (e) {
-      return template.name === selectedContentName;
-    }
-  });
-
-  if (selectedTemplate) {
-    try {
-      titlePayload = JSON.parse(selectedTemplate.name);
-    } catch (e) {
-      titlePayload = { ar: selectedContentName, en: selectedContentName };
-    }
-  } else {
-    titlePayload = { ar: selectedContentName, en: selectedContentName };
-  }
-
-  const formData = new FormData();
-  formData.append('title', JSON.stringify(titlePayload));
-  formData.append('file', contentFile);
-    if (isOldContentMode) formData.append('is_old_content', 'true');
-  // 🟢 أضف التواريخ
-  if (startDate) formData.append('start_date', startDate);
-  if (endDate)   formData.append('end_date', endDate);
-  
-
-  try {
-    const response = await fetch(
-      `http://localhost:3006/api/folders/${folderIdToUpload}/contents`,
-      {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${getToken()}` },
-        body: formData
-      }
-    );
-
-    const result = await response.json();
-
-    if (response.ok) {
-      showToast(result.message || '✅ تم رفع المحتوى بنجاح!', 'success');
-      closeAddContentModal();
-      await fetchFolderContents(folderIdToUpload);
-    } else {
-      showToast(`❌ فشل إضافة المحتوى: ${result.message || 'خطأ'}`, 'error');
-    }
-  } catch (err) {
-    console.error(err);
-    showToast('❌ خطأ في الاتصال بالخادم.', 'error');
-  }
-}
-
 
 
     // --- Edit/Delete Modal Functions ---
@@ -1739,60 +1335,39 @@ document.getElementById('updateFolderBtn')
     }
 
      async function openEditContentModal(contentId) {
-         console.log('Opening edit modal for content:', contentId);
-         if (editContentModal) {
-             try {
-                 const response = await fetch(`http://localhost:3006/api/contents/${contentId}`, {
-                     headers: {
-                         'Authorization': `Bearer ${getToken()}`
-                     }
-                 });
-                 const data = await response.json();
+  if (editContentModal) {
+    try {
+      const response = await fetch(`http://localhost:3006/api/contents/${contentId}`, {
+        headers: { 'Authorization': `Bearer ${getToken()}` }
+      });
+      const data = await response.json();
 
-                 if (response.ok && data.data) {
-                     editContentIdInput.value = contentId;    // نحفظ الـ ID
-                     
-                     // نعبّي دروبداون الاسم:
-                     const rawTitle = data.data.title;
-                     let displayTitle;
-                     
-                     // فك JSON للعنوان
-                     try {
-                         const parsedTitle = JSON.parse(rawTitle);
-                         const lang = localStorage.getItem('language') || 'ar';
-                         displayTitle = parsedTitle[lang] || parsedTitle.ar || rawTitle;
-                     } catch (e) {
-                         displayTitle = rawTitle; // Fallback for old data
-                     }
-                     
-                     // تأكد من تحميل أسماء المحتوى
-                     if (!contentNames.length) {
-                         await loadContentNames();
-                     }
-                     
-                     // عرض قائمة أسماء المحتوى في المودال
-                     renderEditContentNames(contentNames);
-                     
-                     document.getElementById('editContentNameToggle').innerHTML =
-                       `${displayTitle} <span class="arrow">▾</span>`;
-                     // نعبّي الـ hidden input
-                     document.getElementById('editSelectedContentNameId').value = displayTitle;
-                     // عرض المودال
-                     editContentModal.style.display = 'flex';
-                     // 🟢 عيّن التواريخ في الحقول
-                     document.getElementById('editContentStartDate').value = data.data.start_date ? data.data.start_date.split('T')[0] : '';
-                     document.getElementById('editContentEndDate').value   = data.data.end_date   ? data.data.end_date.split('T')[0]   : '';
-
-                 } else {
-                     showToast(data.message || 'فشل جلب بيانات المحتوى.', 'error');
-                     console.error('Failed to fetch content data. Status:', response.status, 'Message:', data.message);
-                 }
-             } catch (error) {
-                 console.error('Error fetching content data:', error);
-                 showToast('حدث خطأ في الاتصال بجلب بيانات المحتوى.', 'error');
-             }
-         }
+      if (response.ok && data.data) {
+        editContentIdInput.value = contentId;
+        // فقط عيّن التواريخ إذا وجدت
+        document.getElementById('editContentStartDate').value = data.data.start_date ? data.data.start_date.split('T')[0] : '';
+        document.getElementById('editContentEndDate').value   = data.data.end_date   ? data.data.end_date.split('T')[0]   : '';
+        // إعادة تعيين حقل الملف
+        if (editContentFileInput) editContentFileInput.value = '';
+        // إعادة منطقة رفع الملفات
+        const fileDropArea = document.querySelector('#editContentModal .file-drop-area');
+        if (fileDropArea) {
+          const fileUploadText = fileDropArea.querySelector('.file-upload-text');
+          if (fileUploadText) {
+            fileUploadText.innerHTML = '<span class="supported-files">ملفات PDF فقط</span>';
+          }
+          fileDropArea.classList.remove('has-file');
+        }
+        // أظهر المودال
+        editContentModal.style.display = 'flex';
+      } else {
+        showToast(data.message || 'فشل جلب بيانات المحتوى.', 'error');
+      }
+    } catch (error) {
+      showToast('حدث خطأ في الاتصال بجلب بيانات المحتوى.', 'error');
     }
+  }
+}
 
 function closeEditContentModal() {
   if (editContentModal) {
@@ -1823,44 +1398,28 @@ function closeEditContentModal() {
 
     async function handleUpdateContent() {
         let contentId = editContentIdInput.value.trim();
-        const contentTitle = document.getElementById('editSelectedContentNameId').value.trim();
         const contentFile = document.getElementById('editContentFile').files[0];
         // 🟢 حقول التواريخ
         const startDate = document.getElementById('editContentStartDate')?.value;
         const endDate   = document.getElementById('editContentEndDate')?.value;
         contentId = contentId.replace(/[^\d]/g, '');
-        if (!contentId || !contentTitle) {
+        if (!contentId) {
           showToast(getTranslation('content-title-required'), 'error');
           return;
         }
-        let titlePayload;
-        const selectedTemplate = contentNames.find(template => {
-          try {
-            const parsed = JSON.parse(template.name);
-            const lang = localStorage.getItem('language') || 'ar';
-            const displayName = parsed[lang] || parsed.ar;
-            return displayName === contentTitle;
-          } catch (e) {
-            return template.name === contentTitle;
-          }
-        });
-        if (selectedTemplate) {
-          try {
-            titlePayload = JSON.parse(selectedTemplate.name);
-          } catch (e) {
-            titlePayload = { ar: contentTitle, en: contentTitle };
-          }
-        } else {
-          titlePayload = { ar: contentTitle, en: contentTitle };
+        let fileName = '';
+        if (contentFile) {
+          fileName = contentFile.name;
+          const dotIdx = fileName.lastIndexOf('.');
+          if (dotIdx > 0) fileName = fileName.substring(0, dotIdx);
         }
         const formData = new FormData();
-        formData.append('title', JSON.stringify(titlePayload));
+        if (fileName) formData.append('title', fileName);
         if (contentFile) formData.append('file', contentFile);
-        // 🟢 أضف التواريخ
         if (startDate) formData.append('start_date', startDate);
         if (endDate)   formData.append('end_date', endDate);
         try {
-          const response = await fetch(`${apiBase}/contents/${contentId}`, {
+          const response = await fetch(`http://localhost:3006/api/contents/${contentId}`, {
             method: 'PUT',
             headers: {
               'Authorization': `Bearer ${getToken()}`
@@ -2193,165 +1752,7 @@ if (departmentIdFromUrl && isInitialFetch) {
         }
     }
     
-    // --- Content Name Modals ---
-    const addContentNameModal = document.getElementById('addContentNameModal');
-    const saveAddContentNameBtn = document.getElementById('saveAddContentName');
-    const cancelAddContentNameBtn = document.getElementById('cancelAddContentName');
-    const editContentNameModal = document.getElementById('editContentNameModal');
-    const saveEditContentNameBtn = document.getElementById('saveEditContentName');
-    const cancelEditContentNameBtn = document.getElementById('cancelEditContentName');
-    const deleteContentNameModal = document.getElementById('deleteContentNameModal');
-    const confirmDeleteContentNameBtn = document.getElementById('confirmDeleteContentNameBtn');
-    const cancelDeleteContentNameBtn = document.getElementById('cancelDeleteContentNameBtn');
-
-    function closeAddContentNameModal() {
-        if(addContentNameModal) addContentNameModal.style.display = 'none';
-        const contentNameAr = document.getElementById('contentNameAr');
-        if(contentNameAr) contentNameAr.value = '';
-        const contentNameEn = document.getElementById('contentNameEn');
-        if(contentNameEn) contentNameEn.value = '';
-    }
-
-    function closeEditContentNameModal() {
-        if(editContentNameModal) editContentNameModal.style.display = 'none';
-        const editContentNameId = document.getElementById('editContentNameId');
-        if(editContentNameId) editContentNameId.value = '';
-        const editContentNameAr = document.getElementById('editContentNameAr');
-        if(editContentNameAr) editContentNameAr.value = '';
-        const editContentNameEn = document.getElementById('editContentNameEn');
-        if(editContentNameEn) editContentNameEn.value = '';
-    }
-
-    function closeDeleteContentNameModal() {
-        if(deleteContentNameModal) deleteContentNameModal.style.display = 'none';
-        const deleteContentNameId = document.getElementById('deleteContentNameId');
-        if(deleteContentNameId) deleteContentNameId.value = '';
-    }
-
-    if (saveAddContentNameBtn){
-        saveAddContentNameBtn.addEventListener('click', async () => {
-            const nameArInput = document.getElementById('contentNameAr');
-            const nameEnInput = document.getElementById('contentNameEn');
-            if (!nameArInput || !nameEnInput) return;
-
-            const nameAr = nameArInput.value.trim();
-            const nameEn = nameEnInput.value.trim();
-    
-            if (!nameAr || !nameEn) {
-                showToast(getTranslation('all-fields-required'), 'error');
-                return;
-            }
-    
-            const name = JSON.stringify({ ar: nameAr, en: nameEn });
-    
-            try {
-                const response = await fetch(`${apiBase}/content-names`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${getToken()}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ name })
-                });
-                const data = await response.json();
-                if (response.ok) {
-                    showToast(getTranslation('content-added-success'), 'success');
-                    closeAddContentNameModal();
-                    await loadContentNames();
-                    renderEditContentNames(contentNames);
-                } else {
-                    showToast(data.message || 'فشل إضافة اسم المحتوى.', 'error');
-                }
-            } catch (error) {
-                console.error('Error adding content name:', error);
-                showToast('حدث خطأ في الاتصال.', 'error');
-            }
-        });
-    }
-    
-    if(saveEditContentNameBtn) {
-        saveEditContentNameBtn.addEventListener('click', async () => {
-            const idInput = document.getElementById('editContentNameId');
-            const nameArInput = document.getElementById('editContentNameAr');
-            const nameEnInput = document.getElementById('editContentNameEn');
-            if(!idInput || !nameArInput || !nameEnInput) return;
-
-            const id = idInput.value;
-            const nameAr = nameArInput.value.trim();
-            const nameEn = nameEnInput.value.trim();
-    
-            if (!nameAr || !nameEn) {
-                showToast(getTranslation('all-fields-required'), 'error');
-                return;
-            }
-    
-            const name = JSON.stringify({ ar: nameAr, en: nameEn });
-    
-            try {
-                const response = await fetch(`${apiBase}/content-names/${id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${getToken()}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ name })
-                });
-                const data = await response.json();
-                if (response.ok) {
-                    showToast(getTranslation('content-updated-success'), 'success');
-                    closeEditContentNameModal();
-                    await loadContentNames();
-                    renderEditContentNames(contentNames);
-                } else {
-                    showToast(data.message || 'فشل تحديث اسم المحتوى.', 'error');
-                }
-            } catch (error) {
-                console.error('Error updating content name:', error);
-                showToast('حدث خطأ في الاتصال.', 'error');
-            }
-        });
-    }
-    
-    if(confirmDeleteContentNameBtn){
-        confirmDeleteContentNameBtn.addEventListener('click', async () => {
-            const idInput = document.getElementById('deleteContentNameId');
-            if(!idInput) return;
-            const id = idInput.value;
-            try {
-                const response = await fetch(`${apiBase}/content-names/${id}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${getToken()}` }
-                });
-                const data = await response.json();
-                if (response.ok) {
-                    showToast(getTranslation('content-deleted-success'), 'success');
-                    closeDeleteContentNameModal();
-                    await loadContentNames();
-                    renderEditContentNames(contentNames);
-                } else {
-                    showToast(data.message || 'فشل حذف اسم المحتوى.', 'error');
-                }
-            } catch (error) {
-                console.error('Error deleting content name:', error);
-                showToast('حدث خطأ في الاتصال.', 'error');
-            }
-        });
-    }
-    
-    if(cancelAddContentNameBtn) cancelAddContentNameBtn.addEventListener('click', closeAddContentNameModal);
-    if(cancelEditContentNameBtn) cancelEditContentNameBtn.addEventListener('click', closeEditContentNameModal);
-    if(cancelDeleteContentNameBtn) cancelDeleteContentNameBtn.addEventListener('click', closeDeleteContentNameModal);
-    if(addContentNameModal) addContentNameModal.addEventListener('click', e => e.target === addContentNameModal && closeAddContentNameModal());
-    if(editContentNameModal) editContentNameModal.addEventListener('click', e => e.target === editContentNameModal && closeEditContentNameModal());
-    if(deleteContentNameModal) {
-        deleteContentNameModal.addEventListener('click', e => e.target === deleteContentNameModal && closeDeleteContentNameModal());
-        const closeBtn = deleteContentNameModal.querySelector('.close-button');
-        if(closeBtn) closeBtn.addEventListener('click', closeDeleteContentNameModal);
-    }
-
-    // --- Folder Name Modals ---
-
-    let isOldContentMode = false;
+     // --- Folder Name Modals ---
 
     // 2) إضافة زر "إضافة محتوى قديم" بجانب زر إضافة محتوى عادي
     const addOldContentBtn = document.createElement('button');
@@ -2406,10 +1807,7 @@ const folderNameToggleEl = document.getElementById('folderNameToggle');
 if (folderNameToggleEl) folderNameToggleEl.innerHTML = `<span data-translate="choose-from-list">${getTranslation('choose-from-list')}</span> <span class="arrow">▾</span>`;
 const editFolderToggleEl = document.getElementById('editFolderToggle');
 if (editFolderToggleEl) editFolderToggleEl.innerHTML = `<span data-translate="choose-from-list">${getTranslation('choose-from-list')}</span> <span class="arrow">▾</span>`;
-const contentNameToggleEl = document.getElementById('contentNameToggle');
-if (contentNameToggleEl) contentNameToggleEl.innerHTML = `<span data-translate="choose-name">${getTranslation('choose-name')}</span> <span class="arrow">▾</span>`;
-const editContentNameToggleEl = document.getElementById('editContentNameToggle');
-if (editContentNameToggleEl) editContentNameToggleEl.innerHTML = `<span data-translate="choose-name">${getTranslation('choose-name')}</span> <span class="arrow">▾</span>`;
+
 
 const backToFilesBtnEl = document.getElementById('backToFilesBtn');
 if (backToFilesBtnEl) backToFilesBtnEl.innerHTML = `
@@ -2546,44 +1944,28 @@ window.translations = translations;
 async function handleCreateContent() {
   const folderIdToUpload = document.getElementById('addContentFolderId')?.value;
   const contentFile      = document.getElementById('contentFile')?.files[0];
-  const selectedContentName = document.getElementById('selectedContentNameId')?.value;
+  // 🟢 حقول التواريخ
   const startDate = document.getElementById('contentStartDate')?.value;
   const endDate   = document.getElementById('contentEndDate')?.value;
 
-  if (!folderIdToUpload || !selectedContentName || !contentFile || selectedContentName === getTranslation('choose-name')) {
+  if (!folderIdToUpload || !contentFile) {
     showToast(getTranslation('select-content'), 'error');
+    console.log('رفع محتوى:', {folderIdToUpload, contentFile});
+
     return;
   }
 
-  let titlePayload;
-  const selectedTemplate = contentNames.find(template => {
-    try {
-      const parsed = JSON.parse(template.name);
-      const lang = localStorage.getItem('language') || 'ar';
-      const displayName = parsed[lang] || parsed.ar;
-      return displayName === selectedContentName;
-    } catch (e) {
-      return template.name === selectedContentName;
-    }
-  });
-
-  if (selectedTemplate) {
-    try {
-      titlePayload = JSON.parse(selectedTemplate.name);
-    } catch (e) {
-      titlePayload = { ar: selectedContentName, en: selectedContentName };
-    }
-  } else {
-    titlePayload = { ar: selectedContentName, en: selectedContentName };
-  }
+  // Extract file name without extension
+  let fileName = contentFile.name;
+  const dotIdx = fileName.lastIndexOf('.');
+  if (dotIdx > 0) fileName = fileName.substring(0, dotIdx);
 
   const formData = new FormData();
-  formData.append('title', JSON.stringify(titlePayload));
+  formData.append('title', fileName);
   formData.append('file', contentFile);
+  if (isOldContentMode) formData.append('is_old_content', 'true');
   if (startDate) formData.append('start_date', startDate);
   if (endDate)   formData.append('end_date', endDate);
-  // 🟢 أضف is_old_content إذا كان الوضع قديم
-  if (isOldContentMode) formData.append('is_old_content', 'true');
 
   try {
     const response = await fetch(
@@ -2782,3 +2164,34 @@ window.translations = window.translations || {};
     window.translations[lang]['soon-expire'] = lang === 'ar' ? 'اقترب انتهاء الصلاحية' : 'Expiring soon';
   }
 });
+
+// أضف الدالة بعد closeAddContentModal
+function openAddContentModal() {
+  if (addContentModal) {
+    document.getElementById('addContentFolderId').value = currentFolderId;
+    addContentModal.style.display = 'flex';
+    // إعادة تعيين الحقول الأساسية
+    document.getElementById('contentFile').value = '';
+    // مسح التواريخ أيضاً
+    const startDateInput = document.getElementById('contentStartDate');
+    if (startDateInput) startDateInput.value = '';
+    const endDateInput = document.getElementById('contentEndDate');
+    if (endDateInput) endDateInput.value = '';
+
+    const fileDropArea = document.querySelector('#addContentModal .file-drop-area');
+    if(fileDropArea) {
+        const fileUploadText = fileDropArea.querySelector('.file-upload-text');
+        if(fileUploadText) {
+            fileUploadText.innerHTML = `
+              <span 
+                class="supported-files" 
+                data-translate="supported-files"
+              >
+                ${getTranslation('supported-files')}
+              </span>
+            `;
+        }
+        fileDropArea.classList.remove('has-file');
+    }
+  }
+}

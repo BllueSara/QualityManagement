@@ -141,29 +141,6 @@
       <div class="modal-body">
         <input type="hidden" id="addContentFolderId" />
 
-        <!-- ✅ اسم المحتوى Dropdown -->
-        <div class="form-group">
-          <label data-translate="content-name">اسم المحتوى</label>
-          <div class="custom-dropdown" id="contentNameDropdown">
-            <button type="button" id="contentNameToggle" class="dropdown-toggle">
-              <span data-translate="choose-name">اختر اسماً…</span> <span class="arrow">▾</span>
-            </button>
-            <div id="contentNameMenu" class="dropdown-menu hidden">
-              <input
-                type="text"
-                id="contentNameSearch"
-                class="dropdown-search"
-                data-placeholder="search-content-name"
-                placeholder="ابحث عن اسم…"
-              />
-              <div id="addNewContentNameLink" class="add-folder-new" data-translate="add-content-name">
-                + إضافة اسم جديد
-              </div>
-              <div id="contentNamesContainer" class="dropdown-list"></div>
-            </div>
-          </div>
-          <input type="hidden" id="selectedContentNameId" />
-        </div>
         <!-- ✅ تاريخ البداية -->
         <div class="form-group">
           <label for="contentStartDate" data-translate="start-date">تاريخ البداية</label>
@@ -261,25 +238,6 @@
       <input type="hidden" id="editContentId" />
       <input type="hidden" id="editSelectedContentNameId" />
 
-      <!-- ✅ اسم المحتوى Dropdown -->
-      <div class="form-group">
-        <label data-translate="content-name"><span class="required">*</span></label>
-        <div class="custom-dropdown" id="editContentNameDropdown">
-          <button type="button" id="editContentNameToggle" class="dropdown-toggle" data-translate="choose-from-list">
-            <span data-translate="choose-from-list"></span> <span class="arrow">▾</span>
-          </button>
-          <div id="editContentNameMenu" class="dropdown-menu hidden">
-            <input
-              type="text"
-              id="editContentNameSearch"
-              class="dropdown-search"
-              data-placeholder="search-content-name"
-            />
-            <div id="editAddNewContentNameLink" class="add-folder-new" data-translate="add-content-name"></div>
-            <div id="editContentNamesContainer" class="dropdown-list"></div>
-          </div>
-        </div>
-      </div>
       <!-- ✅ تاريخ البداية (تعديل) -->
       <div class="form-group">
         <label for="editContentStartDate" data-translate="start-date">تاريخ البداية</label>

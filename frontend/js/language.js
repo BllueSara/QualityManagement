@@ -993,8 +993,12 @@ const translations = {
 'revoke_files': 'سحب الملفات',
 'select-files-to-revoke': 'حدد الملفات لسحبها',
 'department-or-committee': 'القسم او اللجنة',
+'add-approved-content': 'اضافة محتوى معتمد',
+'add_approved_content_committee': 'اضافة محتوى معتمد للجان',
     },
     en: {
+      'add_approved_content_committee': 'Add Approved Content to Committees',
+      'add-approved-content': 'Add Approved Content',
       'department-or-committee': 'Department or Committee',
       'select-files-to-revoke': 'Select files to revoke',
               'security-issues': 'Security related issues.',

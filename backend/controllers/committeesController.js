@@ -627,7 +627,7 @@ exports.getContent = async (req, res) => {
 
 exports.addContent = async (req, res) => {
     try {
-      const { title, notes, approvers_required } = req.body;
+      const { title, notes, approvers_required, force_approved } = req.body;
       const { folderId } = req.params;
       // Save the path including backend directory since multer saves to backend/uploads/content_files
       const filePath = req.file ? path.posix.join('backend', 'uploads', 'content_files', req.file.filename) : null;
@@ -649,10 +649,16 @@ exports.addContent = async (req, res) => {
         const userLanguage = getUserLanguageFromToken(token);
         committeeName = getCommitteeNameByLanguage(comRows[0].name, userLanguage);
       }
-  
+
+      // منطق الاعتماد الفوري
+      let approval_status = 'awaiting';
+      if (force_approved === 'true' || force_approved === true) {
+        approval_status = 'approved';
+      }
+
       const [result] = await db.execute(
-        'INSERT INTO committee_contents (title, file_path, notes, folder_id, created_by, approvers_required) VALUES (?, ?, ?, ?, ?, ?)',
-        [title, filePath, notes, folderId, created_by, approvers_required]
+        'INSERT INTO committee_contents (title, file_path, notes, folder_id, created_by, approvers_required, approval_status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [title, filePath, notes, folderId, created_by, approvers_required, approval_status]
       );
   
       const contentId = result.insertId;

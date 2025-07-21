@@ -111,30 +111,16 @@
                 <div class="modal-body">
                     <input type="hidden" id="addContentFolderId">
 <div class="form-group">
-  <label for="selectedContentTitle" data-translate="content-name">عنوان المحتوى</label>
-  <div class="custom-dropdown" id="contentTitleDropdown">
-    <button type="button" id="contentTitleToggle" class="dropdown-toggle">
-      <span data-translate="choose-content-name">اختر عنوان المحتوى</span> <span class="arrow">▾</span>
-    </button>
-    <div id="contentTitleMenu" class="dropdown-menu hidden">
-      <input type="text" id="contentTitleSearch" class="dropdown-search" placeholder="ابحث…" data-translate-placeholder="search">
-      <div id="addNewContentTitleLink" class="add-folder-new" data-translate="add-content-name">+ إضافة عنوان جديد</div>
-      <div id="contentTitleOptionsContainer" class="dropdown-list"></div>
+  <label for="contentFile" data-translate="choose-file">اختر ملف لإرفاقه</label>
+  <div class="file-drop-area">
+    <img src="../images/attach.svg" alt="أيقونة رفع" class="attach-icon">
+    <input type="file" id="contentFile" accept="application/pdf" required>
+    <div class="file-upload-text">
+      <span class="supported-files" data-translate="pdf-only">ملفات PDF فقط</span>
     </div>
-    <input type="hidden" id="selectedContentTitle" required>
   </div>
 </div>
 
-                    <div class="form-group">
-                        <label for="contentFile" data-translate="choose-file">اختر ملف لإرفاقه</label>
-                        <div class="file-drop-area">
-                            <img src="../images/attach.svg" alt="أيقونة رفع" class="attach-icon">
-                            <input type="file" id="contentFile" accept="application/pdf" required>
-                            <div class="file-upload-text">
-                                <span class="supported-files" data-translate="pdf-only">ملفات PDF فقط</span>
-                            </div>
-                        </div>
-                    </div>
                 </div>
                 <div class="modal-buttons">
                     <button class="btn-primary" id="createContentBtn" type="button" data-translate="add">إضافة</button>
@@ -190,29 +176,7 @@
       <!-- مخفي لتخزين المعرف -->
       <input type="hidden" id="editContentId">
 
-      <!-- ▼ استبدال حقل النص بحقل Dropdown للعناوين -->
-      <div class="form-group">
-        <label data-translate="content-name">عنوان المحتوى <span class="required">*</span></label>
-        <div class="custom-dropdown" id="editContentTitleDropdown">
-          <button type="button" id="editContentTitleToggle" class="dropdown-toggle">
-            <span data-translate="choose-content-name">اختر عنوان المحتوى</span> <span class="arrow">▾</span>
-          </button>
-          <div id="editContentTitleMenu" class="dropdown-menu hidden">
-            <input
-              type="text"
-              id="editContentTitleSearch"
-              class="dropdown-search"
-              placeholder="ابحث…"
-              data-translate-placeholder="search"
-            >
-            <div id="editAddNewContentTitleLink" class="add-folder-new" data-translate="add-content-name">
-              + إضافة عنوان جديد
-            </div>
-            <div id="editContentTitlesContainer" class="dropdown-list"></div>
-          </div>
-          <input type="hidden" id="editSelectedContentTitle" required>
-        </div>
-      </div>
+      <!-- تم حذف حقل عنوان المحتوى بالكامل -->
       <div class="form-group">
         <label for="editContentNotes" data-translate="notes">الملاحظات</label>
         <textarea id="editContentNotes" placeholder="أضف ملاحظات…" data-translate-placeholder="add-notes"></textarea>

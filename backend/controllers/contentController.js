@@ -373,7 +373,7 @@ const addContent = async (req, res) => {
       }
   
       const folderId = req.params.folderId;
-      const { title, notes, approvers_required } = req.body;
+      let { title, notes, approvers_required } = req.body;
       const startDate = req.body.start_date || null;
       const endDate   = req.body.end_date   || null;
       const filePath = req.file ? path.posix.join('content_files', req.file.filename) : null;
@@ -382,7 +382,12 @@ const addContent = async (req, res) => {
       const approvalStatus = isOldContent ? 'approved' : 'pending';
       const isApproved = isOldContent ? 1 : 0;
       const approvedBy = isOldContent ? decodedToken.id : null;
-  
+
+      // إذا لم يُرسل عنوان، استخدم اسم الملف بدون الامتداد
+      if (!title && req.file && req.file.originalname) {
+        title = path.parse(req.file.originalname).name;
+      }
+
       const connection = await db.getConnection();
   
       if (!folderId || !title || !filePath) {
