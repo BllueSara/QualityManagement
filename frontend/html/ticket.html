@@ -51,13 +51,8 @@
               <input type="date" id="eventDate" name="eventDate" placeholder="yyyy/mm/dd" data-translate-placeholder="placeholder-date" required />
             </div>
             <div class="form-group time-group required">
-              <label data-translate="event-time">وقت الحدث</label>
-              <div class="time-options">
-                <input type="radio" id="timeMorning" name="eventTime" value="صباحاً" required />
-                <label for="timeMorning" data-translate="morning">صباحاً</label>
-                <input type="radio" id="timeEvening" name="eventTime" value="مساءً" />
-                <label for="timeEvening" data-translate="evening">مساءً</label>
-              </div>
+              <label for="eventTime" data-translate="event-time">وقت الحدث</label>
+              <input type="time" id="eventTime" name="eventTime" step="1" required />
             </div>
           </div>
 
@@ -83,7 +78,9 @@
 
           <div class="form-group full-width required">
             <label for="otherDepts" data-translate="other-depts">الأقسام الأخرى المعنية</label>
-            <textarea id="otherDepts" name="otherDepts" rows="3" placeholder="إذا وجد، اذكر الأقسام الأخرى" data-translate-placeholder="placeholder-other-depts" required></textarea>
+            <select id="otherDepts" name="otherDepts" required>
+              <option value="" disabled selected data-translate="placeholder-select-dept">اختر القسم</option>
+            </select>
           </div>
         </div>
       </section>
@@ -91,6 +88,7 @@
       <!-- ===== قسم: معلومات المريض (غير إلزامي) ===== -->
       <section class="form-section">
         <h2 class="section-title" data-translate="patient-info">معلومات المريض</h2>
+        <label for="patientInfoExtra" data-translate="patient-info-extra">معلومات المريض</label>
         <div class="section-content">
           <div class="row">
             <div class="form-group">
@@ -102,31 +100,7 @@
               <input type="text" id="medicalRecordNo" name="medicalRecordNo" placeholder="ادخل رقم الملف الطبي" data-translate-placeholder="placeholder-medical-record" />
             </div>
           </div>
-          <div class="row">
-            <div class="form-group">
-              <label for="dob" data-translate="dob">تاريخ الميلاد</label>
-              <input type="date" id="dob" name="dob" placeholder="yyyy/mm/dd" data-translate-placeholder="placeholder-date" />
-            </div>
-            <div class="form-group gender-group">
-              <label data-translate="gender">الجنس</label>
-              <div class="gender-options">
-                <input type="radio" id="genderMale" name="gender" value="ذكر" />
-                <label for="genderMale" data-translate="male">ذكر</label>
-                <input type="radio" id="genderFemale" name="gender" value="أنثى" />
-                <label for="genderFemale" data-translate="female">أنثى</label>
-              </div>
-            </div>
-          </div>
-          <div class="form-group patient-type-group">
-            <label data-translate="patient-type">نوع المريض</label>
-            <div class="checkbox-options">
-              <div><input type="checkbox" id="typeInpatient" name="patientType" value="منوم" /><label for="typeInpatient" data-translate="inpatient">منوم</label></div>
-              <div><input type="checkbox" id="typeOutpatient" name="patientType" value="مراجع" /><label for="typeOutpatient" data-translate="outpatient">مراجع</label></div>
-              <div><input type="checkbox" id="typeStaff" name="patientType" value="موظف" /><label for="typeStaff" data-translate="staff">موظف</label></div>
-              <div><input type="checkbox" id="typeVisitor" name="patientType" value="زائر" /><label for="typeVisitor" data-translate="visitor">زائر</label></div>
-              <div><input type="checkbox" id="typeOther" name="patientType" value="أخرى" /><label for="typeOther" data-translate="other">أخرى</label></div>
-            </div>
-          </div>
+  
         </div>
       </section>
 
@@ -138,109 +112,29 @@
             <label data-translate="select-report-type">اختر نوع البلاغ</label>
             <div class="radio-options report-type-grid">
               <div>
-                <input type="radio" id="reportCapacityToCauseError" name="reportType" value="capacity-to-cause-error" required />
-                <label for="reportCapacityToCauseError" data-translate="capacity-to-cause-error">الظروف أو الأحداث التي لديها القدرة على التسبب في حدوث خطأ.</label>
+                <input type="radio" id="reportAccident" name="reportType" value="حدث عارض" />
+                <label for="reportAccident" data-translate="accident">حدث عارض</label>
+              </div>
+          
+              <div>
+              <input type="radio" id="reportSerious" name="reportType" value="حدث جسيم" />
+              <label for="reportSerious" data-translate="serious">حدث جسيم</label>
+
               </div>
               <div>
-                <input type="radio" id="reportErrorNoPatient" name="reportType" value="error-no-patient" />
-                <label for="reportErrorNoPatient" data-translate="error-no-patient">حدث خطأ ولكن لم يصل أثره إلى المريض.</label>
-              </div>
-              <div>
-                <input type="radio" id="reportErrorNoHarm" name="reportType" value="error-no-harm" />
-                <label for="reportErrorNoHarm" data-translate="error-no-harm">حدث خطأ وصل أثره إلى المريض ولكن لم يسبب ضرراً له.</label>
-              </div>
-              <div>
-                <input type="radio" id="reportErrorMonitor" name="reportType" value="error-monitor" />
-                <label for="reportErrorMonitor" data-translate="error-monitor">حدث خطأ وصل أثره إلى المريض وتطلب المتابعة للتأكد من عدم تسببه في ضرر بالمريض أو تطلب التدخل لمنع الضرر أو الإجراءات معاً.</label>
-              </div>
-              <div>
-                <input type="radio" id="reportErrorMinorHarm" name="reportType" value="error-minor-harm" />
-                <label for="reportErrorMinorHarm" data-translate="error-minor-harm">حدث خطأ قد يكون قد أسهم في حدوث ضرر مؤقت للمريض أو أدى إلى ذلك وتطلب التدخل.</label>
-              </div>
-              <div>
-                <input type="radio" id="reportErrorMinorHarmHospital" name="reportType" value="error-minor-harm-hospital" />
-                <label for="reportErrorMinorHarmHospital" data-translate="error-minor-harm-hospital">حدث خطأ قد يكون قد أسهم في حدوث ضرر مؤقت للمريض أو أدى إلى ذلك وتطلب التنويم بالمستشفى لفترات بسيطة أو لفترات طويلة.</label>
-              </div>
-              <div>
-                <input type="radio" id="reportErrorSeriousHarm" name="reportType" value="error-serious-harm" />
-                <label for="reportErrorSeriousHarm" data-translate="error-serious-harm">حدث خطأ قد يكون قد أسهم في ضرر دائم للمريض أو أدى إلى ذلك الضرر.</label>
-              </div>
-              <div>
-                <input type="radio" id="reportErrorLifeThreatening" name="reportType" value="error-life-threatening" />
-                <label for="reportErrorLifeThreatening" data-translate="error-life-threatening">حدث خطأ يتطلب التدخل الضروري لإنقاذ الحياة.</label>
-              </div>
-              <div>
-                <input type="radio" id="reportErrorDeath" name="reportType" value="error-death" />
-                <label for="reportErrorDeath" data-translate="error-death">حدث خطأ قد يكون قد أسهم في وفاة المريض أو أدى إلى وفاته.</label>
+                <input type="radio" id="reportCatch" name="reportType" value="إلتقاطة جيدة" />
+                <label for="reportCatch" data-translate="good-catch">إلتقاطة جيدة</label>
               </div>
             </div>
-          </div>
-          <div class="form-group full-width">
-            <label for="reportShortDesc" data-translate="event-description">وصف الحدث (اختياري)</label>
-            <input type="text" id="reportShortDesc" name="reportShortDesc" placeholder="أي تفاصيل قصيرة عن الحدث" data-translate-placeholder="placeholder-short-desc" />
           </div>
         </div>
       </section>
-
-      <!-- ===== قسم: وصف الحدث ===== -->
-      <section class="form-section">
-        <h2 class="section-title" data-translate="event-description">وصف الحدث</h2>
-        <div class="section-content">
-          <div class="form-group full-width required">
-            <label for="eventDescription" data-translate="event-description">وصف مفصل للحدث</label>
-            <textarea id="eventDescription" name="eventDescription" rows="5" placeholder="اكتب وصفاً مفصلاً للحدث هنا" data-translate-placeholder="placeholder-event-description" required></textarea>
-          </div>
-        </div>
-      </section>
-
-      <!-- ===== قسم: معلومات المبلغ ===== -->
-      <section class="form-section">
-        <h2 class="section-title" data-translate="reporter-info">معلومات المبلغ</h2>
-        <div class="section-content">
-          <div class="row">
-            <div class="form-group required">
-              <label for="reporterName" data-translate="reporter-name">اسم المبلغ</label>
-              <input type="text" id="reporterName" name="reporterName" placeholder="ادخل اسم المبلغ" data-translate-placeholder="placeholder-reporter-name" required />
-            </div>
-            <div class="form-group required">
-              <label for="reportDate" data-translate="report-date">تاريخ الإبلاغ</label>
-              <input type="date" id="reportDate" name="reportDate" placeholder="yyyy/mm/dd" data-translate-placeholder="placeholder-date" required />
-            </div>
-          </div>
-          <div class="row">
-            <div class="form-group required">
-              <label for="reporterPosition" data-translate="reporter-position">المسمي الوظيفي</label>
-              <input type="text" id="reporterPosition" name="reporterPosition" placeholder="ادخل المسمي الوظيفي" data-translate-placeholder="placeholder-reporter-position" required />
-            </div>
-            <div class="form-group required">
-              <label for="reporterPhone" data-translate="reporter-phone">رقم الجوال</label>
-              <input type="tel" id="reporterPhone" name="reporterPhone" placeholder="05XXXXXXXX" data-translate-placeholder="placeholder-phone" required />
-            </div>
-          </div>
-          <div class="form-group full-width required">
-            <label for="reporterEmail" data-translate="reporter-email">البريد الإلكتروني</label>
-            <input type="email" id="reporterEmail" name="reporterEmail" placeholder="example@domain.com" data-translate-placeholder="placeholder-email" required />
-          </div>
-        </div>
-      </section>
-
-      <!-- ===== قسم: الإجراءات المتخذة ===== -->
-      <section class="form-section">
-        <h2 class="section-title" data-translate="actions-taken">الإجراءات المتخذة</h2>
-        <div class="section-content">
-          <div class="form-group full-width required">
-            <label for="actionsTaken" data-translate="actions-taken">صف الإجراءات التي تم اتخاذها</label>
-            <textarea id="actionsTaken" name="actionsTaken" rows="4" placeholder="صف الإجراءات التي تم اتخاذها" data-translate-placeholder="placeholder-actions" required></textarea>
-          </div>
-        </div>
-      </section>
-
       <!-- ===== قسم: تصنيف الحدث ===== -->
       <section class="form-section">
         <h2 class="section-title" data-translate="event-classification">تصنيف الحدث</h2>
         <div class="section-content">
           <div class="form-group required full-width">
-            <label data-translate="event-classification">اختر تصنيف الحدث (واحد على الأقل)</label>
+            <label data-translate="event-classification-category">اختر تصنيف الحدث (واحد على الأقل)</label>
             <div class="classification-grid">
               <div class="checkbox-item">
                 <input type="checkbox" id="catSecurity" name="classification" value="الأمور المتعلقة بالأمن" />
@@ -362,6 +256,120 @@
           </div>
         </div>
       </section>
+      <!-- ===== قسم: وصف الحدث ===== -->
+      <section class="form-section">
+        <h2 class="section-title" data-translate="event-description">وصف الحدث</h2>
+        <div class="section-content">
+          <div class="form-group full-width required">
+            <label for="eventDescription" data-translate="event-description-step">وصف مفصل للحدث</label>
+            <textarea id="eventDescription" name="eventDescription" rows="5" placeholder="اكتب وصفاً مفصلاً للحدث هنا" data-translate-placeholder="placeholder-event-description" required></textarea>
+          </div>
+        </div>
+      </section>
+      <!-- ===== قسم: الإجراءات المتخذة ===== -->
+      <section class="form-section">
+        <h2 class="section-title" data-translate="actions-taken">الإجراءات المتخذة</h2>
+        <div class="section-content">
+          <div class="form-group full-width required">
+            <label for="actionsTaken" data-translate="actions-taken-steps">صف الإجراءات التي تم اتخاذها</label>
+            <textarea id="actionsTaken" name="actionsTaken" rows="4" placeholder="صف الإجراءات التي تم اتخاذها" data-translate-placeholder="placeholder-actions" required></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== قسم: رفع المرفقات (اختياري) ===== -->
+      <section class="form-section">
+        <h2 class="section-title" data-translate="attachments">المرفقات</h2>
+        <div class="section-content">
+          <div class="form-group full-width">
+            <label for="attachments" data-translate="upload-attachments">رفع المرفقات</label>
+            <input type="file" id="attachments" name="attachments" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx" />
+            <small data-translate="upload-hint">يمكنك رفع أكثر من ملف في آنٍ واحد (jpg, png, pdf, doc).</small>
+          </div>
+        </div>
+      </section>
+      
+      <!-- ===== قسم: تصنيف مستوى الضرر ===== -->
+      <section class="form-section">
+        <h2 class="section-title" data-translate="event-classification-level">تصنيف مستوى الضرر <span style="color:red">*</span></h2>
+        <div class="section-content">
+          <div class="form-group required full-width">
+            <label data-translate="level-of-harm-desc"> اختر تصنيف مستوى الضرر الناتج عن الحدث العارض بناءً على البيان الموضح أعلاه</label>
+            <div class="level-harm-grid">
+              <div class="level-harm-option">
+                <input type="radio" id="harmA" name="levelOfHarm" value="A" required />
+                <label for="harmA" data-translate="harm-level-A-desc"></label>
+              </div>
+              <div class="level-harm-option">
+                <input type="radio" id="harmB" name="levelOfHarm" value="B" required />
+                <label for="harmB" data-translate="harm-level-B-desc"></label>
+              </div>
+              <div class="level-harm-option">
+                <input type="radio" id="harmC" name="levelOfHarm" value="C" required />
+                <label for="harmC" data-translate="harm-level-C-desc"></label>
+              </div>
+              <div class="level-harm-option">
+                <input type="radio" id="harmD" name="levelOfHarm" value="D" required />
+                <label for="harmD" data-translate="harm-level-D-desc"></label>
+              </div>
+              <div class="level-harm-option">
+                <input type="radio" id="harmE" name="levelOfHarm" value="E" required />
+                <label for="harmE" data-translate="harm-level-E-desc"></label>
+              </div>
+              <div class="level-harm-option">
+                <input type="radio" id="harmF" name="levelOfHarm" value="F" required />
+                <label for="harmF" data-translate="harm-level-F-desc"></label>
+              </div>
+              <div class="level-harm-option">
+                <input type="radio" id="harmG" name="levelOfHarm" value="G" required />
+                <label for="harmG" data-translate="harm-level-G-desc"></label>
+              </div>
+              <div class="level-harm-option">
+                <input type="radio" id="harmH" name="levelOfHarm" value="H" required />
+                <label for="harmH" data-translate="harm-level-H-desc"></label>
+              </div>
+              <div class="level-harm-option">
+                <input type="radio" id="harmI" name="levelOfHarm" value="I" required />
+                <label for="harmI" data-translate="harm-level-I-desc"></label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <!-- ===== قسم: معلومات المبلغ ===== -->
+      <section class="form-section">
+        <h2 class="section-title" data-translate="reporter-info">معلومات المبلغ</h2>
+        <div class="section-content">
+          <div class="row">
+            <div class="form-group">
+              <label for="reporterName" data-translate="reporter-name">اسم المبلغ</label>
+              <input type="text" id="reporterName" name="reporterName" placeholder="ادخل اسم المبلغ" data-translate-placeholder="placeholder-reporter-name" />
+            </div>
+            <!-- حذف حقل تاريخ الإبلاغ بالكامل -->
+            <!-- <div class="form-group required">
+              <label for="reportDate" data-translate="report-date">تاريخ الإبلاغ</label>
+              <input type="date" id="reportDate" name="reportDate" placeholder="yyyy/mm/dd" data-translate-placeholder="placeholder-date" required />
+            </div> -->
+          </div>
+          <div class="row">
+            <div class="form-group">
+              <label for="reporterPosition" data-translate="reporter-position">المسمي الوظيفي</label>
+              <input type="text" id="reporterPosition" name="reporterPosition" placeholder="ادخل المسمي الوظيفي" data-translate-placeholder="placeholder-reporter-position" />
+            </div>
+            <div class="form-group">
+              <label for="reporterPhone" data-translate="reporter-phone">رقم الجوال</label>
+              <input type="tel" id="reporterPhone" name="reporterPhone" placeholder="05XXXXXXXX" data-translate-placeholder="placeholder-phone" />
+            </div>
+          </div>
+          <div class="form-group full-width">
+            <label for="reporterEmail" data-translate="reporter-email">البريد الإلكتروني</label>
+            <input type="email" id="reporterEmail" name="reporterEmail" placeholder="example@domain.com" data-translate-placeholder="placeholder-email" />
+          </div>
+        </div>
+      </section>
+
+
+
 
       <!-- ===== قسم: تفاصيل الإصابة (غير إلزامي) ===== -->
       <section class="form-section">
@@ -390,17 +398,7 @@
         </div>
       </section>
 
-      <!-- ===== قسم: رفع المرفقات (اختياري) ===== -->
-      <section class="form-section">
-        <h2 class="section-title" data-translate="attachments">المرفقات</h2>
-        <div class="section-content">
-          <div class="form-group full-width">
-            <label for="attachments" data-translate="upload-attachments">رفع المرفقات</label>
-            <input type="file" id="attachments" name="attachments" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx" />
-            <small data-translate="upload-hint">يمكنك رفع أكثر من ملف في آنٍ واحد (jpg, png, pdf, doc).</small>
-          </div>
-        </div>
-      </section>
+
 
       <!-- أزرار الإرسال والإلغاء -->
       <div class="form-actions">

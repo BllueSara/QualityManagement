@@ -519,7 +519,7 @@ const adminResetPassword = async (req, res) => {
 
 // 8) جلب الأدوار المتاحة
 const getRoles = async (req, res) => {
-  const roles = ['admin', 'sub-admin', 'user'];
+  const roles = ['admin', 'sub-admin', 'manager_ovr', 'user'];
   return res.status(200).json({ 
     status: 'success', 
     data: roles 

@@ -9,7 +9,30 @@ let allContents = [];
 let folderNameOptions = [];
 let selectedFolderNameId = null;
 let isForceApproved = false; // متغير عام
+// دالة لتسجيل عرض المحتوى في اللوقز
+async function logContentView(contentId, contentTitle, folderName, committeeName) {
+    try {
+        const response = await fetch(`${apiBase}/api/logs/content-view`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${getToken()}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                contentId: contentId,
+                contentTitle: contentTitle,
+                folderName: folderName,
+                committeeName: committeeName
+            })
+        });
 
+        if (!response.ok) {
+            console.error('Failed to log content view:', response.status);
+        }
+    } catch (error) {
+        console.error('Error logging content view:', error);
+    }
+}
 const permissions = {
   canAddFolder:    false,
   canAddFolderName: false,
@@ -711,7 +734,8 @@ function renderContents(contents) {
             const folderName = currentFolderName || window._lastCommitteeFilesData?.folderName || '';
             logContentView(content.id, contentTitle, folderName, currentCommitteeName);
             const baseUrl = apiBase.replace('/api', '');
-            window.open(`${baseUrl}/${content.file_path}`, '_blank');
+let filePath = content.file_path.startsWith('backend/') ? content.file_path.replace(/^backend\//, '') : content.file_path;
+window.open(`${baseUrl}/${filePath}`, '_blank');
           } else {
             showToast(getTranslation('file-link-unavailable'), 'error');
           }
@@ -1053,6 +1077,8 @@ function handleFileSelection(inputElement) {
     fileDropArea.classList.remove('has-file');
   }
 }
+
+
 
 // --- تهيئة الصفحة ---
 document.addEventListener('DOMContentLoaded', async function() {

@@ -15,11 +15,13 @@ const translations = {
         'main-title': 'الصفحة الرئيسية',
         'tickets': 'الاحداث العارضة',
         'departments': 'الأقسام',
+        'event-classification-category': 'اختر تصنيف الحدث الذي يتم الإبلاغ عنه',
         'statistics': 'الإحصائيات',
         'approvals': 'الإعتمادات',
         'permissions': 'الصلاحيات',
         'comittees': 'اللجان والواجهات',
         'click-to-enter': 'اضغط للدخول',
+        'view_reports_ovr': 'عرض تقارير الاحداث العارضة',
         
         // System title
         'system-title': 'نظام إدارة الجودة والسلامة',
@@ -533,7 +535,6 @@ const translations = {
         'other-depts': 'الأقسام الأخرى المعنية',
         'enter-other-depts': 'إذا وجد، اذكر الأقسام الأخرى',
         
-        'patient-info': 'معلومات المريض',
         'patient-name': 'اسم المريض',
         'enter-patient-name': 'ادخل اسم المريض',
         'medical-record': 'رقم الملف الطبي',
@@ -655,16 +656,17 @@ const translations = {
         'event-location': 'موقع الحدث',
         'reporting-dept': 'القسم المبلغ',
         'responding-dept': 'القسم المستجيب',
-        
+        'actions-taken-steps': 'فضلًا اذكر الإجراءات التصحيحية التي تم إتخاذها لمنع او تقليل الضرر الناتج عن الحدث',
         'patient-info': 'معلومات المريض',
-        'patient-name': 'اسم المريض',
+        'patient-info-extra':'(في حال كان البلاغ له علاقة بمريض منوم او مراجع  فضلَا تعبئة الحقول  أدناه)',
+        'patient-name': 'اسم المريض', 
         'medical-record-no': 'رقم الملف الطبي',
         'gender': 'الجنس',
         'male': 'ذكر',
         'female': 'أنثى',
         
         'report-type': 'نوع البلاغ',
-        'accident': 'حادث',
+        'accident': 'حدث عارض',
         'near-miss': 'حدث قابل للتبليغ',
         
         'event-description': 'وصف الحدث',
@@ -837,6 +839,7 @@ const translations = {
         'change_role': 'تغيير الدور',
         'delete_user': 'حذف حساب',
         'change_password': 'تغيير كلمة السر',
+        'event-description-step': 'فضلًا اذكر الإجراءات التي تم اتخاذها لمنع او تثليل الضرر الناتج عن الحدث',
         "new": "جديد",
 "sent": "تم الإرسال",
 "closed": "مغلق",
@@ -873,6 +876,7 @@ const translations = {
         'notification-approval': 'اعتماد',
         'notification-signature': 'توقيع',
         'notification-proxy': 'بالنيابة',
+        'view_reports_approvals': ' عرض تقارير الاعتمادات',
         'notification-add': 'إضافة',
         'notification-update': 'تحديث',
         'notification-delete': 'حذف',
@@ -901,10 +905,12 @@ const translations = {
         'pending-contents': 'محتويات بانتظار الاعتماد',
         'approved-contents': 'محتويات معتمدة',
         'committee-count': 'عدد اللجان',
+        'view-details': 'عرض الحدث',
         'pending-committee-contents': 'محتويات اللجان (قيد الاعتماد)',
   'accept-all-proxy-confirm': 'هل توافق على قبول جميع التفويضات بالنيابة عن الشخص في جميع الملفات؟',
 'revoke_delegations':'الغاء جميع التفويضات',
 'revoke-delegations':'الغاء جميع التفويضات',
+'all-months': 'جميع الشهور',
         // Profile Pag
         'profile-title': 'ملفي الشخصي',
         'username-label': 'اسم المستخدم:',
@@ -995,8 +1001,35 @@ const translations = {
 'department-or-committee': 'القسم او اللجنة',
 'add-approved-content': 'اضافة محتوى معتمد',
 'add_approved_content_committee': 'اضافة محتوى معتمد للجان',
+'good-catch': 'إلتقاطة جيدة',
+        // Harm Level Descriptions
+        'harm-level-A-desc': 'الظروف أو الأحداث التي لديها القدرة على التسبب في حدوث خطأ.',
+        'harm-level-B-desc': 'حدث خطأ ولكن لم يصل أثره إلى المريض.',
+        'harm-level-C-desc': 'حدث خطأ وصل أثره إلى المريض ولكن لم يسبب ضرراً له.',
+        'harm-level-D-desc': 'حدث خطأ وصل أثره إلى المريض وتطلب المتابعة للتأكد من عدم تسببه في ضرر للمريض أو تطلب التدخل لمنع الضرر أو الإجراءات معاً.',
+        'harm-level-E-desc': 'حدث خطأ قد يكون قد أسهم في حدوث ضرر مؤقت للمريض أو أدى إلى ذلك وتطلب التدخل.',
+        'harm-level-F-desc': 'حدث خطأ قد يكون قد أسهم في حدوث ضرر مؤقت للمريض أو أدى إلى ذلك وتطلب التنويم بالمستشفى لفترات بسيطة أو لفترات طويلة.',
+        'harm-level-G-desc': 'حدث خطأ قد يكون قد أسهم في ضرر دائم للمريض أو أدى إلى ذلك الضرر.',
+        'harm-level-H-desc': 'حدث خطأ يتطلب التدخل الضروري لإنقاذ الحياة.',
+        'harm-level-I-desc': 'حدث خطأ قد يكون قد أسهم في وفاة المريض أو أدى إلى وفاته.',
+        'event-classification-level': 'تصنيف مستوى الضرر',
+        'level-of-harm-desc' : 'فضلاً اختر مستوى الضرر الناتج عن حصول الحدث العارض بناءًا على البيان الموضح أعلاه',
+        
     },
     en: {
+      'event-classification-level': 'Harm Level',
+      'level-of-harm-desc' : 'Please select the harm level resulting from the incident based on the information provided below',
+              // Harm Level Descriptions
+        'harm-level-A-desc': 'Circumstances or events that have the capacity to cause error.',
+        'harm-level-B-desc': 'An error occurred but the error did not reach the patient.',
+        'harm-level-C-desc': 'An error occurred that reached the patient but did not cause patient harm.',
+        'harm-level-D-desc': 'An error occurred that reached the patient and required monitoring to confirm that it resulted in no harm to the patient and/or required intervention to preclude harm.',
+        'harm-level-E-desc': 'An error occurred that may have contributed to, or resulted in temporary harm (minor injury) to the individual and required intervention.',
+        'harm-level-F-desc': 'An error occurred that may have contributed to, or resulted in temporary harm (minor injury) to the individual and required intervention and initial or prolonged hospitalization.',
+        'harm-level-G-desc': 'An error occurred that may have contributed to, or resulted in individual harm (serious injury – prolonged the stay or extensive follow‑up).',
+        'harm-level-H-desc': 'An error occurred that resulted in life‑threatening injury or multiple serious injuries causing hospitalization and required intervention necessary to sustain life.',
+        'harm-level-I-desc': 'An error occurred that may have contributed to or resulted in the patient’s death.',
+      'good-catch': 'Good Catch',
       'add_approved_content_committee': 'Add Approved Content to Committees',
       'add-approved-content': 'Add Approved Content',
       'department-or-committee': 'Department or Committee',
@@ -1024,6 +1057,7 @@ const translations = {
         'medication': 'Medication.',
         'communication-issues': 'Communication Issues.',
         'fall': 'Fall.',
+        'patient-info-extra':'if the patient has any extra information, please add it here.',
 
         'delegate-all' : 'Delegate All Files',
         'radiation-treatment': 'Radiation treatment (Ionizing radiation Non-Ionizing (Us, UV, Laser, Other).',
@@ -1112,10 +1146,13 @@ const translations = {
         'pending-tickets': 'Pending OVR',
         'completed-tickets': 'Completed OVR',
         'total-departments': 'Total Departments',
+        'view-details':'View Ovr',
         'total-users': 'Total Users',
+        'event-description-steps': 'Kindly, mention the corrective actions were taken to avoid or decrease the harm that resulted from the incidence',
 
         // Tickets
         'ticket-list': 'OVR List',
+        'event-classification-category': 'Choose The Incidence Category',
         'ticket-details': 'OVR Details',
         'ticket-edit': 'Edit OVR',
         'ticket-status': 'OVR Status',
@@ -1181,7 +1218,7 @@ const translations = {
         'request-approval': 'Request Approval',
         'approve': 'Approve',
         'reject': 'Reject',
-
+'actions-taken-steps':'Kindly, mention the corrective actions were taken to avoid or decrease the harm that resulted from the incidence',
         // Profile
         'profile': 'Profile',
         'personal-info': 'Personal Information',
@@ -1230,6 +1267,8 @@ const translations = {
         'department-name': 'Department Name',
         'enter-department-name': 'Enter department name',
         'department-image': 'Image Path',
+        'view_reports_ovr': 'View Reports OVR',
+        'view_reports_approvals': 'View Reports Approvals',
         
         // Labels
         'identifier-label': 'Username / Email / Employee ID',
@@ -1264,6 +1303,7 @@ const translations = {
                 'disable_notifications': 'Disable Notifications',
         'disable_emails': 'Disable Emails',
         'disable_logs': 'Disable Logs',
+        'all-months': 'All Months',
 
         'add-committee': 'Add New Committee',
         'edit-committee': 'Edit Committee',
@@ -1595,7 +1635,7 @@ const translations = {
         'add-old-content': 'Add Old Content',
         'report-type': 'Report Type',
         'select-report-type': 'Select Report Type',
-        'accident': 'Accident',
+        'accident': 'Adverse Event',
         'near-miss': 'Near Miss',
         'serious': 'Serious Event',
         'error': 'Error Alert',
@@ -1720,7 +1760,6 @@ const translations = {
         'reporting-dept': 'Reporting Department',
         'responding-dept': 'Responding Department',
         
-        'patient-info': 'Patient Information',
         'patient-name': 'Patient Name',
         'medical-record-no': 'Medical Record Number',
         'gender': 'Gender',

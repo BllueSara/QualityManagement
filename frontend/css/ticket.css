@@ -195,6 +195,16 @@ html, body {
   background-color: #fff;
 }
 
+.form-group input[type="time"] {
+  padding: 10px 14px;
+  font-size: 0.95rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background-color: #fafafa;
+  color: #1f2937;
+  transition: border-color 0.2s;
+}
+
 /* خيارات الراديو والـ checkboxes */
 .time-group .time-options,
 .gender-group .gender-options,
@@ -321,6 +331,45 @@ html, body {
     gap: 20px;
   }
   .classification-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.level-harm-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px 14px;
+  margin-top: 10px;
+}
+.level-harm-option {
+  background: #f8f8f8;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px 10px 8px 10px;
+  display: flex;
+  align-items: flex-start;
+  min-height: 70px;
+  position: relative;
+  font-size: 15px;
+}
+.level-harm-option input[type="radio"] {
+  margin-top: 3px;
+  margin-left: 8px;
+  accent-color: #1eaa8c;
+}
+.level-harm-option label {
+  cursor: pointer;
+  font-weight: 500;
+  line-height: 1.5;
+  flex: 1;
+}
+@media (max-width: 900px) {
+  .level-harm-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .level-harm-grid {
     grid-template-columns: 1fr;
   }
 }

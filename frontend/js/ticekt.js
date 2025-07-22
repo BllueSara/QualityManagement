@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnCancel = document.getElementById('btnCancel');
     const reportingDeptSelect = document.getElementById('reportingDept');
     const respondingDeptSelect = document.getElementById('respondingDept');
+    const otherDeptsSelect = document.getElementById('otherDepts');
 const apiBase = 'http://localhost:3006/api';
 
     // Load departments from the database
@@ -45,8 +46,14 @@ respondingDeptSelect.innerHTML = `
   </option>
 `;
 
+otherDeptsSelect.innerHTML = `
+  <option value="" disabled selected data-translate="placeholder-select-dept">
+    ${translations[localStorage.getItem('language') || 'ar']["placeholder-select-dept"]}
+  </option>
+`;
 
-    // أضف كل قسم للقائمتين
+
+    // أضف كل قسم للقوائم الثلاث
 const lang = localStorage.getItem('language') || 'ar';
 
 departments.forEach(dept => {
@@ -58,7 +65,6 @@ try {
   deptName = dept.name || '';
 }
 
-
   const opt1 = document.createElement('option');
   opt1.value = dept.id;
   opt1.textContent = deptName;
@@ -68,6 +74,11 @@ try {
   opt2.value = dept.id;
   opt2.textContent = deptName;
   respondingDeptSelect.appendChild(opt2);
+
+  const opt3 = document.createElement('option');
+  opt3.value = dept.id;
+  opt3.textContent = deptName;
+  otherDeptsSelect.appendChild(opt3);
 });
 
 
@@ -84,6 +95,24 @@ try {
 
     // Load departments when the page loads
     loadDepartments();
+
+    // تعبئة التاريخ والوقت تلقائيًا عند تحميل الصفحة
+    const eventDateInput = document.getElementById('eventDate');
+    const eventTimeInput = document.getElementById('eventTime');
+    if (eventDateInput) {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      eventDateInput.value = `${yyyy}-${mm}-${dd}`;
+    }
+    if (eventTimeInput) {
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, '0');
+      const min = String(now.getMinutes()).padStart(2, '0');
+      const ss = String(now.getSeconds()).padStart(2, '0');
+      eventTimeInput.value = `${hh}:${min}:${ss}`;
+    }
 
     // عند الضغط على زر "إلغاء / عودة"، نعيد المستخدم للصفحة السابقة
     btnCancel.addEventListener('click', () => {
@@ -123,6 +152,50 @@ try {
           return;
         }
 
+        // --- إضافة توليد خيارات مستوى الضرر ---
+        function renderLevelOfHarmOptions() {
+          const lang = localStorage.getItem('language') || 'ar';
+          const options = [
+            { value: 'A', label: `${lang === 'ar' ? 'أ' : 'A'} (${getTranslation('capacity-to-cause-error')})`, desc: getTranslation('capacity-to-cause-error') },
+            { value: 'B', label: `${lang === 'ar' ? 'ب' : 'B'} (${getTranslation('error-no-patient')})`, desc: getTranslation('error-no-patient') },
+            { value: 'C', label: `${lang === 'ar' ? 'ج' : 'C'} (${getTranslation('error-no-harm')})`, desc: getTranslation('error-no-harm') },
+            { value: 'D', label: `${lang === 'ar' ? 'د' : 'D'} (${getTranslation('error-monitor')})`, desc: getTranslation('error-monitor') },
+            { value: 'E', label: `${lang === 'ar' ? 'هـ' : 'E'} (${getTranslation('error-minor-harm')})`, desc: getTranslation('error-minor-harm') },
+            { value: 'F', label: `${lang === 'ar' ? 'و' : 'F'} (${getTranslation('error-minor-harm-hospital')})`, desc: getTranslation('error-minor-harm-hospital') },
+            { value: 'G', label: `${lang === 'ar' ? 'ز' : 'G'} (${getTranslation('error-serious-harm')})`, desc: getTranslation('error-serious-harm') },
+            { value: 'H', label: `${lang === 'ar' ? 'ح' : 'H'} (${getTranslation('error-life-threatening')})`, desc: getTranslation('error-life-threatening') },
+            { value: 'I', label: `${lang === 'ar' ? 'ط' : 'I'} (${getTranslation('error-death')})`, desc: getTranslation('error-death') },
+          ];
+          const container = document.getElementById('levelOfHarmOptions');
+          if (!container) return;
+          container.innerHTML = '';
+          options.forEach(opt => {
+            const id = `levelHarm_${opt.value}`;
+            const radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.id = id;
+            radio.name = 'levelOfHarm';
+            radio.value = opt.value;
+            radio.required = true;
+            const label = document.createElement('label');
+            label.htmlFor = id;
+            label.innerHTML = `<b>${opt.label}</b>`;
+            container.appendChild(radio);
+            container.appendChild(label);
+            container.appendChild(document.createElement('br'));
+          });
+        }
+        // عند تحميل الصفحة أو تغيير اللغة
+        renderLevelOfHarmOptions();
+        window.addEventListener('languageChanged', renderLevelOfHarmOptions);
+
+        // التحقق من اختيار مستوى الضرر
+        const levelOfHarm = form.querySelector('input[name="levelOfHarm"]:checked');
+        if (!levelOfHarm) {
+            alert('يرجى اختيار تصنيف مستوى الضرر.');
+            return;
+        }
+
         // بعد: const formData = new FormData(form);
 
         // جمع بيانات النموذج
@@ -151,7 +224,6 @@ try {
         formData.set('report_short_desc', formData.get('reportShortDesc') || '');
         formData.set('event_description', formData.get('eventDescription'));
         formData.set('reporter_name', formData.get('reporterName'));
-        formData.set('report_date', formData.get('reportDate'));
         formData.set('reporter_position', formData.get('reporterPosition'));
         formData.set('reporter_phone', formData.get('reporterPhone'));
         formData.set('reporter_email', formData.get('reporterEmail'));
@@ -169,28 +241,43 @@ try {
         // خزنهم في FormData كسلسلة JSON
         formData.set('classification', JSON.stringify(classificationValues));
         formData.set('language', localStorage.getItem('language') || 'ar');
+        formData.set('level_of_harm', levelOfHarm.value);
 
         try {
-const response = await fetch(`${apiBase}/tickets`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: formData
-            });
+          const response = await fetch(`${apiBase}/tickets`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: formData
+          });
 
-            const result = await response.json();
-
-            if (response.ok) {
-                alert('تم إنشاء الحدث العارض بنجاح');
-                  window.location.reload();
-
-            } else {
-                alert(result.error || 'حدث خطأ أثناء إنشاء الحدث العارض');
+          let result;
+          try {
+            const text = await response.text();
+            let result;
+            try {
+              result = JSON.parse(text);
+            } catch (e) {
+              throw e;
             }
+            console.log('Result:', result);
+          } catch (e) {
+            console.error('JSON parse error:', e);
+            alert('خطأ في قراءة استجابة السيرفر. قد تكون التذكرة أُنشئت بنجاح، يرجى التحقق من قائمة التذاكر.');
+            return;
+          }
+
+          if (response.ok) {
+            alert('تم إنشاء الحدث العارض بنجاح');
+            window.location.reload();
+          } else {
+            alert(result.error || 'حدث خطأ أثناء إنشاء الحدث العارض');
+          }
         } catch (error) {
-            console.error('Error submitting OVR:', error);
-            alert('حدث خطأ أثناء إرسال الحدث العارض');
+          console.error('Error submitting OVR:', error);
+            alert(result.error || 'حدث خطأ أثناء إنشاء الحدث العارض');
+
         }
     });
 });

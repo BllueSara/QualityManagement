@@ -217,26 +217,16 @@ async function handleCommitteeApproval(req, res) {
       });
       
       // التوقيع الأول: شخصي
-      const [existingPersonalLogs] = await db.execute(
+      const [personalLog] = await db.execute(
         `SELECT * FROM committee_approval_logs WHERE content_id = ? AND approver_id = ? AND signed_as_proxy = 0 AND delegated_by IS NULL`,
         [contentId, approverId]
       );
-      
-      if (!existingPersonalLogs.length) {
-        // حفظ التوقيع الشخصي
+      if (!personalLog.length) {
+        // أضف سجل جديد
         await db.execute(`
-          INSERT IGNORE INTO committee_approval_logs (
-            content_id,
-            approver_id,
-            delegated_by,
-            signed_as_proxy,
-            status,
-            signature,
-            electronic_signature,
-            comments,
-            created_at
-          )
-          VALUES (?, ?, NULL, 0, ?, ?, ?, ?, NOW())
+          INSERT INTO committee_approval_logs (
+            content_id, approver_id, delegated_by, signed_as_proxy, status, signature, electronic_signature, comments, created_at
+          ) VALUES (?, ?, NULL, 0, ?, ?, ?, ?, NOW())
         `, [
           contentId,
           approverId,
@@ -245,21 +235,22 @@ async function handleCommitteeApproval(req, res) {
           electronic_signature || null,
           notes || ''
         ]);
-        console.log('✅ Saved personal committee approval for user:', currentUserId);
-      } else {
-        // تحديث التوقيع الشخصي
+        console.log('✅ Inserted personal committee approval for user:', currentUserId);
+      } else if (personalLog[0].status !== (approved ? 'approved' : 'rejected')) {
+        // حدّث السجل ليصبح معتمد
         await db.execute(
-          `UPDATE committee_approval_logs SET status = ?, signature = ?, electronic_signature = ?, comments = ?, created_at = NOW() WHERE content_id = ? AND approver_id = ? AND signed_as_proxy = 0 AND delegated_by IS NULL`,
+          `UPDATE committee_approval_logs SET status = ?, signature = ?, electronic_signature = ?, comments = ?, created_at = NOW() WHERE id = ?`,
           [
             approved ? 'approved' : 'rejected',
             signature || null,
             electronic_signature || null,
             notes || '',
-            contentId,
-            approverId
+            personalLog[0].id
           ]
         );
         console.log('✅ Updated personal committee approval for user:', currentUserId);
+      } else {
+        console.log('ℹ️ Personal committee approval already exists and is up to date.');
       }
       
       // التوقيع الثاني: بالنيابة
@@ -314,7 +305,7 @@ async function handleCommitteeApproval(req, res) {
         userId: currentUserId,
         delegatorId,
         contentId,
-        personalLogs: existingPersonalLogs.length,
+        personalLogs: personalLog.length,
         proxyLogs: existingProxyLogs.length
       });
       
@@ -400,32 +391,49 @@ async function handleCommitteeApproval(req, res) {
     }
 
     // Check if any approvers remain - منطق مبسط لحساب الاعتماد المزدوج
-    const [remaining] = await db.execute(`
-      SELECT COUNT(*) AS cnt
-      FROM committee_content_approvers cca
-      WHERE cca.content_id = ? 
-        AND (
-          -- للمستخدمين العاديين: لا يوجد توقيع
-          (cca.user_id NOT IN (
-            SELECT delegate_id FROM active_delegations
-          ) AND NOT EXISTS (
-            SELECT 1 FROM committee_approval_logs al
-            WHERE al.content_id = cca.content_id 
-              AND al.approver_id = cca.user_id
-              AND al.status = 'approved'
-          ))
-          OR
-          -- للمستخدمين المفوض لهم: أقل من توقيعين
-          (cca.user_id IN (
-            SELECT delegate_id FROM active_delegations
-          ) AND (
-            SELECT COUNT(*) FROM committee_approval_logs al
-            WHERE al.content_id = cca.content_id 
-              AND al.approver_id = cca.user_id
-              AND al.status = 'approved'
-          ) < 2)
-        )
-    `, [contentId]);
+    // منطق جديد: إذا كان هناك معتمد واحد فقط وهو مفوض له، يكفي توقيع واحد فقط
+    const [approvers] = await db.execute(
+      'SELECT user_id FROM committee_content_approvers WHERE content_id = ?',
+      [contentId]
+    );
+
+    let requiredApprovals = 1;
+    let isCurrentUserDelegate = false;
+    if (approvers.length === 1) {
+      // تحقق إذا كان هو مفوض له
+      const [isDelegate] = await db.execute(
+        'SELECT * FROM active_delegations WHERE delegate_id = ?',
+        [approvers[0].user_id]
+      );
+      if (isDelegate.length) {
+        isCurrentUserDelegate = true;
+        requiredApprovals = 1;
+      }
+    } else if (approvers.length > 1 && delegationRows.length) {
+      // إذا كان هناك أكثر من معتمد والمستخدم مفوض له، يحتاج توقيعين
+      isCurrentUserDelegate = true;
+      requiredApprovals = 2;
+    }
+
+    // جلب عدد التواقيع للمستخدم الحالي
+    const [userApprovals] = await db.execute(
+      `SELECT COUNT(*) as count FROM committee_approval_logs 
+       WHERE content_id = ? AND approver_id = ? AND status = 'approved'`,
+      [contentId, currentUserId]
+    );
+
+    // عدل شرط remaining بناءً على المنطق الجديد
+    let remainingCount = 0;
+    if (isCurrentUserDelegate) {
+      if (userApprovals[0].count < requiredApprovals) {
+        remainingCount = 1;
+      }
+    } else {
+      // منطق المستخدم العادي: لم يوقع بعد
+      if (userApprovals[0].count < 1) {
+        remainingCount = 1;
+      }
+    }
 
     // جلب عدد التوقيعات للمستخدم الحالي للتشخيص
     const [currentUserLogs] = await db.execute(`
@@ -454,7 +462,7 @@ async function handleCommitteeApproval(req, res) {
 
     console.log('🔍 Committee remaining approvers check:', {
       contentId,
-      remainingCount: remaining[0].cnt,
+      remainingCount: remainingCount,
       delegationRows: delegationRows.length,
       currentUserApprovals: currentUserLogs[0].count,
       activeDelegations: activeDelegations[0].count,
@@ -468,14 +476,14 @@ async function handleCommitteeApproval(req, res) {
       const ownerId = ownerRows[0].created_by;
       const fileTitle = ownerRows[0].title || '';
       // إذا لم يكتمل الاعتماد النهائي، أرسل إشعار اعتماد جزئي
-      if (approved && remaining[0].cnt > 0) {
+      if (approved && remainingCount > 0) {
         // جلب اسم المعتمد
         const [approverRows] = await db.execute('SELECT username FROM users WHERE id = ?', [approverId]);
         const approverName = approverRows.length ? approverRows[0].username : '';
         await sendPartialApprovalNotification(ownerId, fileTitle, approverName, true);
       }
       // إذا اكتمل الاعتماد النهائي، أرسل إشعار "تم اعتماد الملف من الإدارة"
-      if (remaining[0].cnt === 0) {
+      if (remainingCount === 0) {
         await sendOwnerApprovalNotification(ownerId, fileTitle, approved, true);
       }
     }
@@ -488,8 +496,28 @@ async function handleCommitteeApproval(req, res) {
       `, [contentId, approverId]);
     }
 
-    // If none remain, finalize
-    if (remaining[0].cnt === 0) {
+    // --- تحقق من اعتماد جميع المعتمدين قبل الاعتماد النهائي (لملفات اللجان) ---
+    // 1. جلب جميع المعتمدين
+    const [allApproversRows] = await db.execute(
+      'SELECT user_id FROM committee_content_approvers WHERE content_id = ?',
+      [contentId]
+    );
+    const approverIds = allApproversRows.map(r => r.user_id);
+
+    // 2. جلب عدد من وقع فعلاً (approved)
+    let approvedApproverCount = 0;
+    if (approverIds.length > 0) {
+      const [approvedLogsRows] = await db.execute(
+        `SELECT approver_id FROM committee_approval_logs WHERE content_id = ? AND status = 'approved' AND approver_id IN (${approverIds.map(() => '?').join(',')}) GROUP BY approver_id`,
+        [contentId, ...approverIds]
+      );
+      approvedApproverCount = approvedLogsRows.length;
+    }
+
+    // 3. إذا كل المعتمدين وقعوا، اعتمد الملف نهائياً
+    const allApproved = approverIds.length > 0 && approvedApproverCount === approverIds.length;
+
+    if (allApproved) {
       console.log('🎉 All committee approvers completed! Updating file status...');
       await generateFinalSignedCommitteePDF(contentId);
       const updateResult = await db.execute(`
@@ -502,7 +530,7 @@ async function handleCommitteeApproval(req, res) {
       `, [approverId, contentId]);
       console.log('✅ Committee file status updated:', updateResult);
     } else {
-      console.log('⏳ Still waiting for', remaining[0].cnt, 'committee approvers');
+      console.log('⏳ Still waiting for other committee approvers:', approverIds.length - approvedApproverCount);
     }
 
     res.json({ status: 'success', message: 'تم التوقيع بنجاح' });

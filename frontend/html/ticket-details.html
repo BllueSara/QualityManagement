@@ -60,7 +60,7 @@
           <!-- تاريخ الحدث -->
           <div class="field-group">
             <label class="field-label" data-translate="event-date">تاريخ الحدث</label>
-            <div class="field-value" data-field="event-date">15 فبراير 2024</div>
+            <div class="field-value" data-field="event-date"></div>
           </div>
           <!-- وقت الحدث -->
           <div class="field-group">
@@ -69,7 +69,7 @@
               <span class="radio-readonly">
                 <input type="radio" checked disabled /> <span data-translate="morning">صباحاً</span>
               </span>
-              <span class="time-text">09:30</span>
+              <span class="time-text"></span>
             </div>
           </div>
         </div>
@@ -77,19 +77,24 @@
         <div class="field-single">
           <!-- موقع الحدث -->
           <label class="field-label" data-translate="event-location">موقع الحدث</label>
-          <div class="field-value" data-field="event-location">قسم الطوارئ - الطابق الأول</div>
+          <div class="field-value" data-field="event-location">    </div>
         </div>
 
         <div class="field-row">
           <!-- القسم المبلغ -->
           <div class="field-group">
             <label class="field-label" data-translate="reporting-dept">القسم المبلغ</label>
-            <div class="field-value" data-field="reporting-dept">قسم الطوارئ</div>
+            <div class="field-value" data-field="reporting-dept"> </div>
           </div>
           <!-- القسم المستجيب -->
           <div class="field-group">
             <label class="field-label" data-translate="responding-dept">القسم المستجيب</label>
-            <div class="field-value" data-field="responding-dept">إدارة السلامة</div>
+            <div class="field-value" data-field="responding-dept"> </div>
+          </div>
+          <!-- القسم الآخر المعني -->
+          <div class="field-group">
+            <label class="field-label" data-translate="other-depts">القسم الآخر المعني</label>
+            <div class="field-value" id="otherDeptView"></div>
           </div>
         </div>
       </div>
@@ -106,27 +111,16 @@
           <!-- اسم المريض -->
           <div class="field-group">
             <label class="field-label" data-translate="patient-name">اسم المريض</label>
-            <div class="field-value" data-field="patient-name">أحمد محمد</div>
+            <div class="field-value" data-field="patient-name"> </div>
           </div>
           <!-- رقم الملف الطبي -->
           <div class="field-group">
             <label class="field-label" data-translate="medical-record-no">رقم الملف الطبي</label>
-            <div class="field-value" data-field="medical-record-no">123456789</div>
+            <div class="field-value" data-field="medical-record-no"></div>
           </div>
         </div>
 
-        <div class="field-row">
-          <!-- الجنس -->
-          <div class="field-group">
-            <label class="field-label" data-translate="gender">الجنس</label>
-            <div class="field-value" data-field="gender">
-              <span class="radio-readonly">
-                <input type="radio" checked disabled /> <span data-translate="male">ذكر</span>
-              </span>
-            </div>
-          </div>
 
-          </div>
         </div>
       </div>
     </section>
@@ -148,74 +142,6 @@
         </div>
       </div>
     </section>
-
-    <!-- ===== قسم: وصف الحدث ===== -->
-    <section class="card-section">
-      <div class="section-header">
-        <i class="fas fa-file-alt section-icon"></i>
-        <h2 class="section-title" data-translate="event-description">وصف الحدث</h2>
-      </div>
-      <div class="section-content">
-        <div class="field-single">
-          <div class="field-value" data-field="event-description">
-            تم ملاحظة خطأ في إجراءات السلامة أثناء نقل المريض من قسم الطوارئ إلى قسم العناية المركزة
-          </div>
-        </div>
-        <div class="attachments">
-          <i class="fas fa-paperclip"></i> <span data-translate="has-attachments">يوجد مرفقات</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===== قسم: بيانات المبلغ ===== -->
-    <section class="card-section">
-      <div class="section-header">
-        <i class="fas fa-user section-icon"></i>
-        <h2 class="section-title" data-translate="reporter-info">بيانات المبلغ</h2>
-      </div>
-      <div class="section-content">
-        <div class="field-row">
-          <!-- الاسم -->
-          <div class="field-group">
-            <label class="field-label" data-translate="reporter-name">الاسم</label>
-            <div class="field-value" data-field="reporter-name">محمد أحمد</div>
-          </div>
-          <!-- رقم الجوال -->
-          <div class="field-group">
-            <label class="field-label" data-translate="reporter-phone">رقم الجوال</label>
-            <div class="field-value" data-field="reporter-phone">05xxxxxxx</div>
-          </div>
-        </div>
-        <div class="field-row">
-          <!-- المسمي الوظيفي -->
-          <div class="field-group">
-            <label class="field-label" data-translate="reporter-position">المسمي الوظيفي</label>
-            <div class="field-value" data-field="reporter-position">أخصائي سلامة</div>
-          </div>
-          <!-- البريد الإلكتروني -->
-          <div class="field-group">
-            <label class="field-label" data-translate="reporter-email">البريد الإلكتروني</label>
-            <div class="field-value" data-field="reporter-email">mohammed@example.com</div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===== قسم: الإجراءات المتخذة ===== -->
-    <section class="card-section">
-      <div class="section-header">
-        <i class="fas fa-tools section-icon"></i>
-        <h2 class="section-title" data-translate="actions-taken">الإجراءات المتخذة</h2>
-      </div>
-      <div class="section-content">
-        <div class="field-single">
-          <div class="field-value" data-field="actions-taken">
-            تم اتخاذ الإجراءات التصحيحية اللازمة وتحديث إجراءات السلامة في القسم
-          </div>
-        </div>
-      </div>
-    </section>
-
     <!-- ===== قسم: تصنيف الحدث ===== -->
     <section class="card-section">
       <div class="section-header">
@@ -230,6 +156,95 @@
         </div>
       </div>
     </section>
+    <!-- ===== قسم: وصف الحدث ===== -->
+    <section class="card-section">
+      <div class="section-header">
+        <i class="fas fa-file-alt section-icon"></i>
+        <h2 class="section-title" data-translate="event-description">وصف الحدث</h2>
+      </div>
+      <div class="section-content">
+        <div class="field-single">
+          <div class="field-value" data-field="event-description">
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== قسم: الإجراءات المتخذة ===== -->
+    <section class="card-section">
+      <div class="section-header">
+        <i class="fas fa-tools section-icon"></i>
+        <h2 class="section-title" data-translate="actions-taken">الإجراءات المتخذة</h2>
+      </div>
+      <div class="section-content">
+        <div class="field-single">
+          <div class="field-value" data-field="actions-taken">
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== قسم: المرفقات ===== -->
+    <section class="card-section">
+      <div class="section-header">
+        <i class="fas fa-paperclip section-icon"></i>
+        <h2 class="section-title" data-translate="attachments">المرفقات</h2>
+      </div>
+      <div class="section-content">
+        <div id="attachmentsView" class="attachments-list"></div>
+      </div>
+    </section>
+    <!-- ===== قسم: تصنيف مستوى الضرر ===== -->
+    <section class="card-section">
+      <div class="section-header">
+        <i class="fas fa-exclamation-circle section-icon"></i>
+        <h2 class="section-title" data-translate="event-classification-level">تصنيف مستوى الضرر</h2>
+      </div>
+      <div class="section-content">
+        <div id="levelHarmView" class="field-value"></div>
+      </div>
+    </section>
+
+    <!-- ===== قسم: بيانات المبلغ ===== -->
+    <section class="card-section">
+      <div class="section-header">
+        <i class="fas fa-user section-icon"></i>
+        <h2 class="section-title" data-translate="reporter-info">بيانات المبلغ</h2>
+      </div>
+      <div class="section-content">
+        <div class="field-row">
+          <!-- الاسم -->
+          <div class="field-group">
+            <label class="field-label" data-translate="reporter-name">الاسم</label>
+            <div class="field-value" data-field="reporter-name"> </div>
+          </div>
+          <!-- رقم الجوال -->
+          <div class="field-group">
+            <label class="field-label" data-translate="reporter-phone">رقم الجوال</label>
+            <div class="field-value" data-field="reporter-phone"></div>
+          </div>
+        </div>
+        <div class="field-row">
+          <!-- المسمي الوظيفي -->
+          <div class="field-group">
+            <label class="field-label" data-translate="reporter-position">المسمي الوظيفي</label>
+            <div class="field-value" data-field="reporter-position"> </div>
+          </div>
+          <!-- البريد الإلكتروني -->
+          <div class="field-group">
+            <label class="field-label" data-translate="reporter-email">البريد الإلكتروني</label>
+            <div class="field-value" data-field="reporter-email"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+
+
+
 
     <!-- ===== قسم: تفاصيل الإصابة ===== -->
     <section class="card-section">
@@ -252,6 +267,7 @@
         </div>
       </div>
     </section>
+
 
     <!-- ===== قسم: إضافة رد / إجراء من الجهة المختصة ===== -->
     <section class="card-section">

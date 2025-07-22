@@ -1,9 +1,22 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   // Apply language settings
   const currentLang = localStorage.getItem('language') || 'ar';
   if (typeof setLanguage === 'function') {
     setLanguage(currentLang);
   }
+
+  let allDepartments = [];
+
+  async function fetchAllDepartments() {
+    const token = localStorage.getItem('token');
+    const res = await fetch('http://localhost:3006/api/departments', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    allDepartments = Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : [];
+  }
+
+  await fetchAllDepartments();
 
   const params = new URLSearchParams(window.location.search);
   const ticketId = params.get('id');
@@ -92,19 +105,41 @@ function parseDeptName(name) {
 document.querySelector('[data-field="reporting-dept"]').textContent = parseDeptName(ticket.reporting_dept_name);
 document.querySelector('[data-field="responding-dept"]').textContent = parseDeptName(ticket.responding_dept_name);
 
+      // عرض اسم القسم الآخر المعني
+      if (ticket.other_depts) {
+        const dept = allDepartments.find(d => String(d.id) === String(ticket.other_depts));
+        let deptName = '';
+        if (dept) {
+          try {
+            const lang = localStorage.getItem('language') || 'ar';
+            const nameObj = typeof dept.name === 'string' ? JSON.parse(dept.name) : dept.name;
+            deptName = nameObj?.[lang] || nameObj?.ar || nameObj?.en || '';
+          } catch {
+            deptName = dept.name || '';
+          }
+        }
+        document.getElementById('otherDeptView').textContent = deptName || ticket.other_depts;
+      }
+
       document.querySelector('[data-field="patient-name"]').textContent = ticket.patient_name || '-';
       document.querySelector('[data-field="medical-record-no"]').textContent = ticket.medical_record_no || '-';
-      document.querySelector('[data-field="gender"]').textContent = getTranslation(normalizeValue(ticket.gender));
       document.querySelector('[data-field="report-type"]').textContent = getTranslation(normalizeValue(ticket.report_type));
       document.querySelector('[data-field="event-description"]').textContent = ticket.event_description;
 
-      const attachmentsEl = document.querySelector('.attachments');
+      const attachmentsEl = document.getElementById('attachmentsView');
       if (ticket.attachments && ticket.attachments.length) {
-        const currentLang = localStorage.getItem('language') || 'ar';
-        const attachmentText = currentLang === 'ar' 
-          ? `${ticket.attachments.length} مرفقات`
-          : `${ticket.attachments.length} attachments`;
-        attachmentsEl.innerHTML = `<i class="fas fa-paperclip"></i> ${attachmentText}`;
+        attachmentsEl.innerHTML = '';
+        ticket.attachments.forEach(att => {
+          const filename = att.filename; // استخراج اسم الملف من الكائن
+          const url = `http://localhost:3006/uploads/tickets/${filename}`;
+          const link = document.createElement('a');
+          link.href = url;
+          link.target = '_blank';
+          link.textContent = filename;
+          link.style.display = 'block';
+          link.style.marginBottom = '5px';
+          attachmentsEl.appendChild(link);
+        });
       } else {
         attachmentsEl.style.display = 'none';
       }
@@ -114,6 +149,9 @@ document.querySelector('[data-field="responding-dept"]').textContent = parseDept
       document.querySelector('[data-field="reporter-position"]').textContent = ticket.reporter_position;
       document.querySelector('[data-field="reporter-email"]').textContent = ticket.reporter_email;
       document.querySelector('[data-field="actions-taken"]').textContent = ticket.actions_taken;
+
+      // أضف سطر الطباعة هنا
+      console.log('Ticket object:', ticket);
 
       const tagsContainer = document.querySelector('.tags-container');
       tagsContainer.innerHTML = '';
@@ -137,10 +175,31 @@ document.querySelector('[data-field="responding-dept"]').textContent = parseDept
 
       // 🟢 هنا نستدعي الردود من نفس الدالة
       reloadReplies();
+
+      // 🟢 عرض تصنيف مستوى الضرر
+      if (ticket.level_of_harm) {
+        const key = `harm-level-${ticket.level_of_harm}-desc`;
+        const lang = currentLang || 'ar';
+        const desc = (window.translations && window.translations[lang] && window.translations[lang][key]) ? window.translations[lang][key] : ticket.level_of_harm;
+        const el = document.getElementById('levelHarmView');
+        if (el) el.textContent = desc;
+      }
     })
     .catch(error => {
       alert(getTranslation('error-loading-ticket'));
     });
+
+  // بعد جلب بيانات التذكرة
+  const tokenPayload = token ? JSON.parse(atob(token.split('.')[1])) : {};
+  const userRole = tokenPayload.role;
+
+  // إخفاء المرفقات وبيانات المبلغ لغير admin وmanager_ovr
+  if (userRole !== 'admin' && userRole !== 'manager_ovr') {
+    const attachmentsSection = document.getElementById('attachmentsView')?.closest('.card-section');
+    if (attachmentsSection) attachmentsSection.style.display = 'none';
+    const reporterSection = document.querySelector('.card-section .section-title[data-translate="reporter-info"]')?.closest('.card-section');
+    if (reporterSection) reporterSection.style.display = 'none';
+  }
 
   const replyTextarea = document.getElementById('replyTextarea');
   const submitReply = document.getElementById('submitReply');
@@ -225,8 +284,7 @@ function normalizeValue(val) {
   if (val === 'جسدية' || val.toLowerCase() === 'physical') return 'physical';
   if (val === 'نفسية' || val.toLowerCase() === 'psychic' || val.toLowerCase() === 'psychological') return 'psychic';
   // gender
-  if (val === 'ذكر' || val.toLowerCase() === 'male') return 'male';
-  if (val === 'أنثى' || val.toLowerCase() === 'female') return 'female';
+
   // report_type
   if (val === 'حادث' || val.toLowerCase() === 'accident') return 'accident';
   if (val === 'حدث قابل للتبليغ' || val.toLowerCase().includes('near')) return 'near-miss';

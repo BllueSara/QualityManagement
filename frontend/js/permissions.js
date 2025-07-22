@@ -444,8 +444,15 @@ document.querySelector('.user-profile-header')?.classList.add('active');
 
   // جلب الأدوار للمستخدمين غير Admin
   const roles = await fetchJSON(`${apiBase}/users/roles`);
-  roleSelect.innerHTML = roles.map(r => `
-    <option value=\"${r}\" ${u.role===r?'selected':''}>${r}</option>
+  console.log('Roles from API:', roles);
+  // إظهار manager_ovr فقط للادمن
+  let filteredRoles = roles;
+  console.log('isAdmin:', isAdmin);
+  if (!isAdmin) {
+    filteredRoles = roles.filter(r => r !== 'manager_ovr');
+  }
+  roleSelect.innerHTML = filteredRoles.map(r => `
+    <option value="${r}" ${u.role===r?'selected':''}>${r}</option>
   `).join('');
   btnChangeRole.onclick = () => rolePopup.classList.add('show');
 

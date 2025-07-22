@@ -16,12 +16,13 @@ static async create(ticketData, userId) {
     reporting_dept_id, responding_dept_id, other_depts,
     patient_name, medical_record_no, dob, gender,
     report_type, report_short_desc, event_description,
-    reporter_name, report_date, reporter_position,
+    reporter_name,  reporter_position,
     reporter_phone, reporter_email, actions_taken,
     had_injury, injury_type,
     attachments,
     classification,
-    patient_types    // ← تأكد أنك مرّرت هذا الحقل من الـ front-end
+    patient_types,
+    level_of_harm 
   } = ticketData;
 
   const connection = await db.getConnection();
@@ -38,19 +39,21 @@ static async create(ticketData, userId) {
          reporting_dept_id, responding_dept_id, other_depts,
          patient_name, medical_record_no, dob, gender,
          report_type, report_short_desc, event_description,
-         reporter_name, report_date, reporter_position,
+         reporter_name, reporter_position,
          reporter_phone, reporter_email, actions_taken,
          had_injury, injury_type,
+         level_of_harm,
          status, created_by
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'جديد', ?)`,
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?, ?, ?, ?, ?, 'جديد', ?)`,
       [
         event_date, event_time, event_location,
         reporting_dept_id, responding_dept_id, other_depts,
         patient_name, medical_record_no, dob, safeGender,
         report_type, report_short_desc, event_description,
-        reporter_name, report_date, reporter_position,
+        reporter_name, reporter_position,
         reporter_phone, reporter_email, actions_taken,
         had_injury, injury_type,
+        level_of_harm, 
         userId
       ]
     );
@@ -114,7 +117,7 @@ static async findAllAndAssignments(userId, userRole) {
       [userId]
     );
     const userPerms = new Set(permRows.map(r => r.permission_key));
-    const canViewAll = userRole === 'admin' || userPerms.has('view_tickets');
+    const canViewAll = userRole === 'admin' || userRole === 'manager_ovr' || userPerms.has('view_tickets');
 
     // 2) SQL مع تجميع التصنيفات بشكل موثوق
     let baseSQL = `
@@ -211,7 +214,7 @@ static async findAll(userId, userRole) {
       LEFT JOIN users u      ON t.created_by = u.id
     `;
     const params = [];
-    if (userRole !== 'admin') {
+    if (userRole !== 'admin' && userRole !== 'manager_ovr') {
       // تصفية فقط على التذاكر التي أنشأها المستخدم
       sql += ` WHERE t.created_by = ?`;
       params.push(userId);
@@ -350,7 +353,6 @@ static async update(id, ticketData, userId) {
       report_short_desc = orig.report_short_desc ?? null,
       event_description = orig.event_description ?? null,
       reporter_name     = orig.reporter_name ?? null,
-      report_date       = orig.report_date,
       reporter_position = orig.reporter_position ?? null,
       reporter_phone    = orig.reporter_phone ?? null,
       reporter_email    = orig.reporter_email ?? null,
@@ -358,7 +360,8 @@ static async update(id, ticketData, userId) {
       had_injury,
       injury_type,
       status            = orig.status,
-      attachments       = []
+      attachments       = [],
+      level_of_harm     = orig.level_of_harm 
     } = ticketData;
 
     // 2.1) معالجة الحقول الاختيارية
@@ -380,10 +383,7 @@ static async update(id, ticketData, userId) {
       injury_type = (injury_type === '') ? null : injury_type;
     }
 
-    // report_date: لو مررنا فراغ استخدم القيمة الأصلية
-    if (ticketData.report_date === undefined || ticketData.report_date === '') {
-      report_date = orig.report_date;
-    }
+
 
     // لو أرسل attachments كمصفوفة:
     if (Array.isArray(ticketData.attachments)) {
@@ -407,13 +407,13 @@ static async update(id, ticketData, userId) {
          report_short_desc  = ?,
          event_description  = ?,
          reporter_name      = ?,
-         report_date        = ?,
          reporter_position  = ?,
          reporter_phone     = ?,
          reporter_email     = ?,
          actions_taken      = ?,
          had_injury         = ?,
          injury_type        = ?,
+         level_of_harm      = ?, 
          status             = ?,
          updated_at         = CURRENT_TIMESTAMP
        WHERE id = ?`,
@@ -432,13 +432,13 @@ static async update(id, ticketData, userId) {
         report_short_desc,
         event_description,
         reporter_name,
-        report_date,
         reporter_position,
         reporter_phone,
         reporter_email,
         actions_taken,
         had_injury,
         injury_type,
+        level_of_harm, 
         status,
         id
       ]
@@ -476,7 +476,7 @@ static async update(id, ticketData, userId) {
       ]);
       await connection.query(
         `INSERT INTO ticket_attachments 
-           (ticket_id, filename, filepath, mimetype) 
+           (ticket_id, filename, path, mimetype) 
          VALUES ?`,
         [attVals]
       );

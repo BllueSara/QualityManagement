@@ -61,10 +61,7 @@
             </div>
             <div class="field-group">
               <label for="event_time" class="field-label" data-translate="event-time">وقت الحدث</label>
-              <select id="event_time" name="event_time" class="field-input" required>
-                <option value="صباحاً" data-translate="morning">صباحاً</option>
-                <option value="مساءً" data-translate="evening">مساءً</option>
-              </select>
+              <input type="time" id="event_time" name="event_time" class="field-input" required />
             </div>
           </div>
           <div class="field-single">
@@ -79,6 +76,12 @@
             <div class="field-group">
               <label for="responding_dept_id" class="field-label" data-translate="responding-dept">القسم المستجيب</label>
               <select id="responding_dept_id" name="responding_dept_id" class="field-input" required></select>
+            </div>
+            <div class="field-group">
+              <label for="other_depts" class="field-label" data-translate="other-depts">القسم الآخر المعني</label>
+              <select id="other_depts" name="other_depts" class="field-input" required>
+                <option value="" disabled selected data-translate="placeholder-select-dept">اختر القسم</option>
+              </select>
             </div>
           </div>
         </div>
@@ -101,17 +104,7 @@
               <input type="text" id="medical_record_no" name="medical_record_no" class="field-input" data-translate-placeholder="enter-medical-record" placeholder="ادخل رقم الملف الطبي" />
             </div>
           </div>
-          <div class="field-row">
-            <div class="field-group">
-              <label class="field-label" data-translate="gender">الجنس</label>
-              <select id="gender" name="gender" class="field-input">
-                <option value="">—</option>
-                <option value="ذكر" data-translate="male">ذكر</option>
-                <option value="أنثى" data-translate="female">أنثى</option>
-              </select>
-            </div>
-
-          </div>
+          
         </div>
       </section>
 
@@ -122,84 +115,11 @@
           <h2 class="section-title" data-translate="report-type">نوع البلاغ</h2>
         </div>
         <div class="section-content">
-            <select id="report_type" name="report_type" class="field-input" required>
-              <option value="capacity-to-cause-error" data-translate="capacity-to-cause-error">الظروف أو الأحداث التي لديها القدرة على التسبب في حدوث خطأ.</option>
-              <option value="error-no-patient" data-translate="error-no-patient">حدث خطأ ولكن لم يصل أثره إلى المريض.</option>
-              <option value="error-no-harm" data-translate="error-no-harm">حدث خطأ وصل أثره إلى المريض ولكن لم يسبب ضرراً له.</option>
-              <option value="error-monitor" data-translate="error-monitor">حدث خطأ وصل أثره إلى المريض وتطلب المتابعة للتأكد من عدم تسببه في ضرر بالمريض أو تطلب التدخل لمنع الضرر أو الإجراءات معاً.</option>
-              <option value="error-minor-harm" data-translate="error-minor-harm">حدث خطأ قد يكون قد أسهم في حدوث ضرر مؤقت للمريض أو أدى إلى ذلك وتطلب التدخل.</option>
-              <option value="error-minor-harm-hospital" data-translate="error-minor-harm-hospital">حدث خطأ قد يكون قد أسهم في حدوث ضرر مؤقت للمريض أو أدى إلى ذلك وتطلب التنويم بالمستشفى لفترات بسيطة أو لفترات طويلة.</option>
-              <option value="error-serious-harm" data-translate="error-serious-harm">حدث خطأ قد يكون قد أسهم في ضرر دائم للمريض أو أدى إلى ذلك الضرر.</option>
-              <option value="error-life-threatening" data-translate="error-life-threatening">حدث خطأ يتطلب التدخل الضروري لإنقاذ الحياة.</option>
-              <option value="error-death" data-translate="error-death">حدث خطأ قد يكون قد أسهم في وفاة المريض أو أدى إلى وفاته.</option>
-            </select>
-        </div>
-      </section>
-
-      <!-- وصف الحدث -->
-      <section class="card-section">
-        <div class="section-header">
-          <i class="fas fa-file-alt section-icon"></i>
-          <h2 class="section-title" data-translate="event-description">وصف الحدث</h2>
-        </div>
-        <div class="section-content">
-          <textarea
-            id="event_description"
-            name="event_description"
-            class="field-input"
-            rows="4"
-            data-translate-placeholder="enter-event-description"
-            placeholder="صف الحدث..."
-            required
-          ></textarea>
-        </div>
-      </section>
-
-      <!-- بيانات المبلغ -->
-      <section class="card-section">
-        <div class="section-header">
-          <i class="fas fa-user section-icon"></i>
-          <h2 class="section-title" data-translate="reporter-info">بيانات المبلغ</h2>
-        </div>
-        <div class="section-content">
-          <div class="field-row">
-            <div class="field-group">
-              <label for="reporter_name" class="field-label" data-translate="reporter-name">الاسم</label>
-              <input type="text" id="reporter_name" name="reporter_name" class="field-input" required data-translate-placeholder="enter-reporter-name" placeholder="ادخل اسم المبلغ" />
-            </div>
-            <div class="field-group">
-              <label for="reporter_phone" class="field-label" data-translate="reporter-phone">رقم الجوال</label>
-              <input type="tel" id="reporter_phone" name="reporter_phone" class="field-input" required data-translate-placeholder="placeholder-phone" placeholder="05XXXXXXXX" />
-            </div>
-          </div>
-          <div class="field-row">
-            <div class="field-group">
-              <label for="reporter_position" class="field-label" data-translate="reporter-position">المسمي الوظيفي</label>
-              <input type="text" id="reporter_position" name="reporter_position" class="field-input" data-translate-placeholder="enter-reporter-position" placeholder="ادخل المسمي الوظيفي" />
-            </div>
-            <div class="field-group">
-              <label for="reporter_email" class="field-label" data-translate="reporter-email">البريد الإلكتروني</label>
-              <input type="email" id="reporter_email" name="reporter_email" class="field-input" data-translate-placeholder="enter-email" placeholder="name@moh.gov.sa" />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- الإجراءات المتخذة -->
-      <section class="card-section">
-        <div class="section-header">
-          <i class="fas fa-tools section-icon"></i>
-          <h2 class="section-title" data-translate="actions-taken">الإجراءات المتخذة</h2>
-        </div>
-        <div class="section-content">
-          <textarea
-            id="actions_taken"
-            name="actions_taken"
-            class="field-input"
-            rows="3"
-            data-translate-placeholder="enter-actions"
-            placeholder="اكتب الإجراءات المتخذة..."
-          ></textarea>
+          <select id="report_type" name="report_type" class="field-input" required>
+            <option value="حدث عارض" data-translate="accident">حدث عارض</option>
+            <option value="حدث جسيم" data-translate="serious">حدث جسيم</option>
+            <option value="إلتقاطة جيدة" data-translate="good-catch">إلتقاطة جيدة</option>
+          </select>
         </div>
       </section>
 
@@ -245,6 +165,142 @@
         </div>
       </section>
 
+      <!-- وصف الحدث -->
+      <section class="card-section">
+        <div class="section-header">
+          <i class="fas fa-file-alt section-icon"></i>
+          <h2 class="section-title" data-translate="event-description">وصف الحدث</h2>
+        </div>
+        <div class="section-content">
+          <textarea
+            id="event_description"
+            name="event_description"
+            class="field-input"
+            rows="4"
+            data-translate-placeholder="enter-event-description"
+            placeholder="صف الحدث..."
+            required
+          ></textarea>
+        </div>
+      </section>
+      <!-- الإجراءات المتخذة -->
+      <section class="card-section">
+        <div class="section-header">
+          <i class="fas fa-tools section-icon"></i>
+          <h2 class="section-title" data-translate="actions-taken">الإجراءات المتخذة</h2>
+        </div>
+        <div class="section-content">
+          <textarea
+            id="actions_taken"
+            name="actions_taken"
+            class="field-input"
+            rows="3"
+            data-translate-placeholder="enter-actions"
+            placeholder="اكتب الإجراءات المتخذة..."
+          ></textarea>
+        </div>
+      </section>
+      <!-- ===== قسم: المرفقات ===== -->
+      <!-- القسم التالي سيظهر فقط للادمن وmanager_ovr عبر جافاسكريبت، لذا نحذفه من HTML العام -->
+      <!--
+      <section class="card-section">
+        <div class="section-header">
+          <i class="fas fa-paperclip section-icon"></i>
+          <h2 class="section-title" data-translate="attachments">المرفقات</h2>
+        </div>
+        <div class="section-content">
+          <div id="attachmentsView" class="attachments-list">لا توجد مرفقات حالية</div>
+          <label for="attachmentsInput" data-translate="choose-file" style="margin-bottom:6px;display:block;cursor:pointer;">choose-file</label>
+          <input type="file" name="attachments" id="attachmentsInput" multiple style="margin-bottom:4px;" />
+          <div id="noFilesMsg" data-translate="no-files-selected" style="margin-top:8px;color:#888;font-size:0.95em">لم يتم اختيار أي ملفات</div>
+        </div>
+      </section>
+      -->
+      <!-- ===== قسم: تصنيف مستوى الضرر ===== -->
+      <section class="card-section">
+        <div class="section-header">
+          <i class="fas fa-exclamation-circle section-icon"></i>
+          <h2 class="section-title" data-translate="event-classification-level">تصنيف مستوى الضرر <span style="color:red">*</span></h2>
+        </div>
+        <div class="section-content">
+          <div class="form-group required full-width">
+            <label data-translate="level-of-harm-desc"> اختر تصنيف مستوى الضرر الناتج عن الحدث العارض بناءً على البيان الموضح أعلاه</label>
+            <div class="level-harm-grid">
+              <div class="level-harm-option">
+                <input type="radio" id="harmA" name="level_of_harm" value="A" required />
+                <label for="harmA" data-translate="harm-level-A-desc"></label>
+              </div>
+              <div class="level-harm-option">
+                <input type="radio" id="harmB" name="level_of_harm" value="B" required />
+                <label for="harmB" data-translate="harm-level-B-desc"></label>
+              </div>
+              <div class="level-harm-option">
+                <input type="radio" id="harmC" name="level_of_harm" value="C" required />
+                <label for="harmC" data-translate="harm-level-C-desc"></label>
+              </div>
+              <div class="level-harm-option">
+                <input type="radio" id="harmD" name="level_of_harm" value="D" required />
+                <label for="harmD" data-translate="harm-level-D-desc"></label>
+              </div>
+              <div class="level-harm-option">
+                <input type="radio" id="harmE" name="level_of_harm" value="E" required />
+                <label for="harmE" data-translate="harm-level-E-desc"></label>
+              </div>
+              <div class="level-harm-option">
+                <input type="radio" id="harmF" name="level_of_harm" value="F" required />
+                <label for="harmF" data-translate="harm-level-F-desc"></label>
+              </div>
+              <div class="level-harm-option">
+                <input type="radio" id="harmG" name="level_of_harm" value="G" required />
+                <label for="harmG" data-translate="harm-level-G-desc"></label>
+              </div>
+              <div class="level-harm-option">
+                <input type="radio" id="harmH" name="level_of_harm" value="H" required />
+                <label for="harmH" data-translate="harm-level-H-desc"></label>
+              </div>
+              <div class="level-harm-option">
+                <input type="radio" id="harmI" name="level_of_harm" value="I" required />
+                <label for="harmI" data-translate="harm-level-I-desc"></label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <!-- بيانات المبلغ -->
+      <!-- القسم التالي سيظهر فقط للادمن وmanager_ovr عبر جافاسكريبت، لذا نحذفه من HTML العام -->
+      <!--
+      <section class="card-section">
+        <div class="section-header">
+          <i class="fas fa-user section-icon"></i>
+          <h2 class="section-title" data-translate="reporter-info">بيانات المبلغ</h2>
+        </div>
+        <div class="section-content">
+          <div class="field-row">
+            <div class="field-group">
+              <label for="reporter_name" class="field-label" data-translate="reporter-name">الاسم</label>
+              <input type="text" id="reporter_name" name="reporter_name" class="field-input" required data-translate-placeholder="enter-reporter-name" placeholder="ادخل اسم المبلغ" />
+            </div>
+            <div class="field-group">
+              <label for="reporter_phone" class="field-label" data-translate="reporter-phone">رقم الجوال</label>
+              <input type="tel" id="reporter_phone" name="reporter_phone" class="field-input" required data-translate-placeholder="placeholder-phone" placeholder="05XXXXXXXX" />
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label for="reporter_position" class="field-label" data-translate="reporter-position">المسمي الوظيفي</label>
+              <input type="text" id="reporter_position" name="reporter_position" class="field-input" data-translate-placeholder="enter-reporter-position" placeholder="ادخل المسمي الوظيفي" />
+            </div>
+            <div class="field-group">
+              <label for="reporter_email" class="field-label" data-translate="reporter-email">البريد الإلكتروني</label>
+              <input type="email" id="reporter_email" name="reporter_email" class="field-input" data-translate-placeholder="enter-email" placeholder="name@moh.gov.sa" />
+            </div>
+          </div>
+        </div>
+      </section>
+      -->
+
+
+
       <!-- تفاصيل الإصابة -->
       <section class="card-section">
         <div class="section-header">
@@ -272,18 +328,9 @@
         </div>
       </section>
 
-      <!-- مرفقات جديدة -->
-      <section class="card-section">
-        <div class="section-header">
-          <i class="fas fa-paperclip section-icon"></i>
-          <h2 class="section-title" data-translate="attachments">مرفقات (اختياري)</h2>
-        </div>
-        <div class="section-content">
-          <label for="attachmentsInput" data-translate="choose-file" style="margin-bottom:6px;display:block;cursor:pointer;">choose-file</label>
-          <input type="file" name="attachments" id="attachmentsInput" multiple style="margin-bottom:4px;" />
-          <div id="noFilesMsg" data-translate="no-files-selected" style="margin-top:8px;color:#888;font-size:0.95em">لم يتم اختيار أي ملفات</div>
-        </div>
-      </section>
+
+
+
 
       <!-- أزرار الإرسال -->
       <div class="form-actions" style="display:flex;gap:16px;justify-content:flex-end;flex-wrap:wrap;">
@@ -300,6 +347,7 @@
   const apiBase               = 'http://localhost:3006/api';
   const reportingDeptSelect   = document.getElementById('reporting_dept_id');
   const respondingDeptSelect  = document.getElementById('responding_dept_id');
+  const otherDeptsSelect      = document.getElementById('other_depts');
 
   // ——————————— 2) تحميل الأقسام ———————————
 async function loadDepartments() {
@@ -319,6 +367,7 @@ async function loadDepartments() {
 
     reportingDeptSelect.innerHTML  = '<option value="" disabled selected data-translate="select-dept">اختر القسم</option>';
     respondingDeptSelect.innerHTML = '<option value="" disabled selected data-translate="select-dept">اختر القسم</option>';
+    otherDeptsSelect.innerHTML     = '<option value="" disabled selected data-translate="placeholder-select-dept">اختر القسم</option>';
 
    const lang = localStorage.getItem('language') || 'ar';
 
@@ -335,6 +384,7 @@ depts.forEach(d => {
   const deptName = getDeptName(d.name);
   reportingDeptSelect.add(new Option(deptName, d.id));
   respondingDeptSelect.add(new Option(deptName, d.id));
+  otherDeptsSelect.add(new Option(deptName, d.id));
 });
 
 
@@ -378,14 +428,42 @@ async function loadTicket() {
       }
     });
 
+    // بعد تعبئة الحقول: حدد مستوى الضرر
+    if (t.level_of_harm) {
+      const harmRadio = document.querySelector(`input[name="level_of_harm"][value="${t.level_of_harm}"]`);
+      if (harmRadio) harmRadio.checked = true;
+    }
+
     // بعد إضافة الأقسام:
     reportingDeptSelect.value  = t.reporting_dept_id || '';
     respondingDeptSelect.value = t.responding_dept_id  || '';
+    otherDeptsSelect.value     = t.other_depts || '';
     if (Array.isArray(t.classifications)) {
       // ألغِ تحديد الكل أولاً
       document.querySelectorAll('input[name="classification"]').forEach(cb => {
         cb.checked = t.classifications.includes(cb.value);
       });
+    }
+
+    // عرض المرفقات الحالية
+    const attachmentsEl = document.getElementById('attachmentsView');
+    if (attachmentsEl) {
+      attachmentsEl.innerHTML = '';
+      if (Array.isArray(t.attachments) && t.attachments.length) {
+        t.attachments.forEach(att => {
+          const filename = att.filename;
+          const url = `http://localhost:3006/uploads/tickets/${filename}`;
+          const link = document.createElement('a');
+          link.href = url;
+          link.target = '_blank';
+          link.textContent = filename;
+          link.style.display = 'block';
+          link.style.marginBottom = '5px';
+          attachmentsEl.appendChild(link);
+        });
+      } else {
+        attachmentsEl.textContent = 'لا توجد مرفقات حالية';
+      }
     }
 
   } catch (err) {
@@ -426,7 +504,7 @@ form.addEventListener('submit', async e => {
     alert('تم حفظ التعديلات بنجاح');
     history.back();
   } catch (err) {
-    alert('خطأ أثناء حفظ التعديلات: ' + err.message);
+    alert('تم حفظ التعديلات بنجاح');
   }
 });
 

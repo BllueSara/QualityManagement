@@ -82,116 +82,163 @@ exports.getDepartments = async (req, res) => {
 
 // Create a new ticket
 exports.createTicket = async (req, res) => {
+  console.log('🟢 [createTicket] بداية الدالة');
+  if (!req.user || !req.user.id) {
+    console.error('❌ طلب بدون توكن أو مستخدم غير معرف (createTicket):', {
+      headers: req.headers,
+      body: req.body,
+      url: req.originalUrl
+    });
+    return res.status(401).json({ status: 'error', message: 'محتاج توكن (createTicket)' });
+  }
   try {
+    console.log('🟢 [createTicket] قبل upload');
     upload(req, res, async (err) => {
+      console.log('🟢 [createTicket] دخل upload callback');
       if (err) {
+        console.error('Multer error:', err);
         return res.status(400).json({ error: err.message });
       }
-
-      // 1) فك JSON لمصفوفة التصنيفات
-      let classification = [];
-      if (req.body.classification) {
-        try {
-          classification = JSON.parse(req.body.classification);
-        } catch (e) {
-          return res.status(400).json({ error: 'تصنيف غير صالح' });
-        }
-      }
-
-      // 2) فك JSON لمصفوفة أنواع المرضى
-      let patient_types = [];
-      if (req.body.patient_types) {
-        try {
-          patient_types = JSON.parse(req.body.patient_types);
-        } catch (e) {
-          // إذا فشل الفك، اعتبره قيمة واحدة
-          patient_types = req.body.patient_types ? [req.body.patient_types] : [];
-        }
-      }
-
-      // 3) تنظيف البيانات - تحويل القيم الفارغة إلى null
-      const cleanData = {
-        ...req.body,
-        // الحقول الاختيارية - تحويل القيم الفارغة إلى null
-        other_depts: req.body.other_depts || null,
-        patient_name: req.body.patient_name || null,
-        medical_record_no: req.body.medical_record_no || null,
-        dob: req.body.dob || null,
-        gender: req.body.gender || null,
-        report_short_desc: req.body.report_short_desc || null,
-        had_injury: req.body.had_injury || null,
-        injury_type: req.body.injury_type || null,
-        attachments: req.files
-          ? req.files.map(file => ({
-              filename: file.filename,
-              path: file.path,
-              mimetype: file.mimetype
-            }))
-          : [],
-        classification,
-        patient_types
-      };
-
-      // 4) انشئ الحدث عارض في الموديل، وارجع الـ ID
-      const ticketId = await Ticket.create(cleanData, req.user.id);
-
-      // 5) جلب الحدث عارض للتأكد من وجود الحقل title
-      const createdTicket = await Ticket.findById(
-        ticketId,
-        req.user.id,
-        req.user.role
-      );
-
-      // 6) استخرج العنوان (قد يكون JSON أو نص)
-      const rawTitle = createdTicket?.title || cleanData.report_short_desc || `حدث عارض رقم ${ticketId}`;
-      const userLang = getUserLang(req);
-      const localizedTitle = getLocalizedName(rawTitle, userLang) || rawTitle;
-
-      // 7) تسجيل اللوق بعد نجاح الإنشاء
       try {
-        const logDescription = {
-          ar: `تم إنشاء حدث عارض جديد: ${localizedTitle}`,
-          en: `Created new OVR: ${localizedTitle}`
+        // --- الكود الحالي بالكامل هنا ---
+        console.log('--- req.body ---');
+        console.log(req.body);
+        console.log('--- req.files ---');
+        if (req.files && req.files.length) {
+          req.files.forEach(f => {
+            console.log(`File: ${f.originalname}, Saved as: ${f.filename}, Path: ${f.path}, Type: ${f.mimetype}`);
+          });
+        } else {
+          console.log('No files uploaded');
+        }
+
+        // تحقق من وجود level_of_harm
+        if (!req.body.level_of_harm) {
+          console.log('🔴 [createTicket] لا يوجد level_of_harm');
+          return res.status(400).json({ error: 'مستوى الضرر مطلوب' });
+        }
+
+        // 1) فك JSON لمصفوفة التصنيفات
+        let classification = [];
+        if (req.body.classification) {
+          try {
+            classification = JSON.parse(req.body.classification);
+          } catch (e) {
+            return res.status(400).json({ error: 'تصنيف غير صالح' });
+          }
+        }
+
+        // 2) فك JSON لمصفوفة أنواع المرضى
+        let patient_types = [];
+        if (req.body.patient_types) {
+          try {
+            patient_types = JSON.parse(req.body.patient_types);
+          } catch (e) {
+            // إذا فشل الفك، اعتبره قيمة واحدة
+            patient_types = req.body.patient_types ? [req.body.patient_types] : [];
+          }
+        }
+
+        // 3) تنظيف البيانات - تحويل القيم الفارغة إلى null
+        const cleanData = {
+          ...req.body,
+          // الحقول الاختيارية - تحويل القيم الفارغة إلى null
+          level_of_harm: req.body.level_of_harm,
+          other_depts: req.body.other_depts || null,
+          patient_name: req.body.patient_name || null,
+          medical_record_no: req.body.medical_record_no || null,
+          dob: req.body.dob || null,
+          gender: req.body.gender || null,
+          report_short_desc: req.body.report_short_desc || null,
+          had_injury: req.body.had_injury || null,
+          injury_type: req.body.injury_type || null,
+          attachments: req.files
+            ? req.files.map(file => ({
+                filename: file.filename,
+                path: file.path,
+                mimetype: file.mimetype
+              }))
+            : [],
+          classification,
+          patient_types
         };
-        await logAction(
-          req.user.id,
-          'create_ticket',
-          JSON.stringify(logDescription),
-          'ticket',
-          ticketId
-        );
-      } catch (logErr) {
-        console.error('logAction error:', logErr);
-      }
 
-      // 8) إرسال إشعار إنشاء التذكرة
-      try {
-        await insertNotification(
-          req.user.id,
-          'تم إنشاء تقرير OVR جديد',
-          `تم إنشاء تقرير OVR جديد برقم ${ticketId}`,
-          'ticket'
-        );
-      } catch (notificationErr) {
-        console.error('Notification error:', notificationErr);
-      }
+        // 4) انشئ الحدث عارض في الموديل، وارجع الـ ID
+        const ticketId = await Ticket.create(cleanData, req.user.id);
 
-      // 9) أرسل الرد
-      return res.status(201).json({
-        status: 'success',
-        message: 'تم إنشاء الحدث العارض بنجاح',
-        data: { id: ticketId }
-      });
+        // 5) جلب الحدث عارض للتأكد من وجود الحقل title
+        const createdTicket = await Ticket.findById(
+          ticketId,
+          req.user.id,
+          req.user.role
+        );
+
+        // 6) استخرج العنوان (قد يكون JSON أو نص)
+        const rawTitle = createdTicket?.title || cleanData.report_short_desc || `حدث عارض رقم ${ticketId}`;
+        const userLang = getUserLang(req);
+        const localizedTitle = getLocalizedName(rawTitle, userLang) || rawTitle;
+
+        // 7) تسجيل اللوق بعد نجاح الإنشاء
+        try {
+          const logDescription = {
+            ar: `تم إنشاء حدث عارض جديد: ${localizedTitle}`,
+            en: `Created new OVR: ${localizedTitle}`
+          };
+          await logAction(
+            req.user.id,
+            'create_ticket',
+            JSON.stringify(logDescription),
+            'ticket',
+            ticketId
+          );
+        } catch (logErr) {
+          console.error('logAction error:', logErr);
+        }
+
+        // 8) إرسال إشعار إنشاء التذكرة
+        try {
+          await insertNotification(
+            req.user.id,
+            'تم إنشاء تقرير OVR جديد',
+            `تم إنشاء تقرير OVR جديد برقم ${ticketId}`,
+            'ticket'
+          );
+        } catch (notificationErr) {
+          console.error('Notification error:', notificationErr);
+        }
+
+        // 9) أرسل الرد
+        console.log('🟢 [createTicket] قبل return النهائي (إرسال الرد للفرونتند)');
+        return res.status(201).json({
+          status: 'success',
+          message: 'تم إنشاء الحدث العارض بنجاح',
+          data: { id: ticketId }
+        });
+      } catch (error) {
+        console.error('❌ [createTicket] خطأ داخل upload callback:', error);
+        return res.status(500).json({ message: 'خطأ داخلي أثناء إنشاء التذكرة', error: error.message });
+      }
     });
+    console.log('🔴 [createTicket] بعد upload (لن تظهر غالباً)');
   } catch (error) {
     console.error('OVR error:', error);
-    return res.status(500).json({ message: 'Error creating OVR.' });
+    console.error('FULL ERROR:', JSON.stringify(error, null, 2));
+    return res.status(500).json({ message: 'Error creating OVR.', error: error.message, stack: error.stack });
   }
 };
 
 // Get all tickets
 exports.getAllTickets = async (req, res) => {
+  if (!req.user || !req.user.id) {
+    console.error('❌ طلب بدون توكن أو مستخدم غير معرف (getAllTickets):', {
+      headers: req.headers,
+      body: req.body,
+      url: req.originalUrl
+    });
+    return res.status(401).json({ status: 'error', message: 'محتاج توكن (getAllTickets)' });
+  }
   try {
+    console.log('userRole:', req.user.role, 'userId:', req.user.id);
     const tickets = await Ticket.findAll(req.user.id, req.user.role);
     res.json({ status: 'success', data: tickets });
   } catch (err) {
@@ -206,8 +253,16 @@ exports.getAssignedTickets = async (req, res) => {
 
 // Get a single ticket
 exports.getTicket = async (req, res) => {
-    try {
-        const ticket = await Ticket.findById(
+  if (!req.user || !req.user.id) {
+    console.error('❌ طلب بدون توكن أو مستخدم غير معرف (getTicket):', {
+      headers: req.headers,
+      body: req.body,
+      url: req.originalUrl
+    });
+    return res.status(401).json({ status: 'error', message: 'محتاج توكن (getTicket)' });
+  }
+  try {
+    const ticket = await Ticket.findById(
             req.params.id,
             req.user.id,
             req.user.role
@@ -228,11 +283,20 @@ exports.getTicket = async (req, res) => {
 // controllers/ticketController.js
 
 exports.updateTicket = async (req, res) => {
+  if (!req.user || !req.user.id) {
+    console.error('❌ طلب بدون توكن أو مستخدم غير معرف (updateTicket):', {
+      headers: req.headers,
+      body: req.body,
+      url: req.originalUrl
+    });
+    return res.status(401).json({ status: 'error', message: 'محتاج توكن (updateTicket)' });
+  }
   try {
     upload(req, res, async function (err) {
       if (err) {
         return res.status(400).json({ error: err.message });
       }
+
 
       const userLang = getUserLang(req);
 
@@ -252,6 +316,7 @@ exports.updateTicket = async (req, res) => {
 
       const ticketData = {
         ...req.body,
+        level_of_harm: req.body.level_of_harm,
         classifications,
         patient_types,
         attachments: req.files

@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', async () => {
+  await checkDirectDelegationStatus();
   await checkBulkDelegationNotification();
   loadDelegations();
 });
@@ -31,6 +32,7 @@ function getLocalizedName(jsonString) {
 }
 let selectedContentId = null;
 let selectedContentType = null;
+let hasShownDelegationPopup = false;
 
 async function loadDelegations() {
   const token = localStorage.getItem('token');
@@ -367,6 +369,30 @@ async function sendApproval(contentId, approvalData) {
   } catch (err) {
     // console.error(err);
     alert('خطأ أثناء إرسال الاعتماد.');
+  }
+}
+
+// عند تحميل الصفحة، تحقق من حالة التفويض المباشر
+async function checkDirectDelegationStatus() {
+  const token = localStorage.getItem('token');
+  if (!token || !currentUserId) return;
+  try {
+    const res = await fetch(`/api/users/${currentUserId}/delegation-status`, { headers: authHeaders() });
+    const json = await res.json();
+    if (json.status === 'success' && json.data && json.data.delegated_by && !hasShownDelegationPopup) {
+      hasShownDelegationPopup = true;
+      // جلب اسم المفوض (اختياري)
+      let fromName = '';
+      try {
+        const userRes = await fetch(`/api/users/${json.data.delegated_by}`, { headers: authHeaders() });
+        const userJson = await userRes.json();
+        fromName = userJson.data?.name || userJson.data?.username || '';
+      } catch {}
+      if (!fromName) fromName = 'المفوض';
+      showBulkDelegationPopup('direct-delegation', fromName);
+    }
+  } catch (err) {
+    // تجاهل الخطأ
   }
 }
 

@@ -26,7 +26,7 @@ exports.getClosedTicketsReport = async (req, res) => {
       WHERE up.user_id = ?
     `, [userId]);
     const perms = new Set(permRows.map(r => r.permission_key));
-    const canViewAll = userRole === 'admin' || perms.has('view_all_reports_tickets');
+    const canViewAll = userRole === 'admin' || userRole === 'manager_ovr' || perms.has('view_all_reports_tickets');
     const canViewOwn = perms.has('view_reports_by_person_tickets');
 
     // فلترة حسب الصلاحية
@@ -39,6 +39,16 @@ exports.getClosedTicketsReport = async (req, res) => {
       } else {
         return res.status(403).json({ status: 'error', message: 'ليس لديك صلاحية عرض تقارير الاحداث العارضة.' });
       }
+    }
+    // فلترة حسب الشهر والسنة إذا تم إرسالها
+    const { month, year } = req.query;
+    if (month) {
+      where += ' AND MONTH(h.created_at) = ?';
+      params.push(Number(month));
+    }
+    if (year) {
+      where += ' AND YEAR(h.created_at) = ?';
+      params.push(Number(year));
     }
 
     // جلب عدد التذاكر المغلقة لكل تصنيف ولكل شهر

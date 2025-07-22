@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!token) return;
 
   const { role } = JSON.parse(atob(token.split('.')[1]));
-  const isAdmin = role === 'admin';
+  const isAdmin = role === 'admin' || role === 'manager_ovr';
 
   // أخفِ كل العناصر المعلّمة بـ data-role="admin" إن لم يكن المستخدم Admin
   document.querySelectorAll('[data-role="admin"]').forEach(el => {
@@ -66,6 +66,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     headers: { 'Authorization': `Bearer ${token}` }
   });
   const { data: tickets } = await ticketsRes.json();
+  console.log('tickets:', tickets);
 
 
 const deptsRes = await fetch('http://localhost:3006/api/departments', {
@@ -170,6 +171,18 @@ row.append(tdStatus);
       sendBtn.style.cursor = 'not-allowed';
     }
     
+    // زر عرض التفاصيل
+    const detailsBtn = document.createElement('button');
+    detailsBtn.className = 'btn-details';
+    detailsBtn.innerHTML = `<i class="bi bi-eye"></i> ${getTranslation('view-details')}`;
+    detailsBtn.style.marginRight = '8px';
+    detailsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const ticketId = row.dataset.id;
+      window.location.href = `ticket-details.html?id=${ticketId}`;
+    });
+    
+    tdAct.appendChild(detailsBtn);
     tdAct.appendChild(sendBtn);
     row.append(tdAct);
 

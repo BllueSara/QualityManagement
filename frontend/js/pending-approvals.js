@@ -348,7 +348,7 @@ async function initDropdowns() {
         } else {
           deptBtn.textContent = `${selectedDepts.length} ${getTranslation('departments-count')}`;
         }
-        deptList.classList.remove('active');
+        // لا تغلق القائمة هنا! (تم حذف deptList.classList.remove('active');)
         await rebuildUsersList();
       });
     })();

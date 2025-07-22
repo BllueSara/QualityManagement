@@ -651,7 +651,7 @@ exports.addContent = async (req, res) => {
       }
 
       // منطق الاعتماد الفوري
-      let approval_status = 'awaiting';
+      let approval_status = 'pending';
       if (force_approved === 'true' || force_approved === true) {
         approval_status = 'approved';
       }
