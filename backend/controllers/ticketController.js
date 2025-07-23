@@ -6,6 +6,7 @@ const { logAction } = require('../models/logger');
 const { insertNotification } = require('../models/notfications-utils');
 const jwt = require('jsonwebtoken');
 const Reply = require('../models/replyModel');
+const mysql = require('mysql2/promise');
 
 function getUserLang(req) {
   const auth = req.headers.authorization;
@@ -112,20 +113,27 @@ exports.createTicket = async (req, res) => {
           console.log('No files uploaded');
         }
 
-        // تحقق من وجود level_of_harm
-        if (!req.body.level_of_harm) {
-          console.log('🔴 [createTicket] لا يوجد level_of_harm');
+        // تحقق من وجود harm_level_id
+        if (!req.body.harm_level_id) {
+          console.log('🔴 [createTicket] لا يوجد harm_level_id');
           return res.status(400).json({ error: 'مستوى الضرر مطلوب' });
         }
 
         // 1) فك JSON لمصفوفة التصنيفات
-        let classification = [];
-        if (req.body.classification) {
+        let classifications = [];
+        if (req.body.classifications) {
           try {
-            classification = JSON.parse(req.body.classification);
+            classifications = JSON.parse(req.body.classifications);
+            console.log('Parsed classifications:', classifications);
           } catch (e) {
+            console.error('Error parsing classifications:', e);
             return res.status(400).json({ error: 'تصنيف غير صالح' });
           }
+        }
+        
+        // التحقق من أن التصنيفات موجودة
+        if (!classifications || classifications.length === 0) {
+          return res.status(400).json({ error: 'يجب اختيار تصنيف واحد على الأقل' });
         }
 
         // 2) فك JSON لمصفوفة أنواع المرضى
@@ -134,7 +142,6 @@ exports.createTicket = async (req, res) => {
           try {
             patient_types = JSON.parse(req.body.patient_types);
           } catch (e) {
-            // إذا فشل الفك، اعتبره قيمة واحدة
             patient_types = req.body.patient_types ? [req.body.patient_types] : [];
           }
         }
@@ -142,8 +149,7 @@ exports.createTicket = async (req, res) => {
         // 3) تنظيف البيانات - تحويل القيم الفارغة إلى null
         const cleanData = {
           ...req.body,
-          // الحقول الاختيارية - تحويل القيم الفارغة إلى null
-          level_of_harm: req.body.level_of_harm,
+          harm_level_id: req.body.harm_level_id,
           other_depts: req.body.other_depts || null,
           patient_name: req.body.patient_name || null,
           medical_record_no: req.body.medical_record_no || null,
@@ -159,7 +165,7 @@ exports.createTicket = async (req, res) => {
                 mimetype: file.mimetype
               }))
             : [],
-          classification,
+          classifications,
           patient_types
         };
 
@@ -181,8 +187,8 @@ exports.createTicket = async (req, res) => {
         // 7) تسجيل اللوق بعد نجاح الإنشاء
         try {
           const logDescription = {
-            ar: `تم إنشاء حدث عارض جديد: ${localizedTitle}`,
-            en: `Created new OVR: ${localizedTitle}`
+            ar: `تم إنشاء حدث عارض جديد: ${ticketId}`,
+            en: `Created new OVR: ${ticketId}`
           };
           await logAction(
             req.user.id,
@@ -247,8 +253,13 @@ exports.getAllTickets = async (req, res) => {
   }
 };
 exports.getAssignedTickets = async (req, res) => {
-  const tickets = await Ticket.findAllAndAssignments(req.user.id, req.user.role);
-  res.json({ status: 'success', data: tickets });
+  try {
+    const tickets = await Ticket.findAllAndAssignments(req.user.id, req.user.role);
+    res.json({ status: 'success', data: tickets });
+  } catch (err) {
+    console.error('Error in getAssignedTickets:', err);
+    res.status(500).json({ status: 'error', message: 'حدث خطأ داخلي في جلب التذاكر المكلفة' });
+  }
 };
 
 // Get a single ticket
@@ -262,11 +273,7 @@ exports.getTicket = async (req, res) => {
     return res.status(401).json({ status: 'error', message: 'محتاج توكن (getTicket)' });
   }
   try {
-    const ticket = await Ticket.findById(
-            req.params.id,
-            req.user.id,
-            req.user.role
-        );
+    const ticket = await Ticket.findById(req.params.id, req.user.id, req.user.role);
 
         if (!ticket) {
             return res.status(404).json({ message: 'OVR not found.' });
@@ -274,8 +281,19 @@ exports.getTicket = async (req, res) => {
 
         res.json(ticket);
     } catch (error) {
-        // console.error(error);
-        res.status(500).json({ message: 'Error fetching OVR.' });
+        console.error('❌ [getTicket] خطأ في جلب التذكرة:', error);
+        console.error('❌ [getTicket] تفاصيل الخطأ:', {
+          message: error.message,
+          stack: error.stack,
+          ticketId: req.params.id,
+          userId: req.user?.id,
+          userRole: req.user?.role
+        });
+        res.status(500).json({ 
+          status: 'error', 
+          message: 'حدث خطأ داخلي في جلب التذكرة',
+          details: error.message 
+        });
     }
 };
 
@@ -316,7 +334,7 @@ exports.updateTicket = async (req, res) => {
 
       const ticketData = {
         ...req.body,
-        level_of_harm: req.body.level_of_harm,
+        harm_level_id: req.body.harm_level_id,
         classifications,
         patient_types,
         attachments: req.files
@@ -862,5 +880,442 @@ exports.logTicketView = async (req, res) => {
   } catch (error) {
     console.error('Error logging ticket view:', error);
     res.status(500).json({ message: 'Failed to log ticket view' });
+  }
+};
+
+exports.getClassifications = async (req, res) => {
+  try {
+    const lang = req.query.lang === 'en' ? 'en' : 'ar';
+    const db = await mysql.createPool({
+      host:     process.env.DB_HOST || 'localhost',
+      user:     process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'Quality'
+    });
+    const [rows] = await db.query('SELECT id, name_ar, name_en FROM classifications');
+    const data = rows.map(row => ({
+      id: row.id,
+      name: lang === 'en' ? row.name_en : row.name_ar
+    }));
+    res.json({ data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getClassificationById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = await mysql.createPool({
+      host:     process.env.DB_HOST || 'localhost',
+      user:     process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'Quality'
+    });
+    
+    const [rows] = await db.query('SELECT id, name_ar, name_en FROM classifications WHERE id = ?', [id]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ status: 'error', message: 'التصنيف غير موجود.' });
+    }
+    
+    res.json({ status: 'success', data: rows[0] });
+  } catch (err) {
+    console.error('getClassificationById error:', err);
+    res.status(500).json({ status: 'error', message: 'فشل جلب التصنيف.' });
+  }
+};
+
+exports.getHarmLevels = async (req, res) => {
+  try {
+    const lang = req.query.lang === 'en' ? 'en' : 'ar';
+    const db = await mysql.createPool({
+      host:     process.env.DB_HOST || 'localhost',
+      user:     process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'Quality'
+    });
+    const [rows] = await db.query('SELECT id, code, name_ar, name_en, desc_ar, desc_en FROM harm_levels');
+    const data = rows.map(row => ({
+      id: row.id,
+      code: row.code,
+      name: lang === 'en' ? row.name_en : row.name_ar,
+      desc: lang === 'en' ? row.desc_en : row.desc_ar
+    }));
+    res.json({ data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getHarmLevelById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = await mysql.createPool({
+      host:     process.env.DB_HOST || 'localhost',
+      user:     process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'Quality'
+    });
+    
+    const [rows] = await db.query('SELECT id, code, name_ar, name_en, desc_ar, desc_en FROM harm_levels WHERE id = ?', [id]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ status: 'error', message: 'مستوى الضرر غير موجود.' });
+    }
+    
+    res.json({ status: 'success', data: rows[0] });
+  } catch (err) {
+    console.error('getHarmLevelById error:', err);
+    res.status(500).json({ status: 'error', message: 'فشل جلب مستوى الضرر.' });
+  }
+};
+
+// Create Classification
+exports.createClassification = async (req, res) => {
+  try {
+    const { name_ar, name_en } = req.body;
+    
+    if (!name_ar || !name_en) {
+      return res.status(400).json({ status: 'error', message: 'الاسم بالعربية والإنجليزية مطلوب.' });
+    }
+    
+    const db = await mysql.createPool({
+      host:     process.env.DB_HOST || 'localhost',
+      user:     process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'Quality'
+    });
+    
+    const [result] = await db.query(
+      'INSERT INTO classifications (name_ar, name_en) VALUES (?, ?)',
+      [name_ar, name_en]
+    );
+    
+    // تسجيل اللوق
+    try {
+      const logDescription = {
+        ar: `تم إضافة تصنيف جديد: ${name_ar}`,
+        en: `Added new classification: ${name_en}`
+      };
+      await logAction(
+        req.user.id,
+        'create_classification',
+        JSON.stringify(logDescription),
+        'classification',
+        result.insertId
+      );
+    } catch (logErr) {
+      console.error('logAction error:', logErr);
+    }
+    
+    res.json({ status: 'success', message: 'تم إضافة التصنيف بنجاح.', id: result.insertId });
+  } catch (err) {
+    console.error('createClassification error:', err);
+    res.status(500).json({ status: 'error', message: 'فشل إضافة التصنيف.' });
+  }
+};
+
+// Update Classification
+exports.updateClassification = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name_ar, name_en } = req.body;
+    
+    if (!name_ar || !name_en) {
+      return res.status(400).json({ status: 'error', message: 'الاسم بالعربية والإنجليزية مطلوب.' });
+    }
+    
+    const db = await mysql.createPool({
+      host:     process.env.DB_HOST || 'localhost',
+      user:     process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'Quality'
+    });
+    
+    // جلب البيانات القديمة قبل التحديث
+    const [oldData] = await db.query('SELECT name_ar, name_en FROM classifications WHERE id = ?', [id]);
+    
+    await db.query(
+      'UPDATE classifications SET name_ar = ?, name_en = ? WHERE id = ?',
+      [name_ar, name_en, id]
+    );
+    
+    // تسجيل اللوق
+    try {
+      const logDescription = {
+        ar: `تم تحديث التصنيف: ${oldData[0]?.name_ar || 'غير معروف'} → ${name_ar}`,
+        en: `Updated classification: ${oldData[0]?.name_en || 'Unknown'} → ${name_en}`
+      };
+      await logAction(
+        req.user.id,
+        'update_classification',
+        JSON.stringify(logDescription),
+        'classification',
+        id
+      );
+    } catch (logErr) {
+      console.error('logAction error:', logErr);
+    }
+    
+    res.json({ status: 'success', message: 'تم تحديث التصنيف بنجاح.' });
+  } catch (err) {
+    console.error('updateClassification error:', err);
+    res.status(500).json({ status: 'error', message: 'فشل تحديث التصنيف.' });
+  }
+};
+
+// Delete Classification
+exports.deleteClassification = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const db = await mysql.createPool({
+      host:     process.env.DB_HOST || 'localhost',
+      user:     process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'Quality'
+    });
+    
+    // جلب البيانات قبل الحذف
+    const [classificationData] = await db.query('SELECT name_ar, name_en FROM classifications WHERE id = ?', [id]);
+    
+    if (classificationData.length === 0) {
+      return res.status(404).json({ status: 'error', message: 'التصنيف غير موجود.' });
+    }
+    
+    // Check if classification is used in tickets
+    const [tickets] = await db.query(
+      'SELECT COUNT(*) as count FROM ticket_classifications WHERE classification_id = ?',
+      [id]
+    );
+    
+    if (tickets[0].count > 0) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: 'لا يمكن حذف التصنيف لأنه مستخدم في تذاكر موجودة.' 
+      });
+    }
+    
+    await db.query('DELETE FROM classifications WHERE id = ?', [id]);
+    
+    // تسجيل اللوق
+    try {
+      const logDescription = {
+        ar: `تم حذف التصنيف: ${classificationData[0].name_ar}`,
+        en: `Deleted classification: ${classificationData[0].name_en}`
+      };
+      await logAction(
+        req.user.id,
+        'delete_classification',
+        JSON.stringify(logDescription),
+        'classification',
+        id
+      );
+    } catch (logErr) {
+      console.error('logAction error:', logErr);
+    }
+    
+    res.json({ status: 'success', message: 'تم حذف التصنيف بنجاح.' });
+  } catch (err) {
+    console.error('deleteClassification error:', err);
+    res.status(500).json({ status: 'error', message: 'فشل حذف التصنيف.' });
+  }
+};
+
+// Create Harm Level
+exports.createHarmLevel = async (req, res) => {
+  try {
+    const { description_ar, description_en } = req.body;
+    
+    if (!description_ar || !description_en) {
+      return res.status(400).json({ status: 'error', message: 'الوصف بالعربية والإنجليزية مطلوب.' });
+    }
+    
+    const db = await mysql.createPool({
+      host:     process.env.DB_HOST || 'localhost',
+      user:     process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'Quality'
+    });
+    
+    // إنشاء الكود تلقائياً (A, B, C, D, E, F, G, H, I, J, K, ...)
+    const [existingCodes] = await db.query('SELECT code FROM harm_levels ORDER BY code');
+    let newCode = 'A';
+    
+    if (existingCodes.length > 0) {
+      // البحث عن آخر حرف مستخدم
+      const lastCode = existingCodes[existingCodes.length - 1].code;
+      if (lastCode && lastCode.length === 1) {
+        const lastCharCode = lastCode.charCodeAt(0);
+        if (lastCharCode >= 65 && lastCharCode <= 90) { // A-Z
+          newCode = String.fromCharCode(lastCharCode + 1);
+        }
+      }
+    }
+    
+    // إنشاء أسماء مختصرة (حرف واحد فقط)
+    // تحويل الحرف الإنجليزي إلى عربي
+    const arabicLetters = ['أ', 'ب', 'ج', 'د', 'هـ', 'و', 'ز', 'ح', 'ط', 'ي', 'ك', 'ل', 'م', 'ن', 'س', 'ع', 'ف', 'ص', 'ق', 'ر', 'ش', 'ت', 'ث', 'خ', 'ذ', 'ض'];
+    const englishLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
+    
+    const index = englishLetters.indexOf(newCode);
+    const name_ar = index >= 0 ? arabicLetters[index] : newCode;
+    const name_en = newCode;
+    
+    const [result] = await db.query(
+      'INSERT INTO harm_levels (code, name_ar, name_en, desc_ar, desc_en) VALUES (?, ?, ?, ?, ?)',
+      [newCode, name_ar, name_en, description_ar || '', description_en || '']
+    );
+    
+    // تسجيل اللوق
+    try {
+      const logDescription = {
+        ar: `تم إضافة مستوى ضرر جديد: ${name_ar} (${newCode}) - ${description_ar}`,
+        en: `Added new harm level: ${name_en} (${newCode}) - ${description_en}`
+      };
+      await logAction(
+        req.user.id,
+        'create_harm_level',
+        JSON.stringify(logDescription),
+        'harm_level',
+        result.insertId
+      );
+    } catch (logErr) {
+      console.error('logAction error:', logErr);
+    }
+    
+    res.json({ 
+      status: 'success', 
+      message: `تم إضافة مستوى الضرر بنجاح. الكود: ${newCode}`, 
+      id: result.insertId,
+      code: newCode
+    });
+  } catch (err) {
+    console.error('createHarmLevel error:', err);
+    res.status(500).json({ status: 'error', message: 'فشل إضافة مستوى الضرر.' });
+  }
+};
+
+// Update Harm Level
+exports.updateHarmLevel = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { description_ar, description_en } = req.body;
+    
+    if (!description_ar || !description_en) {
+      return res.status(400).json({ status: 'error', message: 'الوصف بالعربية والإنجليزية مطلوب.' });
+    }
+    
+    const db = await mysql.createPool({
+      host:     process.env.DB_HOST || 'localhost',
+      user:     process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'Quality'
+    });
+    
+    // جلب البيانات القديمة قبل التحديث
+    const [oldData] = await db.query('SELECT code, desc_ar, desc_en FROM harm_levels WHERE id = ?', [id]);
+    
+    if (oldData.length === 0) {
+      return res.status(404).json({ status: 'error', message: 'مستوى الضرر غير موجود.' });
+    }
+    
+    // الحصول على الكود الحالي
+    const currentCode = oldData[0].code || 'A';
+    
+    // تحويل الحرف الإنجليزي إلى عربي
+    const arabicLetters = ['أ', 'ب', 'ج', 'د', 'هـ', 'و', 'ز', 'ح', 'ط', 'ي', 'ك', 'ل', 'م', 'ن', 'س', 'ع', 'ف', 'ص', 'ق', 'ر', 'ش', 'ت', 'ث', 'خ', 'ذ', 'ض'];
+    const englishLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
+    
+    const index = englishLetters.indexOf(currentCode);
+    const name_ar = index >= 0 ? arabicLetters[index] : currentCode;
+    const name_en = currentCode;
+    
+    // تحديث البيانات بدون تغيير الكود
+    await db.query(
+      'UPDATE harm_levels SET name_ar = ?, name_en = ?, desc_ar = ?, desc_en = ? WHERE id = ?',
+      [name_ar, name_en, description_ar || '', description_en || '', id]
+    );
+    
+    // تسجيل اللوق
+    try {
+      const logDescription = {
+        ar: `تم تحديث مستوى الضرر ${currentCode}: ${oldData[0].desc_ar} → ${description_ar}`,
+        en: `Updated harm level ${currentCode}: ${oldData[0].desc_en} → ${description_en}`
+      };
+      await logAction(
+        req.user.id,
+        'update_harm_level',
+        JSON.stringify(logDescription),
+        'harm_level',
+        id
+      );
+    } catch (logErr) {
+      console.error('logAction error:', logErr);
+    }
+    
+    res.json({ status: 'success', message: 'تم تحديث مستوى الضرر بنجاح.' });
+  } catch (err) {
+    console.error('updateHarmLevel error:', err);
+    res.status(500).json({ status: 'error', message: 'فشل تحديث مستوى الضرر.' });
+  }
+};
+
+// Delete Harm Level
+exports.deleteHarmLevel = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const db = await mysql.createPool({
+      host:     process.env.DB_HOST || 'localhost',
+      user:     process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'Quality'
+    });
+    
+    // جلب البيانات قبل الحذف
+    const [harmLevelData] = await db.query('SELECT code, desc_ar, desc_en FROM harm_levels WHERE id = ?', [id]);
+    
+    if (harmLevelData.length === 0) {
+      return res.status(404).json({ status: 'error', message: 'مستوى الضرر غير موجود.' });
+    }
+    
+    // Check if harm level is used in tickets
+    const [tickets] = await db.query(
+      'SELECT COUNT(*) as count FROM tickets WHERE harm_level_id = ?',
+      [id]
+    );
+    
+    if (tickets[0].count > 0) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: 'لا يمكن حذف مستوى الضرر لأنه مستخدم في تذاكر موجودة.' 
+      });
+    }
+    
+    await db.query('DELETE FROM harm_levels WHERE id = ?', [id]);
+    
+    // تسجيل اللوق
+    try {
+      const logDescription = {
+        ar: `تم حذف مستوى الضرر ${harmLevelData[0].code}: ${harmLevelData[0].desc_ar}`,
+        en: `Deleted harm level ${harmLevelData[0].code}: ${harmLevelData[0].desc_en}`
+      };
+      await logAction(
+        req.user.id,
+        'delete_harm_level',
+        JSON.stringify(logDescription),
+        'harm_level',
+        id
+      );
+    } catch (logErr) {
+      console.error('logAction error:', logErr);
+    }
+    
+    res.json({ status: 'success', message: 'تم حذف مستوى الضرر بنجاح.' });
+  } catch (err) {
+    console.error('deleteHarmLevel error:', err);
+    res.status(500).json({ status: 'error', message: 'فشل حذف مستوى الضرر.' });
   }
 };

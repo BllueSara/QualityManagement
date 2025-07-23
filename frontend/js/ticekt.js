@@ -91,10 +91,83 @@ try {
   }
 }
 
+async function loadClassifications() {
+  const lang = localStorage.getItem('language') || 'ar';
+  const token = localStorage.getItem('token');
+  const response = await fetch(`http://localhost:3006/api/tickets/classifications?lang=${lang}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  const result = await response.json();
+  console.log('Classifications API result:', result);
+  if (!result.data) {
+    alert('لم يتم تحميل التصنيفات من السيرفر');
+    return;
+  }
+  const container = document.querySelector('.classification-grid');
+  container.innerHTML = '';
+
+  result.data.forEach(classif => {
+    const id = `cat_${classif.id}`;
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.id = id;
+    checkbox.name = 'classification';
+    checkbox.value = classif.id;
+
+    const label = document.createElement('label');
+    label.htmlFor = id;
+    label.textContent = classif.name;
+
+    const div = document.createElement('div');
+    div.className = 'checkbox-item';
+    div.appendChild(checkbox);
+    div.appendChild(label);
+
+    container.appendChild(div);
+  });
+}
+
+async function loadHarmLevels() {
+  const lang = localStorage.getItem('language') || 'ar';
+  const token = localStorage.getItem('token');
+  const response = await fetch(`http://localhost:3006/api/tickets/harm-levels?lang=${lang}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  const result = await response.json();
+  const container = document.getElementById('levelOfHarmOptions');
+  container.innerHTML = '';
+
+  if (!result.data) {
+    container.innerHTML = '<span style="color:red">لم يتم تحميل مستويات الضرر</span>';
+    return;
+  }
+
+  result.data.forEach(level => {
+    const id = `harm_${level.id}`;
+    const radio = document.createElement('input');
+    radio.type = 'radio';
+    radio.id = id;
+    radio.name = 'harm_level_id';
+    radio.value = level.id;
+    radio.required = true;
+
+    const label = document.createElement('label');
+    label.htmlFor = id;
+    label.innerHTML = `${level.name} <br><small>${level.desc}</small>`;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'level-harm-option';
+    wrapper.appendChild(radio);
+    wrapper.appendChild(label);
+    container.appendChild(wrapper);
+  });
+}
 
 
     // Load departments when the page loads
     loadDepartments();
+    loadClassifications();
+    loadHarmLevels();
 
     // تعبئة التاريخ والوقت تلقائيًا عند تحميل الصفحة
     const eventDateInput = document.getElementById('eventDate');
@@ -110,8 +183,8 @@ try {
       const now = new Date();
       const hh = String(now.getHours()).padStart(2, '0');
       const min = String(now.getMinutes()).padStart(2, '0');
-      const ss = String(now.getSeconds()).padStart(2, '0');
-      eventTimeInput.value = `${hh}:${min}:${ss}`;
+      // const ss = String(now.getSeconds()).padStart(2, '0');
+      eventTimeInput.value = `${hh}:${min}`;
     }
 
     // عند الضغط على زر "إلغاء / عودة"، نعيد المستخدم للصفحة السابقة
@@ -152,50 +225,6 @@ try {
           return;
         }
 
-        // --- إضافة توليد خيارات مستوى الضرر ---
-        function renderLevelOfHarmOptions() {
-          const lang = localStorage.getItem('language') || 'ar';
-          const options = [
-            { value: 'A', label: `${lang === 'ar' ? 'أ' : 'A'} (${getTranslation('capacity-to-cause-error')})`, desc: getTranslation('capacity-to-cause-error') },
-            { value: 'B', label: `${lang === 'ar' ? 'ب' : 'B'} (${getTranslation('error-no-patient')})`, desc: getTranslation('error-no-patient') },
-            { value: 'C', label: `${lang === 'ar' ? 'ج' : 'C'} (${getTranslation('error-no-harm')})`, desc: getTranslation('error-no-harm') },
-            { value: 'D', label: `${lang === 'ar' ? 'د' : 'D'} (${getTranslation('error-monitor')})`, desc: getTranslation('error-monitor') },
-            { value: 'E', label: `${lang === 'ar' ? 'هـ' : 'E'} (${getTranslation('error-minor-harm')})`, desc: getTranslation('error-minor-harm') },
-            { value: 'F', label: `${lang === 'ar' ? 'و' : 'F'} (${getTranslation('error-minor-harm-hospital')})`, desc: getTranslation('error-minor-harm-hospital') },
-            { value: 'G', label: `${lang === 'ar' ? 'ز' : 'G'} (${getTranslation('error-serious-harm')})`, desc: getTranslation('error-serious-harm') },
-            { value: 'H', label: `${lang === 'ar' ? 'ح' : 'H'} (${getTranslation('error-life-threatening')})`, desc: getTranslation('error-life-threatening') },
-            { value: 'I', label: `${lang === 'ar' ? 'ط' : 'I'} (${getTranslation('error-death')})`, desc: getTranslation('error-death') },
-          ];
-          const container = document.getElementById('levelOfHarmOptions');
-          if (!container) return;
-          container.innerHTML = '';
-          options.forEach(opt => {
-            const id = `levelHarm_${opt.value}`;
-            const radio = document.createElement('input');
-            radio.type = 'radio';
-            radio.id = id;
-            radio.name = 'levelOfHarm';
-            radio.value = opt.value;
-            radio.required = true;
-            const label = document.createElement('label');
-            label.htmlFor = id;
-            label.innerHTML = `<b>${opt.label}</b>`;
-            container.appendChild(radio);
-            container.appendChild(label);
-            container.appendChild(document.createElement('br'));
-          });
-        }
-        // عند تحميل الصفحة أو تغيير اللغة
-        renderLevelOfHarmOptions();
-        window.addEventListener('languageChanged', renderLevelOfHarmOptions);
-
-        // التحقق من اختيار مستوى الضرر
-        const levelOfHarm = form.querySelector('input[name="levelOfHarm"]:checked');
-        if (!levelOfHarm) {
-            alert('يرجى اختيار تصنيف مستوى الضرر.');
-            return;
-        }
-
         // بعد: const formData = new FormData(form);
 
         // جمع بيانات النموذج
@@ -203,7 +232,13 @@ try {
 
         // الحقول المطلوبة
         formData.set('event_date', formData.get('eventDate'));
-        formData.set('event_time', formData.get('eventTime'));
+        // اجعل الوقت hh:mm فقط بدون ثواني
+        let eventTime = formData.get('eventTime') || '';
+        if (eventTime.includes(':')) {
+          const parts = eventTime.split(':');
+          eventTime = parts[0] + ':' + parts[1];
+        }
+        formData.set('event_time', eventTime);
         formData.set('event_location', formData.get('eventLocation'));
         formData.set('reporting_dept_id', formData.get('reportingDept'));
         formData.set('responding_dept_id', formData.get('respondingDept'));
@@ -239,9 +274,20 @@ try {
           .map(cb => cb.value);
 
         // خزنهم في FormData كسلسلة JSON
-        formData.set('classification', JSON.stringify(classificationValues));
+        formData.set('classifications', JSON.stringify(classificationValues));
+        
+        // للتأكد من أن التصنيفات تم إرسالها بشكل صحيح
+        console.log('Classifications being sent:', classificationValues);
         formData.set('language', localStorage.getItem('language') || 'ar');
-        formData.set('level_of_harm', levelOfHarm.value);
+        // احذف أي استخدام لـ levelOfHarm.value أو التحقق منه
+
+        // عند إرسال النموذج، اجمع harm_level_id المختار
+        const harmLevelRadio = form.querySelector('input[name="harm_level_id"]:checked');
+        if (!harmLevelRadio) {
+            alert('يرجى اختيار تصنيف مستوى الضرر.');
+            return;
+        }
+        formData.set('harm_level_id', harmLevelRadio.value);
 
         try {
           const response = await fetch(`${apiBase}/tickets`, {

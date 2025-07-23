@@ -1,35 +1,5 @@
-// التصنيفات الثابتة مع الترجمة
-const categories = [
-  { ar: 'الأمور المتعلقة بالأمن', en: 'Security related issues' },
-  { ar: 'السلوك', en: 'Behaviour' },
-  { ar: 'الأمور المتعلقة بالموظفين', en: 'Staff related issues' },
-  { ar: 'إدارة رعاية المرضى', en: 'Patient Care Management' },
-  { ar: 'الأمور المتعلقة بالمختبرات الطبية', en: 'Laboratory related issues' },
-  { ar: 'الأمور المتعلقة بالإجراءات', en: 'Procedural' },
-  { ar: 'مشكلات الأجهزة الطبية', en: 'Medical Equipment Issues' },
-  { ar: 'صيانة المنشآت الصحية', en: 'Facility Maintenance' },
-  { ar: 'السلامة البيئية', en: 'Environment /Safety' },
-  { ar: 'الأمور المتعلقة بالإقامة والسكن', en: 'Accommodation related issues' },
-  { ar: 'االأمور المتعلقة بتقنية المعلومات', en: 'Information technology related issues' },
-  { ar: 'التصوير الطبي والإجراءات التشخيصية', en: 'Medical imaging and diagnostic procedure' },
-  { ar: 'خدمات التغذية', en: 'Food Services' },
-  { ar: 'التغذية السريرية', en: 'Clinical Nutrition' },
-  { ar: 'الأمور ذات العلاقة بمكافحة العدوى', en: 'Infection Control related issues' },
-  { ar: 'الصحة المهنية', en: 'Occupational Health' },
-  { ar: 'الخدمة والتنظيف', en: 'Housekeeping' },
-  { ar: 'أمور متعلقة بالحقن الوريدي', en: 'Intravenous' },
-  { ar: 'تقرحات السرير (إصابة)', en: 'Pressure Ulcer (Injury)' },
-  { ar: 'أمور متعلقة بسلامة الجلد / الإصابات الجلدية', en: 'Skin Lesions / Integrity' },
-  { ar: 'الأدوية', en: 'Medication' },
-  { ar: 'أمور متعلقة بالتواصل', en: 'Communication Issues' },
-  { ar: 'السقوط', en: 'Fall' },
-  { ar: 'العلاج الإشعاعي (الأمور المتعلقة بالأشعة)', en: 'Radiation treatment (Ionizing radiation Non-Ionizing (Us, UV, Laser, Other)' },
-  { ar: 'الأمور المتعلقة بالولادة وألم الولادة', en: 'Labor and delivery related issues' },
-  { ar: 'الأمور المتعلقة بسلاسل الإمداد', en: 'Supply Chain issues (logistics)' },
-  { ar: 'خدمات مغسلة الملاءات', en: 'Laundry services' },
-  { ar: 'الأحداث الجسيمة', en: 'Sentinel Events' },
-  { ar: 'الهوية / المستندات والوثائق / الإقرارات', en: 'ID/Document/Consent' }
-];
+// التصنيفات الديناميكية - سيتم تحميلها من قاعدة البيانات
+let categories = [];
 
 // أسماء الشهور
 const months = [
@@ -72,6 +42,36 @@ function getUserRoleFromToken() {
     return JSON.parse(jsonPayload).role;
   } catch {
     return null;
+  }
+}
+
+// جلب التصنيفات من قاعدة البيانات
+async function fetchClassifications() {
+  try {
+    const token = getToken();
+    if (!token) return;
+    
+    const lang = getCurrentLang();
+    const response = await fetch(`${apiBase}/tickets/classifications?lang=${lang}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (!response.ok) {
+      console.error('❌ [reports-tickets] خطأ في جلب التصنيفات:', response.status);
+      return;
+    }
+    
+    const result = await response.json();
+    if (result.data) {
+      categories = result.data.map(item => ({
+        ar: item.name,
+        en: item.name,
+        id: item.id
+      }));
+      console.log('✅ [reports-tickets] تم تحميل التصنيفات:', categories);
+    }
+  } catch (error) {
+    console.error('❌ [reports-tickets] خطأ في جلب التصنيفات:', error);
   }
 }
 
@@ -131,12 +131,17 @@ function renderFiltersAndTitle() {
     </button>
   `;
   const catSelect = document.getElementById('categoryFilter');
-  categories.forEach(cat => {
-    const opt = document.createElement('option');
-    opt.value = cat[lang];
-    opt.textContent = cat[lang];
-    catSelect.appendChild(opt);
-  });
+  // تأكد من أن التصنيفات تم تحميلها
+  if (categories && categories.length > 0) {
+    categories.forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat[lang];
+      opt.textContent = cat[lang];
+      catSelect.appendChild(opt);
+    });
+  } else {
+    console.log('⚠️ [reports-tickets] التصنيفات لم يتم تحميلها بعد');
+  }
 }
 
 // تحميل التقرير وبناء الجدول
@@ -146,6 +151,7 @@ async function loadTicketsReport() {
   const selMonth = document.getElementById('monthFilter')?.value;
   const selYear = document.getElementById('yearFilter')?.value;
   const params = new URLSearchParams();
+  params.append('lang', lang);
   if (selCat) params.append('category', selCat);
   if (selMonth) params.append('month', selMonth);
   if (selYear) params.append('year', selYear);
@@ -161,13 +167,19 @@ async function loadTicketsReport() {
     if (!res.ok) throw new Error();
     const { data: rows } = await res.json();
 
-    // بناء مصفوفة النتائج حسب التصنيفات الثابتة
+    // بناء مصفوفة النتائج حسب التصنيفات الديناميكية
+    if (!categories || categories.length === 0) {
+      console.log('⚠️ [reports-tickets] التصنيفات غير متوفرة، إعادة تحميل...');
+      await fetchClassifications();
+    }
+    
     const langCats = categories.map(c => c[lang]);
     const dataMap = {};
     langCats.forEach(c => dataMap[c] = Array(12).fill(0));
+    
     rows.forEach(r => {
       const mIdx = (r.month || 1) - 1;
-      // التصنيف من البيانات قد يكون نص عربي أو إنجليزي أو كود، نطابقه مع الثابت
+      // التصنيف من البيانات قد يكون نص عربي أو إنجليزي أو كود، نطابقه مع الديناميكي
       const catIdx = langCats.findIndex(c => c === r.classification);
       if (catIdx !== -1 && mIdx >= 0 && mIdx < 12) {
         dataMap[langCats[catIdx]][mIdx] = r.closed_count;
@@ -212,6 +224,7 @@ async function downloadTableAsCSV() {
   const selMonth = document.getElementById('monthFilter')?.value;
   const selYear = document.getElementById('yearFilter')?.value;
   const params = new URLSearchParams();
+  params.append('lang', lang);
   if (selCat) params.append('category', selCat);
   if (selMonth) params.append('month', selMonth);
   if (selYear) params.append('year', selYear);
@@ -224,6 +237,12 @@ async function downloadTableAsCSV() {
     if (!res.ok) throw new Error();
     const { data: rows } = await res.json();
 
+    // تأكد من وجود التصنيفات
+    if (!categories || categories.length === 0) {
+      console.log('⚠️ [reports-tickets] التصنيفات غير متوفرة، إعادة تحميل...');
+      await fetchClassifications();
+    }
+    
     const langCats = categories.map(c => c[lang]);
     const dataMap = {};
     langCats.forEach(c => dataMap[c] = Array(12).fill(0));
@@ -274,6 +293,7 @@ async function downloadTableAsCSV() {
 // الإعداد عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', async () => {
   await fetchPermissions();      // جلب الصلاحيات أولاً
+  await fetchClassifications();  // جلب التصنيفات أولاً
   renderFiltersAndTitle();       // رسم الفلاتر والعناوين
   loadTicketsReport();           // تحميل البيانات
 
@@ -298,7 +318,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     downloadBtn.style.display = 'none';
   }
 
-  window.addEventListener('languageChanged', () => {
+  window.addEventListener('languageChanged', async () => {
+    await fetchClassifications();  // إعادة تحميل التصنيفات باللغة الجديدة
     renderFiltersAndTitle();
     loadTicketsReport();
     // إعادة فحص الصلاحية بعد تغيير اللغة

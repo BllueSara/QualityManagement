@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة الاحداث العارضة</title>
+    <link rel="stylesheet" href="../css/manage-settings.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+     <header class="main-header">
+    <div class="header-container">
+      <div class="system-title">
+          <img src="/frontend/images/system-title.png" alt="نظام إدارة الجودة والسلامة">
+  </div>
+       <div class="hospital-logo">
+                <img src="/frontend/images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز">
+            </div>
+    </div>
+  </header>
+          <div class="header-actions">
+    <button class="back-btn" onclick="history.back()">
+     <i class="fas fa-arrow-right" id="backIcon"></i>        <span data-translate="back">رجوع</span>
+  </button>
+  <button class="home-btn" onclick="window.location.href='index.html'">
+    <i class="fas fa-home"></i>
+    <span data-translate="home">الرئيسية</span>
+  </button>
+</div>
+    <div class="container">
+        <!-- Header -->
+        <!-- ===== الهيدر العلوي ===== -->
+
+        <!-- Main Content -->
+        <div class="content-wrapper">
+            <h1 class="page-title" data-translate="manage-settings">إدارة الإعدادات</h1>
+
+            <!-- Departments Section -->
+            <section class="settings-section">
+                <div class="section-header">
+                    <h2 class="section-title" data-translate="departments">الأقسام</h2>
+                    <button class="add-btn" id="addDepartmentBtn" data-translate="add-department">
+                        <i class="fas fa-plus"></i>
+                        إضافة قسم
+                    </button>
+                </div>
+                <div class="section-content">
+                    <div class="search-container">
+                        <input type="text" id="departmentSearch" class="search-input" placeholder="ابحث عن قسم..." data-translate-placeholder="search-departments">
+                        <i class="fas fa-search search-icon"></i>
+                    </div>
+                    <div class="items-list" id="departmentsList">
+                        <!-- سيتم ملؤها بالـ JavaScript -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Classifications Section -->
+            <section class="settings-section">
+                <div class="section-header">
+                    <h2 class="section-title" data-translate="classifications">التصنيفات</h2>
+                    <button class="add-btn" id="addClassificationBtn" data-translate="add-classification">
+                        <i class="fas fa-plus"></i>
+                        إضافة تصنيف
+                    </button>
+                </div>
+                <div class="section-content">
+                    <div class="search-container">
+                        <input type="text" id="classificationSearch" class="search-input" placeholder="ابحث عن تصنيف..." data-translate-placeholder="search-classifications">
+                        <i class="fas fa-search search-icon"></i>
+                    </div>
+                    <div class="items-list" id="classificationsList">
+                        <!-- سيتم ملؤها بالـ JavaScript -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Harm Levels Section -->
+            <section class="settings-section">
+                <div class="section-header">
+                    <h2 class="section-title" data-translate="harm-levels">مستويات الضرر</h2>
+                    <button class="add-btn" id="addHarmLevelBtn" data-translate="add-harm-level">
+                        <i class="fas fa-plus"></i>
+                        إضافة مستوى ضرر
+                    </button>
+                </div>
+                <div class="section-content">
+                    <div class="search-container">
+                        <input type="text" id="harmLevelSearch" class="search-input" placeholder="ابحث عن مستوى ضرر..." data-translate-placeholder="search-harm-levels">
+                        <i class="fas fa-search search-icon"></i>
+                    </div>
+                    <div class="items-list" id="harmLevelsList">
+                        <!-- سيتم ملؤها بالـ JavaScript -->
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Add Department Modal -->
+    <div id="addDepartmentModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 data-translate="add-department">إضافة قسم</h3>
+            <hr>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="departmentNameAr" data-translate="department-name-ar">اسم القسم (عربي)</label>
+                    <input type="text" id="departmentNameAr" placeholder="أدخل الاسم بالعربية" data-translate-placeholder="enter-name-arabic">
+                </div>
+                <div class="form-group">
+                    <label for="departmentNameEn" data-translate="department-name-en">Department Name (English)</label>
+                    <input type="text" id="departmentNameEn" placeholder="Enter name in English" data-translate-placeholder="enter-name-english">
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-primary" id="saveAddDepartment" data-translate="save">حفظ</button>
+                <button class="btn-secondary" id="cancelAddDepartment" data-translate="cancel">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Department Modal -->
+    <div id="editDepartmentModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 data-translate="edit-department">تعديل القسم</h3>
+            <hr>
+            <div class="modal-body">
+                <input type="hidden" id="editDepartmentId">
+                <div class="form-group">
+                    <label for="editDepartmentNameAr" data-translate="department-name-ar">اسم القسم (عربي)</label>
+                    <input type="text" id="editDepartmentNameAr" placeholder="أدخل الاسم بالعربية">
+                </div>
+                <div class="form-group">
+                    <label for="editDepartmentNameEn" data-translate="department-name-en">Department Name (English)</label>
+                    <input type="text" id="editDepartmentNameEn" placeholder="Enter name in English">
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-primary" id="saveEditDepartment" data-translate="save">حفظ</button>
+                <button class="btn-secondary" id="cancelEditDepartment" data-translate="cancel">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Classification Modal -->
+    <div id="addClassificationModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 data-translate="add-classification">إضافة تصنيف</h3>
+            <hr>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="classificationNameAr" data-translate="classification-name-ar">اسم التصنيف (عربي)</label>
+                    <input type="text" id="classificationNameAr" placeholder="أدخل الاسم بالعربية">
+                </div>
+                <div class="form-group">
+                    <label for="classificationNameEn" data-translate="classification-name-en">Classification Name (English)</label>
+                    <input type="text" id="classificationNameEn" placeholder="Enter name in English">
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-primary" id="saveAddClassification" data-translate="save">حفظ</button>
+                <button class="btn-secondary" id="cancelAddClassification" data-translate="cancel">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Classification Modal -->
+    <div id="editClassificationModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 data-translate="edit-classification">تعديل التصنيف</h3>
+            <hr>
+            <div class="modal-body">
+                <input type="hidden" id="editClassificationId">
+                <div class="form-group">
+                    <label for="editClassificationNameAr" data-translate="classification-name-ar">اسم التصنيف (عربي)</label>
+                    <input type="text" id="editClassificationNameAr" placeholder="أدخل الاسم بالعربية">
+                </div>
+                <div class="form-group">
+                    <label for="editClassificationNameEn" data-translate="classification-name-en">Classification Name (English)</label>
+                    <input type="text" id="editClassificationNameEn" placeholder="Enter name in English">
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-primary" id="saveEditClassification" data-translate="save">حفظ</button>
+                <button class="btn-secondary" id="cancelEditClassification" data-translate="cancel">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Harm Level Modal -->
+    <div id="addHarmLevelModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 data-translate="add-harm-level">إضافة مستوى ضرر</h3>
+            <hr>
+            <div class="modal-body">
+                <div class="form-group">
+                                        <label for="harmLevelDescAr" data-translate="harm-level-desc-ar">وصف مستوى الضرر (عربي)</label>
+
+                    <textarea id="harmLevelDescAr" placeholder="أدخل الوصف بالعربية" data-translate-placeholder="enter-description-arabic"></textarea>
+                </div>
+                <div class="form-group">
+                                        <label for="harmLevelDescEn" data-translate="harm-level-desc-en">Harm Level Description (English)</label>
+
+                    <textarea id="harmLevelDescEn" placeholder="Enter description in English" data-translate-placeholder="enter-description-english"></textarea>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-primary" id="saveAddHarmLevel" data-translate="save">حفظ</button>
+                <button class="btn-secondary" id="cancelAddHarmLevel" data-translate="cancel">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Harm Level Modal -->
+    <div id="editHarmLevelModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 data-translate="edit-harm-level">تعديل مستوى الضرر</h3>
+            <hr>
+            <div class="modal-body">
+                <input type="hidden" id="editHarmLevelId">
+                <div class="form-group">
+                                                            <label for="harmLevelDescAr" data-translate="harm-level-desc-ar">وصف مستوى الضرر (عربي)</label>
+
+                    <textarea id="editHarmLevelDescAr" placeholder="أدخل الوصف بالعربية"></textarea>
+                </div>
+                <div class="form-group">
+                                        <label for="harmLevelDescEn" data-translate="harm-level-desc-en">Harm Level Description (English)</label>
+
+                    <textarea id="editHarmLevelDescEn" placeholder="Enter description in English"></textarea>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-primary" id="saveEditHarmLevel" data-translate="save">حفظ</button>
+                <button class="btn-secondary" id="cancelEditHarmLevel" data-translate="cancel">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 data-translate="confirm-delete">تأكيد الحذف</h3>
+            <hr>
+            <div class="modal-body">
+                <p data-translate="delete-confirmation">هل أنت متأكد من حذف هذا العنصر؟</p>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-danger" id="confirmDelete" data-translate="delete">حذف</button>
+                <button class="btn-secondary" id="cancelDelete" data-translate="cancel">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/language.js"></script>
+    <script src="../js/manage-settings.js"></script>
+</body>
+</html> 

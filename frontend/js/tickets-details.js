@@ -79,6 +79,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       return response.json();
     })
     .then(ticket => {
+      console.log('✅ [tickets-details] تم استلام بيانات التذكرة:', ticket);
+      console.log('🔍 [tickets-details] بيانات مستوى الضرر في التذكرة:', {
+        harm_level: ticket.harm_level,
+        harm_level_id: ticket.harm_level_id,
+        level_of_harm: ticket.level_of_harm
+      });
+      
       const formatDate = iso => new Date(iso).toLocaleDateString(
         currentLang === 'ar' ? 'ar-EG' : 'en-US', 
         {
@@ -91,16 +98,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.querySelector('[data-field="event-date"]').textContent = formatDate(ticket.event_date);
       document.querySelector('[data-field="event-time"]').textContent = getTranslation(normalizeValue(ticket.event_time));
       document.querySelector('[data-field="event-location"]').textContent = ticket.event_location;
-const lang = currentLang || 'ar';
+      const lang = currentLang || 'ar';
 
-function parseDeptName(name) {
-  try {
-    const parsed = JSON.parse(name);
-    return parsed[lang] || parsed['ar'] || parsed['en'] || name;
-  } catch {
-    return name; // في حال الاسم مو بصيغة JSON
-  }
-}
+      function parseDeptName(name) {
+        try {
+          const parsed = JSON.parse(name);
+          return parsed[lang] || parsed['ar'] || parsed['en'] || name;
+        } catch {
+          return name; // في حال الاسم مو بصيغة JSON
+        }
+      }
 
 document.querySelector('[data-field="reporting-dept"]').textContent = parseDeptName(ticket.reporting_dept_name);
 document.querySelector('[data-field="responding-dept"]').textContent = parseDeptName(ticket.responding_dept_name);
@@ -155,14 +162,30 @@ document.querySelector('[data-field="responding-dept"]').textContent = parseDept
 
       const tagsContainer = document.querySelector('.tags-container');
       tagsContainer.innerHTML = '';
-      ticket.classifications.forEach(cls => {
-        const key = normalizeValue(cls);
-        const translated = getTranslation(key);
-        // If translation is missing, show the original value
-        const display = translated !== key ? translated : cls;
+      
+      // استخدام classification_details إذا كانت متوفرة، وإلا استخدم classifications
+      const classificationsToShow = ticket.classification_details || ticket.classifications || [];
+      
+      classificationsToShow.forEach(cls => {
+        let displayText = '';
+        
+        if (typeof cls === 'object' && cls.name_ar) {
+          // إذا كان cls كائن يحتوي على name_ar و name_en
+          const lang = localStorage.getItem('language') || 'ar';
+          displayText = lang === 'en' ? cls.name_en : cls.name_ar;
+        } else if (typeof cls === 'string') {
+          // إذا كان cls نص
+          const key = normalizeValue(cls);
+          const translated = getTranslation(key);
+          displayText = translated !== key ? translated : cls;
+        } else if (typeof cls === 'number') {
+          // إذا كان cls رقم (ID)
+          displayText = `تصنيف ${cls}`;
+        }
+        
         const span = document.createElement('span');
         span.className = 'tag';
-        span.textContent = display;
+        span.textContent = displayText;
         tagsContainer.appendChild(span);
       });
 
@@ -177,16 +200,26 @@ document.querySelector('[data-field="responding-dept"]').textContent = parseDept
       reloadReplies();
 
       // 🟢 عرض تصنيف مستوى الضرر
-      if (ticket.level_of_harm) {
-        const key = `harm-level-${ticket.level_of_harm}-desc`;
+      console.log('🔍 [tickets-details] بيانات مستوى الضرر:', ticket.harm_level);
+      
+      if (ticket.harm_level && ticket.harm_level.name_ar) {
         const lang = currentLang || 'ar';
-        const desc = (window.translations && window.translations[lang] && window.translations[lang][key]) ? window.translations[lang][key] : ticket.level_of_harm;
+        const harmLevelName = lang === 'en' ? ticket.harm_level.name_en : ticket.harm_level.name_ar;
+        const harmLevelDesc = lang === 'en' ? ticket.harm_level.desc_en : ticket.harm_level.desc_ar;
+        
         const el = document.getElementById('levelHarmView');
-        if (el) el.textContent = desc;
+        if (el) {
+          el.textContent = `${harmLevelName} - ${harmLevelDesc}`;
+        }
+        
+        console.log('✅ [tickets-details] تم عرض مستوى الضرر:', harmLevelName);
+      } else {
+        console.log('⚠️ [tickets-details] لا توجد بيانات مستوى الضرر');
       }
     })
     .catch(error => {
-      alert(getTranslation('error-loading-ticket'));
+      console.error('❌ [tickets-details] خطأ في جلب بيانات التذكرة:', error);
+      alert('حدث خطأ أثناء جلب بيانات الحدث العارض: ' + error.message);
     });
 
   // بعد جلب بيانات التذكرة

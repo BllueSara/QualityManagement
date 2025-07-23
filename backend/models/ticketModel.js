@@ -20,9 +20,9 @@ static async create(ticketData, userId) {
     reporter_phone, reporter_email, actions_taken,
     had_injury, injury_type,
     attachments,
-    classification,
+    classifications,
     patient_types,
-    level_of_harm 
+    harm_level_id // <-- استخدم هذا بدلاً من level_of_harm
   } = ticketData;
 
   const connection = await db.getConnection();
@@ -42,7 +42,7 @@ static async create(ticketData, userId) {
          reporter_name, reporter_position,
          reporter_phone, reporter_email, actions_taken,
          had_injury, injury_type,
-         level_of_harm,
+         harm_level_id,
          status, created_by
        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?, ?, ?, ?, ?, 'جديد', ?)`,
       [
@@ -53,17 +53,17 @@ static async create(ticketData, userId) {
         reporter_name, reporter_position,
         reporter_phone, reporter_email, actions_taken,
         had_injury, injury_type,
-        level_of_harm, 
+        harm_level_id, // <-- هنا
         userId
       ]
     );
     const ticketId = result.insertId;
 
     // 2) إدراج التصنيفات
-    if (Array.isArray(classification) && classification.length) {
-      const vals = classification.map(cat => [ticketId, cat]);
+    if (Array.isArray(classifications) && classifications.length) {
+      const vals = classifications.map(catId => [ticketId, catId]);
       await connection.query(
-        `INSERT INTO ticket_classifications (ticket_id, classification) VALUES ?`,
+        `INSERT INTO ticket_classifications (ticket_id, classification_id) VALUES ?`,
         [vals]
       );
     }
@@ -132,7 +132,15 @@ static async findAllAndAssignments(userId, userRole) {
         u.username    AS created_by,
         t.created_at,
         -- لو ما فيه تصنيفات نرجع []، وإلا نجمعهم
-COALESCE(JSON_ARRAYAGG(tc.classification), JSON_ARRAY()) AS classifications
+        COALESCE(
+          NULLIF(JSON_ARRAYAGG(
+            CASE 
+              WHEN c.name_ar IS NOT NULL THEN c.name_ar 
+              ELSE NULL 
+            END
+          ), JSON_ARRAY(NULL)), 
+          JSON_ARRAY()
+        ) AS classifications
       FROM tickets t
       LEFT JOIN departments rd ON t.reporting_dept_id = rd.id
       LEFT JOIN departments sd ON t.responding_dept_id = sd.id
@@ -146,8 +154,8 @@ COALESCE(JSON_ARRAYAGG(tc.classification), JSON_ARRAY()) AS classifications
           GROUP BY ticket_id
         ) h2 ON h1.ticket_id = h2.ticket_id AND h1.id = h2.max_id
       ) AS latest ON latest.ticket_id = t.id
-      LEFT JOIN ticket_classifications tc
-        ON tc.ticket_id = t.id
+      LEFT JOIN ticket_classifications tc ON tc.ticket_id = t.id
+      LEFT JOIN classifications c ON tc.classification_id = c.id
     `;
 
     // 3) شرط لغير الأدمن
@@ -179,9 +187,18 @@ COALESCE(JSON_ARRAYAGG(tc.classification), JSON_ARRAY()) AS classifications
     // 6) حوّل حقل classifications من JSON string لمصفوفة JS
     const tickets = rows.map(r => ({
       ...r,
-      classifications: typeof r.classifications === 'string'
-        ? JSON.parse(r.classifications)
-        : r.classifications
+      classifications: (() => {
+        try {
+          if (typeof r.classifications === 'string') {
+            const parsed = JSON.parse(r.classifications);
+            return Array.isArray(parsed) ? parsed : [];
+          }
+          return Array.isArray(r.classifications) ? r.classifications : [];
+        } catch (e) {
+          console.error('Error parsing classifications for ticket', r.id, ':', e);
+          return [];
+        }
+      })()
     }));
 
     return tickets;
@@ -228,84 +245,162 @@ static async findAll(userId, userRole) {
 }
 
 
-static async findById(id) {
+static async findById(id, userId, userRole) {
   const conn = await db.getConnection();
   try {
-    // 1) جلب بيانات التذكرة الأساسية (بدون أي شروط إضافية على الدور)
-    const [tickets] = await conn.query(`
-      SELECT 
-        t.*, 
-        rd.name AS reporting_dept_name, 
-        sd.name AS responding_dept_name,
-        u1.username AS created_by_name,
-        u2.username AS assigned_to_name
-      FROM tickets t
-      LEFT JOIN departments rd ON t.reporting_dept_id = rd.id
-      LEFT JOIN departments sd ON t.responding_dept_id = sd.id
-      LEFT JOIN users u1 ON t.created_by   = u1.id
-      LEFT JOIN users u2 ON t.assigned_to  = u2.id
-      WHERE t.id = ?
-    `, [id]);
-
-    if (tickets.length === 0) {
-      return null;
+    if (!id) {
+      throw new Error('معرف التذكرة مطلوب');
     }
-    const ticket = tickets[0];
+    
+    console.log('🔍 [findById] جلب التذكرة رقم:', id, 'للمستخدم:', userId, 'الرول:', userRole);
+    // 1) جلب بيانات التذكرة الأساسية مع بيانات مستوى الضرر
+    let ticket;
+    try {
+      const [tickets] = await conn.query(`
+        SELECT 
+          t.*, 
+          rd.name AS reporting_dept_name, 
+          sd.name AS responding_dept_name,
+          u1.username AS created_by_name,
+          u2.username AS assigned_to_name,
+          h.code AS harm_level_code,
+          h.name_ar AS harm_level_name_ar,
+          h.name_en AS harm_level_name_en,
+          h.desc_ar AS harm_level_desc_ar,
+          h.desc_en AS harm_level_desc_en
+        FROM tickets t
+        LEFT JOIN departments rd ON t.reporting_dept_id = rd.id
+        LEFT JOIN departments sd ON t.responding_dept_id = sd.id
+        LEFT JOIN users u1 ON t.created_by   = u1.id
+        LEFT JOIN users u2 ON t.assigned_to  = u2.id
+        LEFT JOIN harm_levels h ON t.harm_level_id = h.id
+        WHERE t.id = ?
+      `, [id]);
+
+      if (tickets.length === 0) {
+        console.log('❌ [findById] التذكرة غير موجودة:', id);
+        return null;
+      }
+      ticket = tickets[0];
+      console.log('✅ [findById] تم جلب بيانات التذكرة الأساسية');
+    } catch (error) {
+      console.error('❌ [findById] خطأ في جلب بيانات التذكرة الأساسية:', error);
+      throw error;
+    }
+
+    // أضف بيانات مستوى الضرر كمفتاح فرعي
+    try {
+      ticket.harm_level = {
+        id: ticket.harm_level_id,
+        code: ticket.harm_level_code,
+        name_ar: ticket.harm_level_name_ar,
+        name_en: ticket.harm_level_name_en,
+        desc_ar: ticket.harm_level_desc_ar,
+        desc_en: ticket.harm_level_desc_en
+      };
+      
+      // تأكد من أن البيانات موجودة
+      if (!ticket.harm_level.id) {
+        ticket.harm_level = null;
+      }
+      console.log('✅ [findById] تم معالجة بيانات مستوى الضرر');
+    } catch (error) {
+      console.error('❌ [findById] خطأ في معالجة بيانات مستوى الضرر:', error);
+      ticket.harm_level = null;
+    }
 
     // 2) المرفقات
-    const [attachments] = await conn.query(
-      `SELECT id, filename, path, mimetype, created_at
-       FROM ticket_attachments
-       WHERE ticket_id = ?`,
-      [id]
-    );
-    ticket.attachments = attachments;
+    try {
+      const [attachments] = await conn.query(
+        `SELECT id, filename, path, mimetype, created_at
+         FROM ticket_attachments
+         WHERE ticket_id = ?`,
+        [id]
+      );
+      ticket.attachments = attachments;
+      console.log('✅ [findById] تم جلب المرفقات:', attachments.length);
+    } catch (error) {
+      console.error('❌ [findById] خطأ في جلب المرفقات:', error);
+      ticket.attachments = [];
+    }
 
     // 3) سجل الحالات
-    const [history] = await conn.query(
-      `SELECT
-         h.id, h.status, h.comments, h.created_at,
-         u.username AS changed_by_name
-       FROM ticket_status_history h
-       LEFT JOIN users u ON h.changed_by = u.id
-       WHERE h.ticket_id = ?
-       ORDER BY h.created_at DESC`,
-      [id]
-    );
-    ticket.status_history = history;
+    try {
+      const [history] = await conn.query(
+        `SELECT
+           h.id, h.status, h.comments, h.created_at,
+           u.username AS changed_by_name
+         FROM ticket_status_history h
+         LEFT JOIN users u ON h.changed_by = u.id
+         WHERE h.ticket_id = ?
+         ORDER BY h.created_at DESC`,
+        [id]
+      );
+      ticket.status_history = history;
+      console.log('✅ [findById] تم جلب سجل الحالات:', history.length);
+    } catch (error) {
+      console.error('❌ [findById] خطأ في جلب سجل الحالات:', error);
+      ticket.status_history = [];
+    }
 
     // 4) التصنيفات
-    const [classifications] = await conn.query(
-      `SELECT classification
-       FROM ticket_classifications
-       WHERE ticket_id = ?`,
-      [id]
-    );
-    ticket.classifications = classifications.map(r => r.classification);
-    console.log('classifications:', ticket.classifications);
+    try {
+      const [classifications] = await conn.query(
+        `SELECT c.id, c.name_ar, c.name_en
+         FROM ticket_classifications tc
+         JOIN classifications c ON tc.classification_id = c.id
+         WHERE tc.ticket_id = ?`,
+        [id]
+      );
+      ticket.classifications = classifications.map(r => r.id);
+      ticket.classification_details = classifications.map(r => ({
+        id: r.id,
+        name_ar: r.name_ar,
+        name_en: r.name_en
+      }));
+      console.log('✅ [findById] تم جلب التصنيفات:', ticket.classifications);
+      console.log('✅ [findById] تفاصيل التصنيفات:', ticket.classification_details);
+    } catch (error) {
+      console.error('❌ [findById] خطأ في جلب التصنيفات:', error);
+      ticket.classifications = [];
+      ticket.classification_details = [];
+    }
 
     // 5) أنواع المرضى
-    const [patientTypes] = await conn.query(
-      `SELECT patient_type
-       FROM ticket_patient_types
-       WHERE ticket_id = ?`,
-      [id]
-    );
-    ticket.patient_types = patientTypes.map(r => r.patient_type);
+    try {
+      const [patientTypes] = await conn.query(
+        `SELECT patient_type
+         FROM ticket_patient_types
+         WHERE ticket_id = ?`,
+        [id]
+      );
+      ticket.patient_types = patientTypes.map(r => r.patient_type);
+      console.log('✅ [findById] تم جلب أنواع المرضى:', ticket.patient_types);
+    } catch (error) {
+      console.error('❌ [findById] خطأ في جلب أنواع المرضى:', error);
+      ticket.patient_types = [];
+    }
 
     // 6) الردود
-    const [replies] = await conn.query(
-      `SELECT
-         r.id, r.text, r.created_at,
-         u.username AS author
-       FROM ticket_replies r
-       LEFT JOIN users u ON r.author_id = u.id
-       WHERE r.ticket_id = ?
-       ORDER BY r.created_at ASC`,
-      [id]
-    );
-    ticket.replies = replies;
+    try {
+      const [replies] = await conn.query(
+        `SELECT
+           r.id, r.text, r.created_at,
+           u.username AS author
+         FROM ticket_replies r
+         LEFT JOIN users u ON r.author_id = u.id
+         WHERE r.ticket_id = ?
+         ORDER BY r.created_at ASC`,
+        [id]
+      );
+      ticket.replies = replies;
+      console.log('✅ [findById] تم جلب الردود:', replies.length);
+    } catch (error) {
+      console.error('❌ [findById] خطأ في جلب الردود:', error);
+      ticket.replies = [];
+    }
 
+    console.log('✅ [findById] تم إكمال جلب جميع بيانات التذكرة بنجاح');
     return ticket;
 
   } finally {
@@ -361,7 +456,7 @@ static async update(id, ticketData, userId) {
       injury_type,
       status            = orig.status,
       attachments       = [],
-      level_of_harm     = orig.level_of_harm 
+      harm_level_id     = orig.harm_level_id 
     } = ticketData;
 
     // 2.1) معالجة الحقول الاختيارية
@@ -413,7 +508,7 @@ static async update(id, ticketData, userId) {
          actions_taken      = ?,
          had_injury         = ?,
          injury_type        = ?,
-         level_of_harm      = ?, 
+         harm_level_id      = ?, 
          status             = ?,
          updated_at         = CURRENT_TIMESTAMP
        WHERE id = ?`,
@@ -438,7 +533,7 @@ static async update(id, ticketData, userId) {
         actions_taken,
         had_injury,
         injury_type,
-        level_of_harm, 
+        harm_level_id, 
         status,
         id
       ]
@@ -464,7 +559,7 @@ static async update(id, ticketData, userId) {
       );
       const clsVals = ticketData.classifications.map(c => [id, c]);
       await connection.query(
-        'INSERT INTO ticket_classifications (ticket_id, classification) VALUES ?',
+        'INSERT INTO ticket_classifications (ticket_id, classification_id) VALUES ?',
         [clsVals]
       );
     }

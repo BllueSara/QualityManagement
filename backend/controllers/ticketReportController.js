@@ -40,8 +40,8 @@ exports.getClosedTicketsReport = async (req, res) => {
         return res.status(403).json({ status: 'error', message: 'ليس لديك صلاحية عرض تقارير الاحداث العارضة.' });
       }
     }
-    // فلترة حسب الشهر والسنة إذا تم إرسالها
-    const { month, year } = req.query;
+    // فلترة حسب الشهر والسنة والتصنيف إذا تم إرسالها
+    const { month, year, category, lang = 'ar' } = req.query;
     if (month) {
       where += ' AND MONTH(h.created_at) = ?';
       params.push(Number(month));
@@ -50,20 +50,31 @@ exports.getClosedTicketsReport = async (req, res) => {
       where += ' AND YEAR(h.created_at) = ?';
       params.push(Number(year));
     }
+    if (category) {
+      where += ' AND (c.name_ar = ? OR c.name_en = ?)';
+      params.push(category, category);
+    }
+    
+    // إضافة اللغة كمعامل أول للـ CASE statement
+    params.unshift(lang);
 
     // جلب عدد التذاكر المغلقة لكل تصنيف ولكل شهر
     const sql = `
       SELECT
-        tc.classification,
+        CASE 
+          WHEN ? = 'en' THEN c.name_en 
+          ELSE c.name_ar 
+        END AS classification,
         MONTH(h.created_at) AS month,
         YEAR(h.created_at) AS year,
         COUNT(DISTINCT t.id) AS closed_count
       FROM tickets t
       JOIN ticket_status_history h ON h.ticket_id = t.id
       JOIN ticket_classifications tc ON tc.ticket_id = t.id
+      JOIN classifications c ON c.id = tc.classification_id
       ${where}
-      GROUP BY tc.classification, year, month
-      ORDER BY year DESC, month DESC, tc.classification
+      GROUP BY classification, year, month
+      ORDER BY year DESC, month DESC, classification
     `;
     const [rows] = await db.execute(sql, params);
 

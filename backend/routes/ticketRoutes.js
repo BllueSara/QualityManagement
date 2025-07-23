@@ -2,6 +2,30 @@ const express = require('express');
 const router = express.Router();
 const ticketController = require('../controllers/ticketController');
 const { authenticateToken, } = require('../controllers/authController');
+const { 
+    getClassifications, 
+    getClassificationById,
+    createClassification,
+    updateClassification,
+    deleteClassification,
+    getHarmLevels,
+    getHarmLevelById,
+    createHarmLevel,
+    updateHarmLevel,
+    deleteHarmLevel
+} = require('../controllers/ticketController');
+
+router.get('/classifications', authenticateToken, getClassifications);
+router.get('/classifications/:id', authenticateToken, getClassificationById);
+router.post('/classifications', authenticateToken, createClassification);
+router.put('/classifications/:id', authenticateToken, updateClassification);
+router.delete('/classifications/:id', authenticateToken, deleteClassification);
+
+router.get('/harm-levels', authenticateToken, getHarmLevels);
+router.get('/harm-levels/:id', authenticateToken, getHarmLevelById);
+router.post('/harm-levels', authenticateToken, createHarmLevel);
+router.put('/harm-levels/:id', authenticateToken, updateHarmLevel);
+router.delete('/harm-levels/:id', authenticateToken, deleteHarmLevel);
 
 // Get all departments
 router.get('/departments', authenticateToken, ticketController.getDepartments);
