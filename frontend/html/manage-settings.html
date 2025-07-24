@@ -39,7 +39,7 @@
             <section class="settings-section">
                 <div class="section-header">
                     <h2 class="section-title" data-translate="departments">الأقسام</h2>
-                    <button class="add-btn" id="addDepartmentBtn" data-translate="add-department">
+                    <button class="add-btn" id="addDepartmentBtn" data-translate="add-department" style="display: none;">
                         <i class="fas fa-plus"></i>
                         إضافة قسم
                     </button>
@@ -111,6 +111,10 @@
                     <label for="departmentNameEn" data-translate="department-name-en">Department Name (English)</label>
                     <input type="text" id="departmentNameEn" placeholder="Enter name in English" data-translate-placeholder="enter-name-english">
                 </div>
+                <div class="form-group">
+                    <label for="departmentImage" data-translate="department-image">مسار الصورة</label>
+                    <input type="file" id="departmentImage" accept="image/*">
+                </div>
             </div>
             <div class="modal-buttons">
                 <button class="btn-primary" id="saveAddDepartment" data-translate="save">حفظ</button>
@@ -128,15 +132,19 @@
                 <input type="hidden" id="editDepartmentId">
                 <div class="form-group">
                     <label for="editDepartmentNameAr" data-translate="department-name-ar">اسم القسم (عربي)</label>
-                    <input type="text" id="editDepartmentNameAr" placeholder="أدخل الاسم بالعربية">
+                    <input type="text" id="editDepartmentNameAr" placeholder="أدخل الاسم بالعربية" data-translate-placeholder="enter-name-arabic">
                 </div>
                 <div class="form-group">
                     <label for="editDepartmentNameEn" data-translate="department-name-en">Department Name (English)</label>
-                    <input type="text" id="editDepartmentNameEn" placeholder="Enter name in English">
+                    <input type="text" id="editDepartmentNameEn" placeholder="Enter name in English" data-translate-placeholder="enter-name-english">
+                </div>
+                <div class="form-group">
+                    <label for="editDepartmentImage" data-translate="department-image">مسار الصورة</label>
+                    <input type="file" id="editDepartmentImage" accept="image/*">
                 </div>
             </div>
             <div class="modal-buttons">
-                <button class="btn-primary" id="saveEditDepartment" data-translate="save">حفظ</button>
+                <button class="btn-primary" id="saveEditDepartment" data-translate="update">تحديث</button>
                 <button class="btn-secondary" id="cancelEditDepartment" data-translate="cancel">إلغاء</button>
             </div>
         </div>
@@ -150,11 +158,11 @@
             <div class="modal-body">
                 <div class="form-group">
                     <label for="classificationNameAr" data-translate="classification-name-ar">اسم التصنيف (عربي)</label>
-                    <input type="text" id="classificationNameAr" placeholder="أدخل الاسم بالعربية">
+                    <input type="text" id="classificationNameAr" placeholder="أدخل الاسم بالعربية" data-translate-placeholder="enter-name-arabic">
                 </div>
                 <div class="form-group">
                     <label for="classificationNameEn" data-translate="classification-name-en">Classification Name (English)</label>
-                    <input type="text" id="classificationNameEn" placeholder="Enter name in English">
+                    <input type="text" id="classificationNameEn" placeholder="Enter name in English" data-translate-placeholder="enter-name-english">
                 </div>
             </div>
             <div class="modal-buttons">
@@ -173,11 +181,11 @@
                 <input type="hidden" id="editClassificationId">
                 <div class="form-group">
                     <label for="editClassificationNameAr" data-translate="classification-name-ar">اسم التصنيف (عربي)</label>
-                    <input type="text" id="editClassificationNameAr" placeholder="أدخل الاسم بالعربية">
+                    <input type="text" id="editClassificationNameAr" placeholder="أدخل الاسم بالعربية" data-translate-placeholder="enter-name-arabic">
                 </div>
                 <div class="form-group">
                     <label for="editClassificationNameEn" data-translate="classification-name-en">Classification Name (English)</label>
-                    <input type="text" id="editClassificationNameEn" placeholder="Enter name in English">
+                    <input type="text" id="editClassificationNameEn" placeholder="Enter name in English" data-translate-placeholder="enter-name-english">
                 </div>
             </div>
             <div class="modal-buttons">
@@ -221,12 +229,12 @@
                 <div class="form-group">
                                                             <label for="harmLevelDescAr" data-translate="harm-level-desc-ar">وصف مستوى الضرر (عربي)</label>
 
-                    <textarea id="editHarmLevelDescAr" placeholder="أدخل الوصف بالعربية"></textarea>
+                    <textarea id="editHarmLevelDescAr" placeholder="أدخل الوصف بالعربية" data-translate-placeholder="enter-description-arabic"></textarea>
                 </div>
                 <div class="form-group">
                                         <label for="harmLevelDescEn" data-translate="harm-level-desc-en">Harm Level Description (English)</label>
 
-                    <textarea id="editHarmLevelDescEn" placeholder="Enter description in English"></textarea>
+                    <textarea id="editHarmLevelDescEn" placeholder="Enter description in English" data-translate-placeholder="enter-description-english"></textarea>
                 </div>
             </div>
             <div class="modal-buttons">

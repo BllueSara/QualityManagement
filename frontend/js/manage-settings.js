@@ -33,6 +33,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     let currentDeleteType = '';
     let currentDeleteId = '';
 
+    // Permissions state
+    const permissions = { canAdd: false, canEdit: false, canDelete: false };
+
     // Utility functions
     function getToken() { 
         return localStorage.getItem('token'); 
@@ -67,6 +70,50 @@ document.addEventListener('DOMContentLoaded', async function() {
         return window.translations?.[lang]?.[key] || key;
     }
 
+    // Fetch user permissions
+    async function fetchPermissions() {
+        const userId = getUserId();
+        if (!userId) return;
+
+        const headers = { 'Authorization': `Bearer ${getToken()}` };
+
+        // جلب دور المستخدم
+        const userRes = await fetch(`${apiBase}/users/${userId}`, { headers });
+        const { data: user } = await userRes.json();
+        const role = user.role;
+        if (role === 'admin') {
+            permissions.canAdd = permissions.canEdit = permissions.canDelete = true;
+        }
+
+        // جلب قائمة الصلاحيات
+        const permsRes = await fetch(`${apiBase}/users/${userId}/permissions`, { headers });
+        const { data: perms } = await permsRes.json();
+
+        console.log('raw permissions:', perms);
+
+        // تعامُل مع النصوص و objects
+        const keys = perms.map(p => 
+            (typeof p === 'string' ? p : p.permission)
+        );
+        console.log('mapped keys:', keys);
+
+        // ضبط صلاحيات العرض للأقسام فقط
+        if (keys.includes('add_section'))    permissions.canAdd    = true;
+        if (keys.includes('edit_section'))   permissions.canEdit   = true;
+        if (keys.includes('delete_section')) permissions.canDelete = true;
+
+        // تحديث عرض أزرار الأقسام
+        updateDepartmentButtons();
+    }
+
+    // تحديث عرض أزرار الأقسام بناءً على الصلاحيات
+    function updateDepartmentButtons() {
+        const addDepartmentBtn = document.getElementById('addDepartmentBtn');
+        if (addDepartmentBtn) {
+            addDepartmentBtn.style.display = permissions.canAdd ? 'flex' : 'none';
+        }
+    }
+
     // Modal functions
     function openModal(modal) { 
         modal.style.display = 'flex'; 
@@ -83,6 +130,12 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (input.type !== 'hidden') {
                 input.value = '';
             }
+        });
+        
+        // Clear file inputs specifically
+        const fileInputs = modal.querySelectorAll('input[type="file"]');
+        fileInputs.forEach(input => {
+            input.value = '';
         });
     }
 
@@ -163,20 +216,29 @@ document.addEventListener('DOMContentLoaded', async function() {
                 deptName = dept.name;
             }
 
+            let actions = '';
+            if (permissions.canEdit || permissions.canDelete) {
+                actions = '<div class="item-actions">';
+                if (permissions.canEdit) {
+                    actions += `<button class="edit-btn" onclick="handleEditDepartment(${dept.id})">
+                        <i class="fas fa-edit"></i> ${getTranslation('edit')}
+                    </button>`;
+                }
+                if (permissions.canDelete) {
+                    actions += `<button class="delete-btn" onclick="handleDeleteDepartment(${dept.id})">
+                        <i class="fas fa-trash"></i> ${getTranslation('delete')}
+                    </button>`;
+                }
+                actions += '</div>';
+            }
+
             return `
                 <div class="item-row" data-id="${dept.id}">
                     <div class="item-info">
                         <div class="item-name">${deptName}</div>
                         <div class="item-description">ID: ${dept.id}</div>
                     </div>
-                    <div class="item-actions">
-                        <button class="edit-btn" onclick="handleEditDepartment(${dept.id})">
-                            <i class="fas fa-edit"></i> ${getTranslation('edit')}
-                        </button>
-                        <button class="delete-btn" onclick="handleDeleteDepartment(${dept.id})">
-                            <i class="fas fa-trash"></i> ${getTranslation('delete')}
-                        </button>
-                    </div>
+                    ${actions}
                 </div>
             `;
         }).join('');
@@ -309,6 +371,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 document.getElementById('editDepartmentNameAr').value = department.name || '';
                 document.getElementById('editDepartmentNameEn').value = '';
             }
+            // Clear the image input
+            document.getElementById('editDepartmentImage').value = '';
             openModal(editDepartmentModal);
         }
     };
@@ -393,17 +457,21 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Save handlers
     document.getElementById('saveAddDepartment').addEventListener('click', async () => {
+        if (!permissions.canAdd) return;
+
         const nameAr = document.getElementById('departmentNameAr').value.trim();
         const nameEn = document.getElementById('departmentNameEn').value.trim();
+        const file = document.getElementById('departmentImage').files[0];
         
-        if (!nameAr || !nameEn) {
-            alert(getTranslation('please-enter-both-names') || 'الرجاء إدخال الاسم بالعربية والإنجليزية');
+        if (!nameAr || !nameEn || !file) {
+            alert('الرجاء إدخال الاسم بالعربية والإنجليزية واختيار صورة.');
             return;
         }
 
         const name = JSON.stringify({ ar: nameAr, en: nameEn });
         const formData = new FormData();
         formData.append('name', name);
+        formData.append('image', file);
 
         try {
             const response = await fetch(`${apiBase}/departments`, {
@@ -424,18 +492,22 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     document.getElementById('saveEditDepartment').addEventListener('click', async () => {
+        if (!permissions.canEdit) return;
+
         const id = document.getElementById('editDepartmentId').value;
         const nameAr = document.getElementById('editDepartmentNameAr').value.trim();
         const nameEn = document.getElementById('editDepartmentNameEn').value.trim();
+        const file = document.getElementById('editDepartmentImage').files[0];
         
         if (!id || !nameAr || !nameEn) {
-            alert(getTranslation('please-enter-both-names') || 'الرجاء إدخال الاسم بالعربية والإنجليزية');
+            alert('الرجاء إدخال الاسم بالعربية والإنجليزية.');
             return;
         }
 
         const name = JSON.stringify({ ar: nameAr, en: nameEn });
         const formData = new FormData();
         formData.append('name', name);
+        if (file) formData.append('image', file);
 
         try {
             const response = await fetch(`${apiBase}/departments/${id}`, {
@@ -656,11 +728,31 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     });
 
+    // Button event listeners
+    addDepartmentBtn.addEventListener('click', () => {
+        if (!permissions.canAdd) return;
+        openModal(addDepartmentModal);
+    });
+
+    addClassificationBtn.addEventListener('click', () => {
+        openModal(addClassificationModal);
+    });
+
+    addHarmLevelBtn.addEventListener('click', () => {
+        openModal(addHarmLevelModal);
+    });
+
+    // Search event listeners
+    departmentSearch.addEventListener('input', (e) => filterDepartments(e.target.value));
+    classificationSearch.addEventListener('input', (e) => filterClassifications(e.target.value));
+    harmLevelSearch.addEventListener('input', (e) => filterHarmLevels(e.target.value));
+
     // Language change handler
     window.addEventListener('languageChanged', async () => {
         await fetchClassifications();
         await fetchHarmLevels();
         updatePlaceholders();
+        updateDepartmentButtons();
     });
 
     // Update placeholders based on current language
@@ -671,19 +763,135 @@ document.addEventListener('DOMContentLoaded', async function() {
         placeholders.forEach(element => {
             const key = element.getAttribute('data-translate-placeholder');
             const translation = getTranslation(key);
-            if (translation) {
+            if (translation && translation !== key) {
                 element.placeholder = translation;
+            }
+        });
+        
+        // Also update all elements with data-translate attribute
+        const translatableElements = document.querySelectorAll('[data-translate]');
+        translatableElements.forEach(element => {
+            const key = element.getAttribute('data-translate');
+            const translation = getTranslation(key);
+            if (translation && translation !== key) {
+                element.textContent = translation;
             }
         });
     }
 
     // Initialize
     checkAuth();
+    await fetchPermissions();
     await fetchDepartments();
     await fetchClassifications();
     await fetchHarmLevels();
     updatePlaceholders();
+    
+    // Update placeholders on page load
+    setTimeout(() => {
+        updatePlaceholders();
+    }, 100);
+    
+    // Also update placeholders when DOM is fully loaded
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+            updatePlaceholders();
+        }, 200);
+    });
 });
+
+// Global functions for buttons
+window.handleEditDepartment = async (id) => {
+    if (!permissions.canEdit) return;
+    
+    try {
+        const response = await fetch(`${apiBase}/departments/${id}`, {
+            headers: { 'Authorization': `Bearer ${getToken()}` }
+        });
+        if (!response.ok) throw new Error('Failed to fetch department details');
+        
+        const department = await response.json();
+        let nameAr, nameEn;
+        
+        try {
+            const parsed = JSON.parse(department.name);
+            nameAr = parsed.ar || '';
+            nameEn = parsed.en || '';
+        } catch {
+            nameAr = department.name;
+            nameEn = department.name;
+        }
+        
+        document.getElementById('editDepartmentId').value = id;
+        document.getElementById('editDepartmentNameAr').value = nameAr;
+        document.getElementById('editDepartmentNameEn').value = nameEn;
+        document.getElementById('editDepartmentImage').value = '';
+        
+        openModal(editDepartmentModal);
+    } catch (error) {
+        console.error('❌ Error fetching department details:', error);
+        alert('خطأ في جلب تفاصيل القسم');
+    }
+};
+
+window.handleDeleteDepartment = (id) => {
+    if (!permissions.canDelete) return;
+    currentDeleteType = 'department';
+    currentDeleteId = id;
+    openModal(deleteModal);
+};
+
+window.handleEditClassification = async (id) => {
+    try {
+        const response = await fetch(`${apiBase}/tickets/classifications/${id}`, {
+            headers: { 'Authorization': `Bearer ${getToken()}` }
+        });
+        if (!response.ok) throw new Error('Failed to fetch classification details');
+        
+        const classification = await response.json();
+        
+        document.getElementById('editClassificationId').value = id;
+        document.getElementById('editClassificationNameAr').value = classification.name_ar || '';
+        document.getElementById('editClassificationNameEn').value = classification.name_en || '';
+        
+        openModal(editClassificationModal);
+    } catch (error) {
+        console.error('❌ Error fetching classification details:', error);
+        alert('خطأ في جلب تفاصيل التصنيف');
+    }
+};
+
+window.handleDeleteClassification = (id) => {
+    currentDeleteType = 'classification';
+    currentDeleteId = id;
+    openModal(deleteModal);
+};
+
+window.handleEditHarmLevel = async (id) => {
+    try {
+        const response = await fetch(`${apiBase}/tickets/harm-levels/${id}`, {
+            headers: { 'Authorization': `Bearer ${getToken()}` }
+        });
+        if (!response.ok) throw new Error('Failed to fetch harm level details');
+        
+        const harmLevel = await response.json();
+        
+        document.getElementById('editHarmLevelId').value = id;
+        document.getElementById('editHarmLevelDescAr').value = harmLevel.desc_ar || '';
+        document.getElementById('editHarmLevelDescEn').value = harmLevel.desc_en || '';
+        
+        openModal(editHarmLevelModal);
+    } catch (error) {
+        console.error('❌ Error fetching harm level details:', error);
+        alert('خطأ في جلب تفاصيل مستوى الضرر');
+    }
+};
+
+window.handleDeleteHarmLevel = (id) => {
+    currentDeleteType = 'harm-level';
+    currentDeleteId = id;
+    openModal(deleteModal);
+};
 
 // Global function for back button
 window.goBack = () => window.history.back(); 
