@@ -1,5 +1,60 @@
 // permissions.js
 
+// Toast notification function
+function showToast(message, type = 'info', duration = 3000) {
+  let toastContainer = document.getElementById('toast-container');
+  if (!toastContainer) {
+    toastContainer = document.createElement('div');
+    toastContainer.id = 'toast-container';
+    toastContainer.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    `;
+    document.body.appendChild(toastContainer);
+  }
+
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  toast.style.cssText = `
+    background-color: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#17a2b8'};
+    color: #fff;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    transform: translateY(-20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  `;
+
+  toastContainer.appendChild(toast);
+
+  // Force reflow
+  toast.offsetWidth;
+
+  // Show the toast
+  setTimeout(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateY(0)';
+  }, 10);
+
+  // Set a timeout to remove the toast
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(-20px)';
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.remove();
+      }
+    }, 500);
+  }, duration);
+}
+
 const apiBase      = 'http://localhost:3006/api';
 let authToken      = localStorage.getItem('token') || null;
 let selectedUserId = null;
@@ -42,7 +97,7 @@ if (btnClearCache) {
     const myRole = payload.role;
     
     if (myRole !== 'admin') {
-      alert('هذا الزر متاح للادمن فقط');
+      showToast('هذا الزر متاح للادمن فقط', 'warning');
       return;
     }
     
@@ -79,7 +134,7 @@ if (btnClearCache) {
         });
       }
       
-      alert('تم مسح الكاش ميموري بنجاح. سيتم إعادة تحميل الصفحة الآن.');
+      showToast('تم مسح الكاش ميموري بنجاح. سيتم إعادة تحميل الصفحة الآن.', 'success');
       
       // إعادة تحميل الصفحة بعد ثانيتين
       setTimeout(() => {
@@ -88,7 +143,7 @@ if (btnClearCache) {
       
     } catch (error) {
       console.error('خطأ في مسح الكاش ميموري:', error);
-      alert('حدث خطأ أثناء مسح الكاش ميموري: ' + error.message);
+      showToast('حدث خطأ أثناء مسح الكاش ميموري: ' + error.message, 'error');
     }
   };
 }
@@ -97,7 +152,7 @@ if (btnClearCache) {
 const btnRevokeFiles = document.getElementById('btn-revoke-files');
 if (btnRevokeFiles) {
   btnRevokeFiles.onclick = async () => {
-    if (!selectedUserId) return alert(getTranslation('please-select-user') || 'الرجاء اختيار مستخدم أولاً');
+    if (!selectedUserId) return showToast(getTranslation('please-select-user') || 'الرجاء اختيار مستخدم أولاً', 'warning');
     
     try {
       // جلب الملفات من API
@@ -179,17 +234,17 @@ if (btnRevokeFiles) {
         // إضافة حدث الضغط بعد تعريف الزر وإضافته للـ DOM
         btnConfirm.addEventListener('click', async () => {
           const checked = Array.from(box.querySelectorAll('input[type=checkbox]:checked')).map(i => i.value);
-          if (!checked.length) return alert('اختر ملف واحد على الأقل');
+          if (!checked.length) return showToast('اختر ملف واحد على الأقل', 'warning');
           
           try {
             await fetchJSON(`${apiBase}/users/${selectedUserId}/revoke-files`, {
               method: 'POST',
               body: JSON.stringify({ fileIds: checked })
             });
-            alert('تم سحب الملفات المحددة');
+            showToast('تم سحب الملفات المحددة', 'success');
             document.body.removeChild(overlay);
           } catch (error) {
-            alert('فشل في سحب الملفات: ' + error.message);
+            showToast('فشل في سحب الملفات: ' + error.message, 'error');
           }
         });
       }
@@ -198,7 +253,7 @@ if (btnRevokeFiles) {
       document.body.appendChild(overlay);
       
     } catch (error) {
-      alert('فشل في جلب الملفات: ' + error.message);
+      showToast('فشل في جلب الملفات: ' + error.message, 'error');
     }
   };
 }
@@ -253,9 +308,9 @@ async function fetchJSON(url, opts = {}) {
     const msg = body.message || body.error || `حدث خطأ (رمز ${res.status})`;
 
     if (res.status === 401) {
-      alert('غير مسموح: يرجى تسجيل الدخول مجدداً');
+      showToast('غير مسموح: يرجى تسجيل الدخول مجدداً', 'error');
     } else {
-      alert(msg);
+      showToast(msg, 'error');
     }
 
     throw new Error(msg);
@@ -292,7 +347,7 @@ async function loadMyPermissions() {
       btnClearCache.style.display = (myRole === 'admin') ? '' : 'none';
     }
   } catch (e) {
-    alert('فشل جلب صلاحياتي.');
+    showToast('فشل جلب صلاحياتي.', 'error');
   }
 }
 async function fetchDepartments() {
@@ -339,7 +394,7 @@ try {
     });
   } catch (error) {
     console.error('🚨 fetchDepartments error:', error);
-    alert('خطأ في جلب الأقسام.');
+    showToast('خطأ في جلب الأقسام.', 'error');
   }
 }
 
@@ -454,12 +509,12 @@ profileStatus.onclick = async () => {
 
     // 4) طرد نفسك لو عطّلت حسابك
     if (Number(id) === payload.id && newStatus === 'inactive') {
-      alert(getTranslation('logout_due_to_deactivation'));
+      showToast(getTranslation('logout_due_to_deactivation'), 'warning');
       localStorage.removeItem('token');
       window.location.href = '/frontend/html/login.html';
     }
   } catch {
-    alert(getTranslation('status_change_failed'));
+    showToast(getTranslation('status_change_failed'), 'error');
   }
 };
 
@@ -551,7 +606,7 @@ document.querySelector('.user-profile-header')?.classList.add('active');
         await fetchJSON(`${apiBase}/users/${id}/permissions/${encodeURIComponent(key)}`, { method });
       } catch {
         input.checked = !checked;
-        alert('فشل تحديث الصلاحية');
+        showToast('فشل تحديث الصلاحية', 'error');
       }
     };
   });
@@ -593,22 +648,22 @@ document.querySelector('.user-profile-header')?.classList.add('active');
 // handlers role popup
 btnCancelRole.addEventListener('click', () => rolePopup.classList.remove('show'));
 btnSaveRole.addEventListener('click', async () => {
-  if (!selectedUserId) return alert('اختر مستخدماً أولاً');
+  if (!selectedUserId) return showToast('اختر مستخدماً أولاً', 'warning');
   const newRole = roleSelect.value;
   try {
     await fetchJSON(`${apiBase}/users/${selectedUserId}/role`, { method: 'PUT', body: JSON.stringify({ role: newRole }) });
     profileRoleEl.textContent = newRole;
     rolePopup.classList.remove('show');
-    alert('تم تغيير الدور');
+    showToast('تم تغيير الدور', 'success');
   } catch {
-    alert('فشل تغيير الدور');
+    showToast('فشل تغيير الدور', 'error');
   }
 });
 
 // Delete User
 btnDeleteUser.addEventListener('click', async () => {
   if (!selectedUserId) {
-    return alert('اختر مستخدماً أولاً');
+    return showToast('اختر مستخدماً أولاً', 'warning');
   }
   if (!confirm('هل أنت متأكد من حذف هذا المستخدم؟')) {
     return;
@@ -618,26 +673,26 @@ btnDeleteUser.addEventListener('click', async () => {
     const result = await fetchJSON(`${apiBase}/users/${selectedUserId}`, {
       method: 'DELETE'
     });
-    alert(result.message || 'تم حذف المستخدم بنجاح');
+    showToast(result.message || 'تم حذف المستخدم بنجاح', 'success');
     loadUsers();
   } catch (err) {
     console.error('خطأ في حذف المستخدم:', err);
     // err.message هنا يحمل "خطأ في حذف المستخدم" أو الرسالة الخاصة من السيرفر
-    alert(err.message);
+    showToast(err.message, 'error');
   }
 });
 
 
 // Reset Password
 btnResetPwd.addEventListener('click', async () => {
-  if (!selectedUserId) return alert('اختر مستخدماً أولاً');
+  if (!selectedUserId) return showToast('اختر مستخدماً أولاً', 'warning');
   const newPassword = prompt('أدخل كلمة المرور الجديدة للمستخدم:');
   if (!newPassword) return;
   try {
-    await fetchJSON(`${apiBase}/users/${selectedUserId}/reset-password`, { method: 'POST', body: JSON.stringify({ newPassword }) });
-    alert('تم تحديث كلمة المرور بنجاح');
+    await fetchJSON(`${apiBase}/users/${selectedUserId}/reset-password`, { method: 'PUT', body: JSON.stringify({ newPassword }) });
+    showToast('تم تحديث كلمة المرور بنجاح', 'success');
   } catch (err) {
-    alert('فشل إعادة التعيين: ' + err.message);
+    showToast('فشل إعادة التعيين: ' + err.message, 'error');
   }
 });
 
@@ -712,14 +767,14 @@ console.log('🚀 departmentId:', data.departmentId);
 const btnExcel = document.getElementById('btn-export-excel');
 if (btnExcel) {
   btnExcel.addEventListener('click', () => {
-    if (!selectedUserId) return alert('اختر مستخدماً أولاً');
+    if (!selectedUserId) return showToast('اختر مستخدماً أولاً', 'warning');
     window.location = `${apiBase}/users/${selectedUserId}/export/excel`;
   });
 }
 const btnPdf = document.getElementById('btn-export-pdf');
 if (btnPdf) {
   btnPdf.addEventListener('click', () => {
-    if (!selectedUserId) return alert('اختر مستخدماً أولاً');
+    if (!selectedUserId) return showToast('اختر مستخدماً أولاً', 'warning');
     window.location = `${apiBase}/users/${selectedUserId}/export/pdf`;
   });
 }
@@ -1078,7 +1133,7 @@ async function fetchDepartmentsForEditModal(selectedId, selectedName) {
       editDepartment.appendChild(option);
     });
   } catch (error) {
-    alert('خطأ في جلب الأقسام.');
+    showToast('خطأ في جلب الأقسام.', 'error');
   }
 }
 
@@ -1095,7 +1150,7 @@ if (btnSaveEditUser) {
     if (!selectedUserId) return;
     // تحقق من الحقول المطلوبة
     if (!editUserName.value.trim() || !editEmployeeNumber.value.trim() || !editDepartment.value || !editEmail.value.trim()) {
-      alert('جميع الحقول مطلوبة.');
+      showToast('جميع الحقول مطلوبة.', 'warning');
       return;
     }
     const data = {
@@ -1112,16 +1167,16 @@ if (btnSaveEditUser) {
       });
       editUserModal.style.display = 'none';
       await selectUser(selectedUserId); // تحديث بيانات العرض
-      alert('تم تحديث معلومات المستخدم بنجاح');
+      showToast('تم تحديث معلومات المستخدم بنجاح', 'success');
     } catch (err) {
-      alert('فشل تحديث معلومات المستخدم: ' + err.message);
+      showToast('فشل تحديث معلومات المستخدم: ' + err.message, 'error');
     }
   });
 }
 
 // دالة فتح popup إلغاء التفويضات
 async function openRevokeDelegationsPopup() {
-  if (!selectedUserId) return alert(getTranslation('please-select-user'));
+  if (!selectedUserId) return showToast(getTranslation('please-select-user'), 'warning');
   // جلب ملخص الأشخاص المفوض لهم (ملفات + لجان)
   let fileDelegates = [];
   let committeeDelegates = [];
@@ -1143,7 +1198,7 @@ async function openRevokeDelegationsPopup() {
       committeeDelegates = jsonComm.data;
     }
   } catch (err) {
-    alert(getTranslation('error-occurred'));
+    showToast(getTranslation('error-occurred'), 'error');
     return;
   }
   // بناء popup
@@ -1210,12 +1265,12 @@ async function openRevokeDelegationsPopup() {
       } else {
         btn.disabled = false;
         btn.textContent = getTranslation('revoke-delegations');
-        alert(json.message || getTranslation('error-occurred'));
+        showToast(json.message || getTranslation('error-occurred'), 'error');
       }
     } catch (err) {
       btn.disabled = false;
       btn.textContent = getTranslation('revoke-delegations');
-      alert(getTranslation('error-occurred'));
+      showToast(getTranslation('error-occurred'), 'error');
     }
   };
 }
