@@ -7,7 +7,6 @@ const {
   delegateApproval,
   getProxyApprovals,
   acceptProxyDelegation,
-  acceptAllProxyDelegations,
   revokeAllDelegations,
   cleanupOldApprovalLogs
 } = require('../controllers/approvalController');
@@ -20,15 +19,21 @@ router.get('/assigned-to-me', getAssignedApprovals);
 router.post('/:id/delegate', delegateApproval);
 router.get('/proxy', getProxyApprovals);
 router.post('/proxy/accept/:id', acceptProxyDelegation);
-router.post('/proxy/accept-all', acceptAllProxyDelegations);
-router.post('/delegate-all', require('../controllers/approvalController').delegateAllApprovals);
-router.post('/bulk-delegation/process', require('../controllers/approvalController').processBulkDelegation);
+router.post('/proxy/accept-all-unified', require('../controllers/approvalController').acceptAllProxyDelegationsUnified);
+router.post('/delegate-all-unified', require('../controllers/approvalController').delegateAllApprovalsUnified);
 router.delete('/delegations/by-user/:userId', revokeAllDelegations);
 // إلغاء تفويض ملف واحد (عادي)
 router.delete('/:id/delegation', require('../controllers/approvalController').revokeDelegation);
 // جلب كل التفويضات النشطة التي أعطاها مستخدم معيّن
 router.get('/delegated-by/:userId', require('../controllers/approvalController').getDelegationsByUser);
-// جلب ملخص الأشخاص الذين تم تفويضهم من المستخدم الحالي
+// جلب التفويضات المعلقة الموحدة (أقسام ولجان)
+router.get('/pending-delegations-unified/:userId', require('../controllers/approvalController').getPendingDelegationsUnified);
+// معالجة التفويض المباشر الموحد (أقسام ولجان)
+router.post('/direct-delegation-unified/process', require('../controllers/approvalController').processDirectDelegationUnified);
+// معالجة التفويض الجماعي الموحد (أقسام ولجان)
+router.post('/bulk-delegation-unified/process', require('../controllers/approvalController').processBulkDelegationUnified);
+
+// جلب ملخص التفويضات لمستخدم معين
 router.get('/delegation-summary/:userId', require('../controllers/approvalController').getDelegationSummaryByUser);
 
 // تنظيف السجلات القديمة من approval_logs (للمشرفين فقط)

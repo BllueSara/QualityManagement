@@ -32,7 +32,7 @@ router.post('/proxy/accept/:id', acceptProxyDelegationCommittee);
 
 router.post('/proxy/accept-all', acceptAllProxyDelegationsCommittee);
 
-router.post('/delegate-all', require('../controllers/committeeApprovalController').delegateAllCommitteeApprovals);
+
 
 // إلغاء جميع تفويضات اللجان التي أعطاها مستخدم معيّن
 router.delete('/delegations/by-user/:userId', revokeAllCommitteeDelegations);

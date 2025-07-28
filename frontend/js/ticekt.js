@@ -1,6 +1,40 @@
 // scripts.js
 
+// دالة إظهار التوست - خارج DOMContentLoaded لتكون متاحة في كل مكان
+function showToast(message, type = 'info', duration = 3000) {
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        document.body.appendChild(toastContainer);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+
+    toastContainer.appendChild(toast);
+
+    // Force reflow to ensure animation plays from start
+    toast.offsetWidth; 
+
+    // تفعيل التوست
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 10);
+
+    // Set a timeout to remove the toast
+    setTimeout(() => {
+        toast.classList.remove('show');
+        // Remove element after animation completes
+        setTimeout(() => {
+            toast.remove();
+        }, 500); // Should match CSS animation duration
+    }, duration);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+
     const form = document.getElementById('ticketForm');
     const btnCancel = document.getElementById('btnCancel');
     const reportingDeptSelect = document.getElementById('reportingDept');
@@ -87,7 +121,7 @@ try {
 
   } catch (error) {
     console.error('Error loading departments:', error);
-    alert('حدث خطأ أثناء تحميل الأقسام: ' + (error.message || error));
+    showToast('حدث خطأ أثناء تحميل الأقسام: ' + (error.message || error), 'error');
   }
 }
 
@@ -100,7 +134,7 @@ async function loadClassifications() {
   const result = await response.json();
   console.log('Classifications API result:', result);
   if (!result.data) {
-    alert('لم يتم تحميل التصنيفات من السيرفر');
+    showToast('لم يتم تحميل التصنيفات من السيرفر', 'error');
     return;
   }
   const container = document.querySelector('.classification-grid');
@@ -199,7 +233,7 @@ async function loadHarmLevels() {
         // التحقق من أن تاريخ الحدث موجود وأقل من تاريخ اليوم
         const eventDate = document.getElementById('eventDate').value;
         if (!eventDate) {
-            alert('يرجى اختيار تاريخ الحدث.');
+            showToast('يرجى اختيار تاريخ الحدث.', 'error');
             return;
         }
 
@@ -207,21 +241,21 @@ async function loadHarmLevels() {
         const reportingDept = document.getElementById('reportingDept').value;
         const respondingDept = document.getElementById('respondingDept').value;
         if (!reportingDept || !respondingDept) {
-            alert('يرجى اختيار القسم المبلغ والقسم المستجيب.');
+            showToast('يرجى اختيار القسم المبلغ والقسم المستجيب.', 'error');
             return;
         }
 
         // التحقق من اختيار نوع البلاغ
         const reportType = form.querySelector('input[name="reportType"]:checked');
         if (!reportType) {
-            alert('يرجى اختيار نوع البلاغ.');
+            showToast('يرجى اختيار نوع البلاغ.', 'error');
             return;
         }
 
         const checkboxes = form.querySelectorAll('input[type="checkbox"][name="classification"]');
         const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
         if (!anyChecked) {
-          alert('يرجى اختيار خيار واحد على الأقل');
+          showToast('يرجى اختيار خيار واحد على الأقل', 'error');
           return;
         }
 
@@ -284,7 +318,7 @@ async function loadHarmLevels() {
         // عند إرسال النموذج، اجمع harm_level_id المختار
         const harmLevelRadio = form.querySelector('input[name="harm_level_id"]:checked');
         if (!harmLevelRadio) {
-            alert('يرجى اختيار تصنيف مستوى الضرر.');
+            showToast('يرجى اختيار تصنيف مستوى الضرر.', 'error');
             return;
         }
         formData.set('harm_level_id', harmLevelRadio.value);
@@ -310,19 +344,22 @@ async function loadHarmLevels() {
             console.log('Result:', result);
           } catch (e) {
             console.error('JSON parse error:', e);
-            alert('خطأ في قراءة استجابة السيرفر. قد تكون التذكرة أُنشئت بنجاح، يرجى التحقق من قائمة التذاكر.');
+            showToast('خطأ في قراءة استجابة السيرفر. قد تكون التذكرة أُنشئت بنجاح، يرجى التحقق من قائمة التذاكر.', 'error');
             return;
           }
 
           if (response.ok) {
-            alert('تم إنشاء الحدث العارض بنجاح');
-            window.location.reload();
+            showToast('تم إنشاء الحدث العارض بنجاح', 'success');
+            // انتظر قليلاً قبل إعادة التحميل ليرى المستخدم التوست
+            setTimeout(() => {
+              window.location.reload();
+            }, 2000);
           } else {
-            alert(result.error || 'حدث خطأ أثناء إنشاء الحدث العارض');
+            showToast(result.error || 'حدث خطأ أثناء إنشاء الحدث العارض', 'error');
           }
         } catch (error) {
           console.error('Error submitting OVR:', error);
-            alert(result.error || 'حدث خطأ أثناء إنشاء الحدث العارض');
+            showToast(result.error || 'حدث خطأ أثناء إنشاء الحدث العارض', 'error');
 
         }
     });

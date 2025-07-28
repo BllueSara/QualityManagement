@@ -1,6 +1,40 @@
 // committee.js
 const apiBase = 'http://localhost:3006/api';
 
+// دالة إظهار التوست - خارج DOMContentLoaded لتكون متاحة في كل مكان
+function showToast(message, type = 'info', duration = 3000) {
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        document.body.appendChild(toastContainer);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+
+    toastContainer.appendChild(toast);
+
+    // Force reflow to ensure animation plays from start
+    toast.offsetWidth; 
+
+    // تفعيل التوست
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 10);
+
+    // Set a timeout to remove the toast
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, 500);
+    }, duration);
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   // DOM elements
   const addBtn      = document.getElementById('addCommitteeButton');
@@ -46,8 +80,34 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   function checkAuth() {
     if (!getToken()) {
-      alert(getTranslation('please-login'));
+      showToast(getTranslation('please-login'), 'warning');
       return window.location.href = 'login.html';
+    }
+  }
+
+  // Helper function for API calls
+  async function apiCall(url, options = {}) {
+    const defaultOptions = {
+      headers: {
+        ...authHeaders(),
+        ...options.headers
+      }
+    };
+    
+    const finalOptions = { ...defaultOptions, ...options };
+    
+    try {
+      const res = await fetch(url, finalOptions);
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.message || 'API Error');
+      }
+      
+      return data;
+    } catch (err) {
+      console.error('API Error:', err);
+      throw err;
     }
   }
 
@@ -59,25 +119,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     const userId = getUserId();
     if (!userId) return;
 
-    // 1) get user to check role
-    const userRes = await fetch(`${apiBase}/users/${userId}`, {
-      headers: authHeaders()
-    });
-    const { data: user } = await userRes.json();
-    if (user.role === 'admin') {
-      permissions.canAdd = permissions.canEdit = permissions.canDelete = true;
+    try {
+      // 1) get user to check role
+      const { data: user } = await apiCall(`${apiBase}/users/${userId}`);
+      if (user.role === 'admin') {
+        permissions.canAdd = permissions.canEdit = permissions.canDelete = true;
+      }
+
+      // 2) get explicit permissions
+      const { data: perms } = await apiCall(`${apiBase}/users/${userId}/permissions`);
+      const keys = perms.map(p => typeof p === 'string' ? p : p.permission_key || p.permission);
+
+      if (keys.includes('add_committee'))    permissions.canAdd    = true;
+      if (keys.includes('edit_committee'))   permissions.canEdit   = true;
+      if (keys.includes('delete_committee')) permissions.canDelete = true;
+    } catch (err) {
+      console.error('Error fetching permissions:', err);
     }
-
-    // 2) get explicit permissions
-    const permsRes = await fetch(`${apiBase}/users/${userId}/permissions`, {
-      headers: authHeaders()
-    });
-    const { data: perms } = await permsRes.json();
-    const keys = perms.map(p => typeof p === 'string' ? p : p.permission_key || p.permission);
-
-    if (keys.includes('add_committee'))    permissions.canAdd    = true;
-    if (keys.includes('edit_committee'))   permissions.canEdit   = true;
-    if (keys.includes('delete_committee')) permissions.canDelete = true;
   }
 
   function updateAddButton() {
@@ -102,11 +160,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // load & render
   async function loadCommittees() {
     try {
-      const res = await fetch(`${apiBase}/committees`, {
-        headers: authHeaders()
-      });
-      const list = await res.json();
-      if (!res.ok) throw new Error(list.message);
+      const list = await apiCall(`${apiBase}/committees`);
       
       grid.innerHTML = '';
       list.forEach(item => {
@@ -124,8 +178,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             .forEach(btn => btn.addEventListener('click', onDeleteClick));
       }
     } catch (err) {
-      console.error('Error fetching committees:', err);
-      alert(getTranslation('error-fetching-committees'));
+      showToast(getTranslation('error-fetching-committees'), 'error');
     }
   }
 
@@ -225,35 +278,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     showModal(deleteModal);
   }
 
-  // Add committee
-  addBtn.addEventListener('click', () => showModal(addModal));
-  saveAddBtn.addEventListener('click', async () => {
-    if (!permissions.canAdd) return;
-    const nameAr = addCommitteeNameArInput.value.trim();
-    const nameEn = addCommitteeNameEnInput.value.trim();
-    const file = document.getElementById('committeeImage').files[0];
-    if (!nameAr || !nameEn || !file) {
-      alert('الرجاء إدخال الاسم بالعربية والإنجليزية واختيار صورة.');
-      return;
-    }
+  // Helper function for form data creation
+  function createCommitteeFormData(nameAr, nameEn, file) {
     const name = JSON.stringify({ ar: nameAr, en: nameEn });
     const fd = new FormData();
     fd.append('name', name);
     if (file) fd.append('image', file);
+    return fd;
+  }
+
+  // Add committee
+  addBtn.addEventListener('click', () => showModal(addModal));
+  saveAddBtn.addEventListener('click', async () => {
+    if (!permissions.canAdd) return;
+    
+    const nameAr = addCommitteeNameArInput.value.trim();
+    const nameEn = addCommitteeNameEnInput.value.trim();
+    const file = document.getElementById('committeeImage').files[0];
+    
+    if (!nameAr || !nameEn || !file) {
+      showToast('الرجاء إدخال الاسم بالعربية والإنجليزية واختيار صورة.', 'warning');
+      return;
+    }
+
     try {
-      const res = await fetch(`${apiBase}/committees`, {
+      const formData = createCommitteeFormData(nameAr, nameEn, file);
+      await apiCall(`${apiBase}/committees`, {
         method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${getToken()}`
-  },        body: fd
+        body: formData
       });
-      const msg = await res.json();
-      if (!res.ok) throw new Error(msg.message || getTranslation('error-adding-committee'));
-      alert(getTranslation('committee-added-success'));
+      
+      showToast(getTranslation('committee-added-success'), 'success');
       hideModal(addModal);
       loadCommittees();
     } catch (err) {
-      console.error(err);
+      showToast(getTranslation('error-adding-committee'), 'error');
     }
   });
   cancelAdd.addEventListener('click', () => hideModal(addModal));
@@ -261,32 +320,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Edit committee
   saveEditBtn.addEventListener('click', async () => {
     if (!permissions.canEdit) return;
+    
     const id = editIdInput.value;
     const nameAr = editCommitteeNameArInput.value.trim();
     const nameEn = editCommitteeNameEnInput.value.trim();
     const file = editImage.files[0];
+    
     if (!id || !nameAr || !nameEn) {
-      alert('الرجاء إدخال الاسم بالعربية والإنجليزية.');
+      showToast('الرجاء إدخال الاسم بالعربية والإنجليزية.', 'warning');
       return;
     }
-    const name = JSON.stringify({ ar: nameAr, en: nameEn });
-    const fd = new FormData();
-    fd.append('name', name);
-    if (file) fd.append('image', file);
+
     try {
-      const res = await fetch(`${apiBase}/committees/${id}`, {
+      const formData = createCommitteeFormData(nameAr, nameEn, file);
+      await apiCall(`${apiBase}/committees/${id}`, {
         method: 'PUT',
-  headers: {
-    'Authorization': `Bearer ${getToken()}`
-  },        body: fd
+        body: formData
       });
-      const msg = await res.json();
-      if (!res.ok) throw new Error(msg.message || getTranslation('error-updating-committee'));
-      alert(getTranslation('committee-updated-success'));
+      
+      showToast(getTranslation('committee-updated-success'), 'success');
       hideModal(editModal);
       loadCommittees();
     } catch (err) {
-      console.error(err);
+      showToast(getTranslation('error-updating-committee'), 'error');
     }
   });
   cancelEdit.addEventListener('click', () => hideModal(editModal));
@@ -294,22 +350,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Delete committee
   confirmDel.addEventListener('click', async () => {
     if (!permissions.canDelete) return;
+    
     const id = deleteModal.dataset.committeeId;
+    
     try {
-      const res = await fetch(`${apiBase}/committees/${id}`, {
-        method: 'DELETE',
-  headers: {
-    'Authorization': `Bearer ${getToken()}`
-  },      });
-      const msg = await res.json();
-      if (!res.ok) throw new Error(msg.message || getTranslation('error-deleting-committee'));
+      await apiCall(`${apiBase}/committees/${id}`, {
+        method: 'DELETE'
+      });
       
-      alert(getTranslation('committee-deleted-success'));
+      showToast(getTranslation('committee-deleted-success'), 'success');
       hideModal(deleteModal);
       loadCommittees();
     } catch (err) {
-      console.error(err);
-      alert(getTranslation('error-deleting-committee'));
+      showToast(getTranslation('error-deleting-committee'), 'error');
     }
   });
   cancelDel.addEventListener('click', () => hideModal(deleteModal));

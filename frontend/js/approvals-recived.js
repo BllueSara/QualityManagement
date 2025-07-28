@@ -14,6 +14,40 @@ let allItems = [];
 const statusList = ['pending', 'approved', 'rejected'];
 let currentGroupIndex = 0;
 
+// دالة إظهار التوست - خارج DOMContentLoaded لتكون متاحة في كل مكان
+function showToast(message, type = 'info', duration = 3000) {
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        document.body.appendChild(toastContainer);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+
+    toastContainer.appendChild(toast);
+
+    // Force reflow to ensure animation plays from start
+    toast.offsetWidth; 
+
+    // تفعيل التوست
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 10);
+
+    // Set a timeout to remove the toast
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, 500);
+    }, duration);
+}
+
 // جلب صلاحيات المستخدم
 async function fetchPermissions() {
   if (!token) return;
@@ -73,7 +107,7 @@ function setupCloseButtons() {
 const deptFilter = document.getElementById('deptFilter');
 
 document.addEventListener('DOMContentLoaded', async () => {
-  if (!token) return alert(getTranslation('please-login'));
+  if (!token) return showToast(getTranslation('please-login'), 'error');
 
   await fetchPermissions();
 
@@ -119,7 +153,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderApprovals(filteredItems);
   } catch (err) {
     console.error("Error loading approvals:", err);
-    alert(getTranslation('error-loading'));
+    showToast(getTranslation('error-loading'), 'error');
   }
 document.getElementById("prevPage").addEventListener("click", () => {
   if (currentPage > 1) {
@@ -143,7 +177,7 @@ document.getElementById("nextPage").addEventListener("click", () => {
   if (btnSendReason) {
     btnSendReason.addEventListener('click', async () => {
       const reason = document.getElementById('rejectReason').value.trim();
-      if (!reason) return alert(getTranslation('please-enter-reason'));
+      if (!reason) return showToast(getTranslation('please-enter-reason'), 'warning');
       const type     = document.querySelector(`tr[data-id="${selectedContentId}"]`).dataset.type;
       const endpoint = type === 'committee' ? 'committee-approvals' : 'approvals';
       try {
@@ -151,12 +185,12 @@ document.getElementById("nextPage").addEventListener("click", () => {
           method: 'POST',
           body: JSON.stringify({ approved: false, signature: null, notes: reason })
         });
-        alert(getTranslation('success-rejected'));
+        showToast(getTranslation('success-rejected'), 'success');
         closeModal('rejectModal');
         updateApprovalStatusInUI(selectedContentId, 'rejected');
       } catch (e) {
         console.error('Failed to send rejection:', e);
-        alert(getTranslation('error-sending'));
+        showToast(getTranslation('error-sending'), 'error');
       }
     });
   }
@@ -367,7 +401,7 @@ document.querySelectorAll('.btn-preview').forEach(btn => {
     const item   = allItems.find(i => i.id == itemId);
 
     if (!item || !item.file_path) {
-      alert(getTranslation('no-content'));
+      showToast(getTranslation('no-content'), 'error');
       return;
     }
 
@@ -466,7 +500,7 @@ async function fetchApprovalLog(contentId, type) {
 const btnElectronicApprove = document.getElementById('btnElectronicApprove');
 if (btnElectronicApprove) {
   btnElectronicApprove.addEventListener('click', async () => {
-    if (!selectedContentId) return alert(getTranslation('please-select-user'));
+    if (!selectedContentId) return showToast(getTranslation('please-select-user'), 'warning');
     const contentType = document.querySelector(`tr[data-id="${selectedContentId}"]`).dataset.type;
     const endpoint = contentType === 'committee' ? 'committee-approvals' : 'approvals';
     let approvalLog = await fetchApprovalLog(selectedContentId, contentType);
@@ -491,13 +525,13 @@ if (btnElectronicApprove) {
         body: JSON.stringify(payload)
       });
       console.log('[SIGN] response:', response);
-      alert(getTranslation('success-approved'));
+      showToast(getTranslation('success-approved'), 'success');
       closeModal('qrModal');
       updateApprovalStatusInUI(selectedContentId, 'approved');
       disableActionsFor(selectedContentId);
     } catch (err) {
       console.error('Failed to electronically approve:', err);
-      alert(getTranslation('error-sending'));
+      showToast(getTranslation('error-sending'), 'error');
     }
   });
 }
@@ -573,13 +607,13 @@ function setupSignatureModal() {
         body: JSON.stringify(payload)
       });
       console.log('[SIGN] response:', response);
-      alert(getTranslation('success-sent'));
+      showToast(getTranslation('success-sent'), 'success');
       closeSignatureModal();
       updateApprovalStatusInUI(selectedContentId, 'approved');
       disableActionsFor(selectedContentId);
     } catch (err) {
       console.error('Failed to send signature:', err);
-      alert(getTranslation('error-sending'));
+      showToast(getTranslation('error-sending'), 'error');
     }
   });
 }
@@ -613,7 +647,7 @@ async function loadDepartments() {
 
   } catch (err) {
     console.error('Failed to load departments:', err);
-    alert(getTranslation('error-loading'));
+    showToast(getTranslation('error-loading'), 'error');
   }
 }
 
@@ -639,7 +673,7 @@ document.getElementById('delegateDept').addEventListener('change', async (e) => 
 
   } catch (err) {
     console.error('Failed to load users:', err);
-    alert(getTranslation('error-loading'));
+    showToast(getTranslation('error-loading'), 'error');
   }
 });
 
@@ -676,29 +710,29 @@ if (btnDelegateConfirm) {
   btnDelegateConfirm.addEventListener('click', async () => {
     const userId = document.getElementById('delegateUser').value;
     const notes = document.getElementById('delegateNotes').value;
-    if (!userId) return alert(getTranslation('please-select-user'));
+    if (!userId) return showToast(getTranslation('please-select-user'), 'warning');
     if (isBulkDelegation) {
-      // تفويض جماعي
+      // تفويض جماعي موحد
       try {
-        const [res1, res2] = await Promise.all([
-          fetch(`${apiBase}/approvals/delegate-all`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ delegateTo: userId, notes })
-          }),
-          fetch(`${apiBase}/committee-approvals/delegate-all`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ delegateTo: userId, notes })
-          })
-        ]);
-        const json1 = await res1.json();
-        const json2 = await res2.json();
-        alert((json1.message || '') + '\n' + (json2.message || ''));
+        const response = await fetch(`${apiBase}/approvals/delegate-all-unified`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ delegateTo: userId, notes })
+        });
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+          const stats = result.stats || {};
+          const message = `${result.message}\nملفات الأقسام: ${stats.departmentFiles || 0}\nملفات اللجان: ${stats.committeeFiles || 0}`;
+          showToast(message, 'success');
+        } else {
+          showToast(result.message || 'حدث خطأ أثناء التفويض الجماعي', 'error');
+        }
         closeModal('delegateModal');
         window.location.reload();
       } catch (err) {
-        alert(getTranslation('error-sending') || 'حدث خطأ أثناء التفويض الجماعي');
+        console.error('Delegation error:', err);
+        showToast(getTranslation('error-sending') || 'حدث خطأ أثناء التفويض الجماعي', 'error');
       }
     } else {
       // تفويض فردي
@@ -712,12 +746,12 @@ if (btnDelegateConfirm) {
             notes: notes
           })
         });
-        alert(getTranslation('success-delegated'));
+        showToast(getTranslation('success-delegated'), 'success');
         closeModal('delegateModal');
         disableActionsFor(selectedContentId);
       } catch (err) {
         console.error('Failed to delegate:', err);
-        alert(getTranslation('error-sending'));
+        showToast(getTranslation('error-sending'), 'error');
       }
     }
     isBulkDelegation = false;
@@ -744,27 +778,44 @@ function showApprovalsProxyPopup() {
       getTranslation('accept-all-proxy-confirm') || 'هل توافق على أن تصبح مفوضًا بالنيابة عن جميع الملفات المحولة لك؟',
       async () => {
         try {
-          await Promise.all([
-            fetch('http://localhost:3006/api/approvals/proxy/accept-all', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } }),
-            fetch('http://localhost:3006/api/committee-approvals/proxy/accept-all', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } })
-          ]);
-          alert(getTranslation('accept-all-proxy-success') || 'تم قبول جميع التفويضات بنجاح!');
+          const response = await fetch(`${apiBase}/approvals/proxy/accept-all-unified`, { 
+            method: 'POST', 
+            headers: { 'Authorization': `Bearer ${token}` } 
+          });
+          const result = await response.json();
+          
+          if (result.status === 'success') {
+            const stats = result.stats || {};
+            const message = `${result.message}\nملفات الأقسام: ${stats.departmentFiles || 0}\nملفات اللجان: ${stats.committeeFiles || 0}`;
+            showToast(message, 'success');
+          } else {
+            showToast(result.message || getTranslation('accept-all-proxy-error') || 'حدث خطأ أثناء قبول جميع التفويضات', 'error');
+          }
           window.location.reload();
         } catch (err) {
-          alert(getTranslation('accept-all-proxy-error') || 'حدث خطأ أثناء قبول جميع التفويضات');
+          console.error('Accept all delegations error:', err);
+          showToast(getTranslation('accept-all-proxy-error') || 'حدث خطأ أثناء قبول جميع التفويضات', 'error');
         }
       }
     );
   } else {
     if (window.confirm(getTranslation('accept-all-proxy-confirm') || 'هل توافق على أن تصبح مفوضًا بالنيابة عن جميع الملفات المحولة لك؟')) {
-      Promise.all([
-        fetch('http://localhost:3006/api/approvals/proxy/accept-all', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('http://localhost:3006/api/committee-approvals/proxy/accept-all', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } })
-      ]).then(() => {
-        alert(getTranslation('accept-all-proxy-success') || 'تم قبول جميع التفويضات بنجاح!');
+      fetch(`${apiBase}/approvals/proxy/accept-all-unified`, { 
+        method: 'POST', 
+        headers: { 'Authorization': `Bearer ${token}` } 
+      }).then(async (response) => {
+        const result = await response.json();
+        if (result.status === 'success') {
+          const stats = result.stats || {};
+          const message = `${result.message}\nملفات الأقسام: ${stats.departmentFiles || 0}\nملفات اللجان: ${stats.committeeFiles || 0}`;
+          showToast(message, 'success');
+        } else {
+          showToast(result.message || getTranslation('accept-all-proxy-error') || 'حدث خطأ أثناء قبول جميع التفويضات', 'error');
+        }
         window.location.reload();
-      }).catch(() => {
-        alert(getTranslation('accept-all-proxy-error') || 'حدث خطأ أثناء قبول جميع التفويضات');
+      }).catch((err) => {
+        console.error('Accept all delegations error:', err);
+        showToast(getTranslation('accept-all-proxy-error') || 'حدث خطأ أثناء قبول جميع التفويضات', 'error');
       });
     }
   }

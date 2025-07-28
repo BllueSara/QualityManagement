@@ -95,8 +95,9 @@ const translations = {
         'search': 'ابحث…',
         'committee-name-ar': 'اسم اللجنة (عربي)',
         'committee-name-en': 'اسم اللجنة (إنجليزي)',
-        'enter-ar-name': 'ادخل اسم اللجنة بالعربية',
-        'enter-en-name': 'ادخل اسم اللجنة بالانجليزية',
+        'enter-ar-name': 'ادخل الاسم  بالعربية',
+        'enter-en-name': 'ادخل الاسم  بالانجليزية',
+        'clear-cache': 'مسح الكاش ميموري',
 
         // Login & Register
         'login': 'تسجيل الدخول',
@@ -1178,7 +1179,8 @@ const translations = {
       'add_approved_content_committee': 'Add Approved Content to Committees',
       'add-approved-content': 'Add Approved Content',
       'department-or-committee': 'Department or Committee',
-      'select-files-to-revoke': 'Select files to revoke',
+              'select-files-to-revoke': 'Select files to revoke',
+        'clear-cache': 'Clear Cache Memory',
 
               'security-issues': 'Security related issues.',
         'behaviour': 'Behaviour',
@@ -1246,8 +1248,8 @@ const translations = {
         'language': 'English',
         'committee-name-ar': 'Committee Name (Arabic)',
         'committee-name-en': 'Committee Name (English)',
-        'enter-ar-name': 'Enter committee name in Arabic',
-        'enter-en-name': 'Enter committee name in English',
+        'enter-ar-name': 'Enter  name in Arabic',
+        'enter-en-name': 'Enter  name in English',
          "status_active": "Active",
   "status_inactive": "Inactive",
   "status_confirm_active": "activate",

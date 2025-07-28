@@ -469,7 +469,7 @@ const addContent = async (req, res) => {
           );
   
           await connection.execute(
-            `INSERT INTO approval_logs (content_id, approver_id)
+            `INSERT IGNORE INTO approval_logs (content_id, approver_id)
              VALUES (?, ?)`,
             [contentId, userId]
           );

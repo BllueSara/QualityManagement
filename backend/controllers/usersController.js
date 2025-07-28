@@ -359,28 +359,51 @@ const deleteUser = async (req, res) => {
       return res.status(404).json({ status:'error', message:'المستخدم غير موجود' });
     }
 
-    const [result] = await db.execute('DELETE FROM users WHERE id = ?', [id]);
-    
-    if (!result.affectedRows) {
-      return res.status(404).json({ status:'error', message:'المستخدم غير موجود' });
-    }
+    // بدء المعاملة لحذف البيانات المرتبطة أولاً
+    const connection = await db.getConnection();
+    await connection.beginTransaction();
 
-    // ✅ تسجيل اللوق بعد نجاح حذف المستخدم
     try {
-        const logDescription = {
-            ar: `تم حذف مستخدم: ${userDetails.username}`,
-            en: `Deleted user: ${userDetails.username}`
-        };
-        
-        await logAction(adminUserId, 'delete_user', JSON.stringify(logDescription), 'user', id);
-    } catch (logErr) {
-        console.error('logAction error:', logErr);
-    }
+      // حذف السجلات المرتبطة من ticket_assignments
+      await connection.execute('DELETE FROM ticket_assignments WHERE assigned_to = ?', [id]);
+      
 
-    res.status(200).json({ 
-      status: 'success',
-      message: 'تم حذف المستخدم بنجاح'
-    });
+      // الآن يمكن حذف المستخدم بأمان
+      const [result] = await connection.execute('DELETE FROM users WHERE id = ?', [id]);
+      
+      if (!result.affectedRows) {
+        await connection.rollback();
+        connection.release();
+        return res.status(404).json({ status:'error', message:'المستخدم غير موجود' });
+      }
+
+      // تأكيد المعاملة
+      await connection.commit();
+      connection.release();
+
+      // ✅ تسجيل اللوق بعد نجاح حذف المستخدم
+      try {
+          const logDescription = {
+              ar: `تم حذف مستخدم: ${userDetails.username}`,
+              en: `Deleted user: ${userDetails.username}`
+          };
+          
+          await logAction(adminUserId, 'delete_user', JSON.stringify(logDescription), 'user', id);
+      } catch (logErr) {
+          console.error('logAction error:', logErr);
+      }
+
+      res.status(200).json({ 
+        status: 'success',
+        message: 'تم حذف المستخدم بنجاح'
+      });
+
+    } catch (deleteError) {
+      // في حالة حدوث خطأ، التراجع عن المعاملة
+      await connection.rollback();
+      connection.release();
+      throw deleteError;
+    }
 
   } catch (error) {
     console.error('deleteUser error:', error);
@@ -942,14 +965,14 @@ const updateUserStatus = async (req, res) => {
 // إضافة endpoint جديد للتحقق من حالة التفويض
 const getDelegationStatus = async (req, res) => {
   try {
-    const { userId } = req.params;
-    if (!userId) {
+    const { id } = req.params;
+    if (!id) {
       return res.status(400).json({ status: 'error', message: 'معرف المستخدم مطلوب' });
     }
 
     const [rows] = await db.execute(
       'SELECT user_id FROM active_delegations WHERE delegate_id = ?',
-      [userId]
+      [id]
     );
 
     if (rows.length === 0) {

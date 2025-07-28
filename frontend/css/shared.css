@@ -548,7 +548,7 @@ nav ul li a:hover {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     opacity: 0;
     transform: translateY(-20px);
-    animation: slideIn 0.5s forwards, fadeOut 0.5s forwards 2.5s;
+    transition: opacity 0.5s ease, transform 0.5s ease;
 }
 
 .toast.success {
@@ -557,6 +557,16 @@ nav ul li a:hover {
 
 .toast.error {
     background-color: #dc3545;
+}
+
+.toast.info {
+    background-color: #17a2b8;
+}
+
+/* تفعيل التوست عند إضافته */
+.toast.show {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 @keyframes slideIn {

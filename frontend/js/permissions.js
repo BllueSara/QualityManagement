@@ -18,6 +18,7 @@ const btnDeleteUser = document.getElementById('btn-delete-user');
 const btnResetPwd   = document.getElementById('btn-reset-password');
 const btnChangeRole = document.getElementById('btn-change-role');
 const btnAddUser    = document.getElementById('add-user-btn');
+const btnClearCache = document.getElementById('btn-clear-cache');
 
 // إضافة زر إلغاء التفويضات
 const btnRevokeDelegations = document.createElement('button');
@@ -31,6 +32,66 @@ if (btnAddUser && btnAddUser.parentNode) {
 }
 // إظهار الزر فقط إذا كان للمستخدم صلاحية (admin أو من لديه صلاحية revoke_delegations)
 btnRevokeDelegations.style.display = 'none';
+
+// زر مسح الكاش ميموري - للادمن فقط
+if (btnClearCache) {
+  btnClearCache.onclick = async () => {
+    // تحقق من أن المستخدم admin
+    const authToken = localStorage.getItem('token') || '';
+    const payload = JSON.parse(atob(authToken.split('.')[1] || '{}'));
+    const myRole = payload.role;
+    
+    if (myRole !== 'admin') {
+      alert('هذا الزر متاح للادمن فقط');
+      return;
+    }
+    
+    if (!confirm('هل أنت متأكد من مسح الكاش ميموري للموقع؟ هذا سيؤدي إلى إعادة تحميل الصفحة.')) {
+      return;
+    }
+    
+    try {
+      // مسح localStorage
+      const keysToKeep = ['token', 'language']; // نحتفظ بالتوكن واللغة
+      const allKeys = Object.keys(localStorage);
+      allKeys.forEach(key => {
+        if (!keysToKeep.includes(key)) {
+          localStorage.removeItem(key);
+        }
+      });
+      
+      // مسح sessionStorage
+      sessionStorage.clear();
+      
+      // مسح الكاش ميموري للمتصفح
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+      }
+      
+      // مسح IndexedDB إذا كان موجود
+      if ('indexedDB' in window) {
+        const databases = await indexedDB.databases();
+        databases.forEach(db => {
+          if (db.name) {
+            indexedDB.deleteDatabase(db.name);
+          }
+        });
+      }
+      
+      alert('تم مسح الكاش ميموري بنجاح. سيتم إعادة تحميل الصفحة الآن.');
+      
+      // إعادة تحميل الصفحة بعد ثانيتين
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+      
+    } catch (error) {
+      console.error('خطأ في مسح الكاش ميموري:', error);
+      alert('حدث خطأ أثناء مسح الكاش ميموري: ' + error.message);
+    }
+  };
+}
 
 // زر سحب الملفات
 const btnRevokeFiles = document.getElementById('btn-revoke-files');
@@ -225,6 +286,11 @@ async function loadMyPermissions() {
         btnRevokeFiles.style.display = 'none';
       }
     }
+    
+    // إظهار زر مسح الكاش ميموري للادمن فقط
+    if (btnClearCache) {
+      btnClearCache.style.display = (myRole === 'admin') ? '' : 'none';
+    }
   } catch (e) {
     alert('فشل جلب صلاحياتي.');
   }
@@ -306,6 +372,8 @@ async function loadUsers() {
   if (btnRevokeFiles) {
     btnRevokeFiles.style.display = 'none';
   }
+  
+  // لا نحتاج لإخفاء زر مسح الكاش ميموري هنا - سيتم التحكم به في loadMyPermissions
 }
 
 // =====================
@@ -517,6 +585,8 @@ document.querySelector('.user-profile-header')?.classList.add('active');
       btnRevokeFiles.style.display = 'none';
     }
   }
+  
+  // لا نحتاج للتحكم في زر مسح الكاش ميموري هنا - سيتم التحكم به في loadMyPermissions
 }
 
 
@@ -666,6 +736,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (btnRevokeFiles) {
     btnRevokeFiles.style.display = 'none';
   }
+  
+  // لا نحتاج لإخفاء زر مسح الكاش ميموري هنا - سيتم التحكم به في loadMyPermissions
 });
 
 // =====================

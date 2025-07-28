@@ -1,3 +1,37 @@
+// دالة إظهار التوست - خارج DOMContentLoaded لتكون متاحة في كل مكان
+function showToast(message, type = 'info', duration = 3000) {
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        document.body.appendChild(toastContainer);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+
+    toastContainer.appendChild(toast);
+
+    // Force reflow to ensure animation plays from start
+    toast.offsetWidth; 
+
+    // تفعيل التوست
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 10);
+
+    // Set a timeout to remove the toast
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, 500);
+    }, duration);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log('register.js script loaded and DOMContentLoaded event fired.');
     const registerForm = document.getElementById('registerForm');
@@ -91,7 +125,7 @@ async function fetchDepartments() {
 
   } catch (err) {
     console.error(err);
-    alert(err.message || 'حدث خطأ أثناء جلب الأقسام');
+    showToast(err.message || 'حدث خطأ أثناء جلب الأقسام', 'error');
   }
 }
 
@@ -127,7 +161,7 @@ saveAddDepartmentBtn.addEventListener('click', async function () {
   const token = localStorage.getItem('token');
 
   if (!nameAr || !nameEn || !imageFile) {
-    alert('جميع الحقول مطلوبة (الاسمين + الصورة)');
+    showToast('جميع الحقول مطلوبة (الاسمين + الصورة)', 'warning');
     return;
   }
 
@@ -148,7 +182,7 @@ formData.append('image', imageFile);
     const data = await response.json();
 
     if (response.ok) {
-      alert(data.message);
+      showToast(data.message);
       closeModal(addDepartmentModal);
       await fetchDepartments();
 
@@ -163,11 +197,11 @@ formData.append('image', imageFile);
         }
       }
     } else {
-      alert(data.message || 'حدث خطأ عند إضافة القسم.');
+      showToast(data.message || 'حدث خطأ عند إضافة القسم.', 'error');
     }
   } catch (error) {
     console.error('خطأ في إضافة القسم:', error);
-    alert('حدث خطأ في الاتصال.');
+    showToast('حدث خطأ في الاتصال.', 'error');
   }
 });
 
@@ -209,7 +243,7 @@ registerForm.addEventListener('submit', async function(e) {
   const username = formData.username.toLowerCase();
   if (username !== 'admin') {
     if (!formData.department_id || formData.department_id === '__ADD_NEW_DEPARTMENT__') {
-      alert('الرجاء اختيار قسم أو إضافة قسم جديد.');
+      showToast('الرجاء اختيار قسم أو إضافة قسم جديد.', 'warning');
       return;
     }
   }
@@ -217,13 +251,13 @@ registerForm.addEventListener('submit', async function(e) {
   // تحقق من تطابق كلمتي المرور
   const confirmPassword = document.getElementById('reg-confirm-password').value;
   if (formData.password !== confirmPassword) {
-    alert('كلمتا المرور غير متطابقتين');
+    showToast('كلمتا المرور غير متطابقتين', 'warning');
     return;
   }
 
   // **تحقق من وجود الرقم الوظيفي**
 if (username !== 'admin' && !formData.employee_number) {
-  alert('الرجاء إدخال الرقم الوظيفي.');
+  showToast('الرجاء إدخال الرقم الوظيفي.', 'warning');
   return;
 }
 
@@ -237,15 +271,15 @@ if (username !== 'admin' && !formData.employee_number) {
     const data = await response.json();
 
     if (response.ok) {
-      alert(data.message);
+      showToast(data.message);
       localStorage.setItem('token', data.token);
       window.location.href = 'index.html';
     } else {
-      alert(data.message);
+      showToast(data.message, 'error');
     }
   } catch (error) {
     console.error('خطأ في التسجيل:', error);
-    alert('حدث خطأ أثناء التسجيل. يرجى المحاولة مرة أخرى.');
+    showToast('حدث خطأ أثناء التسجيل. يرجى المحاولة مرة أخرى.', 'error');
   }
 });
 

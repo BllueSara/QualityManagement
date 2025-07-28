@@ -1,6 +1,40 @@
 // manage-settings.js
 const apiBase = 'http://localhost:3006/api';
 
+// دالة إظهار التوست - خارج DOMContentLoaded لتكون متاحة في كل مكان
+function showToast(message, type = 'info', duration = 3000) {
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        document.body.appendChild(toastContainer);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+
+    toastContainer.appendChild(toast);
+
+    // Force reflow to ensure animation plays from start
+    toast.offsetWidth; 
+
+    // تفعيل التوست
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 10);
+
+    // Set a timeout to remove the toast
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, 500);
+    }, duration);
+}
+
 document.addEventListener('DOMContentLoaded', async function() {
     // Get references to elements
     const addDepartmentBtn = document.getElementById('addDepartmentBtn');
@@ -56,7 +90,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     function checkAuth() {
         if (!getToken()) {
-            alert(getTranslation('please-login'));
+            showToast(getTranslation('please-login'), 'warning');
             window.location.href = 'login.html';
         }
     }
@@ -430,7 +464,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             openModal(editClassificationModal);
         } catch (error) {
             console.error('❌ Error fetching classification details:', error);
-            alert('خطأ في جلب تفاصيل التصنيف');
+            showToast('خطأ في جلب تفاصيل التصنيف', 'error');
         }
     }
 
@@ -451,7 +485,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             openModal(editHarmLevelModal);
         } catch (error) {
             console.error('❌ Error fetching harm level details:', error);
-            alert('خطأ في جلب تفاصيل مستوى الضرر');
+            showToast('خطأ في جلب تفاصيل مستوى الضرر', 'error');
         }
     }
 
@@ -464,7 +498,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const file = document.getElementById('departmentImage').files[0];
         
         if (!nameAr || !nameEn || !file) {
-            alert('الرجاء إدخال الاسم بالعربية والإنجليزية واختيار صورة.');
+            showToast('الرجاء إدخال الاسم بالعربية والإنجليزية واختيار صورة.', 'warning');
             return;
         }
 
@@ -482,12 +516,12 @@ document.addEventListener('DOMContentLoaded', async function() {
             
             if (!response.ok) throw new Error('Failed to add department');
             
-            alert(getTranslation('department-added-success') || 'تم إضافة القسم بنجاح');
+            showToast(getTranslation('department-added-success') || 'تم إضافة القسم بنجاح', 'success');
             closeModal(addDepartmentModal);
             await fetchDepartments();
         } catch (error) {
             console.error('❌ Error adding department:', error);
-            alert(getTranslation('error-adding-department') || 'خطأ في إضافة القسم');
+            showToast(getTranslation('error-adding-department') || 'خطأ في إضافة القسم', 'error');
         }
     });
 
@@ -500,7 +534,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const file = document.getElementById('editDepartmentImage').files[0];
         
         if (!id || !nameAr || !nameEn) {
-            alert('الرجاء إدخال الاسم بالعربية والإنجليزية.');
+            showToast('الرجاء إدخال الاسم بالعربية والإنجليزية.', 'warning');
             return;
         }
 
@@ -518,12 +552,12 @@ document.addEventListener('DOMContentLoaded', async function() {
             
             if (!response.ok) throw new Error('Failed to update department');
             
-            alert(getTranslation('department-updated-success') || 'تم تحديث القسم بنجاح');
+            showToast(getTranslation('department-updated-success') || 'تم تحديث القسم بنجاح', 'success');
             closeModal(editDepartmentModal);
             await fetchDepartments();
         } catch (error) {
             console.error('❌ Error updating department:', error);
-            alert(getTranslation('error-updating-department') || 'خطأ في تحديث القسم');
+            showToast(getTranslation('error-updating-department') || 'خطأ في تحديث القسم', 'error');
         }
     });
 
@@ -532,7 +566,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const nameEn = document.getElementById('classificationNameEn').value.trim();
         
         if (!nameAr || !nameEn) {
-            alert(getTranslation('please-enter-both-names') || 'الرجاء إدخال الاسم بالعربية والإنجليزية');
+            showToast(getTranslation('please-enter-both-names') || 'الرجاء إدخال الاسم بالعربية والإنجليزية', 'warning');
             return;
         }
 
@@ -551,12 +585,12 @@ document.addEventListener('DOMContentLoaded', async function() {
             
             if (!response.ok) throw new Error('Failed to add classification');
             
-            alert(getTranslation('classification-added-success') || 'تم إضافة التصنيف بنجاح');
+            showToast(getTranslation('classification-added-success') || 'تم إضافة التصنيف بنجاح', 'success');
             closeModal(addClassificationModal);
             await fetchClassifications();
         } catch (error) {
             console.error('❌ Error adding classification:', error);
-            alert(getTranslation('error-adding-classification') || 'خطأ في إضافة التصنيف');
+            showToast(getTranslation('error-adding-classification') || 'خطأ في إضافة التصنيف', 'error');
         }
     });
 
@@ -566,7 +600,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const nameEn = document.getElementById('editClassificationNameEn').value.trim();
         
         if (!id || !nameAr || !nameEn) {
-            alert(getTranslation('please-enter-both-names') || 'الرجاء إدخال الاسم بالعربية والإنجليزية');
+            showToast(getTranslation('please-enter-both-names') || 'الرجاء إدخال الاسم بالعربية والإنجليزية', 'warning');
             return;
         }
 
@@ -585,12 +619,12 @@ document.addEventListener('DOMContentLoaded', async function() {
             
             if (!response.ok) throw new Error('Failed to update classification');
             
-            alert(getTranslation('classification-updated-success') || 'تم تحديث التصنيف بنجاح');
+            showToast(getTranslation('classification-updated-success') || 'تم تحديث التصنيف بنجاح', 'success');
             closeModal(editClassificationModal);
             await fetchClassifications();
         } catch (error) {
             console.error('❌ Error updating classification:', error);
-            alert(getTranslation('error-updating-classification') || 'خطأ في تحديث التصنيف');
+            showToast(getTranslation('error-updating-classification') || 'خطأ في تحديث التصنيف', 'error');
         }
     });
 
@@ -599,7 +633,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const descEn = document.getElementById('harmLevelDescEn').value.trim();
         
         if (!descAr || !descEn) {
-            alert('الرجاء إدخال الوصف بالعربية والإنجليزية');
+            showToast('الرجاء إدخال الوصف بالعربية والإنجليزية', 'warning');
             return;
         }
 
@@ -623,12 +657,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                 `تم إضافة مستوى الضرر بنجاح. الكود: ${result.code}` : 
                 (getTranslation('harm-level-added-success') || 'تم إضافة مستوى الضرر بنجاح');
             
-            alert(message);
+            showToast(message, 'success');
             closeModal(addHarmLevelModal);
             await fetchHarmLevels();
         } catch (error) {
             console.error('❌ Error adding harm level:', error);
-            alert(getTranslation('error-adding-harm-level') || 'خطأ في إضافة مستوى الضرر');
+            showToast(getTranslation('error-adding-harm-level') || 'خطأ في إضافة مستوى الضرر', 'error');
         }
     });
 
@@ -638,7 +672,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const descEn = document.getElementById('editHarmLevelDescEn').value.trim();
         
         if (!id || !descAr || !descEn) {
-            alert('الرجاء إدخال الوصف بالعربية والإنجليزية');
+            showToast('الرجاء إدخال الوصف بالعربية والإنجليزية', 'warning');
             return;
         }
 
@@ -657,12 +691,12 @@ document.addEventListener('DOMContentLoaded', async function() {
             
             if (!response.ok) throw new Error('Failed to update harm level');
             
-            alert(getTranslation('harm-level-updated-success') || 'تم تحديث مستوى الضرر بنجاح');
+            showToast(getTranslation('harm-level-updated-success') || 'تم تحديث مستوى الضرر بنجاح', 'success');
             closeModal(editHarmLevelModal);
             await fetchHarmLevels();
         } catch (error) {
             console.error('❌ Error updating harm level:', error);
-            alert(getTranslation('error-updating-harm-level') || 'خطأ في تحديث مستوى الضرر');
+            showToast(getTranslation('error-updating-harm-level') || 'خطأ في تحديث مستوى الضرر', 'error');
         }
     });
 
@@ -691,7 +725,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             
             if (!response.ok) throw new Error('Failed to delete item');
             
-            alert(getTranslation('item-deleted-success') || 'تم حذف العنصر بنجاح');
+            showToast(getTranslation('item-deleted-success') || 'تم حذف العنصر بنجاح', 'success');
             closeModal(deleteModal);
             
             // Refresh data
@@ -708,7 +742,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         } catch (error) {
             console.error('❌ Error deleting item:', error);
-            alert(getTranslation('error-deleting-item') || 'خطأ في حذف العنصر');
+            showToast(getTranslation('error-deleting-item') || 'خطأ في حذف العنصر', 'error');
         }
     });
 
@@ -830,7 +864,7 @@ window.handleEditDepartment = async (id) => {
         openModal(editDepartmentModal);
     } catch (error) {
         console.error('❌ Error fetching department details:', error);
-        alert('خطأ في جلب تفاصيل القسم');
+        showToast('خطأ في جلب تفاصيل القسم', 'error');
     }
 };
 
@@ -857,7 +891,7 @@ window.handleEditClassification = async (id) => {
         openModal(editClassificationModal);
     } catch (error) {
         console.error('❌ Error fetching classification details:', error);
-        alert('خطأ في جلب تفاصيل التصنيف');
+        showToast('خطأ في جلب تفاصيل التصنيف', 'error');
     }
 };
 
@@ -883,7 +917,7 @@ window.handleEditHarmLevel = async (id) => {
         openModal(editHarmLevelModal);
     } catch (error) {
         console.error('❌ Error fetching harm level details:', error);
-        alert('خطأ في جلب تفاصيل مستوى الضرر');
+        showToast('خطأ في جلب تفاصيل مستوى الضرر', 'error');
     }
 };
 

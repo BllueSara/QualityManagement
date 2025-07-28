@@ -1,6 +1,39 @@
 // استيراد الترجمة
 const apiBase = 'http://localhost:3006/api';
 
+// دالة إظهار التوست - خارج DOMContentLoaded لتكون متاحة في كل مكان
+function showToast(message, type = 'info', duration = 3000) {
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        document.body.appendChild(toastContainer);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+
+    toastContainer.appendChild(toast);
+
+    // Force reflow to ensure animation plays from start
+    toast.offsetWidth; 
+
+    // تفعيل التوست
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 10);
+
+    // Set a timeout to remove the toast
+    setTimeout(() => {
+        toast.classList.remove('show');
+        // Remove element after animation completes
+        setTimeout(() => {
+            toast.remove();
+        }, 500); // Should match CSS animation duration
+    }, duration);
+}
+
 if (typeof getTranslation !== 'function') {
   function getTranslation(key) {
     const lang = localStorage.getItem('language') || 'ar';
@@ -377,12 +410,12 @@ async function rebuildUsersList() {
   sendBtn.addEventListener('click', async () => {
     // التحقق من أن الزر غير معطل
     if (sendBtn.disabled) {
-      alert(sendBtn.title || getTranslation('ticket-closed-error') || 'لا يمكن تحويل الحدث العارض لأنه مغلق');
+      showToast(sendBtn.title || getTranslation('ticket-closed-error') || 'لا يمكن تحويل الحدث العارض لأنه مغلق', 'error');
       return;
     }
 
     if (!selectedUsers.length) {
-      alert(getTranslation('please-select-users'));
+      showToast(getTranslation('please-select-users'), 'error');
       return;
     }
 
@@ -416,7 +449,7 @@ if (!assignRes.ok) {
   
   // التعامل مع الأخطاء المختلفة
   if (errorData.status === 'closed') {
-    alert(getTranslation('ticket-closed-error') || 'لا يمكن تحويل الحدث العارض لأنه مغلق');
+    showToast(getTranslation('ticket-closed-error') || 'لا يمكن تحويل الحدث العارض لأنه مغلق', 'error');
     // تعطيل الزر بعد اكتشاف أن التذكرة مغلقة
     sendBtn.disabled = true;
     sendBtn.style.opacity = '0.5';
@@ -425,7 +458,7 @@ if (!assignRes.ok) {
   }
   
   if (errorData.status === 'already_assigned') {
-    alert(getTranslation('already-assigned-error') || 'جميع المستخدمين المحددين مكلفون بالفعل بهذا الحدث العارض');
+    showToast(getTranslation('already-assigned-error') || 'جميع المستخدمين المحددين مكلفون بالفعل بهذا الحدث العارض', 'error');
     return;
   }
   
@@ -443,7 +476,7 @@ if (result.assignedCount > 0) {
   }
 }
 
-alert(successMessage);
+showToast(successMessage, 'success');
 
 // تحديث خانة الحالة بشكل مرن
 const tdStatus = row.querySelector('td:nth-child(5)');
@@ -462,7 +495,7 @@ await rebuildUsersList();
 
 } catch (err) {
   console.error('❌ Error:', err);
-  alert(getTranslation('error-sending') + `\n${err.message || ''}`);
+  showToast(getTranslation('error-sending') + `\n${err.message || ''}`, 'error');
 }
   });
   }
