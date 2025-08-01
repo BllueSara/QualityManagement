@@ -11,12 +11,23 @@
     <link rel="stylesheet" href="../css/shared.css">
     <link rel="stylesheet" href="../css/departments.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* إخفاء المحتوى حتى يتم تحميل اللغة */
+        .content-hidden {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out;
+        }
 
-  
+        .content-visible {
+            opacity: 1;
+            visibility: visible;
+        }
+    </style>
 </head>
 
 <body>
-    <header>
+    <header class="content-hidden">
         <div class="container">
             <div class="hospital-logo">
                 <img src="../images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز">
@@ -28,7 +39,7 @@
            
         </div>
     </header>
-        <div class="header-actions">
+        <div class="header-actions content-hidden">
     <button class="back-btn" id="backBtn" onclick="window.location.href='index.html'" style="right: 50px; left: auto; display: flex; align-items: center; gap: 4px;">
       <i class="fas fa-arrow-right" id="backIcon"></i>
         <span id="backBtnText" data-translate="back">رجوع</span>
@@ -38,7 +49,7 @@
     <span data-translate="home">الرئيسية</span>
   </button>
 </div>
-    <main>
+    <main class="content-hidden">
 
         <div class="container">
 <!-- HTML -->
@@ -137,9 +148,21 @@
 </body>
 
 
-<script src="../js/departments.js" defer></script>
 <script src="../js/language.js"></script>
-    <script src="/frontend/js/check-status.js"></script>
+<script src="../js/departments.js" defer></script>
+<script src="/frontend/js/check-status.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        // إظهار المحتوى بعد تحميل اللغة
+        setTimeout(() => {
+            const elements = document.querySelectorAll('.content-hidden');
+            elements.forEach(element => {
+                element.classList.remove('content-hidden');
+                element.classList.add('content-visible');
+            });
+        }, 100);
+    });
+</script>
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {

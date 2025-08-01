@@ -49,10 +49,22 @@
         .language-switcher .dropdown a:hover {
             background: #f5f5f5;
         }
+
+        /* إخفاء المحتوى حتى يتم تحميل اللغة */
+        .content-hidden {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .content-visible {
+            opacity: 1;
+            visibility: visible;
+        }
     </style>
 </head>
 <body>
-    <header>
+    <header class="content-hidden">
         <div class="container">
             <div class="system-title">
                 <img src="../images/system-title.png" alt="نظام إدارة الجودة والسلامة">
@@ -63,7 +75,7 @@
         </div>
     </header>
 
-    <div class="language-switcher">
+    <div class="language-switcher content-hidden">
         <a href="#"><img src="../images/langauage.svg" alt=""> <span data-translate="language">عربي</span></a>
         <ul class="dropdown">
             <li><a href="#">عربي</a></li>
@@ -71,7 +83,7 @@
         </ul>
     </div>
 
-    <main>
+    <main class="content-hidden">
         <div class="auth-container">
             <form class="auth-form" id="registerForm">
                 <h2 data-translate="register">إنشاء حساب جديد</h2>
@@ -171,7 +183,19 @@
         </div>
     </div>
 
-    <script src="../js/register.js"></script>
     <script src="../js/language.js"></script>
+    <script src="../js/register.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // إظهار المحتوى بعد تحميل اللغة
+            setTimeout(() => {
+                const elements = document.querySelectorAll('.content-hidden');
+                elements.forEach(element => {
+                    element.classList.remove('content-hidden');
+                    element.classList.add('content-visible');
+                });
+            }, 100);
+        });
+    </script>
 </body>
 </html> 

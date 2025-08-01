@@ -6,9 +6,22 @@
     <title>إدارة الاحداث العارضة</title>
     <link rel="stylesheet" href="../css/manage-settings.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* إخفاء المحتوى حتى يتم تحميل اللغة */
+        .content-hidden {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .content-visible {
+            opacity: 1;
+            visibility: visible;
+        }
+    </style>
 </head>
 <body>
-     <header class="main-header">
+     <header class="main-header content-hidden">
     <div class="header-container">
       <div class="system-title">
           <img src="/frontend/images/system-title.png" alt="نظام إدارة الجودة والسلامة">
@@ -18,7 +31,7 @@
             </div>
     </div>
   </header>
-          <div class="header-actions">
+          <div class="header-actions content-hidden">
     <button class="back-btn" onclick="history.back()">
      <i class="fas fa-arrow-right" id="backIcon"></i>        <span data-translate="back">رجوع</span>
   </button>
@@ -27,7 +40,7 @@
     <span data-translate="home">الرئيسية</span>
   </button>
 </div>
-    <div class="container">
+    <div class="container content-hidden">
         <!-- Header -->
         <!-- ===== الهيدر العلوي ===== -->
 
@@ -261,5 +274,17 @@
 
     <script src="../js/language.js"></script>
     <script src="../js/manage-settings.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // إظهار المحتوى بعد تحميل اللغة
+            setTimeout(() => {
+                const elements = document.querySelectorAll('.content-hidden');
+                elements.forEach(element => {
+                    element.classList.remove('content-hidden');
+                    element.classList.add('content-visible');
+                });
+            }, 100);
+        });
+    </script>
 </body>
 </html> 

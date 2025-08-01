@@ -20,11 +20,23 @@
 
   <!-- ===== ربط ملف التنسيقات ===== -->
   <link rel="stylesheet" href="/frontend/css/electronic-approval.css" />
+  <style>
+    /* إخفاء المحتوى حتى يتم تحميل اللغة */
+    .content-hidden {
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease-in-out;
+    }
+
+    .content-visible {
+      opacity: 1;
+      visibility: visible;
+    }
+  </style>
 </head>
 <body>
-
   <!-- ===== الهيدر العلوي ===== -->
-  <header class="main-header">
+  <header class="main-header content-hidden">
     <div class="header-container">
       <div class="system-title">
           <img src="/frontend/images/system-title.png" alt="نظام إدارة الجودة والسلامة">
@@ -35,12 +47,11 @@
     </div>
   </header>
 
-
   <!-- خط أفقي أسفل الهيدر -->
-  <div class="header-divider"></div>
+  <div class="header-divider content-hidden"></div>
 
   <!-- ===== المحتوى الرئيسي ===== -->
-  <main class="content-wrapper">
+  <main class="content-wrapper content-hidden">
     <!-- ===== عنوان الصفحة والوصف ===== -->
     <div class="page-header">
       <h1 class="page-title">الاعتماد الإلكتروني</h1>
@@ -103,7 +114,17 @@
   </main>
 
 <script src="electronic-approval.js"></script>
-
-
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    // إظهار المحتوى بعد تحميل اللغة
+    setTimeout(() => {
+      const elements = document.querySelectorAll('.content-hidden');
+      elements.forEach(element => {
+        element.classList.remove('content-hidden');
+        element.classList.add('content-visible');
+      });
+    }, 100);
+  });
+</script>
 </body>
 </html>

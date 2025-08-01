@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>تتبع التذكرة - نظام إدارة الجودة والسلامة</title>
+  <title data-translate="track-ticket-title">تتبع التذكرة - نظام إدارة الجودة والسلامة</title>
 
   <!-- ===== استيراد خط Tajawal ===== -->
   <link
@@ -21,10 +21,23 @@
 
   <!-- ===== ربط ملف التنسيقات ===== -->
   <link rel="stylesheet" href="/frontend/css/track-request.css" />
+  <style>
+    /* إخفاء المحتوى حتى يتم تحميل اللغة */
+    .content-hidden {
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease-in-out;
+    }
+
+    .content-visible {
+      opacity: 1;
+      visibility: visible;
+    }
+  </style>
 </head>
 <body>
   <!-- ===== الهيدر العلوي ===== -->
-  <header class="main-header">
+  <header class="main-header content-hidden">
     <div class="header-container">
       <div class="system-title">
           <img src="/frontend/images/system-title.png" alt="نظام إدارة الجودة والسلامة">
@@ -34,7 +47,7 @@
             </div>
     </div>
   </header>
-  <div class="header-actions">
+  <div class="header-actions content-hidden">
     <button class="back-btn" onclick="history.back()">
      <i class="fas fa-arrow-right" id="backIcon"></i>        <span data-translate="back">رجوع</span>
   </button>
@@ -47,10 +60,11 @@
   <div class="header-divider"></div>
 
   <!-- ===== المحتوى الرئيسي ===== -->
-  <main class="content-wrapper">
+  <main class="content-wrapper content-hidden">
     <!-- ===== عنوان الصفحة والوصف ===== -->
     <div class="page-header">
-      <h1 class="page-title" data-translate="track-request">تتبع الطلب</h1>
+      <h1 class="page-title" data-translate="track-ticket">تتبع التذكرة</h1>
+      <p class="page-subtitle" data-translate="track-ticket-subtitle">متابعة حالة التذكرة ومراحل معالجتها</p>
     </div>
 
     <!-- ===== بطاقة تتبع الطلب ===== -->
@@ -59,26 +73,25 @@
         <!-- القسم التالي -->
         <div class="next-dept">
           <span class="label-text" data-translate="next-department">القسم التالي:</span>
-          <span class="dept-name"> </span>
+          <span class="dept-name" id="nextDepartment">قسم السلامة</span>
         </div>
         <!-- رأس البطاقة: الحالة الحالية وأخر تحديث -->
         <div class="track-header">
-          <h2 class="track-status-title" data-translate="track-status-title">   </h2>
-          <span class="last-update" data-translate="last-update">   </span>
+          <h2 class="track-status-title" data-translate="track-status-title" id="currentStatus">قيد المراجعة في قسم التفتيش</h2>
+          <span class="last-update" data-translate="last-update" id="lastUpdate">آخر تحديث: 23 فبراير 2024</span>
         </div>
 
         <!-- ===== قسم التقدم (Progress) ===== -->
         <div class="track-progress-container">
           <!-- نص التقدم -->
           <div class="progress-info">
-            <span class="progress-label" data-translate="progress-label"> </span>
-            <span class="progress-steps">    </span>
+            <span class="progress-label" data-translate="progress-label">تقدم التذكرة</span>
+            <span class="progress-steps" id="progressSteps">3 من 4 خطوات مكتملة</span>
           </div>
           <!-- دائرة النسبة -->
           <div class="progress-circle">
             <svg viewBox="0 0 36 36" class="circular-chart blue">
-                              <text x="18" y="21" class="percentage-text"></text>
-
+              <text x="18" y="21" class="percentage-text" id="progressPercentage">75%</text>
               <path
                 class="circle-bg"
                 d="M18 2.0845
@@ -101,7 +114,7 @@
       <div class="divider"></div>
 
       <!-- ===== قائمة Timeline ===== -->
-      <div class="timeline">
+      <div class="timeline" id="ticketTimeline">
         <!-- مرحلة مكتملة -->
         <div class="timeline-item completed">
           <div class="icon-wrapper">
@@ -110,12 +123,12 @@
             </div>
           </div>
           <div class="timeline-content">
-            <h3 class="timeline-dept"> </h3>
+            <h3 class="timeline-dept">قسم الجودة</h3>
             <div class="timeline-details">
-              <span class="timeline-date">  </span>
-              <span class="status-badge approved-badge"></span>
+              <span class="timeline-date">20 فبراير 2024</span>
+              <span class="status-badge approved-badge" data-translate="approved">معتمد</span>
             </div>
-            <p class="timeline-note">   >
+            <p class="timeline-note" data-translate="ticket-approved">تم اعتماد التذكرة بنجاح</p>
           </div>
         </div>
 
@@ -127,12 +140,12 @@
             </div>
           </div>
           <div class="timeline-content">
-            <h3 class="timeline-dept"> </h3>
+            <h3 class="timeline-dept">قسم السلامة</h3>
             <div class="timeline-details">
-              <span class="timeline-date">  </span>
-              <span class="status-badge pending-badge"> </span>
+              <span class="timeline-date">22 فبراير 2024</span>
+              <span class="status-badge pending-badge" data-translate="under-review">قيد المراجعة</span>
             </div>
-            <p class="timeline-note">   </p>
+            <p class="timeline-note" data-translate="reviewing-ticket">جاري مراجعة التذكرة والمستندات المرفقة</p>
           </div>
         </div>
 
@@ -144,11 +157,12 @@
             </div>
           </div>
           <div class="timeline-content">
-            <h3 class="timeline-dept"> </h3>
+            <h3 class="timeline-dept">قسم التفتيش</h3>
             <div class="timeline-details">
-              <span class="timeline-date">  </span>
-              <span class="status-badge waiting-badge"> </span>
+              <span class="timeline-date" data-translate="expected-date">متوقع: 25 فبراير 2024</span>
+              <span class="status-badge waiting-badge" data-translate="waiting">في الانتظار</span>
             </div>
+            <p class="timeline-note" data-translate="waiting-for-inspection">في انتظار مراجعة قسم التفتيش</p>
           </div>
         </div>
       </div>
@@ -157,10 +171,44 @@
     </div>
     <!-- نهاية بطاقة التتبع -->
 
+    <!-- ===== قسم تفاصيل التذكرة ===== -->
+    <div class="ticket-details-card">
+      <h3 class="details-title" data-translate="ticket-details">تفاصيل التذكرة</h3>
+      <div class="details-grid">
+        <div class="detail-item">
+          <span class="detail-label" data-translate="ticket-number">رقم التذكرة:</span>
+          <span class="detail-value" id="ticketNumber">TKT-2024-001</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label" data-translate="ticket-type">نوع التذكرة:</span>
+          <span class="detail-value" id="ticketType">طلب صيانة</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label" data-translate="priority">الأولوية:</span>
+          <span class="detail-value priority-high" id="ticketPriority">عالية</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label" data-translate="created-date">تاريخ الإنشاء:</span>
+          <span class="detail-value" id="createdDate">18 فبراير 2024</span>
+        </div>
+      </div>
+    </div>
+
   </main>
-</body>
-<script src="/frontend/js/language.js"></script>
-<script src="/frontend/js/track-request-ticket.js"></script>
-    <script src="/frontend/js/check-status.js"></script>
+  <script src="/frontend/js/language.js"></script>
+  <script src="/frontend/js/track-request-ticket.js"></script>
+  <script src="/frontend/js/check-status.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      // إظهار المحتوى بعد تحميل اللغة
+      setTimeout(() => {
+        const elements = document.querySelectorAll('.content-hidden');
+        elements.forEach(element => {
+          element.classList.remove('content-hidden');
+          element.classList.add('content-visible');
+        });
+      }, 100);
+    });
+  </script>
 
 </html>

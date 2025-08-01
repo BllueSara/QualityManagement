@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -14,11 +14,24 @@
   <!-- ملفات التنسيقات -->
   <link rel="stylesheet" href="/frontend/css/pending-approvals.css"/>
   <link rel="stylesheet" href="/frontend/css/pending-ticket.css"/>
+  <style>
+    /* إخفاء المحتوى حتى يتم تحميل اللغة */
+    .content-hidden {
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease-in-out;
+    }
+
+    .content-visible {
+      opacity: 1;
+      visibility: visible;
+    }
+  </style>
 </head>
 <body>
 
   <!-- ===== الهيدر العلوي ===== -->
-  <header class="main-header">
+  <header class="main-header content-hidden">
     <div class="header-container">
       <div class="system-title">
         <img src="/frontend/images/system-title.png" alt="نظام إدارة الجودة والسلامة">
@@ -30,7 +43,7 @@
   </header>
 
   <!-- ===== أزرار التنقل ===== -->
-  <div class="header-actions">
+  <div class="header-actions content-hidden">
     <button class="back-btn" onclick="history.back()">
      <i class="fas fa-arrow-right" id="backIcon"></i>      <span data-translate="back">رجوع</span>
     </button>
@@ -40,32 +53,53 @@
     </button>
   </div>
 
-  <!-- ===== بطاقة التقارير بانتظار الاعتماد ===== -->
-  <div class="file-card">
-    <div class="file-card-header">
-      <h2 class="file-name" data-translate="pending-approvals">ملفات بانتظار الاعتماد</h2>
+  <!-- ===== المحتوى الرئيسي ===== -->
+  <main class="content-wrapper content-hidden">
+    <!-- ===== عنوان الصفحة والوصف ===== -->
+    <div class="page-header">
+      <h1 class="page-title" data-translate="pending-approvals">ملفات بانتظار الاعتماد</h1>
+      <p class="page-subtitle" data-translate="pending-approvals-subtitle">الملفات التي تحتاج إلى مراجعة واعتماد من قبلك</p>
     </div>
-    <div class="table-container">
-      <table class="approvals-table">
-        <thead>
-          <tr>
-            <th data-translate="report">التقرير</th>
-            <th data-translate="department">القسم</th>
-            <th data-translate="selected">المُختارون</th>
-            <th data-translate="will-be-sent-to">سيتم الارسال الى</th>
-            <th data-translate="action">الإجراء</th>
-          </tr>
-        </thead>
-        <tbody>
-       
-        </tbody>
-      </table>
+
+    <!-- ===== بطاقة التقارير بانتظار الاعتماد ===== -->
+    <div class="file-card">
+      <div class="file-card-header">
+        <h2 class="file-name" data-translate="pending-approvals">ملفات بانتظار الاعتماد</h2>
+      </div>
+      <div class="table-container">
+        <table class="approvals-table">
+          <thead>
+            <tr>
+              <th data-translate="report">التقرير</th>
+              <th data-translate="department">القسم</th>
+              <th data-translate="selected">المُختارون</th>
+              <th data-translate="will-be-sent-to">سيتم الارسال الى</th>
+              <th data-translate="action">الإجراء</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- البيانات يتم إدراجها هنا من الجافاسكربت -->
+          </tbody>
+        </table>
+      </div>
     </div>
-  </div>
+  </main>
 
   <script src="/frontend/js/language.js"></script>
   <script src="/frontend/js/pending-approvals.js"></script>
-      <script src="/frontend/js/check-status.js"></script>
+  <script src="/frontend/js/check-status.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      // إظهار المحتوى بعد تحميل اللغة
+      setTimeout(() => {
+        const elements = document.querySelectorAll('.content-hidden');
+        elements.forEach(element => {
+          element.classList.remove('content-hidden');
+          element.classList.add('content-visible');
+        });
+      }, 100);
+    });
+  </script>
 
 </body>
 </html>

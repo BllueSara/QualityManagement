@@ -20,10 +20,23 @@
 
   <!-- رابط تنسيقات ticket-details.css -->
   <link rel="stylesheet" href="/frontend/css/ticket-details.css" />
+  <style>
+    /* إخفاء المحتوى حتى يتم تحميل اللغة */
+    .content-hidden {
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease-in-out;
+    }
+
+    .content-visible {
+      opacity: 1;
+      visibility: visible;
+    }
+  </style>
 </head>
 <body>
   <!-- الهيدر -->
-  <header class="main-header">
+  <header class="main-header content-hidden">
     <div class="header-container">
       <div class="system-title">
         <img src="/frontend/images/system-title.png" alt="نظام إدارة الجودة والسلامة" />
@@ -33,7 +46,7 @@
       </div>
     </div>
   </header>
-  <div class="header-actions">
+  <div class="header-actions content-hidden">
     <button class="back-btn" onclick="history.back()">
      <i class="fas fa-arrow-right" id="backIcon"></i>        
       </i><span data-translate="back">رجوع</span>
@@ -43,7 +56,7 @@
     </button>
   </div>
 
-  <main class="content-wrapper">
+  <main class="content-wrapper content-hidden">
     <h1 class="page-title" data-translate="ticket-edit">تعديل التذكرة</h1>
 
     <form id="editTicketForm" class="ticket-form" enctype="multipart/form-data">
@@ -567,7 +580,17 @@ form.addEventListener('submit', async e => {
   });
 </script>
     <script src="/frontend/js/check-status.js"></script>
-
-
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        // إظهار المحتوى بعد تحميل اللغة
+        setTimeout(() => {
+          const elements = document.querySelectorAll('.content-hidden');
+          elements.forEach(element => {
+            element.classList.remove('content-hidden');
+            element.classList.add('content-visible');
+          });
+        }, 100);
+      });
+    </script>
 </body>
 </html>

@@ -10,9 +10,22 @@
     <link rel="stylesheet" href="../css/shared.css">
     <link rel="stylesheet" href="../css/department-content.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* إخفاء المحتوى حتى يتم تحميل اللغة */
+        .content-hidden {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .content-visible {
+            opacity: 1;
+            visibility: visible;
+        }
+    </style>
 </head>
 <body>
-    <header>
+    <header class="content-hidden">
         <div class="container">
             <div class="hospital-logo">
                 <img src="../images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز">
@@ -23,13 +36,13 @@
 
         </div>
     </header>
-    <div class="header-actions">
+    <div class="header-actions content-hidden">
         <button class="home-btn" onclick="window.location.href='index.html'">
             <i class="fas fa-home"></i>
             <span data-translate="home">الرئيسية</span>
         </button>
     </div>
-    <main>
+    <main class="content-hidden">
         <div class="container">
             <h1 data-translate="committee-content-title">محتويات اللجنة</h1>
 
@@ -368,6 +381,18 @@
     <script src="../js/language.js"></script>
     <script src="../js/committee-content.js"></script>
         <script src="/frontend/js/check-status.js"></script>
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                // إظهار المحتوى بعد تحميل اللغة
+                setTimeout(() => {
+                    const elements = document.querySelectorAll('.content-hidden');
+                    elements.forEach(element => {
+                        element.classList.remove('content-hidden');
+                        element.classList.add('content-visible');
+                    });
+                }, 100);
+            });
+        </script>
 
 </body>
 </html> 

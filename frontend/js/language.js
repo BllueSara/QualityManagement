@@ -19,7 +19,7 @@ const translations = {
         'statistics': 'الإحصائيات',
         'approvals': 'الإعتمادات',
         'permissions': 'الصلاحيات',
-        'comittees': 'اللجان والواجهات',
+        'comittees': 'اللجان ',
         'click-to-enter': 'اضغط للدخول',
         'view_reports_ovr': 'عرض تقارير الاحداث العارضة',
         

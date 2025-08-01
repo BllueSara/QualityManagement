@@ -11,10 +11,23 @@
     <link rel="stylesheet" href="../css/shared.css">
     <link rel="stylesheet" href="../css/departments.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* إخفاء المحتوى حتى يتم تحميل اللغة */
+        .content-hidden {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .content-visible {
+            opacity: 1;
+            visibility: visible;
+        }
+    </style>
 </head>
 
 <body>
-    <header>
+    <header class="content-hidden">
         <div class="container">
             <div class="hospital-logo">
                 <img src="../images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز">
@@ -24,7 +37,7 @@
             </div>
         </div>
     </header>
-        <div class="header-actions">
+        <div class="header-actions content-hidden">
     <button class="back-btn" id="backBtn" onclick="window.location.href='index.html'" style="right: 50px; left: auto; display: flex; align-items: center; gap: 4px;">
      <i class="fas fa-arrow-right" id="backIcon"></i>        <span id="backBtnText" data-translate="back">رجوع</span>
     </button>
@@ -33,9 +46,9 @@
     <span data-translate="home">الرئيسية</span>
   </button>
 </div>
-    <main>
+    <main class="content-hidden">
         <div class="container">
-            <h1 data-translate="committees">اللجان والواجهات</h1>
+            <h1 data-translate="comittees">اللجان </h1>
             <div class="controls-bar">
                 <button class="btn-primary" id="addCommitteeButton" data-translate="add-committee">إضافة لجنة جديدة</button>
                 <div class="search-bar" id="searchBarWrapper" style="display: flex; align-items: center; position: relative;">
@@ -114,8 +127,20 @@
         </div>
     </div>
     <div id="toast-container"></div>
-    <script src="../js/committees.js" defer></script>
     <script src="../js/language.js"></script>
+    <script src="../js/committees.js" defer></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // إظهار المحتوى بعد تحميل اللغة
+            setTimeout(() => {
+                const elements = document.querySelectorAll('.content-hidden');
+                elements.forEach(element => {
+                    element.classList.remove('content-hidden');
+                    element.classList.add('content-visible');
+                });
+            }, 100);
+        });
+    </script>
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
