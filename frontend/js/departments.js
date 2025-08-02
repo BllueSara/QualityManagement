@@ -40,8 +40,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     const addDepartmentModal = document.getElementById('addDepartmentModal');
     const addModalSaveBtn = document.getElementById('saveAddDepartment');
     const addModalCancelBtn = document.getElementById('cancelAddDepartment');
-    const addDepartmentNameInput = document.getElementById('departmentName');
+    const addDepartmentTypeInput = document.getElementById('departmentType');
+    const addDepartmentNameArInput = document.getElementById('departmentNameAr');
+    const addDepartmentNameEnInput = document.getElementById('departmentNameEn');
     const addDepartmentImageInput = document.getElementById('departmentImage');
+    const addDepartmentHasSubDepartmentsYes = document.getElementById('hasSubDepartmentsYes');
+    const addDepartmentHasSubDepartmentsNo = document.getElementById('hasSubDepartmentsNo');
     const cardsGrid = document.querySelector('.cards-grid');
     const searchInput = document.getElementById('searchInput');
 
@@ -49,16 +53,16 @@ document.addEventListener('DOMContentLoaded', async function() {
     const editModalSaveBtn = document.getElementById('saveEditDepartment');
     const editModalCancelBtn = document.getElementById('cancelEditDepartment');
     const editDepartmentIdInput = document.getElementById('editDepartmentId');
-    const editDepartmentNameInput = document.getElementById('editDepartmentName');
+    const editDepartmentTypeInput = document.getElementById('editDepartmentType');
+    const editDepartmentNameArInput = document.getElementById('editDepartmentNameAr');
+    const editDepartmentNameEnInput = document.getElementById('editDepartmentNameEn');
     const editDepartmentImageInput = document.getElementById('editDepartmentImage');
+    const editDepartmentHasSubDepartmentsYes = document.getElementById('editHasSubDepartmentsYes');
+    const editDepartmentHasSubDepartmentsNo = document.getElementById('editHasSubDepartmentsNo');
 
     const deleteDepartmentModal = document.getElementById('deleteDepartmentModal');
     const deleteModalConfirmBtn = document.getElementById('confirmDeleteDepartment');
     const deleteModalCancelBtn = document.getElementById('cancelDeleteDepartment');
-const addDepartmentNameArInput = document.getElementById('departmentNameAr');
-const addDepartmentNameEnInput = document.getElementById('departmentNameEn');
-const editDepartmentNameArInput = document.getElementById('editDepartmentNameAr');
-const editDepartmentNameEnInput = document.getElementById('editDepartmentNameEn');
 
     // Store original departments data for filtering
     let allDepartments = [];
@@ -95,8 +99,6 @@ const editDepartmentNameEnInput = document.getElementById('editDepartmentNameEn'
     // فتح بوب اب اضافه القسم 
     addDepartmentBtn.addEventListener('click', () => openModal(addDepartmentModal));
 
-
-
     // Search functionality
     searchInput.addEventListener('input', function() {
         const searchTerm = this.value.trim().toLowerCase();
@@ -126,9 +128,9 @@ const editDepartmentNameEnInput = document.getElementById('editDepartmentNameEn'
     function updateSearchPlaceholder() {
         const lang = localStorage.getItem('language') || 'ar';
         if (lang === 'ar') {
-            searchInput.placeholder = 'ابحث عن قسم...';
+            searchInput.placeholder = getTranslation('search-department-placeholder');
         } else {
-            searchInput.placeholder = 'Search for department...';
+            searchInput.placeholder = getTranslation('search-department-placeholder');
         }
     }
 
@@ -199,14 +201,18 @@ function closeModal(modal) {
   modal.style.display = 'none';
 
   if (modal === addDepartmentModal) {
+    addDepartmentTypeInput.value = '';
     addDepartmentNameArInput.value = '';
     addDepartmentNameEnInput.value = '';
     addDepartmentImageInput.value = '';
+    addDepartmentHasSubDepartmentsNo.checked = true; // إعادة تعيين للقيمة الافتراضية
   } else if (modal === editDepartmentModal) {
     editDepartmentIdInput.value = '';
+    editDepartmentTypeInput.value = '';
     editDepartmentNameArInput.value = '';
     editDepartmentNameEnInput.value = '';
     editDepartmentImageInput.value = '';
+    editDepartmentHasSubDepartmentsNo.checked = true; // إعادة تعيين للقيمة الافتراضية
   }
 }
 
@@ -249,11 +255,15 @@ function closeModal(modal) {
                 deptName = dept.name;
             }
 
+            // إضافة نوع القسم/الإدارة
+            const typeText = dept.type === 'department' ? getTranslation('department-type-text') : getTranslation('administration-type-text');
+            const typeClass = dept.type === 'department' ? 'department' : 'administration';
+
             let icons = '';
             if (permissions.canEdit || permissions.canDelete) {
                 icons = '<div class="card-icons">';
-                if (permissions.canEdit)
-                    icons += `<a href="#" class="edit-icon" data-id="${dept.id}" data-name='${dept.name}'"><img src="../images/edit.svg" alt="${getTranslation('edit')}"></a>`;
+                            if (permissions.canEdit)
+                icons += `<a href="#" class="edit-icon" data-id="${dept.id}" data-name='${dept.name}' data-type="${dept.type}" data-has-sub-departments="${dept.has_sub_departments || false}"><img src="../images/edit.svg" alt="${getTranslation('edit')}"></a>`;
 
                 if (permissions.canDelete)
                     icons += `<a href="#" class="delete-icon" data-id="${dept.id}"><img src="../images/delet.svg" alt="${getTranslation('delete')}"></a>`;
@@ -262,13 +272,16 @@ function closeModal(modal) {
 
             card.innerHTML = icons +
                 `<div class="card-icon bg-blue"><img src="http://localhost:3006/${dept.image}" alt="${deptName}"></div>` +
-                `<div class="card-title">${deptName}</div>`;
+                `<div class="card-title">${deptName}</div>` +
+                `<div class="card-subtitle"><span class="type-badge ${typeClass}">${typeText}</span></div>`;
 
             cardsGrid.appendChild(card);
 
             card.addEventListener('click', e => {
                 if (e.target.closest('.card-icons')) return;
-                window.location.href = `department-content.html?departmentId=${dept.id}`;
+                
+                // التحقق من وجود تابعين
+                checkForSubDepartments(dept.id, dept.name, dept.type, dept.has_sub_departments);
             });
         });
 
@@ -276,6 +289,27 @@ function closeModal(modal) {
             document.querySelectorAll('.edit-icon').forEach(el => el.addEventListener('click', handleEdit));
         if (permissions.canDelete)
             document.querySelectorAll('.delete-icon').forEach(el => el.addEventListener('click', handleDeleteOpen));
+    }
+
+    // Check if department has sub-departments
+    async function checkForSubDepartments(departmentId, departmentName, departmentType, hasSubDepartments) {
+        try {
+            console.log('🔍 Checking sub-departments for department:', departmentId, 'hasSubDepartments:', hasSubDepartments);
+            
+            if (hasSubDepartments) {
+                // إذا كان القسم يسمح بإضافة تابعين، انتقل لصفحة التابعين
+                console.log('🔍 Department allows sub-departments, redirecting to sub-departments page');
+                window.location.href = `sub-departments.html?departmentId=${departmentId}`;
+            } else {
+                // إذا كان القسم لا يسمح بإضافة تابعين، انتقل لصفحة المحتويات
+                console.log('🔍 Department does not allow sub-departments, redirecting to content page');
+                window.location.href = `department-content.html?departmentId=${departmentId}`;
+            }
+        } catch (error) {
+            console.error('Error checking sub-departments:', error);
+            // في حالة الخطأ، انتقل لصفحة المحتويات
+            window.location.href = `department-content.html?departmentId=${departmentId}`;
+        }
     }
 
     // Fetch and render departments
@@ -288,7 +322,7 @@ async function fetchDepartments() {
         if (!res.ok) throw new Error(result.message);
 
         // Store all departments for filtering
-        allDepartments = result;
+        allDepartments = result.success ? result.data : result;
         
         // Render all departments initially
         renderDepartments(allDepartments);
@@ -307,6 +341,7 @@ function handleEdit(e) {
 
   const el = e.currentTarget;
   editDepartmentIdInput.value = el.dataset.id;
+  editDepartmentTypeInput.value = el.dataset.type;
 
   try {
     const parsedName = JSON.parse(el.dataset.name);
@@ -315,6 +350,14 @@ function handleEdit(e) {
   } catch {
     editDepartmentNameArInput.value = el.dataset.name || '';
     editDepartmentNameEnInput.value = '';
+  }
+
+  // تحميل قيمة has_sub_departments
+  const hasSubDepartments = el.dataset.hasSubDepartments === 'true';
+  if (hasSubDepartments) {
+    editDepartmentHasSubDepartmentsYes.checked = true;
+  } else {
+    editDepartmentHasSubDepartmentsNo.checked = true;
   }
 
   openModal(editDepartmentModal);
@@ -330,12 +373,14 @@ function handleEdit(e) {
 addModalSaveBtn.addEventListener('click', async () => {
   if (!permissions.canAdd) return;
 
+  const type = addDepartmentTypeInput.value;
   const nameAr = addDepartmentNameArInput.value.trim();
   const nameEn = addDepartmentNameEnInput.value.trim();
   const file   = addDepartmentImageInput.files[0];
+  const hasSubDepartments = addDepartmentHasSubDepartmentsYes.checked;
 
-  if (!nameAr || !nameEn || !file) {
-    showToast('الرجاء إدخال الاسم بالعربية والإنجليزية واختيار صورة.', 'error');
+  if (!type || !nameAr || !nameEn || !file) {
+    showToast(getTranslation('please-enter-all-required-data'), 'error');
     return;
   }
 
@@ -343,6 +388,9 @@ addModalSaveBtn.addEventListener('click', async () => {
 
   const fd = new FormData();
   fd.append('name', name);
+  fd.append('type', type);
+  fd.append('parentId', null); // الأقسام الرئيسية ليس لها أب
+  fd.append('hasSubDepartments', hasSubDepartments);
   fd.append('image', file);
 
   try {
@@ -368,12 +416,14 @@ editModalSaveBtn.addEventListener('click', async () => {
   if (!permissions.canEdit) return;
 
   const id     = editDepartmentIdInput.value;
+  const type   = editDepartmentTypeInput.value;
   const nameAr = editDepartmentNameArInput.value.trim();
   const nameEn = editDepartmentNameEnInput.value.trim();
   const file   = editDepartmentImageInput.files[0];
+  const hasSubDepartments = editDepartmentHasSubDepartmentsYes.checked;
 
-  if (!id || !nameAr || !nameEn) {
-    showToast('الرجاء إدخال الاسم بالعربية والإنجليزية.', 'error');
+  if (!id || !type || !nameAr || !nameEn) {
+    showToast(getTranslation('please-enter-all-required-data'), 'error');
     return;
   }
 
@@ -381,6 +431,9 @@ editModalSaveBtn.addEventListener('click', async () => {
 
   const fd = new FormData();
   fd.append('name', name);
+  fd.append('type', type);
+  fd.append('parentId', null); // الأقسام الرئيسية ليس لها أب
+  fd.append('hasSubDepartments', hasSubDepartments);
   if (file) fd.append('image', file);
 
   try {

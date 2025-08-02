@@ -1,6 +1,7 @@
 // Language labels
 let currentLang = localStorage.getItem('lang') || 'ar';
 apiBase = 'http://localhost:3006';
+console.log('API Base URL:', apiBase); // Debug log
 // صلاحيات المستخدم (افتراضيًا كل شيء false)
 const permissions = {
   // ... باقي الصلاحيات
@@ -89,9 +90,12 @@ async function fetchApprovalsReports() {
 
 async function fetchDepartments() {
   try {
-    const res = await fetch(`${apiBase}/api/departments`);
+    console.log('Fetching departments from:', `${apiBase}/api/departments/all`); // Debug log
+    const res = await fetch(`${apiBase}/api/departments/all`);
     if (!res.ok) throw new Error('Network response was not ok');
-    return await res.json();
+    const data = await res.json();
+    console.log('Raw departments response:', data); // Debug log
+    return data.data || data; // Handle both {data: [...]} and [...] formats
   } catch (err) {
     console.error('Failed to fetch departments:', err);
     return [];
@@ -104,15 +108,27 @@ async function populateDepartments() {
   const departments = await fetchDepartments();
   const lang = getCurrentLang();
 
+  console.log('Fetched departments:', departments); // Debug log
+
   departments.forEach(dep => {
     let nameObj = dep.name;
     if (typeof nameObj === 'string') {
-      try { nameObj = JSON.parse(nameObj); }
-      catch { nameObj = { ar: nameObj, en: nameObj }; }
+      try { 
+        nameObj = JSON.parse(nameObj); 
+        console.log('Parsed nameObj:', nameObj); // Debug log
+      }
+      catch { 
+        nameObj = { ar: nameObj, en: nameObj }; 
+        console.log('Fallback nameObj:', nameObj); // Debug log
+      }
     }
+    
+    const displayName = nameObj[lang] || nameObj.ar || nameObj.en || dep.name || 'Unknown';
+    console.log('Display name:', displayName); // Debug log
+    
     const option = document.createElement('option');
-    option.value = nameObj[lang];
-    option.textContent = nameObj[lang];
+    option.value = displayName;
+    option.textContent = displayName;
     select.appendChild(option);
   });
 }

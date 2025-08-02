@@ -291,7 +291,7 @@ ${parseLocalizedName(item.title)}
 }
 
 async function initDropdowns() {
-  const departments = await fetchJSON(`${apiBase}/departments`);
+  const departments = await fetchJSON(`${apiBase}/departments/all`);
   document.querySelectorAll('tbody tr').forEach(row => {
     const deptDrop = row.querySelector('[data-type=dept]');
     const userDrop = row.querySelector('[data-type=users]');

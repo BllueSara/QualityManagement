@@ -47,6 +47,20 @@ function renderStats(data) {
   document.getElementById('pending-committee-contents').textContent = data.committee_contents_pending;
 }
 
+function makeCommitteeCardClickable() {
+  // Find the committee count card by looking for the card that contains the committee-count element
+  const committeeCountElement = document.getElementById('committee-count');
+  if (committeeCountElement) {
+    const committeeCard = committeeCountElement.closest('.stat-card');
+    if (committeeCard) {
+      committeeCard.style.cursor = 'pointer';
+      committeeCard.addEventListener('click', () => {
+        window.location.href = 'committees.html';
+      });
+    }
+  }
+}
+
 
 function renderChart(data) {
   const lang = localStorage.getItem('language') || document.documentElement.lang || 'ar';
@@ -99,4 +113,5 @@ function renderChart(data) {
   const closed7d  = await fetchClosedWeek();
   renderStats(stats);
   renderChart(closed7d);
+  makeCommitteeCardClickable();
 })();

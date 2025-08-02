@@ -89,7 +89,7 @@ async function populateFilters() {
     const lang = localStorage.getItem('language') || 'ar';
 
     // — Departments
-    const deptRes = await fetch(`${apiBase}/departments`, {
+    const deptRes = await fetch(`${apiBase}/departments/all`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     if (!deptRes.ok) throw new Error(`Departments ${deptRes.status}`);

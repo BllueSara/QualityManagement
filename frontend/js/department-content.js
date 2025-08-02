@@ -1692,7 +1692,7 @@ createFolderBtn.onclick = async () => {
                 backToFilesContainer.style.display = 'none'; // Hide the back to files button
             } else {
                 // من قائمة المجلدات إلى الأقسام (departmens.html)
-                window.location.href = 'departments.html';
+                window.history.back();
             }
         });
     }
@@ -1711,9 +1711,6 @@ if (departmentIdFromUrl && isInitialFetch) {
     }
 
     // Function to go back to the previous page
-    function goBack() {
-        window.history.back();
-    }
 
     // Function to handle content deletion
     async function handleDeleteContent() {

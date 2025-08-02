@@ -45,14 +45,24 @@ if (typeof getTranslation !== 'function') {
 }
 function getLocalizedName(name) {
   const lang = localStorage.getItem('language') || 'ar';
+  
+  if (!name) return 'غير محدد';
+  
   try {
-    // إذا كانت JSON كسلسلة، فكّها
+    // إذا كان الاسم كائن JSON
     if (typeof name === 'string' && name.trim().startsWith('{')) {
-      name = JSON.parse(name);
+      const parsed = JSON.parse(name);
+      return parsed[lang] || parsed['ar'] || parsed['en'] || name;
     }
-    return name?.[lang] || name?.ar || name?.en || (typeof name === 'string' ? name : '');
-  } catch {
-    return typeof name === 'string' ? name : '';
+    // إذا كان الاسم كائن مباشرة
+    if (typeof name === 'object' && name !== null) {
+      return name[lang] || name['ar'] || name['en'] || JSON.stringify(name);
+    }
+    // إذا كان نص عادي
+    return typeof name === 'string' ? name : 'غير محدد';
+  } catch (error) {
+    console.warn('⚠️ خطأ في معالجة اسم القسم:', name, error);
+    return typeof name === 'string' ? name : 'غير محدد';
   }
 }
 
@@ -102,14 +112,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   console.log('tickets:', tickets);
 
 
-const deptsRes = await fetch('http://localhost:3006/api/departments', {
+const deptsRes = await fetch('http://localhost:3006/api/departments/all', {
   headers: { 'Authorization': `Bearer ${token}` }
 });
+
+if (!deptsRes.ok) {
+  console.error('❌ خطأ في جلب الأقسام:', deptsRes.status, deptsRes.statusText);
+  throw new Error(`فشل في جلب الأقسام: ${deptsRes.status}`);
+}
 
 const resJson = await deptsRes.json(); // فقط هنا
 console.log('📦 استجابة الأقسام:', resJson);
 
-const depts = Array.isArray(resJson) ? resJson : [];
+// معالجة الاستجابة - قد تكون مصفوفة مباشرة أو كائن مع data
+const depts = Array.isArray(resJson) ? resJson : (resJson.data || []);
+
+if (!depts.length) {
+  console.warn('⚠️ لا توجد أقسام متاحة');
+}
 
 
   // 3) بناء صف لكل تذكرة

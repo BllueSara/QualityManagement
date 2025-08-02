@@ -623,7 +623,7 @@ async function loadDepartments() {
   if (!deptSelect) return;
 
   try {
-    const res = await fetchJSON(`${apiBase}/departments`);
+    const res = await fetchJSON(`${apiBase}/departments/all`);
     const departments = Array.isArray(res) ? res : (res.data || []);
     const lang = localStorage.getItem('language') || 'ar';
 

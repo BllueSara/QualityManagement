@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function fetchAllDepartments() {
     const token = localStorage.getItem('token');
-    const res = await fetch('http://localhost:3006/api/departments', {
+    const res = await fetch('http://localhost:3006/api/departments/all', {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const data = await res.json();

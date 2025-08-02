@@ -89,12 +89,27 @@ function closeModal(modal) {
     // دالة لجلب الأقسام من الباك اند وتعبئة قائمة الاختيار
 async function fetchDepartments() {
   try {
-    const token    = localStorage.getItem('token');
-    const response = await fetch('http://localhost:3006/api/departments', {
-      headers: { 'Authorization': `Bearer ${token}` }
+    const response = await fetch('http://localhost:3006/api/departments/all', {
+      method: 'GET',
+      headers: { 
+        'Content-Type': 'application/json'
+      }
     });
-    const data     = await response.json();
-    if (!response.ok) throw new Error(data.message || 'فشل جلب الأقسام');
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API Error:', errorText);
+      throw new Error(`فشل جلب الأقسام: ${response.status} ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    
+    // Handle both array and object with data property
+    const departments = Array.isArray(result) ? result : (result.data || []);
+
+    if (!Array.isArray(departments)) {
+      throw new Error('الرد ليس مصفوفة أقسام');
+    }
 
     // حدّد اللغة الحالية:
     const lang = localStorage.getItem('language') || 'ar';
@@ -102,7 +117,7 @@ async function fetchDepartments() {
     const defaultText = lang === 'ar' ? 'اختر القسم' : 'Select Department';
     departmentSelect.innerHTML = `<option value="">${defaultText}</option>`;
 
-    data.forEach(dept => {
+    departments.forEach(dept => {
       let parsed;
       try {
         // تأكد من تحويل الاسم من string JSON إلى كائن دائماً
@@ -120,11 +135,13 @@ async function fetchDepartments() {
       departmentSelect.appendChild(opt);
     });
 
+    console.log('تم تحميل الأقسام بنجاح:', departments.length);
+
     // خيار "إضافة جديد"
 
 
   } catch (err) {
-    console.error(err);
+    console.error('خطأ في جلب الأقسام:', err);
     showToast(err.message || 'حدث خطأ أثناء جلب الأقسام', 'error');
   }
 }
@@ -158,7 +175,6 @@ saveAddDepartmentBtn.addEventListener('click', async function () {
   const nameAr = departmentNameArInput.value.trim();
   const nameEn = departmentNameEnInput.value.trim();
   const imageFile = departmentImageInput.files[0];
-  const token = localStorage.getItem('token');
 
   if (!nameAr || !nameEn || !imageFile) {
     showToast('جميع الحقول مطلوبة (الاسمين + الصورة)', 'warning');
@@ -171,11 +187,8 @@ formData.append('image', imageFile);
 
 
   try {
-    const response = await fetch('http://localhost:3006/api/departments', {
+    const response = await fetch('http://localhost:3006/api/departments/all', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      },
       body: formData
     });
 

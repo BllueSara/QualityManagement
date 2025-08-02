@@ -176,18 +176,21 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Fetch data functions
     async function fetchDepartments() {
         try {
-            const response = await fetch(`${apiBase}/departments`, {
+            const response = await fetch(`${apiBase}/departments/all`, {
                 headers: { 'Authorization': `Bearer ${getToken()}` }
             });
-            if (!response.ok) throw new Error('Failed to fetch departments');
+            if (!response.ok) throw new Error(`Failed to fetch departments: ${response.status}`);
             
-            const data = await response.json();
-            departments = data;
+            const result = await response.json();
+            console.log('📦 Raw departments response:', result);
+            
+            // معالجة الاستجابة - قد تكون مصفوفة مباشرة أو كائن مع data
+            departments = Array.isArray(result) ? result : (result.data || []);
             renderDepartments(departments);
             console.log('✅ Departments loaded:', departments);
         } catch (error) {
             console.error('❌ Error fetching departments:', error);
-            departmentsList.innerHTML = '<div class="error">خطأ في تحميل الأقسام</div>';
+            departmentsList.innerHTML = '<div class="error">خطأ في تحميل الأقسام: ' + error.message + '</div>';
         }
     }
 
@@ -242,12 +245,27 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
 
         departmentsList.innerHTML = items.map(dept => {
-            let deptName;
-            try {
-                const parsed = JSON.parse(dept.name);
-                deptName = parsed[lang] || parsed['ar'] || dept.name;
-            } catch {
-                deptName = dept.name;
+            let deptName = 'غير محدد';
+            
+            if (dept.name) {
+                try {
+                    // إذا كان الاسم كائن JSON
+                    if (typeof dept.name === 'string' && dept.name.trim().startsWith('{')) {
+                        const parsed = JSON.parse(dept.name);
+                        deptName = parsed[lang] || parsed['ar'] || parsed['en'] || dept.name;
+                    }
+                    // إذا كان الاسم كائن مباشرة
+                    else if (typeof dept.name === 'object' && dept.name !== null) {
+                        deptName = dept.name[lang] || dept.name['ar'] || dept.name['en'] || JSON.stringify(dept.name);
+                    }
+                    // إذا كان نص عادي
+                    else {
+                        deptName = dept.name;
+                    }
+                } catch (error) {
+                    console.warn('⚠️ خطأ في معالجة اسم القسم:', dept.name, error);
+                    deptName = typeof dept.name === 'string' ? dept.name : 'غير محدد';
+                }
             }
 
             let actions = '';
@@ -347,13 +365,29 @@ document.addEventListener('DOMContentLoaded', async function() {
     function filterDepartments(searchTerm) {
         const lang = getCurrentLang();
         const filtered = departments.filter(dept => {
-            let deptName;
-            try {
-                const parsed = JSON.parse(dept.name);
-                deptName = parsed[lang] || parsed['ar'] || dept.name;
-            } catch {
-                deptName = dept.name;
+            let deptName = 'غير محدد';
+            
+            if (dept.name) {
+                try {
+                    // إذا كان الاسم كائن JSON
+                    if (typeof dept.name === 'string' && dept.name.trim().startsWith('{')) {
+                        const parsed = JSON.parse(dept.name);
+                        deptName = parsed[lang] || parsed['ar'] || parsed['en'] || dept.name;
+                    }
+                    // إذا كان الاسم كائن مباشرة
+                    else if (typeof dept.name === 'object' && dept.name !== null) {
+                        deptName = dept.name[lang] || dept.name['ar'] || dept.name['en'] || JSON.stringify(dept.name);
+                    }
+                    // إذا كان نص عادي
+                    else {
+                        deptName = dept.name;
+                    }
+                } catch (error) {
+                    console.warn('⚠️ خطأ في معالجة اسم القسم للفلترة:', dept.name, error);
+                    deptName = typeof dept.name === 'string' ? dept.name : 'غير محدد';
+                }
             }
+            
             return deptName.toLowerCase().includes(searchTerm.toLowerCase());
         });
         renderDepartments(filtered);
@@ -405,6 +439,28 @@ document.addEventListener('DOMContentLoaded', async function() {
                 document.getElementById('editDepartmentNameAr').value = department.name || '';
                 document.getElementById('editDepartmentNameEn').value = '';
             }
+            
+            // Set department type if the field exists
+            const editDepartmentType = document.getElementById('editDepartmentType');
+            if (editDepartmentType) {
+                editDepartmentType.value = department.type || 'main';
+            }
+            
+            // Set has sub departments if the fields exist
+            const hasSubDepartments = department.has_sub_departments || department.hasSubDepartments;
+            const editHasSubDepartmentsYes = document.getElementById('editHasSubDepartmentsYes');
+            const editHasSubDepartmentsNo = document.getElementById('editHasSubDepartmentsNo');
+            
+            if (editHasSubDepartmentsYes && editHasSubDepartmentsNo) {
+                if (hasSubDepartments) {
+                    editHasSubDepartmentsYes.checked = true;
+                    editHasSubDepartmentsNo.checked = false;
+                } else {
+                    editHasSubDepartmentsYes.checked = false;
+                    editHasSubDepartmentsNo.checked = true;
+                }
+            }
+            
             // Clear the image input
             document.getElementById('editDepartmentImage').value = '';
             openModal(editDepartmentModal);
@@ -493,18 +549,23 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('saveAddDepartment').addEventListener('click', async () => {
         if (!permissions.canAdd) return;
 
+        const type = document.getElementById('departmentType')?.value || 'main';
         const nameAr = document.getElementById('departmentNameAr').value.trim();
         const nameEn = document.getElementById('departmentNameEn').value.trim();
         const file = document.getElementById('departmentImage').files[0];
+        const hasSubDepartments = document.getElementById('hasSubDepartmentsYes')?.checked || false;
         
         if (!nameAr || !nameEn || !file) {
-            showToast('الرجاء إدخال الاسم بالعربية والإنجليزية واختيار صورة.', 'warning');
+            showToast(getTranslation('please-enter-all-required-data') || 'الرجاء إدخال الاسم بالعربية والإنجليزية واختيار صورة.', 'warning');
             return;
         }
 
         const name = JSON.stringify({ ar: nameAr, en: nameEn });
         const formData = new FormData();
         formData.append('name', name);
+        formData.append('type', type);
+        formData.append('parentId', null); // الأقسام الرئيسية ليس لها أب
+        formData.append('hasSubDepartments', hasSubDepartments);
         formData.append('image', file);
 
         try {
@@ -514,7 +575,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 body: formData
             });
             
-            if (!response.ok) throw new Error('Failed to add department');
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.message || 'Failed to add department');
             
             showToast(getTranslation('department-added-success') || 'تم إضافة القسم بنجاح', 'success');
             closeModal(addDepartmentModal);
@@ -529,18 +591,23 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (!permissions.canEdit) return;
 
         const id = document.getElementById('editDepartmentId').value;
+        const type = document.getElementById('editDepartmentType')?.value || 'main';
         const nameAr = document.getElementById('editDepartmentNameAr').value.trim();
         const nameEn = document.getElementById('editDepartmentNameEn').value.trim();
         const file = document.getElementById('editDepartmentImage').files[0];
+        const hasSubDepartments = document.getElementById('editHasSubDepartmentsYes')?.checked || false;
         
         if (!id || !nameAr || !nameEn) {
-            showToast('الرجاء إدخال الاسم بالعربية والإنجليزية.', 'warning');
+            showToast(getTranslation('please-enter-all-required-data') || 'الرجاء إدخال الاسم بالعربية والإنجليزية.', 'warning');
             return;
         }
 
         const name = JSON.stringify({ ar: nameAr, en: nameEn });
         const formData = new FormData();
         formData.append('name', name);
+        formData.append('type', type);
+        formData.append('parentId', null); // الأقسام الرئيسية ليس لها أب
+        formData.append('hasSubDepartments', hasSubDepartments);
         if (file) formData.append('image', file);
 
         try {
@@ -550,7 +617,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 body: formData
             });
             
-            if (!response.ok) throw new Error('Failed to update department');
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.message || 'Failed to update department');
             
             showToast(getTranslation('department-updated-success') || 'تم تحديث القسم بنجاح', 'success');
             closeModal(editDepartmentModal);

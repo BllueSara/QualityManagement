@@ -353,48 +353,59 @@ async function loadMyPermissions() {
 async function fetchDepartments() {
   try {
     const token = localStorage.getItem('token');
-    const response = await fetch(`${apiBase}/departments`, {
+    if (!token) {
+      throw new Error('لا يوجد توكن مصادقة');
+    }
+
+    const response = await fetch(`${apiBase}/departments/all`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
     });
 
-    const result = await response.json();
-
     if (!response.ok) {
-      throw new Error('فشل في جلب الأقسام');
+      const errorText = await response.text();
+      console.error('🚨 Department API error:', response.status, errorText);
+      throw new Error(`فشل في جلب الأقسام (${response.status})`);
     }
 
-    if (!Array.isArray(result)) {
+    const result = await response.json();
+
+    // Handle both array and object with data property
+    const departments = Array.isArray(result) ? result : (result.data || []);
+
+    if (!Array.isArray(departments)) {
+      console.error('🚨 Invalid departments response format:', result);
       throw new Error('الرد ليس مصفوفة أقسام');
     }
 
     // تحديث القائمة المنسدلة
-const lang = localStorage.getItem('language') || 'ar';
-const selectText = lang === 'ar' ? 'اختر القسم' : 'Select Department';
-departmentSelect.innerHTML = `<option value="">${selectText}</option>`;
+    const lang = localStorage.getItem('language') || 'ar';
+    const selectText = lang === 'ar' ? 'اختر القسم' : 'Select Department';
+    departmentSelect.innerHTML = `<option value="">${selectText}</option>`;
 
-
-    result.forEach(dept => {
+    departments.forEach(dept => {
       const option = document.createElement('option');
       option.value = dept.id;
-let name = dept.name;
-try {
-  if (typeof name === 'string' && name.trim().startsWith('{')) {
-    name = JSON.parse(name);
-  }
-  option.textContent = typeof name === 'object'
-    ? (name[lang] || name.ar || name.en || '')
-    : name;
-} catch {
-  option.textContent = '';
-}
+      let name = dept.name;
+      try {
+        if (typeof name === 'string' && name.trim().startsWith('{')) {
+          name = JSON.parse(name);
+        }
+        option.textContent = typeof name === 'object'
+          ? (name[lang] || name.ar || name.en || '')
+          : name;
+      } catch {
+        option.textContent = '';
+      }
 
       departmentSelect.appendChild(option);
     });
+
+    console.log('✅ Successfully loaded', departments.length, 'departments');
   } catch (error) {
     console.error('🚨 fetchDepartments error:', error);
-    showToast('خطأ في جلب الأقسام.', 'error');
+    showToast('خطأ في جلب الأقسام: ' + error.message, 'error');
   }
 }
 
@@ -1105,17 +1116,37 @@ if (btnEditUserInfo) {
 async function fetchDepartmentsForEditModal(selectedId, selectedName) {
   try {
     const token = localStorage.getItem('token');
-    const response = await fetch(`${apiBase}/departments`, {
+    if (!token) {
+      throw new Error('لا يوجد توكن مصادقة');
+    }
+
+    const response = await fetch(`${apiBase}/departments/all`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
     });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('🚨 Department API error (edit modal):', response.status, errorText);
+      throw new Error(`فشل في جلب الأقسام (${response.status})`);
+    }
+
     const result = await response.json();
-    if (!Array.isArray(result)) throw new Error('الرد ليس مصفوفة أقسام');
+    
+    // Handle both array and object with data property
+    const departments = Array.isArray(result) ? result : (result.data || []);
+    
+    if (!Array.isArray(departments)) {
+      console.error('🚨 Invalid departments response format (edit modal):', result);
+      throw new Error('الرد ليس مصفوفة أقسام');
+    }
+    
     const lang = localStorage.getItem('language') || 'ar';
     const selectText = lang === 'ar' ? 'اختر القسم' : 'Select Department';
     editDepartment.innerHTML = `<option value="">${selectText}</option>`;
-    result.forEach(dept => {
+    
+    departments.forEach(dept => {
       const option = document.createElement('option');
       option.value = dept.id;
       let name = dept.name;
@@ -1132,8 +1163,11 @@ async function fetchDepartmentsForEditModal(selectedId, selectedName) {
       if (dept.id == selectedId) option.selected = true;
       editDepartment.appendChild(option);
     });
+
+    console.log('✅ Successfully loaded', departments.length, 'departments for edit modal');
   } catch (error) {
-    showToast('خطأ في جلب الأقسام.', 'error');
+    console.error('🚨 fetchDepartmentsForEditModal error:', error);
+    showToast('خطأ في جلب الأقسام: ' + error.message, 'error');
   }
 }
 

@@ -45,7 +45,7 @@ const apiBase = 'http://localhost:3006/api';
     // Load departments from the database
 async function loadDepartments() {
   try {
-    const response = await fetch(`${apiBase}/departments`, {
+    const response = await fetch(`${apiBase}/departments/all`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }

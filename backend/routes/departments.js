@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { getDepartments, addDepartment, updateDepartment, deleteDepartment } = require('../controllers/departmentController');
+const { getDepartments, getAllDepartments, getSubDepartments, addDepartment, updateDepartment, deleteDepartment } = require('../controllers/departmentController');
 
 // إعدادات تخزين multer
 const storage = multer.diskStorage({
@@ -15,8 +15,14 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-// مسار جلب الأقسام
+// مسار جلب الأقسام الرئيسية فقط
 router.get('/', getDepartments);
+
+// مسار جلب جميع الأقسام (الرئيسية والفرعية)
+router.get('/all', getAllDepartments);
+
+// مسار جلب التابعين لقسم/إدارة معينة
+router.get('/:departmentId/sub-departments', getSubDepartments);
 
 // مسار إضافة قسم جديد (مع تحميل الصورة)
 router.post('/', upload.single('image'), addDepartment);
