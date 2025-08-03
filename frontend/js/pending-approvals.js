@@ -149,9 +149,15 @@ async function loadPendingApprovals() {
       : [];
     const hasApprovers = assignedApproverNames.length > 0;
 
-    // 2) ابني badges من الأسماء
+    // 2) ابني badges من الأسماء مع أرقام التسلسل
+    // الأسماء تأتي مرتبة من GROUP_CONCAT ORDER BY ca.sequence_number
     const approverBadges = assignedApproverNames
-      .map(name => `<span class="badge">${name}</span>`)
+      .map((name, index) => {
+        const sequenceNumber = index + 1; // ترتيب حسب الترتيب في GROUP_CONCAT
+        const isFirst = sequenceNumber === 1;
+        const badgeColor = isFirst ? '#28a745' : '#6c757d';
+        return `<span class="badge" style="background-color: ${badgeColor}; color: white;" data-sequence="${sequenceNumber}">${sequenceNumber}. ${name}</span>`;
+      })
       .join('');
 
     const contentType = item.type === 'committee'
@@ -201,6 +207,7 @@ ${parseLocalizedName(item.title)}
         <button class="btn-send" style="padding:6px 12px;">
           <i class="bi ${hasApprovers ? 'bi-plus-circle' : 'bi-send'}"></i>
           ${hasApprovers ? getTranslation('add-more') : getTranslation('send')}
+          <span style="font-size: 10px; margin-left: 4px; opacity: 0.8;">(${getTranslation('sequential')})</span>
         </button>
         ${item.file_path
           ? `<button class="btn-view" data-file-path="${item.file_path}" style="margin-right:5px;padding:6px 12px;">
@@ -300,6 +307,7 @@ async function initDropdowns() {
     if (!sendBtn) return;
     let selectedDepts = [];
     let selectedUsers = [];
+    let selectionCounter = 0; // عداد لترتيب الاختيار
 
     const deptBtn  = deptDrop.querySelector('.dropdown-btn');
     const deptList = deptDrop.querySelector('.dropdown-content');
@@ -367,6 +375,48 @@ async function initDropdowns() {
 
       uBtn.disabled = false;
       uBtn.textContent = selectedUsers.length ? `${selectedUsers.length} ${getTranslation('selected-count')}` : getTranslation('select-people');
+      
+      // إعادة بناء القائمة المعروضة للمعتمدين المختارين
+      const selCell = row.querySelector('.selected-cell');
+      if (selCell && selectedUsers.length > 0) {
+        selCell.innerHTML = '';
+        
+        // ترتيب المعتمدين حسب وقت الاختيار
+        const sortedUsers = selectedUsers.sort((a, b) => a.selectedAt - b.selectedAt);
+        
+        // إعادة تعيين العداد ليكون أكبر من أكبر قيمة موجودة
+        const maxSelectedAt = Math.max(...selectedUsers.map(u => u.selectedAt || 0));
+        selectionCounter = maxSelectedAt;
+        
+        sortedUsers.forEach((u, index) => {
+          const badge = document.createElement('span');
+          badge.className = 'badge';
+          badge.dataset.sequence = index + 1;
+          
+          const lang = localStorage.getItem('language') || 'ar';
+          const dept = selectedDepts.find(d => d.id === u.deptId);
+          let deptName = dept?.name || '';
+
+          try {
+            const parsed = typeof deptName === 'string' ? JSON.parse(deptName) : deptName;
+            deptName = parsed?.[lang] || parsed?.ar || parsed?.en || '';
+          } catch {}
+
+          // إضافة رقم التسلسل مع الاسم
+          badge.textContent = `${index + 1}. ${u.name} (${deptName})`;
+          
+          // إضافة لون مختلف للمعتمد الأول
+          if (index === 0) {
+            badge.style.backgroundColor = '#28a745'; // أخضر للمعتمد الأول
+            badge.style.color = 'white';
+          } else {
+            badge.style.backgroundColor = '#6c757d'; // رمادي للمعتمدين الآخرين
+            badge.style.color = 'white';
+          }
+          
+          selCell.appendChild(badge);
+        });
+      }
 
       for (const dept of selectedDepts) {
         const divider = document.createElement('div');
@@ -388,7 +438,8 @@ async function initDropdowns() {
           item.textContent = u.name;
           item.dataset.deptId = dept.id;
           item.dataset.userId = u.id;
-          if (selectedUsers.some(x => x.id === u.id)) {
+          const existingUser = selectedUsers.find(x => x.id === u.id);
+          if (existingUser) {
             item.classList.add('selected');
           }
           uList.appendChild(item);
@@ -421,8 +472,11 @@ async function initDropdowns() {
         const userId = item.dataset.userId;
 
         if (item.classList.toggle('selected')) {
-          selectedUsers.push({ id: userId, name, deptId });
+          // إضافة المعتمد مع حفظ ترتيب الاختيار
+          selectionCounter++;
+          selectedUsers.push({ id: userId, name, deptId, selectedAt: selectionCounter });
         } else {
+          // إزالة المعتمد
           selectedUsers = selectedUsers.filter(x => x.id !== userId);
         }
 
@@ -430,9 +484,15 @@ async function initDropdowns() {
 
         const selCell = row.querySelector('.selected-cell');
         selCell.innerHTML = '';
-        selectedUsers.forEach(u => {
+        
+        // ترتيب المعتمدين حسب وقت الاختيار
+        const sortedUsers = selectedUsers.sort((a, b) => a.selectedAt - b.selectedAt);
+        
+        sortedUsers.forEach((u, index) => {
           const badge = document.createElement('span');
           badge.className = 'badge';
+          badge.dataset.sequence = index + 1;
+          
           const lang = localStorage.getItem('language') || 'ar';
           const dept = selectedDepts.find(d => d.id === u.deptId);
           let deptName = dept?.name || '';
@@ -442,7 +502,18 @@ async function initDropdowns() {
             deptName = parsed?.[lang] || parsed?.ar || parsed?.en || '';
           } catch {}
 
-          badge.textContent = `${u.name} (${deptName})`;
+          // إضافة رقم التسلسل مع الاسم
+          badge.textContent = `${index + 1}. ${u.name} (${deptName})`;
+          
+          // إضافة لون مختلف للمعتمد الأول
+          if (index === 0) {
+            badge.style.backgroundColor = '#28a745'; // أخضر للمعتمد الأول
+            badge.style.color = 'white';
+          } else {
+            badge.style.backgroundColor = '#6c757d'; // رمادي للمعتمدين الآخرين
+            badge.style.color = 'white';
+          }
+          
           selCell.appendChild(badge);
         });
       });
@@ -473,9 +544,41 @@ async function initDropdowns() {
         return alert(getTranslation('no-new-approvers'));
       }
 
-      // 3) دمج القديم مع الجديد
-      const allNames = existingAssignedNames.concat(newUsers.map(u => u.name));
-      const allIds   = existingIds.concat(newUsers.map(u => u.id));
+      // 3) جلب الترتيب من الواجهة المعروضة حالياً
+      const selCell = row.querySelector('.selected-cell');
+      const displayedBadges = selCell.querySelectorAll('.badge');
+      
+      // إنشاء خريطة للترتيب المعروض
+      const displayOrder = new Map();
+      displayedBadges.forEach((badge, index) => {
+        const badgeText = badge.textContent;
+        // استخراج الاسم من النص (إزالة رقم التسلسل)
+        const nameMatch = badgeText.match(/\d+\.\s*(.+?)(?:\s*\(|$)/);
+        if (nameMatch) {
+          const name = nameMatch[1].trim();
+          displayOrder.set(name, index + 1);
+        }
+      });
+      
+      // إذا لم تكن هناك badges معروضة، استخدم ترتيب الاختيار
+      let sortedNewUsers;
+      if (displayedBadges.length === 0) {
+        sortedNewUsers = newUsers.sort((a, b) => {
+          const aSelected = selectedUsers.find(u => u.id === a.id);
+          const bSelected = selectedUsers.find(u => u.id === b.id);
+          return (aSelected?.selectedAt || 0) - (bSelected?.selectedAt || 0);
+        });
+      } else {
+        // ترتيب المعتمدين الجدد حسب الترتيب المعروض
+        sortedNewUsers = newUsers.sort((a, b) => {
+          const aOrder = displayOrder.get(a.name) || 999;
+          const bOrder = displayOrder.get(b.name) || 999;
+          return aOrder - bOrder;
+        });
+      }
+      
+      const allNames = existingAssignedNames.concat(sortedNewUsers.map(u => u.name));
+      const allIds   = existingIds.concat(sortedNewUsers.map(u => u.id));
 
       // 4) أرسل الـ API
       const contentId = row.dataset.id;
@@ -496,26 +599,56 @@ async function initDropdowns() {
             return;
           }
           
-          // أضف الأسماء الجديدة مع إشارة للتفويض إذا كان موجود
-          for (const u of newUsers) {
+          // إعادة بناء القائمة كاملة بالترتيب الصحيح
+          selCell.innerHTML = '';
+          
+          // إضافة جميع المعتمدين (القديم + الجديد) بالترتيب الصحيح
+          for (let index = 0; index < allNames.length; index++) {
+            const name = allNames[index];
             const badge = document.createElement('span');
             badge.className = 'badge';
+            const sequenceNumber = index + 1;
+            badge.dataset.sequence = sequenceNumber;
             
             // تحقق إذا كان هذا المستخدم مفوض له
-            try {
-              const delegationResponse = await fetchJSON(`${apiBase}/users/${u.id}/delegation-status`);
-              if (delegationResponse && delegationResponse.delegated_by) {
-                // هذا مفوض له، أضف إشارة
-                badge.textContent = `${u.name} (مفوض له)`;
-                badge.style.backgroundColor = '#ff6b6b'; // لون مختلف للمفوض له
-              } else {
-                badge.textContent = u.name;
+            const isNewUser = sortedNewUsers.some(u => u.name === name);
+            if (isNewUser) {
+              const newUser = sortedNewUsers.find(u => u.name === name);
+              try {
+                const delegationResponse = await fetchJSON(`${apiBase}/users/${newUser.id}/delegation-status`);
+                if (delegationResponse && delegationResponse.delegated_by) {
+                  // هذا مفوض له، أضف إشارة مع رقم التسلسل
+                  badge.textContent = `${sequenceNumber}. ${name} (مفوض له)`;
+                  badge.style.backgroundColor = '#ff6b6b'; // لون مختلف للمفوض له
+                } else {
+                  badge.textContent = `${sequenceNumber}. ${name}`;
+                  // لون حسب الترتيب
+                  if (sequenceNumber === 1) {
+                    badge.style.backgroundColor = '#28a745'; // أخضر للمعتمد الأول
+                  } else {
+                    badge.style.backgroundColor = '#6c757d'; // رمادي للمعتمدين الآخرين
+                  }
+                }
+              } catch (err) {
+                // إذا فشل التحقق، استخدم الاسم العادي مع رقم التسلسل
+                badge.textContent = `${sequenceNumber}. ${name}`;
+                if (sequenceNumber === 1) {
+                  badge.style.backgroundColor = '#28a745';
+                } else {
+                  badge.style.backgroundColor = '#6c757d';
+                }
               }
-            } catch (err) {
-              // إذا فشل التحقق، استخدم الاسم العادي
-              badge.textContent = u.name;
+            } else {
+              // معتمد قديم
+              badge.textContent = `${sequenceNumber}. ${name}`;
+              if (sequenceNumber === 1) {
+                badge.style.backgroundColor = '#28a745'; // أخضر للمعتمد الأول
+              } else {
+                badge.style.backgroundColor = '#6c757d'; // رمادي للمعتمدين الآخرين
+              }
             }
             
+            badge.style.color = 'white';
             selCell.appendChild(badge);
           }
 

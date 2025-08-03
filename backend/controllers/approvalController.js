@@ -52,8 +52,7 @@ const getUserPendingApprovals = async (req, res) => {
       // المستخدم مفوض له - سيظهر له الملف مرة واحدة وسيعتمد مرتين تلقائياً
       const delegatorId = delegationRows[0].user_id;
       
-      // جلب الملفات المكلف بها المستخدم (شخصياً أو بالنيابة)
-      // المهم: لا تظهر الملف للمفوض الأصلي، فقط للمفوض له
+      // جلب الملفات المكلف بها المستخدم (شخصياً أو بالنيابة) مع التحقق من التسلسل
       const [delegatedRows] = await db.execute(`
         SELECT 
           CONCAT('dept-', c.id) AS id, 
@@ -66,8 +65,9 @@ const getUserPendingApprovals = async (req, res) => {
           c.created_at,
           f.name AS folderName,
           COALESCE(d.name, '-') AS source_name,
-          GROUP_CONCAT(DISTINCT u2.username) AS assigned_approvers,
-          'dual' AS signature_type
+          GROUP_CONCAT(DISTINCT u2.username ORDER BY ca.sequence_number) AS assigned_approvers,
+          'dual' AS signature_type,
+          ca.sequence_number
         FROM contents c
         JOIN folders f ON c.folder_id = f.id
         LEFT JOIN departments d ON f.department_id = d.id
@@ -81,12 +81,24 @@ const getUserPendingApprovals = async (req, res) => {
               AND approver_id = ?
               AND status = 'approved'
           )
-        GROUP BY c.id
+          AND (
+            -- التحقق من أن جميع المعتمدين السابقين قد وقعوا
+            ca.sequence_number = 1 
+            OR NOT EXISTS (
+              SELECT 1 FROM content_approvers ca2
+              JOIN approval_logs al ON al.content_id = ca2.content_id AND al.approver_id = ca2.user_id
+              WHERE ca2.content_id = c.id 
+                AND ca2.sequence_number < ca.sequence_number
+                AND al.status = 'approved'
+            ) = 0
+          )
+        GROUP BY c.id, ca.sequence_number
+        ORDER BY ca.sequence_number
       `, [userId, userId]);
 
       rows = delegatedRows;
     } else {
-      // المستخدم عادي - جلب الملفات المكلف بها فقط
+      // المستخدم عادي - جلب الملفات المكلف بها فقط مع التحقق من التسلسل
       const [normalRows] = await db.execute(`
         SELECT 
           CONCAT('dept-', c.id) AS id, 
@@ -99,8 +111,9 @@ const getUserPendingApprovals = async (req, res) => {
           c.created_at,
           f.name AS folderName,
           COALESCE(d.name, '-') AS source_name,
-          GROUP_CONCAT(DISTINCT u2.username) AS assigned_approvers,
-          'normal' AS signature_type
+          GROUP_CONCAT(DISTINCT u2.username ORDER BY ca.sequence_number) AS assigned_approvers,
+          'normal' AS signature_type,
+          ca.sequence_number
         FROM contents c
         JOIN folders f ON c.folder_id = f.id
         LEFT JOIN departments d ON f.department_id = d.id
@@ -114,7 +127,19 @@ const getUserPendingApprovals = async (req, res) => {
               AND approver_id = ?
               AND status = 'approved'
           )
-        GROUP BY c.id
+          AND (
+            -- التحقق من أن جميع المعتمدين السابقين قد وقعوا
+            ca.sequence_number = 1 
+            OR NOT EXISTS (
+              SELECT 1 FROM content_approvers ca2
+              JOIN approval_logs al ON al.content_id = ca2.content_id AND al.approver_id = ca2.user_id
+              WHERE ca2.content_id = c.id 
+                AND ca2.sequence_number < ca.sequence_number
+                AND al.status = 'approved'
+            ) = 0
+          )
+        GROUP BY c.id, ca.sequence_number
+        ORDER BY ca.sequence_number
       `, [userId, userId]);
 
       rows = normalRows;
@@ -178,6 +203,36 @@ const handleApproval = async (req, res) => {
     // إذا كان المستخدم مفوض شخص آخر، نفذ الاعتماد باسم المفوض له
     if (globalProxies[currentUserId]) {
       currentUserId = globalProxies[currentUserId];
+    }
+
+    // التحقق من التسلسل - تأكد من أن المعتمد السابق قد وقع
+    const [sequenceCheck] = await db.execute(`
+      SELECT ca.sequence_number
+      FROM content_approvers ca
+      WHERE ca.content_id = ? AND ca.user_id = ?
+    `, [contentId, currentUserId]);
+
+    if (sequenceCheck.length > 0) {
+      const currentSequence = sequenceCheck[0].sequence_number;
+      
+      // إذا لم يكن المعتمد الأول، تحقق من أن المعتمد السابق قد وقع
+      if (currentSequence > 1) {
+        const [previousApprovers] = await db.execute(`
+          SELECT COUNT(*) as count
+          FROM content_approvers ca
+          JOIN approval_logs al ON al.content_id = ca.content_id AND al.approver_id = ca.user_id
+          WHERE ca.content_id = ? 
+            AND ca.sequence_number < ?
+            AND al.status = 'approved'
+        `, [contentId, currentSequence]);
+
+        if (previousApprovers[0].count === 0) {
+          return res.status(400).json({ 
+            status: 'error', 
+            message: 'لا يمكنك التوقيع حتى يوقع المعتمد السابق' 
+          });
+        }
+      }
     }
 
 // ——— منطق التوقيع المزدوج للمفوض له ———
@@ -729,13 +784,14 @@ const getAssignedApprovals = async (req, res) => {
           c.title,
           c.file_path,
           c.approval_status,
-          GROUP_CONCAT(DISTINCT u2.username) AS assigned_approvers,
+          GROUP_CONCAT(DISTINCT u2.username ORDER BY ca.sequence_number) AS assigned_approvers,
           d.name AS source_name,
           f.name AS folder_name,
           u.username AS created_by_username,
           'department' AS type,
           CAST(c.approvers_required AS CHAR) AS approvers_required,
-          c.created_at
+          c.created_at,
+          ca.sequence_number
         FROM contents c
         JOIN folders f        ON c.folder_id = f.id
         JOIN departments d    ON f.department_id = d.id
@@ -749,7 +805,7 @@ const getAssignedApprovals = async (req, res) => {
             AND al.signed_as_proxy = 1
             AND al.status = 'accepted'
         )
-        GROUP BY c.id
+        GROUP BY c.id, ca.sequence_number
       `
       : `
         SELECT
@@ -757,13 +813,14 @@ const getAssignedApprovals = async (req, res) => {
           c.title,
           c.file_path,
           c.approval_status,
-          GROUP_CONCAT(DISTINCT u2.username) AS assigned_approvers,
+          GROUP_CONCAT(DISTINCT u2.username ORDER BY ca.sequence_number) AS assigned_approvers,
           d.name AS source_name,
           f.name AS folder_name,
           u.username AS created_by_username,
           'department' AS type,
           CAST(c.approvers_required AS CHAR) AS approvers_required,
-          c.created_at
+          c.created_at,
+          ca.sequence_number
         FROM contents c
         JOIN folders f        ON c.folder_id = f.id
         JOIN departments d    ON f.department_id = d.id
@@ -777,7 +834,18 @@ const getAssignedApprovals = async (req, res) => {
             AND al.signed_as_proxy = 1
             AND al.status = 'accepted'
         )
-        GROUP BY c.id
+        AND (
+          -- التحقق من أن جميع المعتمدين السابقين قد وقعوا
+          ca.sequence_number = 1 
+          OR NOT EXISTS (
+            SELECT 1 FROM content_approvers ca2
+            JOIN approval_logs al ON al.content_id = ca2.content_id AND al.approver_id = ca2.user_id
+            WHERE ca2.content_id = c.id 
+              AND ca2.sequence_number < ca.sequence_number
+              AND al.status = 'approved'
+          ) = 0
+        )
+        GROUP BY c.id, ca.sequence_number
       `;
 
     const committeeContentQuery = canViewAll
@@ -787,13 +855,14 @@ const getAssignedApprovals = async (req, res) => {
           cc.title,
           cc.file_path,
           cc.approval_status,
-          GROUP_CONCAT(DISTINCT u2.username) AS assigned_approvers,
+          GROUP_CONCAT(DISTINCT u2.username ORDER BY cca.sequence_number) AS assigned_approvers,
           com.name AS source_name,
           cf.name AS folder_name,
           u.username AS created_by_username,
           'committee' AS type,
           CAST(cc.approvers_required AS CHAR) AS approvers_required,
-          cc.created_at
+          cc.created_at,
+          cca.sequence_number
         FROM committee_contents cc
         JOIN committee_folders cf      ON cc.folder_id = cf.id
         JOIN committees com            ON cf.committee_id = com.id
@@ -807,7 +876,7 @@ const getAssignedApprovals = async (req, res) => {
             AND cal.signed_as_proxy = 1
             AND cal.status = 'accepted'
         )
-        GROUP BY cc.id
+        GROUP BY cc.id, cca.sequence_number
       `
       : `
         SELECT
@@ -815,13 +884,14 @@ const getAssignedApprovals = async (req, res) => {
           cc.title,
           cc.file_path,
           cc.approval_status,
-          GROUP_CONCAT(DISTINCT u2.username) AS assigned_approvers,
+          GROUP_CONCAT(DISTINCT u2.username ORDER BY cca.sequence_number) AS assigned_approvers,
           com.name AS source_name,
           cf.name AS folder_name,
           u.username AS created_by_username,
           'committee' AS type,
           CAST(cc.approvers_required AS CHAR) AS approvers_required,
-          cc.created_at
+          cc.created_at,
+          cca.sequence_number
         FROM committee_contents cc
         JOIN committee_folders cf      ON cc.folder_id = cf.id
         JOIN committees com            ON cf.committee_id = com.id
@@ -835,7 +905,18 @@ const getAssignedApprovals = async (req, res) => {
             AND cal.signed_as_proxy = 1
             AND cal.status = 'accepted'
         )
-        GROUP BY cc.id
+        AND (
+          -- التحقق من أن جميع المعتمدين السابقين قد وقعوا
+          cca.sequence_number = 1 
+          OR NOT EXISTS (
+            SELECT 1 FROM committee_content_approvers cca2
+            JOIN committee_approval_logs cal ON cal.content_id = cca2.content_id AND cal.approver_id = cca2.user_id
+            WHERE cca2.content_id = cc.id 
+              AND cca2.sequence_number < cca.sequence_number
+              AND cal.status = 'approved'
+          ) = 0
+        )
+        GROUP BY cc.id, cca.sequence_number
       `;
 
     // إذا كان مفوّض محدود نمرر userId مرتين فقط (مرة للقسم ومرة للجنة)
@@ -851,24 +932,6 @@ const getAssignedApprovals = async (req, res) => {
     `;
 
     let [rows] = await db.execute(finalQuery, params);
-
-    // إذا كان المستخدم مفوض له (من جدول active_delegations)
-    // لا نحتاج لجلب ملفات المفوض الأصلي لأن المفوض له هو من سيعتمد
-    // const [delegationRows] = await db.execute(
-    //   'SELECT user_id FROM active_delegations WHERE delegate_id = ?',
-    //   [userId]
-    // );
-    // if (delegationRows.length) {
-    //   const delegatorId = delegationRows[0].user_id;
-    //   // جلب ملفات المفوض الأصلي بنفس الاستعلام
-    //   let delegatorParams = canViewAll ? [delegatorId, delegatorId] : [delegatorId, delegatorId, delegatorId, delegatorId];
-    //   let [delegatorRows] = await db.execute(finalQuery, delegatorParams);
-    //   // دمج النتائج بدون تكرار (حسب id)
-    //   const existingIds = new Set(rows.map(r => r.id));
-    //   delegatorRows.forEach(r => {
-    //     if (!existingIds.has(r.id)) rows.push(r);
-    //   });
-    // }
 
     // تحويل الحقل من نص JSON إلى مصفوفة
     rows.forEach(row => {

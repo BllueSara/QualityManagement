@@ -87,7 +87,7 @@ exports.getPendingApprovals = async (req, res) => {
             cc.title,
             cc.file_path,
             cc.approval_status,
-            GROUP_CONCAT(DISTINCT u2.username) AS assigned_approvers,
+            GROUP_CONCAT(DISTINCT u2.username ORDER BY cca.sequence_number) AS assigned_approvers,
             com.name AS source_name,
             cf.name AS folder_name,
             u.username AS created_by_username,
@@ -270,12 +270,16 @@ exports.sendApprovalRequest = async (req, res) => {
     // 3) أدخل الجدد فقط، وسجّل لهم سجلّ اعتماد
     const processedUsers = new Set(); // لتجنب التكرار
     
-    for (const userId of toAdd) {
+    for (let i = 0; i < toAdd.length; i++) {
+      const userId = toAdd[i];
       if (processedUsers.has(userId)) continue; // تجنب التكرار
       
+      // حساب رقم التسلسل (بعد المعتمدين الموجودين)
+      const sequenceNumber = existing.length + i + 1;
+      
       await conn.execute(
-        `INSERT INTO committee_content_approvers (content_id, user_id) VALUES (?, ?)`,
-        [contentId, userId]
+        `INSERT INTO committee_content_approvers (content_id, user_id, sequence_number) VALUES (?, ?, ?)`,
+        [contentId, userId, sequenceNumber]
       );
       
       // تحقق إذا كان هذا المستخدم مفوض له
