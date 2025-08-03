@@ -856,6 +856,7 @@ const translations = {
         'accounts-group': 'الحسابات',
         // Permissions Page (Permission Titles)
         'grant_permissions': 'منح الصلاحيات',
+        'grant_all_permissions': 'منح جميع الصلاحيات',
         'view_logs': 'عرض السجلات',
         'view_dashboard': 'عرض لوحة التحكم',
         'add_section': 'إضافة قسم',
@@ -2125,6 +2126,7 @@ const translations = {
         'accounts-group': 'Accounts',
         // Permissions Page (Permission Titles)
         'grant_permissions': 'Grant Permissions',
+        'grant_all_permissions': 'Grant All Permissions',
         'view_logs': 'View Logs',
         'view_dashboard': 'View Dashboard',
         'add_section': 'Add Department',
