@@ -6,6 +6,7 @@ const token = localStorage.getItem('token');
 let permissionsKeys = [];
 let selectedContentId = null;
 let canvas, ctx;
+let currentSignature = null; // لتخزين التوقيع الحالي (رسم أو صورة)
 const currentLang = localStorage.getItem('language') || 'ar';
 let currentPage   = 1;
 const itemsPerPage = 5;
@@ -542,7 +543,15 @@ function setupSignatureModal() {
   if (!canvas) return;
   ctx = canvas.getContext('2d');
   let drawing = false;
+  
   window.addEventListener('resize', resizeCanvas);
+  
+  // إعداد التبويبات
+  setupSignatureTabs();
+  
+  // إعداد رفع الصور
+  setupImageUpload();
+  
   function getPos(e) {
     const rect = canvas.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -552,6 +561,7 @@ function setupSignatureModal() {
       y: clientY - rect.top
     };
   }
+  
   canvas.addEventListener('mousedown', e => {
     drawing = true;
     const pos = getPos(e);
@@ -564,7 +574,11 @@ function setupSignatureModal() {
     ctx.lineTo(pos.x, pos.y);
     ctx.stroke();
   });
-  canvas.addEventListener('mouseup', () => drawing = false);
+  canvas.addEventListener('mouseup', () => {
+    drawing = false;
+    // تحديث التوقيع الحالي عند الانتهاء من الرسم
+    currentSignature = canvas.toDataURL('image/png');
+  });
   canvas.addEventListener('mouseleave', () => drawing = false);
   canvas.addEventListener('touchstart', e => {
     drawing = true;
@@ -578,18 +592,34 @@ function setupSignatureModal() {
     ctx.lineTo(pos.x, pos.y);
     ctx.stroke();
   });
-  canvas.addEventListener('touchend', () => drawing = false);
+  canvas.addEventListener('touchend', () => {
+    drawing = false;
+    // تحديث التوقيع الحالي عند الانتهاء من الرسم
+    currentSignature = canvas.toDataURL('image/png');
+  });
+  
   document.getElementById('btnClear').addEventListener('click', () => {
     clearCanvas();
+    currentSignature = null;
   });
+  
+  document.getElementById('btnCancelSignature').addEventListener('click', () => {
+    closeSignatureModal();
+  });
+  
   document.getElementById('btnConfirmSignature').addEventListener('click', async () => {
-    const base64Signature = canvas.toDataURL('image/png');
+    // التحقق من وجود توقيع
+    if (!currentSignature) {
+      showToast(getTranslation('no-signature') || 'يرجى إضافة توقيع أولاً', 'error');
+      return;
+    }
+    
     const contentType = document.querySelector(`tr[data-id="${selectedContentId}"]`).dataset.type;
     const endpoint = contentType === 'committee' ? 'committee-approvals' : 'approvals';
     let approvalLog = await fetchApprovalLog(selectedContentId, contentType);
     const payload = {
       approved: true,
-      signature: base64Signature,
+      signature: currentSignature,
       notes: ''
     };
     const tokenPayload = JSON.parse(atob(token.split('.')[1] || '{}'));
@@ -616,6 +646,124 @@ function setupSignatureModal() {
       showToast(getTranslation('error-sending'), 'error');
     }
   });
+}
+
+// إعداد التبويبات
+function setupSignatureTabs() {
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const tabContents = document.querySelectorAll('.tab-content');
+  
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetTab = btn.dataset.tab;
+      
+      // إزالة الفئة النشطة من جميع التبويبات
+      tabBtns.forEach(b => b.classList.remove('active'));
+      tabContents.forEach(c => c.classList.remove('active'));
+      
+      // إضافة الفئة النشطة للتبويب المحدد
+      btn.classList.add('active');
+      document.getElementById(`${targetTab}-tab`).classList.add('active');
+      
+      // إعادة تعيين التوقيع الحالي
+      currentSignature = null;
+    });
+  });
+}
+
+// إعداد رفع الصور
+function setupImageUpload() {
+  const uploadArea = document.getElementById('uploadArea');
+  const fileInput = document.getElementById('signatureFile');
+  const uploadPreview = document.getElementById('uploadPreview');
+  const previewImage = document.getElementById('previewImage');
+  const btnRemoveImage = document.getElementById('btnRemoveImage');
+  
+  // النقر على منطقة الرفع
+  uploadArea.addEventListener('click', () => {
+    fileInput.click();
+  });
+  
+  // سحب وإفلات الملفات
+  uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('dragover');
+  });
+  
+  uploadArea.addEventListener('dragleave', () => {
+    uploadArea.classList.remove('dragover');
+  });
+  
+  uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('dragover');
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      handleFileSelect(files[0]);
+    }
+  });
+  
+  // اختيار الملف من input
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+      handleFileSelect(e.target.files[0]);
+    }
+  });
+  
+  // إزالة الصورة
+  btnRemoveImage.addEventListener('click', () => {
+    uploadPreview.style.display = 'none';
+    uploadArea.style.display = 'block';
+    fileInput.value = '';
+    currentSignature = null;
+  });
+  
+  function handleFileSelect(file) {
+    if (!file.type.startsWith('image/')) {
+      showToast(getTranslation('invalid-image') || 'يرجى اختيار ملف صورة صالح', 'error');
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        // تحويل الصورة إلى base64
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // تحديد أبعاد الصورة
+        const maxWidth = 400;
+        const maxHeight = 200;
+        let { width, height } = img;
+        
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+        if (height > maxHeight) {
+          width = (width * maxHeight) / height;
+          height = maxHeight;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // رسم الصورة على الكانفاس
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // تحويل إلى base64
+        currentSignature = canvas.toDataURL('image/png');
+        
+        // عرض المعاينة
+        previewImage.src = currentSignature;
+        uploadArea.style.display = 'none';
+        uploadPreview.style.display = 'block';
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
 }
 
 async function loadDepartments() {
@@ -843,6 +991,28 @@ function openSignatureModal(contentId) {
   selectedContentId = contentId;
   const modal = document.getElementById('signatureModal');
   modal.style.display = 'flex';
+  
+  // إعادة تعيين التوقيع الحالي
+  currentSignature = null;
+  
+  // إعادة تعيين التبويبات
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const tabContents = document.querySelectorAll('.tab-content');
+  tabBtns.forEach(b => b.classList.remove('active'));
+  tabContents.forEach(c => c.classList.remove('active'));
+  
+  // تفعيل تبويب التوقيع المباشر افتراضياً
+  document.querySelector('[data-tab="draw"]').classList.add('active');
+  document.getElementById('draw-tab').classList.add('active');
+  
+  // إعادة تعيين منطقة رفع الصور
+  const uploadArea = document.getElementById('uploadArea');
+  const uploadPreview = document.getElementById('uploadPreview');
+  if (uploadArea && uploadPreview) {
+    uploadArea.style.display = 'block';
+    uploadPreview.style.display = 'none';
+  }
+  
   setTimeout(() => {
     resizeCanvas();
     clearCanvas();
