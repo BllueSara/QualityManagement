@@ -36,6 +36,77 @@ function getTranslation(key) {
   return key;
 }
 
+// وظيفة تصدير الداشبورد إلى Excel
+async function exportDashboardToExcel() {
+  try {
+    // إظهار رسالة تحميل
+    showToast(getTranslation('exporting'), 'info');
+    
+    const token = localStorage.getItem('token');
+    const response = await fetch('http://localhost:3006/api/dashboard/export-excel', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.status === 401) {
+      showToast(getTranslation('please-login'), 'error');
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error('فشل في تصدير التقرير');
+    }
+
+    // تحميل الملف
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `dashboard-report-${new Date().toISOString().split('T')[0]}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+
+    showToast(getTranslation('export-success'), 'success');
+  } catch (error) {
+    console.error('خطأ في تصدير التقرير:', error);
+    showToast(getTranslation('export-error'), 'error');
+  }
+}
+
+// وظيفة إظهار رسائل Toast
+function showToast(message, type = 'info') {
+  const toastContainer = document.getElementById('toast-container');
+  if (!toastContainer) return;
+
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+
+  toastContainer.appendChild(toast);
+
+  // إظهار Toast
+  setTimeout(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateY(0)';
+  }, 100);
+
+  // إخفاء Toast بعد 3 ثوان
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(-100%)';
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.parentNode.removeChild(toast);
+      }
+    }, 300);
+  }, 3000);
+}
+
 function renderStats(data) {
   document.getElementById('closed-tickets').textContent = data.closed;
   document.getElementById('new-tickets').textContent = data.new_tickets;
@@ -47,8 +118,56 @@ function renderStats(data) {
   document.getElementById('pending-committee-contents').textContent = data.committee_contents_pending;
 }
 
-function makeCommitteeCardClickable() {
-  // Find the committee count card by looking for the card that contains the committee-count element
+function makeCardsClickable() {
+  // جعل بطاقة التذاكر المغلقة قابلة للنقر
+  const closedTicketsElement = document.getElementById('closed-tickets');
+  if (closedTicketsElement) {
+    const closedCard = closedTicketsElement.closest('.stat-card');
+    if (closedCard) {
+      closedCard.style.cursor = 'pointer';
+      closedCard.addEventListener('click', () => {
+        window.location.href = 'ticket-list.html';
+      });
+    }
+  }
+
+  // جعل بطاقة التذاكر الجديدة قابلة للنقر
+  const newTicketsElement = document.getElementById('new-tickets');
+  if (newTicketsElement) {
+    const newCard = newTicketsElement.closest('.stat-card');
+    if (newCard) {
+      newCard.style.cursor = 'pointer';
+      newCard.addEventListener('click', () => {
+        window.location.href = 'ticket-list.html';
+      });
+    }
+  }
+
+  // جعل بطاقة محتويات بانتظار الاعتماد قابلة للنقر
+  const pendingContentsElement = document.getElementById('pending-contents');
+  if (pendingContentsElement) {
+    const pendingCard = pendingContentsElement.closest('.stat-card');
+    if (pendingCard) {
+      pendingCard.style.cursor = 'pointer';
+      pendingCard.addEventListener('click', () => {
+        window.location.href = 'approvals-recived.html';
+      });
+    }
+  }
+
+  // جعل بطاقة المحتويات المعتمدة قابلة للنقر
+  const approvedContentsElement = document.getElementById('approved-contents');
+  if (approvedContentsElement) {
+    const approvedCard = approvedContentsElement.closest('.stat-card');
+    if (approvedCard) {
+      approvedCard.style.cursor = 'pointer';
+      approvedCard.addEventListener('click', () => {
+        window.location.href = 'approvals-recived.html';
+      });
+    }
+  }
+
+  // جعل بطاقة عدد اللجان قابلة للنقر
   const committeeCountElement = document.getElementById('committee-count');
   if (committeeCountElement) {
     const committeeCard = committeeCountElement.closest('.stat-card');
@@ -56,6 +175,18 @@ function makeCommitteeCardClickable() {
       committeeCard.style.cursor = 'pointer';
       committeeCard.addEventListener('click', () => {
         window.location.href = 'committees.html';
+      });
+    }
+  }
+
+  // جعل بطاقة محتويات اللجان بانتظار الاعتماد قابلة للنقر
+  const pendingCommitteeContentsElement = document.getElementById('pending-committee-contents');
+  if (pendingCommitteeContentsElement) {
+    const pendingCommitteeCard = pendingCommitteeContentsElement.closest('.stat-card');
+    if (pendingCommitteeCard) {
+      pendingCommitteeCard.style.cursor = 'pointer';
+      pendingCommitteeCard.addEventListener('click', () => {
+        window.location.href = 'approvals-recived.html';
       });
     }
   }
@@ -113,5 +244,5 @@ function renderChart(data) {
   const closed7d  = await fetchClosedWeek();
   renderStats(stats);
   renderChart(closed7d);
-  makeCommitteeCardClickable();
+  makeCardsClickable();
 })();

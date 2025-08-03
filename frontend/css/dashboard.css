@@ -99,6 +99,72 @@ main {
     padding: 20px 0;
 }
 
+/* Dashboard Header with Export Button */
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.dashboard-header h2 {
+    margin: 0;
+    color: #2d2d2d;
+    font-size: 1.8rem;
+    font-weight: 600;
+}
+
+.export-excel-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Tajawal', sans-serif;
+    box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
+}
+
+.export-excel-btn:hover {
+    background: linear-gradient(135deg, #218838, #1ea085);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+}
+
+.export-excel-btn:active {
+    transform: translateY(0);
+}
+
+.export-excel-btn i {
+    font-size: 16px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    .dashboard-header h2 {
+        font-size: 1.5rem;
+    }
+    
+    .export-excel-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
 main h1 {
     color: #333;
     margin-bottom: 25px;

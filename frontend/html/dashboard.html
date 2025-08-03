@@ -51,7 +51,13 @@
     <main class="content-hidden">
  
         <div class="container">
-           <h2 data-translate="dashboard-overview"> قائمة الاحصائيات</h2>
+           <div class="dashboard-header">
+             <h2 data-translate="dashboard-overview"> قائمة الاحصائيات</h2>
+             <button class="export-excel-btn" onclick="exportDashboardToExcel()">
+                               <i class="fas fa-file-excel"></i>
+                               <span data-translate="export-excel">تصدير Excel</span>
+             </button>
+           </div>
 <div class="stats-grid">
 
   <!-- بطاقة: التذاكر المغلقة -->

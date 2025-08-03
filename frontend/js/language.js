@@ -98,6 +98,12 @@ const translations = {
         'enter-ar-name': 'ادخل الاسم  بالعربية',
         'enter-en-name': 'ادخل الاسم  بالانجليزية',
         'clear-cache': 'مسح الكاش ميموري',
+        
+        // Export Excel translations
+        'export-csv': 'تصدير CSV',
+        'exporting': 'جاري تصدير التقرير...',
+        'export-success': 'تم تصدير التقرير بنجاح',
+        'export-error': 'حدث خطأ أثناء تصدير التقرير',
 
         // Login & Register
         'login': 'تسجيل الدخول',
@@ -797,7 +803,7 @@ const translations = {
         'approvals-group': 'الاعتمادات',
         'signature-group': 'التوقيع',
         'accounts-group': 'الحسابات',
-        'export-excel': 'تصدير إلى Excel',
+        'export-csv': 'تصدير إلى CSV',
         'export-pdf': 'تصدير إلى PDF',
         'add-user-title': 'إضافة مستخدم جديد',
         'user-info': 'معلومات المستخدم',
@@ -891,7 +897,7 @@ const translations = {
 "closed": "مغلق",
 'employee-number-placeholder': 'ادخل رقم الموظف',
         // Permissions Page (Export Buttons)
-        'export-excel': 'تصدير إلى Excel',
+        'export-csv': 'تصدير إلى CSV',
         'export-pdf': 'تصدير إلى PDF',
         'file-id': 'رقم الملف',
         // Logs Page
@@ -1222,6 +1228,12 @@ const translations = {
       'department-or-committee': 'Department or Committee',
               'select-files-to-revoke': 'Select files to revoke',
         'clear-cache': 'Clear Cache Memory',
+        
+        // Export CSV translations
+        'export-csv': 'Export CSV',
+        'exporting': 'Exporting report...',
+        'export-success': 'Report exported successfully',
+        'export-error': 'Error occurred while exporting report',
 
               'security-issues': 'Security related issues.',
         'behaviour': 'Behaviour',
@@ -2040,7 +2052,7 @@ const translations = {
         'approvals-group': 'Approvals',
         'signature-group': 'Signature',
         'accounts-group': 'Accounts',
-        'export-excel': 'Export to Excel',
+        'export-csv': 'Export to CSV',
         'export-pdf': 'Export to PDF',
         'add-user-title': 'Add New User',
         'user-info': 'User Information',
@@ -2119,7 +2131,7 @@ const translations = {
         'delete_user': 'Delete Account',
         'change_password': 'Change Password',
         // Permissions Page (Export Buttons)
-        'export-excel': 'Export to Excel',
+        'export-csv': 'Export to CSV',
         'export-pdf': 'Export to PDF',
         // Logs Page
         'logs-title': 'System Logs',
