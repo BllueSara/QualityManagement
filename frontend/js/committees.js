@@ -94,19 +94,41 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     };
     
+    // إذا كان body من نوع FormData، لا نضيف Content-Type header
+    // لأن المتصفح يضيفه تلقائياً مع boundary
+    if (options.body instanceof FormData) {
+      delete defaultOptions.headers['Content-Type'];
+    }
+    
     const finalOptions = { ...defaultOptions, ...options };
     
     try {
+
+      
       const res = await fetch(url, finalOptions);
+      
       const data = await res.json();
       
       if (!res.ok) {
         throw new Error(data.message || 'API Error');
       }
       
-      return data;
+      // التأكد من أن الاستجابة تحتوي على البيانات المطلوبة
+      if (data && typeof data === 'object') {
+        console.log('Valid response received');
+        return data;
+      } else {
+        throw new Error('Invalid response format');
+      }
     } catch (err) {
       console.error('API Error:', err);
+      console.error('API Error details:', {
+        message: err.message,
+        stack: err.stack,
+        name: err.name,
+        url: url,
+        method: finalOptions.method
+      });
       throw err;
     }
   }
@@ -147,13 +169,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     m.style.display = 'none';
     // reset inputs
     if (m === addModal) {
-      document.getElementById('committeeName').value = '';
-      document.getElementById('committeeImage').value = '';
+      // إعادة تعيين حقول الإضافة
+      if (addCommitteeNameArInput) addCommitteeNameArInput.value = '';
+      if (addCommitteeNameEnInput) addCommitteeNameEnInput.value = '';
+      
+      const committeeImageInput = document.getElementById('committeeImage');
+      if (committeeImageInput) committeeImageInput.value = '';
     }
     if (m === editModal) {
-      editIdInput.value = '';
-      editName.value     = '';
-      editImage.value    = '';
+      // إعادة تعيين حقول التعديل
+      if (editIdInput) editIdInput.value = '';
+      if (editCommitteeNameArInput) editCommitteeNameArInput.value = '';
+      if (editCommitteeNameEnInput) editCommitteeNameEnInput.value = '';
+      if (editImage) editImage.value = '';
     }
   }
 
@@ -215,7 +243,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // معالجة مسار الصورة للتوافق مع المسارات القديمة والجديدة
     let imgSrc;
-    if (committee.image) {
+    let hasImage = false;
+    
+    if (committee.image && committee.image.trim() !== '') {
+      hasImage = true;
       if (committee.image.startsWith('backend/uploads/')) {
         // المسار الجديد: backend/uploads/images/filename.jpg
         imgSrc = `http://localhost:3006/${committee.image}`;
@@ -234,14 +265,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         imgSrc = `http://localhost:3006/backend/uploads/images/${committee.image}`;
       }
     } else {
-      // صورة افتراضية
+      // لا توجد صورة
+      hasImage = false;
       imgSrc = '../images/committee.svg';
     }
+
+    // إنشاء عنصر الصورة مع التعامل مع الحالات التي لا توجد فيها صورة
+    const imageElement = hasImage ? 
+        `<img src="${imgSrc}" alt="${committeeName}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` :
+        `<div style="font-size: 24px; color: #fff; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">${committeeName.charAt(0).toUpperCase()}</div>`;
+    
+    // إضافة fallback للصور التي تفشل في التحميل
+    const fallbackElement = `<div style="font-size: 24px; color: #fff; display: none; align-items: center; justify-content: center; width: 100%; height: 100%;">${committeeName.charAt(0).toUpperCase()}</div>`;
 
     card.innerHTML = `
       ${icons}
       <div class="card-icon bg-orange">
-        <img src="${imgSrc}" alt="${committeeName}">
+        ${imageElement}
+        ${fallbackElement}
       </div>
       <div class="card-title">${committeeName}</div>
     `;
@@ -283,7 +324,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     const name = JSON.stringify({ ar: nameAr, en: nameEn });
     const fd = new FormData();
     fd.append('name', name);
-    if (file) fd.append('image', file);
+    if (file) {
+      fd.append('image', file);
+    }
+    
+    // للتأكد من أن FormData تم إنشاؤه بشكل صحيح
+    console.log('FormData created:', {
+      name: name,
+      hasFile: !!file,
+      fileName: file ? file.name : 'no file'
+    });
+    
     return fd;
   }
 
@@ -296,24 +347,75 @@ document.addEventListener('DOMContentLoaded', async () => {
     const nameEn = addCommitteeNameEnInput.value.trim();
     const file = document.getElementById('committeeImage').files[0];
     
-    if (!nameAr || !nameEn || !file) {
-      showToast('الرجاء إدخال الاسم بالعربية والإنجليزية واختيار صورة.', 'warning');
+    if (!nameAr || !nameEn) {
+      showToast('الرجاء إدخال الاسم بالعربية والإنجليزية.', 'warning');
       return;
     }
 
     try {
       const formData = createCommitteeFormData(nameAr, nameEn, file);
-      await apiCall(`${apiBase}/committees`, {
+      console.log('Sending formData:', formData);
+      
+      const result = await apiCall(`${apiBase}/committees`, {
         method: 'POST',
         body: formData
       });
       
+      console.log('API Response:', result);
+      
       showToast(getTranslation('committee-added-success'), 'success');
       hideModal(addModal);
-      loadCommittees();
-    } catch (err) {
-      showToast(getTranslation('error-adding-committee'), 'error');
-    }
+      
+             // إضافة اللجنة الجديدة مباشرة للعرض
+       const newCommittee = result.committee || {
+         id: result.committeeId || result.id,
+         name: JSON.stringify({ ar: nameAr, en: nameEn }),
+         image: file ? `backend/uploads/images/${file.name}` : ''
+       };
+       
+       // التأكد من أن لدينا ID صحيح
+       if (!newCommittee.id) {
+         console.error('No committee ID received from server');
+         showToast('خطأ في استلام معرف اللجنة من الخادم', 'error');
+         return;
+       }
+      
+      console.log('New committee object:', newCommittee);
+      
+      // إضافة اللجنة الجديدة في بداية القائمة
+      const newCard = createCard(newCommittee);
+      grid.insertBefore(newCard, grid.firstChild);
+      
+      // إضافة event listeners للكارد الجديد
+      if (permissions.canEdit) {
+        newCard.querySelector('.edit-icon')?.addEventListener('click', onEditClick);
+      }
+      if (permissions.canDelete) {
+        newCard.querySelector('.delete-icon')?.addEventListener('click', onDeleteClick);
+      }
+      
+      // إضافة click event للكارد الجديد
+      newCard.addEventListener('click', () => {
+        window.location.href = `committee-content.html?committeeId=${newCommittee.id}`;
+      });
+         } catch (err) {
+       console.error('Error adding committee:', err);
+       console.error('Error details:', {
+         message: err.message,
+         stack: err.stack,
+         name: err.name
+       });
+       
+       // عرض رسالة خطأ أكثر تفصيلاً
+       let errorMessage = getTranslation('error-adding-committee');
+       if (err.message.includes('NetworkError') || err.message.includes('fetch')) {
+         errorMessage = 'خطأ في الاتصال بالخادم';
+       } else if (err.message.includes('Unauthorized')) {
+         errorMessage = 'غير مصرح لك بإضافة لجنة';
+       }
+       
+       showToast(errorMessage, 'error');
+     }
   });
   cancelAdd.addEventListener('click', () => hideModal(addModal));
 
@@ -333,17 +435,70 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     try {
       const formData = createCommitteeFormData(nameAr, nameEn, file);
-      await apiCall(`${apiBase}/committees/${id}`, {
+      console.log('Sending update formData:', formData);
+      
+      const result = await apiCall(`${apiBase}/committees/${id}`, {
         method: 'PUT',
         body: formData
       });
       
+      console.log('Update API Response:', result);
+      
       showToast(getTranslation('committee-updated-success'), 'success');
       hideModal(editModal);
-      loadCommittees();
-    } catch (err) {
-      showToast(getTranslation('error-updating-committee'), 'error');
-    }
+      
+             // تحديث اللجنة مباشرة في الواجهة بدلاً من إعادة تحميل كل اللجان
+       const existingCard = grid.querySelector(`[data-id="${id}"]`);
+       if (existingCard) {
+         const updatedCommittee = result.committee || {
+           id: id,
+           name: JSON.stringify({ ar: nameAr, en: nameEn }),
+           image: file ? `backend/uploads/images/${file.name}` : existingCard.querySelector('.card-icon img')?.src || ''
+         };
+         
+         // التأكد من أن لدينا بيانات صحيحة
+         if (!updatedCommittee.id) {
+           console.error('No committee ID in update response');
+           showToast('خطأ في استلام بيانات اللجنة المحدثة', 'error');
+           return;
+         }
+        
+        console.log('Updated committee object:', updatedCommittee);
+        
+        const updatedCard = createCard(updatedCommittee);
+        existingCard.replaceWith(updatedCard);
+        
+        // إضافة event listeners للكارد المحدث
+        if (permissions.canEdit) {
+          updatedCard.querySelector('.edit-icon')?.addEventListener('click', onEditClick);
+        }
+        if (permissions.canDelete) {
+          updatedCard.querySelector('.delete-icon')?.addEventListener('click', onDeleteClick);
+        }
+        
+        // إضافة click event للكارد المحدث
+        updatedCard.addEventListener('click', () => {
+          window.location.href = `committee-content.html?committeeId=${updatedCommittee.id}`;
+        });
+      }
+         } catch (err) {
+       console.error('Error updating committee:', err);
+       console.error('Error details:', {
+         message: err.message,
+         stack: err.stack,
+         name: err.name
+       });
+       
+       // عرض رسالة خطأ أكثر تفصيلاً
+       let errorMessage = getTranslation('error-updating-committee');
+       if (err.message.includes('NetworkError') || err.message.includes('fetch')) {
+         errorMessage = 'خطأ في الاتصال بالخادم';
+       } else if (err.message.includes('Unauthorized')) {
+         errorMessage = 'غير مصرح لك بتعديل اللجنة';
+       }
+       
+       showToast(errorMessage, 'error');
+     }
   });
   cancelEdit.addEventListener('click', () => hideModal(editModal));
 
@@ -360,7 +515,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       showToast(getTranslation('committee-deleted-success'), 'success');
       hideModal(deleteModal);
-      loadCommittees();
+      
+      // حذف اللجنة مباشرة من الواجهة بدلاً من إعادة تحميل كل اللجان
+      const existingCard = grid.querySelector(`[data-id="${id}"]`);
+      if (existingCard) {
+        existingCard.remove();
+      }
     } catch (err) {
       showToast(getTranslation('error-deleting-committee'), 'error');
     }

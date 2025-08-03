@@ -201,11 +201,16 @@ exports.getCommittee = async (req, res) => {
 exports.addCommittee = async (req, res) => {
     try {
       const { name } = req.body;
-      // Save relative path instead of full system path
-      const imagePath = req.file ? path.posix.join('backend', 'uploads', 'images', req.file.filename) : null;
-  
-      if (!name || !imagePath) {
-        return res.status(400).json({ message: 'اسم اللجنة والصورة مطلوبان' });
+      
+      // التحقق من وجود الاسم
+      if (!name) {
+        return res.status(400).json({ message: 'اسم اللجنة مطلوب' });
+      }
+      
+      // معالجة مسار الصورة - السماح بإضافة لجنة بدون صورة
+      let imagePath = '';
+      if (req.file) {
+        imagePath = path.posix.join('backend', 'uploads', 'images', req.file.filename);
       }
   
       const [exists] = await db.execute('SELECT id FROM committees WHERE name = ?', [name]);
@@ -241,8 +246,13 @@ exports.addCommittee = async (req, res) => {
         }
       }
   
-      // ✅ الآن نرد على العميل
-      res.status(201).json({ message: 'تم إضافة اللجنة بنجاح', committeeId });
+      // ✅ الآن نرد على العميل مع بيانات اللجنة المضافة
+      const [newCommittee] = await db.execute('SELECT * FROM committees WHERE id = ?', [committeeId]);
+      res.status(201).json({ 
+        message: 'تم إضافة اللجنة بنجاح', 
+        committeeId,
+        committee: newCommittee[0]
+      });
   
     } catch (error) {
       console.error('Error in addCommittee:', error);
@@ -255,23 +265,23 @@ exports.addCommittee = async (req, res) => {
     try {
       const { id } = req.params;
       const { name } = req.body;
-      // Save relative path instead of full system path
-      const imagePath = req.file ? path.posix.join('backend', 'uploads', 'images', req.file.filename) : null;
-  
+      
       if (!name) {
         return res.status(400).json({ message: 'اسم اللجنة مطلوب' });
       }
-  
-      let query = 'UPDATE committees SET name = ?';
-      let params = [name];
-  
-      if (imagePath) {
-        query += ', image = ?';
-        params.push(imagePath);
+      
+      // معالجة مسار الصورة - السماح بتحديث لجنة بدون صورة
+      let query, params;
+      if (req.file) {
+        // إذا تم رفع صورة جديدة
+        const imagePath = path.posix.join('backend', 'uploads', 'images', req.file.filename);
+        query = 'UPDATE committees SET name = ?, image = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
+        params = [name, imagePath, id];
+      } else {
+        // إذا لم يتم رفع صورة جديدة، احتفظ بالصورة القديمة
+        query = 'UPDATE committees SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
+        params = [name, id];
       }
-  
-      query += ', updated_at = CURRENT_TIMESTAMP WHERE id = ?';
-      params.push(id);
   
       const [result] = await db.execute(query, params);
       if (result.affectedRows === 0) {
@@ -302,7 +312,12 @@ exports.addCommittee = async (req, res) => {
         }
       }
   
-      res.status(200).json({ message: 'تم تعديل اللجنة بنجاح' });
+      // إرجاع بيانات اللجنة المحدثة
+      const [updatedCommittee] = await db.execute('SELECT * FROM committees WHERE id = ?', [id]);
+      res.status(200).json({ 
+        message: 'تم تعديل اللجنة بنجاح',
+        committee: updatedCommittee[0]
+      });
   
     } catch (error) {
       console.error('updateCommittee error:', error);

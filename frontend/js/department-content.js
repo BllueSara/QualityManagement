@@ -1985,7 +1985,7 @@ async function handleCreateContent() {
     }
   } catch (err) {
     console.error(err);
-    showToast('❌ خطأ في الاتصال بالخادم.', 'error');
+    // showToast('❌ خطأ في الاتصال بالخادم.', 'error');
   }
 }
 

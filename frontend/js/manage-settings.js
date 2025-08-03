@@ -555,8 +555,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         const file = document.getElementById('departmentImage').files[0];
         const hasSubDepartments = document.getElementById('hasSubDepartmentsYes')?.checked || false;
         
-        if (!nameAr || !nameEn || !file) {
-            showToast(getTranslation('please-enter-all-required-data') || 'الرجاء إدخال الاسم بالعربية والإنجليزية واختيار صورة.', 'warning');
+        if (!nameAr || !nameEn) {
+            showToast(getTranslation('please-enter-all-required-data') || 'الرجاء إدخال الاسم بالعربية والإنجليزية.', 'warning');
             return;
         }
 
@@ -566,7 +566,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         formData.append('type', type);
         formData.append('parentId', null); // الأقسام الرئيسية ليس لها أب
         formData.append('hasSubDepartments', hasSubDepartments);
-        formData.append('image', file);
+        if (file) {
+            formData.append('image', file);
+        }
 
         try {
             const response = await fetch(`${apiBase}/departments`, {
