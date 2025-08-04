@@ -1201,9 +1201,26 @@ const translations = {
         'choose-type': 'اختر النوع',
         'yes': 'نعم',
         'no': 'لا',
+        'executive-administration-type-text': 'إدارة تنفيذية',
+        'choose-type': 'اختر النوع',
+        'yes': 'نعم',
+        'no': 'لا',
         
+        // Pagination translations
+        'page': 'صفحة',
+        'of': 'من',
+        'total-departments': 'إجمالي الأقسام',
+        'total-committees': 'إجمالي اللجان',
     },
     en: {
+              // Names fields
+                      // Pagination translations
+                              'executive-administration-type-text': 'Executive Administration',
+
+        'page': 'Page',
+        'of': 'of',
+        'total-departments': 'Total Departments',
+        'total-committees': 'Total Committees',
       'event-classification-level': 'Harm Level',
       'level-of-harm-desc' : 'Please select the harm level resulting from the incident based on the information provided below',
               // Harm Level Descriptions

@@ -1,6 +1,12 @@
 // committee.js
 const apiBase = 'http://localhost:3006/api';
 
+// متغيرات الصفحات
+let allCommittees = [];
+let filteredCommittees = [];
+let currentPage = 1;
+const committeesPerPage = 20;
+
 // دالة إظهار التوست - خارج DOMContentLoaded لتكون متاحة في كل مكان
 function showToast(message, type = 'info', duration = 3000) {
     let toastContainer = document.getElementById('toast-container');
@@ -33,6 +39,13 @@ function showToast(message, type = 'info', duration = 3000) {
             }
         }, 500);
     }, duration);
+}
+
+// دالة الحصول على اللجان للصفحة الحالية
+function getPaginatedCommittees() {
+    const startIndex = (currentPage - 1) * committeesPerPage;
+    const endIndex = startIndex + committeesPerPage;
+    return filteredCommittees.slice(startIndex, endIndex);
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -185,26 +198,94 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  // دالة عرض الصفحات
+  function renderPagination() {
+    // إزالة الصفحات الموجودة مسبقاً
+    const existingPagination = document.querySelector('.pagination');
+    if (existingPagination) {
+      existingPagination.remove();
+    }
+
+    const totalPages = Math.ceil(filteredCommittees.length / committeesPerPage);
+    if (totalPages <= 1) return;
+
+    const paginationContainer = document.createElement('div');
+    paginationContainer.className = 'pagination';
+
+    // معلومات الصفحة
+    const pageInfo = document.createElement('div');
+    pageInfo.className = 'page-info';
+    pageInfo.textContent = `${getTranslation('page')} ${currentPage} ${getTranslation('of')} ${totalPages}`;
+
+    // معلومات العدد الإجمالي
+    const totalInfo = document.createElement('div');
+    totalInfo.className = 'total-info';
+    totalInfo.textContent = `${getTranslation('total-committees')}: ${filteredCommittees.length}`;
+
+    // أزرار التنقل
+    const prevBtn = document.createElement('button');
+    prevBtn.className = 'pagination-btn';
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.innerHTML = `<i class="fas fa-chevron-left"></i>`;
+    prevBtn.addEventListener('click', () => {
+      if (currentPage > 1) {
+        currentPage--;
+        renderCommittees();
+        renderPagination();
+      }
+    });
+
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'pagination-btn';
+    nextBtn.disabled = currentPage === totalPages;
+    nextBtn.innerHTML = `<i class="fas fa-chevron-right"></i>`;
+    nextBtn.addEventListener('click', () => {
+      if (currentPage < totalPages) {
+        currentPage++;
+        renderCommittees();
+        renderPagination();
+      }
+    });
+
+    paginationContainer.appendChild(pageInfo);
+    paginationContainer.appendChild(totalInfo);
+    paginationContainer.appendChild(prevBtn);
+    paginationContainer.appendChild(nextBtn);
+
+    // إضافة الصفحات بعد الشبكة
+    grid.parentNode.insertBefore(paginationContainer, grid.nextSibling);
+  }
+
+  // دالة عرض اللجان
+  function renderCommittees() {
+    const committeesToRender = getPaginatedCommittees();
+    
+    grid.innerHTML = '';
+    committeesToRender.forEach(item => {
+      const card = createCard(item);
+      grid.appendChild(card);
+    });
+
+    // إضافة event listeners للكروت
+    if (permissions.canEdit) {
+      grid.querySelectorAll('.edit-icon')
+        .forEach(btn => btn.addEventListener('click', onEditClick));
+    }
+    if (permissions.canDelete) {
+      grid.querySelectorAll('.delete-icon')
+        .forEach(btn => btn.addEventListener('click', onDeleteClick));
+    }
+  }
+
   // load & render
   async function loadCommittees() {
     try {
       const list = await apiCall(`${apiBase}/committees`);
       
-      grid.innerHTML = '';
-      list.forEach(item => {
-        const card = createCard(item);
-        grid.appendChild(card);
-      });
-
-      // wire up edit/delete icons only if allowed
-      if (permissions.canEdit) {
-        grid.querySelectorAll('.edit-icon')
-            .forEach(btn => btn.addEventListener('click', onEditClick));
-      }
-      if (permissions.canDelete) {
-        grid.querySelectorAll('.delete-icon')
-            .forEach(btn => btn.addEventListener('click', onDeleteClick));
-      }
+      allCommittees = list; // Store all fetched committees
+      filteredCommittees = list; // Initialize filtered committees with all fetched ones
+      renderCommittees(); // Render all fetched committees initially
+      renderPagination(); // Render pagination for all fetched committees
     } catch (err) {
       showToast(getTranslation('error-fetching-committees'), 'error');
     }
@@ -366,38 +447,30 @@ document.addEventListener('DOMContentLoaded', async () => {
       showToast(getTranslation('committee-added-success'), 'success');
       hideModal(addModal);
       
-             // إضافة اللجنة الجديدة مباشرة للعرض
-       const newCommittee = result.committee || {
-         id: result.committeeId || result.id,
-         name: JSON.stringify({ ar: nameAr, en: nameEn }),
-         image: file ? `backend/uploads/images/${file.name}` : ''
-       };
-       
-       // التأكد من أن لدينا ID صحيح
-       if (!newCommittee.id) {
-         console.error('No committee ID received from server');
-         showToast('خطأ في استلام معرف اللجنة من الخادم', 'error');
-         return;
-       }
+      // إضافة اللجنة الجديدة للبيانات المحلية
+      const newCommittee = result.committee || {
+        id: result.committeeId || result.id,
+        name: JSON.stringify({ ar: nameAr, en: nameEn }),
+        image: file ? `backend/uploads/images/${file.name}` : ''
+      };
+      
+      // التأكد من أن لدينا ID صحيح
+      if (!newCommittee.id) {
+        console.error('No committee ID received from server');
+        showToast('خطأ في استلام معرف اللجنة من الخادم', 'error');
+        return;
+      }
       
       console.log('New committee object:', newCommittee);
       
-      // إضافة اللجنة الجديدة في بداية القائمة
-      const newCard = createCard(newCommittee);
-      grid.insertBefore(newCard, grid.firstChild);
+      // إضافة اللجنة الجديدة في بداية المصفوفات
+      allCommittees.unshift(newCommittee);
+      filteredCommittees.unshift(newCommittee);
       
-      // إضافة event listeners للكارد الجديد
-      if (permissions.canEdit) {
-        newCard.querySelector('.edit-icon')?.addEventListener('click', onEditClick);
-      }
-      if (permissions.canDelete) {
-        newCard.querySelector('.delete-icon')?.addEventListener('click', onDeleteClick);
-      }
-      
-      // إضافة click event للكارد الجديد
-      newCard.addEventListener('click', () => {
-        window.location.href = `committee-content.html?committeeId=${newCommittee.id}`;
-      });
+      // إعادة عرض اللجان والصفحات
+      currentPage = 1; // العودة للصفحة الأولى
+      renderCommittees();
+      renderPagination();
          } catch (err) {
        console.error('Error adding committee:', err);
        console.error('Error details:', {
@@ -447,40 +520,36 @@ document.addEventListener('DOMContentLoaded', async () => {
       showToast(getTranslation('committee-updated-success'), 'success');
       hideModal(editModal);
       
-             // تحديث اللجنة مباشرة في الواجهة بدلاً من إعادة تحميل كل اللجان
-       const existingCard = grid.querySelector(`[data-id="${id}"]`);
-       if (existingCard) {
-         const updatedCommittee = result.committee || {
-           id: id,
-           name: JSON.stringify({ ar: nameAr, en: nameEn }),
-           image: file ? `backend/uploads/images/${file.name}` : existingCard.querySelector('.card-icon img')?.src || ''
-         };
-         
-         // التأكد من أن لدينا بيانات صحيحة
-         if (!updatedCommittee.id) {
-           console.error('No committee ID in update response');
-           showToast('خطأ في استلام بيانات اللجنة المحدثة', 'error');
-           return;
-         }
-        
-        console.log('Updated committee object:', updatedCommittee);
-        
-        const updatedCard = createCard(updatedCommittee);
-        existingCard.replaceWith(updatedCard);
-        
-        // إضافة event listeners للكارد المحدث
-        if (permissions.canEdit) {
-          updatedCard.querySelector('.edit-icon')?.addEventListener('click', onEditClick);
-        }
-        if (permissions.canDelete) {
-          updatedCard.querySelector('.delete-icon')?.addEventListener('click', onDeleteClick);
-        }
-        
-        // إضافة click event للكارد المحدث
-        updatedCard.addEventListener('click', () => {
-          window.location.href = `committee-content.html?committeeId=${updatedCommittee.id}`;
-        });
+      // تحديث اللجنة في البيانات المحلية
+      const updatedCommittee = result.committee || {
+        id: id,
+        name: JSON.stringify({ ar: nameAr, en: nameEn }),
+        image: file ? `backend/uploads/images/${file.name}` : ''
+      };
+      
+      // التأكد من أن لدينا بيانات صحيحة
+      if (!updatedCommittee.id) {
+        console.error('No committee ID in update response');
+        showToast('خطأ في استلام بيانات اللجنة المحدثة', 'error');
+        return;
       }
+      
+      console.log('Updated committee object:', updatedCommittee);
+      
+      // تحديث اللجنة في المصفوفات
+      const allIndex = allCommittees.findIndex(c => c.id == id);
+      const filteredIndex = filteredCommittees.findIndex(c => c.id == id);
+      
+      if (allIndex !== -1) {
+        allCommittees[allIndex] = updatedCommittee;
+      }
+      if (filteredIndex !== -1) {
+        filteredCommittees[filteredIndex] = updatedCommittee;
+      }
+      
+      // إعادة عرض اللجان والصفحات
+      renderCommittees();
+      renderPagination();
          } catch (err) {
        console.error('Error updating committee:', err);
        console.error('Error details:', {
@@ -516,11 +585,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       showToast(getTranslation('committee-deleted-success'), 'success');
       hideModal(deleteModal);
       
-      // حذف اللجنة مباشرة من الواجهة بدلاً من إعادة تحميل كل اللجان
-      const existingCard = grid.querySelector(`[data-id="${id}"]`);
-      if (existingCard) {
-        existingCard.remove();
+      // حذف اللجنة من البيانات المحلية
+      allCommittees = allCommittees.filter(c => c.id != id);
+      filteredCommittees = filteredCommittees.filter(c => c.id != id);
+      
+      // التحقق من الصفحة الحالية
+      const totalPages = Math.ceil(filteredCommittees.length / committeesPerPage);
+      if (currentPage > totalPages && totalPages > 0) {
+        currentPage = totalPages;
       }
+      
+      // إعادة عرض اللجان والصفحات
+      renderCommittees();
+      renderPagination();
     } catch (err) {
       showToast(getTranslation('error-deleting-committee'), 'error');
     }
@@ -530,10 +607,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Search filter
   searchInput.addEventListener('input', ({ target }) => {
     const term = target.value.toLowerCase();
-    grid.querySelectorAll('.card').forEach(c => {
-      const title = c.querySelector('.card-title').textContent.toLowerCase();
-      c.style.display = title.includes(term) ? '' : 'none';
+    filteredCommittees = allCommittees.filter(committee => {
+      const name = JSON.parse(committee.name)[localStorage.getItem('language') || 'ar'] || JSON.parse(committee.name)['ar'] || committee.name;
+      return name.toLowerCase().includes(term);
     });
+    currentPage = 1; // Reset to first page on search
+    renderCommittees();
+    renderPagination();
   });
 
   // Close modals when clicking overlay

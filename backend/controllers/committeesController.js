@@ -14,6 +14,51 @@ const db = mysql.createPool({
 // const { insertNotification } = require('../models/notfications-utils');
  const { logAction } = require('../models/logger');
 
+// ========== Language Validation Helper Functions ==========
+// دالة للتحقق من أن النص عربي
+function isArabicText(text) {
+    if (!text || typeof text !== 'string') return false;
+    
+    // حروف عربية أساسية
+    const arabicPattern = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+    
+    // حروف إنجليزية وأرقام وعلامات ترقيم
+    const englishPattern = /[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;
+    
+    const arabicCount = (text.match(arabicPattern) || []).length;
+    const englishCount = (text.match(englishPattern) || []).length;
+    
+    // إذا كان النص يحتوي على حروف عربية أكثر من الإنجليزية
+    return arabicCount > englishCount;
+}
+
+// دالة للتحقق من أن النص إنجليزي
+function isEnglishText(text) {
+    if (!text || typeof text !== 'string') return false;
+    
+    // حروف إنجليزية وأرقام وعلامات ترقيم
+    const englishPattern = /[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?\s]/;
+    
+    // حروف عربية
+    const arabicPattern = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+    
+    const englishCount = (text.match(englishPattern) || []).length;
+    const arabicCount = (text.match(arabicPattern) || []).length;
+    
+    // إذا كان النص يحتوي على حروف إنجليزية أكثر من العربية
+    return englishCount > arabicCount;
+}
+
+// دالة للتحقق من لغة النص
+function validateTextLanguage(text, requiredLanguage) {
+    if (requiredLanguage === 'ar') {
+        return isArabicText(text);
+    } else if (requiredLanguage === 'en') {
+        return isEnglishText(text);
+    }
+    return false;
+}
+
 // دالة مساعدة لاستخراج اسم اللجنة باللغة المناسبة
 function getCommitteeNameByLanguage(committeeNameData, userLanguage = 'ar') {
     try {
@@ -207,6 +252,38 @@ exports.addCommittee = async (req, res) => {
         return res.status(400).json({ message: 'اسم اللجنة مطلوب' });
       }
       
+      // التحقق من صحة تنسيق الاسم (JSON يحتوي على ar و en)
+      let nameAr, nameEn;
+      try {
+        const nameObj = typeof name === 'string' ? JSON.parse(name) : name;
+        nameAr = nameObj.ar;
+        nameEn = nameObj.en;
+        
+        if (!nameAr || !nameEn) {
+          return res.status(400).json({ 
+            message: '❌ يجب إدخال اسم اللجنة باللغتين العربية والإنجليزية\n\nمثال صحيح: {"ar": "لجنة الجودة", "en": "Quality Committee"}' 
+          });
+        }
+      } catch (parseError) {
+        return res.status(400).json({ 
+          message: '❌ تنسيق الاسم غير صحيح\n\nمثال صحيح: {"ar": "لجنة الجودة", "en": "Quality Committee"}' 
+        });
+      }
+      
+      // التحقق من لغة النص العربي
+      if (!validateTextLanguage(nameAr, 'ar')) {
+        return res.status(400).json({ 
+          message: `❌ خطأ في حقل "الاسم بالعربية": يجب إدخال النص باللغة العربية فقط.\nالنص المدخل: "${nameAr}"\n\nمثال صحيح: "لجنة الجودة" أو "لجنة السلامة"`
+        });
+      }
+      
+      // التحقق من لغة النص الإنجليزي
+      if (!validateTextLanguage(nameEn, 'en')) {
+        return res.status(400).json({ 
+          message: `❌ خطأ في حقل "الاسم بالإنجليزية": يجب إدخال النص باللغة الإنجليزية فقط.\nالنص المدخل: "${nameEn}"\n\nمثال صحيح: "Quality Committee" أو "Safety Committee"`
+        });
+      }
+      
       // معالجة مسار الصورة - السماح بإضافة لجنة بدون صورة
       let imagePath = '';
       if (req.file) {
@@ -268,6 +345,38 @@ exports.addCommittee = async (req, res) => {
       
       if (!name) {
         return res.status(400).json({ message: 'اسم اللجنة مطلوب' });
+      }
+      
+      // التحقق من صحة تنسيق الاسم (JSON يحتوي على ar و en)
+      let nameAr, nameEn;
+      try {
+        const nameObj = typeof name === 'string' ? JSON.parse(name) : name;
+        nameAr = nameObj.ar;
+        nameEn = nameObj.en;
+        
+        if (!nameAr || !nameEn) {
+          return res.status(400).json({ 
+            message: '❌ يجب إدخال اسم اللجنة باللغتين العربية والإنجليزية\n\nمثال صحيح: {"ar": "لجنة الجودة", "en": "Quality Committee"}' 
+          });
+        }
+      } catch (parseError) {
+        return res.status(400).json({ 
+          message: '❌ تنسيق الاسم غير صحيح\n\nمثال صحيح: {"ar": "لجنة الجودة", "en": "Quality Committee"}' 
+        });
+      }
+      
+      // التحقق من لغة النص العربي
+      if (!validateTextLanguage(nameAr, 'ar')) {
+        return res.status(400).json({ 
+          message: `❌ خطأ في حقل "الاسم بالعربية": يجب إدخال النص باللغة العربية فقط.\nالنص المدخل: "${nameAr}"\n\nمثال صحيح: "لجنة الجودة" أو "لجنة السلامة"`
+        });
+      }
+      
+      // التحقق من لغة النص الإنجليزي
+      if (!validateTextLanguage(nameEn, 'en')) {
+        return res.status(400).json({ 
+          message: `❌ خطأ في حقل "الاسم بالإنجليزية": يجب إدخال النص باللغة الإنجليزية فقط.\nالنص المدخل: "${nameEn}"\n\nمثال صحيح: "Quality Committee" أو "Safety Committee"`
+        });
       }
       
       // معالجة مسار الصورة - السماح بتحديث لجنة بدون صورة

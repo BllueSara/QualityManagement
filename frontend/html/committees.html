@@ -143,98 +143,50 @@
         });
     </script>
 
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    if (typeof setLanguage === 'function') {
-      const lang = localStorage.getItem('language') || 'ar';
-      setLanguage(lang);
-    }
-    window.addEventListener('storage', function(e) {
-      if (e.key === 'language' && typeof setLanguage === 'function') {
-        setLanguage(localStorage.getItem('language') || 'ar');
-      }
-    });
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof setLanguage === 'function') {
+                const lang = localStorage.getItem('language') || 'ar';
+                setLanguage(lang);
+            }
+            window.addEventListener('storage', function(e) {
+                if (e.key === 'language' && typeof setLanguage === 'function') {
+                    setLanguage(localStorage.getItem('language') || 'ar');
+                }
+            });
 
-    // Only swap the arrow direction for the back button, not the order
-    function updateBackBtnArrow(lang) {
-      const backIcon = document.getElementById('backIcon');
-      if (backIcon) {
-        if (lang === 'ar') {
-          backIcon.classList.remove('fa-arrow-left');
-          backIcon.classList.add('fa-arrow-right');
-        } else {
-          backIcon.classList.remove('fa-arrow-right');
-          backIcon.classList.add('fa-arrow-left');
-        }
-      }
-    }
-    // Call on load and whenever language changes
-    const lang = localStorage.getItem('language') || 'ar';
-    updateBackBtnArrow(lang);
-    window.addEventListener('storage', function(e) {
-      if (e.key === 'language') {
-        updateBackBtnArrow(localStorage.getItem('language') || 'ar');
-      }
-    });
-    // Also update after setLanguage (in case of manual switch)
-    if (typeof setLanguage === 'function') {
-      const origSetLanguage = setLanguage;
-      window.setLanguage = function(lang) {
-        origSetLanguage(lang);
-        updateBackBtnArrow(lang);
-      };
-    }
-  });
-</script>
-    <script src="/frontend/js/check-status.js"></script>
-
-</body>
-
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    if (typeof setLanguage === 'function') {
-      const lang = localStorage.getItem('language') || 'ar';
-      setLanguage(lang);
-    }
-    window.addEventListener('storage', function(e) {
-      if (e.key === 'language' && typeof setLanguage === 'function') {
-        setLanguage(localStorage.getItem('language') || 'ar');
-      }
-    });
-
-    // Only swap the arrow direction for the back button, not the order
-    function updateBackBtnArrow(lang) {
-      const backIcon = document.getElementById('backIcon');
-      if (backIcon) {
-        if (lang === 'ar') {
-          backIcon.classList.remove('fa-arrow-left');
-          backIcon.classList.add('fa-arrow-right');
-        } else {
-          backIcon.classList.remove('fa-arrow-right');
-          backIcon.classList.add('fa-arrow-left');
-        }
-      }
-    }
-    // Call on load and whenever language changes
-    const lang = localStorage.getItem('language') || 'ar';
-    updateBackBtnArrow(lang);
-    window.addEventListener('storage', function(e) {
-      if (e.key === 'language') {
-        updateBackBtnArrow(localStorage.getItem('language') || 'ar');
-      }
-    });
-    // Also update after setLanguage (in case of manual switch)
-    if (typeof setLanguage === 'function') {
-      const origSetLanguage = setLanguage;
-      window.setLanguage = function(lang) {
-        origSetLanguage(lang);
-        updateBackBtnArrow(lang);
-      };
-    }
-  });
-</script>
-    <script src="/frontend/js/check-status.js"></script>
+            // Only swap the arrow direction for the back button, not the order
+            function updateBackBtnArrow(lang) {
+                const backIcon = document.getElementById('backIcon');
+                if (backIcon) {
+                    if (lang === 'ar') {
+                        backIcon.classList.remove('fa-arrow-left');
+                        backIcon.classList.add('fa-arrow-right');
+                    } else {
+                        backIcon.classList.remove('fa-arrow-right');
+                        backIcon.classList.add('fa-arrow-left');
+                    }
+                }
+            }
+            // Call on load and whenever language changes
+            const lang = localStorage.getItem('language') || 'ar';
+            updateBackBtnArrow(lang);
+            window.addEventListener('storage', function(e) {
+                if (e.key === 'language') {
+                    updateBackBtnArrow(localStorage.getItem('language') || 'ar');
+                }
+            });
+            // Also update after setLanguage (in case of manual switch)
+            if (typeof setLanguage === 'function') {
+                const origSetLanguage = setLanguage;
+                window.setLanguage = function(lang) {
+                    origSetLanguage(lang);
+                    updateBackBtnArrow(lang);
+                };
+            }
+        });
+    </script>
+    <script src="../js/check-status.js"></script>
 
 </body>
-
 </html> 
