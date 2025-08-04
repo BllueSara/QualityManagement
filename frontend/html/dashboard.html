@@ -158,6 +158,45 @@
             <div class="chart-container">
                 <canvas id="ticketsChart"></canvas>
             </div>
+
+            <!-- قسم إحصائيات الأقسام -->
+            <div class="charts-section">
+                <h2 data-translate="department-statistics">إحصائيات الأقسام</h2>
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <h3 data-translate="department-approval-rate">معدل اعتماد الأقسام</h3>
+                        <canvas id="departmentChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3 data-translate="department-performance">أداء الأقسام الشهري</h3>
+                        <canvas id="departmentPerformanceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- قسم إحصائيات اللجان -->
+            <div class="charts-section">
+                <h2 data-translate="committee-statistics">إحصائيات اللجان</h2>
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <h3 data-translate="committee-approval-status">حالة اعتماد اللجان</h3>
+                        <canvas id="committeeChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3 data-translate="committee-performance">أداء اللجان</h3>
+                        <canvas id="committeePerformanceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- قسم التحليل الشهري -->
+            <div class="charts-section">
+                <h2 data-translate="monthly-analysis">التحليل الشهري</h2>
+                <div class="chart-container full-width">
+                    <h3 data-translate="monthly-trends">الاتجاهات الشهرية للمحتويات</h3>
+                    <canvas id="monthlyTrendsChart"></canvas>
+                </div>
+            </div>
         </div>
     </main>
     <script src="../js/language.js"></script>

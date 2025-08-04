@@ -3,7 +3,10 @@ const router = express.Router();
 const {
   getStats,
   getClosedWeek,
-  exportDashboardExcel
+  exportDashboardExcel,
+  getDepartmentStats,
+  getCommitteeStats,
+  getMonthlyPerformance
 } = require('../controllers/dashboardController');
 
 // GET /api/dashboard/stats
@@ -14,5 +17,14 @@ router.get('/closed-week', getClosedWeek);
 
 // GET /api/dashboard/export-excel
 router.get('/export-excel', exportDashboardExcel);
+
+// GET /api/dashboard/department-stats
+router.get('/department-stats', getDepartmentStats);
+
+// GET /api/dashboard/committee-stats
+router.get('/committee-stats', getCommitteeStats);
+
+// GET /api/dashboard/monthly-performance
+router.get('/monthly-performance', getMonthlyPerformance);
 
 module.exports = router;

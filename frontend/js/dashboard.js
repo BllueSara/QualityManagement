@@ -28,12 +28,238 @@ async function fetchClosedWeek() {
   return json.data;
 }
 
+// دالة جلب إحصائيات الأقسام
+async function fetchDepartmentStats() {
+  const token = localStorage.getItem('token');
+  const res = await fetch('http://localhost:3006/api/dashboard/department-stats', {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (res.status === 401) {
+    alert(getTranslation('please-login'));
+    return [];
+  }
+  const json = await res.json();
+  return json.data;
+}
+
+// دالة جلب إحصائيات اللجان
+async function fetchCommitteeStats() {
+  const token = localStorage.getItem('token');
+  const res = await fetch('http://localhost:3006/api/dashboard/committee-stats', {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (res.status === 401) {
+    alert(getTranslation('please-login'));
+    return [];
+  }
+  const json = await res.json();
+  return json.data;
+}
+
+// دالة جلب الأداء الشهري
+async function fetchMonthlyPerformance() {
+  const token = localStorage.getItem('token');
+  const res = await fetch('http://localhost:3006/api/dashboard/monthly-performance', {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (res.status === 401) {
+    alert(getTranslation('please-login'));
+    return [];
+  }
+  const json = await res.json();
+  return json.data;
+}
+
 function getTranslation(key) {
   const lang = localStorage.getItem('language') || document.documentElement.lang || 'ar';
   if (window.translations && window.translations[lang] && window.translations[lang][key]) {
     return window.translations[lang][key];
   }
   return key;
+}
+
+// دالة معالجة اسم القسم حسب اللغة
+function getDepartmentNameByLanguage(departmentNameData, userLanguage = 'ar') {
+  try {
+    // إذا كان الاسم JSON يحتوي على اللغتين
+    if (typeof departmentNameData === 'string' && departmentNameData.startsWith('{')) {
+      const parsed = JSON.parse(departmentNameData);
+      return parsed[userLanguage] || parsed['ar'] || departmentNameData;
+    }
+    // إذا كان نص عادي
+    return departmentNameData || 'غير معروف';
+  } catch (error) {
+    // في حالة فشل التحليل، إرجاع النص كما هو
+    return departmentNameData || 'غير معروف';
+  }
+}
+
+// دالة معالجة اسم اللجنة حسب اللغة
+function getCommitteeNameByLanguage(committeeNameData, userLanguage = 'ar') {
+  try {
+    // إذا كان الاسم JSON يحتوي على اللغتين
+    if (typeof committeeNameData === 'string' && committeeNameData.startsWith('{')) {
+      const parsed = JSON.parse(committeeNameData);
+      return parsed[userLanguage] || parsed['ar'] || committeeNameData;
+    }
+    // إذا كان نص عادي
+    return committeeNameData || 'غير معروف';
+  } catch (error) {
+    // في حالة فشل التحليل، إرجاع النص كما هو
+    return committeeNameData || 'غير معروف';
+  }
+}
+
+// دالة تحديث عناوين الرسوم البيانية
+function updateChartTitles() {
+  const lang = localStorage.getItem('language') || document.documentElement.lang || 'ar';
+  const titles = document.querySelectorAll('[data-translate]');
+  titles.forEach(element => {
+    const key = element.getAttribute('data-translate');
+    const translation = getTranslation(key);
+    if (translation && translation !== key) {
+      element.textContent = translation;
+    }
+  });
+}
+
+// دالة لتنظيف الرسوم البيانية الموجودة
+function destroyExistingCharts() {
+  const chartIds = ['ticketsChart', 'departmentChart', 'departmentPerformanceChart', 'committeeChart', 'committeePerformanceChart', 'monthlyTrendsChart'];
+  chartIds.forEach(chartId => {
+    const canvas = document.getElementById(chartId);
+    if (canvas) {
+      const existingChart = Chart.getChart(canvas);
+      if (existingChart) {
+        existingChart.destroy();
+      }
+    }
+  });
+}
+
+// دالة للتحقق من وجود العناصر قبل الرسم
+function ensureCanvasExists(chartId) {
+  const canvas = document.getElementById(chartId);
+  if (!canvas) {
+    console.error(`Canvas element with id '${chartId}' not found`);
+    return null;
+  }
+  return canvas;
+}
+
+// دالة لمعالجة أحداث النقر على الرسوم البيانية
+function handleChartClick(event, chart) {
+  try {
+    const points = chart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
+    if (points.length) {
+      const firstPoint = points[0];
+      const label = chart.data.labels[firstPoint.index];
+      const value = chart.data.datasets[firstPoint.datasetIndex].data[firstPoint.index];
+      
+      // يمكن إضافة منطق إضافي هنا للتفاعل مع النقر
+      console.log(`Clicked on: ${label} with value: ${value}`);
+    }
+  } catch (error) {
+    console.error('Error handling chart click:', error);
+  }
+}
+
+// دالة لتعطيل النقر على الرسوم البيانية إذا لزم الأمر
+function disableChartClicks() {
+  const canvases = document.querySelectorAll('.chart-container canvas');
+  canvases.forEach(canvas => {
+    canvas.style.pointerEvents = 'none';
+  });
+}
+
+// دالة لتمكين النقر على الرسوم البيانية
+function enableChartClicks() {
+  // تمكين التفاعل مع الرسوم البيانية
+  const charts = Chart.getChart ? Object.values(Chart.instances) : [];
+  charts.forEach(chart => {
+    if (chart && chart.canvas) {
+      chart.canvas.style.pointerEvents = 'auto';
+      chart.canvas.style.cursor = 'default';
+    }
+  });
+}
+
+// دالة التأكد من عمل التلميحات
+function ensureTooltipsWork() {
+  // التأكد من أن Chart.js متاح
+  if (typeof Chart === 'undefined') {
+    console.warn('Chart.js not loaded');
+    return;
+  }
+
+  // إضافة معالج أخطاء للتلميحات
+  const originalTooltip = Chart.defaults.plugins.tooltip;
+  if (originalTooltip) {
+    originalTooltip.enabled = true;
+    originalTooltip.mode = 'nearest';
+    originalTooltip.intersect = false;
+  }
+
+  // إضافة معالج للتأكد من عمل التلميحات
+  document.addEventListener('mouseover', function(e) {
+    if (e.target.tagName === 'CANVAS') {
+      const chart = Chart.getChart(e.target);
+      if (chart) {
+        // التأكد من أن التلميحات مفعلة
+        if (chart.options.plugins && chart.options.plugins.tooltip) {
+          chart.options.plugins.tooltip.enabled = true;
+        }
+      }
+    }
+  });
+}
+
+// دالة تشخيص مشاكل التلميحات
+function debugTooltips() {
+  console.log('=== Tooltip Debug Information ===');
+  
+  // التحقق من وجود Chart.js
+  if (typeof Chart === 'undefined') {
+    console.error('Chart.js is not loaded!');
+    return;
+  }
+  console.log('✓ Chart.js is loaded');
+  
+  // التحقق من الرسوم البيانية الموجودة
+  const charts = Chart.getChart ? Object.values(Chart.instances) : [];
+  console.log(`Found ${charts.length} charts:`, charts.map(chart => chart.id || 'unnamed'));
+  
+  // فحص إعدادات التلميحات لكل رسم بياني
+  charts.forEach((chart, index) => {
+    console.log(`Chart ${index + 1} (${chart.id || 'unnamed'}):`);
+    console.log('  - Canvas element:', chart.canvas);
+    console.log('  - Tooltip enabled:', chart.options.plugins?.tooltip?.enabled);
+    console.log('  - Tooltip mode:', chart.options.plugins?.tooltip?.mode);
+    console.log('  - Tooltip intersect:', chart.options.plugins?.tooltip?.intersect);
+    console.log('  - Canvas pointer-events:', chart.canvas?.style.pointerEvents);
+    console.log('  - Canvas cursor:', chart.canvas?.style.cursor);
+  });
+  
+  // التحقق من عناصر Canvas في DOM
+  const canvases = document.querySelectorAll('.chart-container canvas');
+  console.log(`Found ${canvases.length} canvas elements in DOM:`, canvases);
+  
+  canvases.forEach((canvas, index) => {
+    console.log(`Canvas ${index + 1}:`);
+    console.log('  - Element:', canvas);
+    console.log('  - Parent container:', canvas.parentElement);
+    console.log('  - CSS pointer-events:', getComputedStyle(canvas).pointerEvents);
+    console.log('  - CSS cursor:', getComputedStyle(canvas).cursor);
+    console.log('  - CSS z-index:', getComputedStyle(canvas).zIndex);
+  });
+  
+  console.log('=== End Tooltip Debug ===');
 }
 
 // وظيفة تصدير الداشبورد إلى Excel
@@ -119,13 +345,22 @@ function renderStats(data) {
 }
 
 function makeCardsClickable() {
+  // إزالة event listeners الموجودة لتجنب التكرار
+  const statCards = document.querySelectorAll('.stat-card');
+  statCards.forEach(card => {
+    const newCard = card.cloneNode(true);
+    card.parentNode.replaceChild(newCard, card);
+  });
+
   // جعل بطاقة التذاكر المغلقة قابلة للنقر
   const closedTicketsElement = document.getElementById('closed-tickets');
   if (closedTicketsElement) {
     const closedCard = closedTicketsElement.closest('.stat-card');
     if (closedCard) {
       closedCard.style.cursor = 'pointer';
-      closedCard.addEventListener('click', () => {
+      closedCard.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         window.location.href = 'ticket-list.html';
       });
     }
@@ -137,7 +372,9 @@ function makeCardsClickable() {
     const newCard = newTicketsElement.closest('.stat-card');
     if (newCard) {
       newCard.style.cursor = 'pointer';
-      newCard.addEventListener('click', () => {
+      newCard.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         window.location.href = 'ticket-list.html';
       });
     }
@@ -149,7 +386,9 @@ function makeCardsClickable() {
     const pendingCard = pendingContentsElement.closest('.stat-card');
     if (pendingCard) {
       pendingCard.style.cursor = 'pointer';
-      pendingCard.addEventListener('click', () => {
+      pendingCard.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         window.location.href = 'approvals-recived.html';
       });
     }
@@ -161,7 +400,9 @@ function makeCardsClickable() {
     const approvedCard = approvedContentsElement.closest('.stat-card');
     if (approvedCard) {
       approvedCard.style.cursor = 'pointer';
-      approvedCard.addEventListener('click', () => {
+      approvedCard.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         window.location.href = 'approvals-recived.html';
       });
     }
@@ -173,7 +414,9 @@ function makeCardsClickable() {
     const committeeCard = committeeCountElement.closest('.stat-card');
     if (committeeCard) {
       committeeCard.style.cursor = 'pointer';
-      committeeCard.addEventListener('click', () => {
+      committeeCard.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         window.location.href = 'committees.html';
       });
     }
@@ -185,7 +428,9 @@ function makeCardsClickable() {
     const pendingCommitteeCard = pendingCommitteeContentsElement.closest('.stat-card');
     if (pendingCommitteeCard) {
       pendingCommitteeCard.style.cursor = 'pointer';
-      pendingCommitteeCard.addEventListener('click', () => {
+      pendingCommitteeCard.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         window.location.href = 'approvals-recived.html';
       });
     }
@@ -197,7 +442,9 @@ function makeCardsClickable() {
     const totalUsersCard = totalUsersElement.closest('.stat-card');
     if (totalUsersCard) {
       totalUsersCard.style.cursor = 'pointer';
-      totalUsersCard.addEventListener('click', () => {
+      totalUsersCard.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         window.location.href = 'permissions.html';
       });
     }
@@ -209,7 +456,9 @@ function makeCardsClickable() {
     const adminCountCard = adminCountElement.closest('.stat-card');
     if (adminCountCard) {
       adminCountCard.style.cursor = 'pointer';
-      adminCountCard.addEventListener('click', () => {
+      adminCountCard.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         window.location.href = 'permissions.html';
       });
     }
@@ -218,6 +467,9 @@ function makeCardsClickable() {
 
 
 function renderChart(data) {
+  const canvas = ensureCanvasExists('ticketsChart');
+  if (!canvas) return;
+
   const lang = localStorage.getItem('language') || document.documentElement.lang || 'ar';
   const daysAr = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
   const daysEn = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -227,9 +479,8 @@ function renderChart(data) {
   });
   const counts = data.map(r => r.closed_count);
 
-  new Chart(
-    document.getElementById('ticketsChart').getContext('2d'),
-    {
+  try {
+    new Chart(canvas.getContext('2d'), {
       type: 'bar',
       data: {
         labels,
@@ -237,36 +488,725 @@ function renderChart(data) {
           label: getTranslation('closed-tickets'),
           data: counts,
           backgroundColor: '#3a7ffb',
-          borderColor:   '#3a7ffb',
+          borderColor: '#3a7ffb',
           borderWidth: 1
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: {
+          mode: 'nearest',
+          axis: 'x',
+          intersect: false
+        },
         scales: {
-          y: { beginAtZero: true, grid: { color: '#e0e0e0', drawBorder: false } },
-          x: { grid: { display: false } }
+          y: { 
+            beginAtZero: true, 
+            grid: { color: '#e0e0e0', drawBorder: false },
+            ticks: {
+              font: {
+                size: 13,
+                family: "'Tajawal', 'Arial', sans-serif"
+              }
+            }
+          },
+          x: { 
+            grid: { display: false },
+            ticks: {
+              font: {
+                size: 13,
+                family: "'Tajawal', 'Arial', sans-serif"
+              }
+            }
+          }
         },
         plugins: {
-          legend:  { display: false },
+          legend: {
+            display: false
+          },
           tooltip: {
-            rtl: lang !== 'en',
+            enabled: true,
+            mode: 'nearest',
+            intersect: false,
             callbacks: {
-              title: ctx => ctx[0].label,
-              label: ctx => getTranslation('closed-tickets') + ': ' + ctx.parsed.y
+              label: function(context) {
+                return getTranslation('closed-tickets') + ': ' + context.parsed.y;
+              }
+            },
+            titleFont: {
+              size: 14,
+              family: "'Tajawal', 'Arial', sans-serif"
+            },
+            bodyFont: {
+              size: 13,
+              family: "'Tajawal', 'Arial', sans-serif"
             }
           }
         }
       }
+    });
+  } catch (error) {
+    console.error('Error rendering tickets chart:', error);
+  }
+}
+
+// دالة عرض رسم بياني دائري للأقسام
+function renderDepartmentChart(data) {
+  if (!data || data.length === 0) {
+    const canvas = document.getElementById('departmentChart');
+    if (canvas) {
+      canvas.style.display = 'none';
+      canvas.parentElement.innerHTML = '<div class="chart-loading">لا توجد بيانات متاحة</div>';
     }
-  );
+    return;
+  }
+
+  const lang = localStorage.getItem('language') || document.documentElement.lang || 'ar';
+  const labels = data.map(d => getDepartmentNameByLanguage(d.department_name, lang));
+  const approvedData = data.map(d => d.approved_contents);
+  const pendingData = data.map(d => d.pending_contents);
+
+  try {
+    new Chart(
+      document.getElementById('departmentChart').getContext('2d'),
+      {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{
+            label: getTranslation('approved-contents'),
+            data: approvedData,
+            backgroundColor: [
+              '#28a745', '#20c997', '#17a2b8', '#007bff', '#6f42c1',
+              '#e83e8c', '#fd7e14', '#ffc107', '#28a745', '#6c757d'
+            ],
+            borderWidth: 2,
+            borderColor: '#ffffff'
+          }, {
+            label: getTranslation('pending-contents'),
+            data: pendingData,
+            backgroundColor: [
+              '#dc3545', '#fd7e14', '#ffc107', '#17a2b8', '#6f42c1',
+              '#e83e8c', '#28a745', '#20c997', '#007bff', '#6c757d'
+            ],
+            borderWidth: 2,
+            borderColor: '#ffffff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'nearest',
+            intersect: false
+          },
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                padding: 20,
+                usePointStyle: true,
+                font: { 
+                  size: 13,
+                  family: "'Tajawal', 'Arial', sans-serif"
+                }
+              }
+            },
+            tooltip: {
+              enabled: true,
+              mode: 'nearest',
+              intersect: false,
+              callbacks: {
+                label: function(context) {
+                  const label = context.label || '';
+                  const value = context.parsed;
+                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                  const percentage = ((value / total) * 100).toFixed(1);
+                  return `${label}: ${value} (${percentage}%)`;
+                }
+              },
+              titleFont: {
+                size: 14,
+                family: "'Tajawal', 'Arial', sans-serif"
+              },
+              bodyFont: {
+                size: 13,
+                family: "'Tajawal', 'Arial', sans-serif"
+              }
+            }
+          }
+        }
+      }
+    );
+  } catch (error) {
+    console.error('Error rendering department chart:', error);
+  }
+}
+
+// دالة عرض رسم بياني شريطي لأداء الأقسام
+function renderDepartmentPerformanceChart(data) {
+  if (!data || data.length === 0) {
+    const canvas = document.getElementById('departmentPerformanceChart');
+    if (canvas) {
+      canvas.style.display = 'none';
+      canvas.parentElement.innerHTML = '<div class="chart-loading">لا توجد بيانات متاحة</div>';
+    }
+    return;
+  }
+
+  const lang = localStorage.getItem('language') || document.documentElement.lang || 'ar';
+  const labels = data.map(d => getDepartmentNameByLanguage(d.department_name, lang));
+  const approvalRates = data.map(d => parseFloat(d.approval_rate));
+
+  try {
+    new Chart(
+      document.getElementById('departmentPerformanceChart').getContext('2d'),
+      {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: getTranslation('approval-rate') + ' (%)',
+            data: approvalRates,
+            backgroundColor: approvalRates.map(rate => 
+              rate >= 80 ? '#28a745' : 
+              rate >= 60 ? '#ffc107' : 
+              rate >= 40 ? '#fd7e14' : '#dc3545'
+            ),
+            borderColor: approvalRates.map(rate => 
+              rate >= 80 ? '#1e7e34' : 
+              rate >= 60 ? '#e0a800' : 
+              rate >= 40 ? '#e55a00' : '#c82333'
+            ),
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'nearest',
+            axis: 'x',
+            intersect: false
+          },
+          scales: {
+            y: { 
+              beginAtZero: true, 
+              max: 100,
+              grid: { color: '#e0e0e0', drawBorder: false },
+              ticks: {
+                callback: function(value) {
+                  return value + '%';
+                },
+                font: {
+                  size: 13,
+                  family: "'Tajawal', 'Arial', sans-serif"
+                }
+              }
+            },
+            x: { 
+              grid: { display: false },
+              ticks: {
+                maxRotation: 0,
+                minRotation: 0,
+                autoSkip: true,
+                maxTicksLimit: 8,
+                font: {
+                  size: 13,
+                  family: "'Tajawal', 'Arial', sans-serif"
+                }
+              }
+            }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              enabled: true,
+              mode: 'nearest',
+              intersect: false,
+              callbacks: {
+                label: function(context) {
+                  return getTranslation('approval-rate') + ': ' + context.parsed.y + '%';
+                }
+              },
+              titleFont: {
+                size: 14,
+                family: "'Tajawal', 'Arial', sans-serif"
+              },
+              bodyFont: {
+                size: 13,
+                family: "'Tajawal', 'Arial', sans-serif"
+              }
+            }
+          }
+        }
+      }
+    );
+  } catch (error) {
+    console.error('Error rendering department performance chart:', error);
+  }
+}
+
+// دالة عرض رسم بياني للجان
+function renderCommitteeChart(data) {
+  if (!data || data.length === 0) {
+    const canvas = document.getElementById('committeeChart');
+    if (canvas) {
+      canvas.style.display = 'none';
+      canvas.parentElement.innerHTML = '<div class="chart-loading">لا توجد بيانات متاحة</div>';
+    }
+    return;
+  }
+
+  const lang = localStorage.getItem('language') || document.documentElement.lang || 'ar';
+  const labels = data.map(c => getCommitteeNameByLanguage(c.committee_name, lang));
+  const approvedData = data.map(c => c.approved_contents);
+  const pendingData = data.map(c => c.pending_contents);
+  const rejectedData = data.map(c => c.rejected_contents);
+
+  try {
+    new Chart(
+      document.getElementById('committeeChart').getContext('2d'),
+      {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: getTranslation('approved-contents'),
+            data: approvedData,
+            backgroundColor: '#28a745',
+            borderColor: '#1e7e34',
+            borderWidth: 1
+          }, {
+            label: getTranslation('pending-contents'),
+            data: pendingData,
+            backgroundColor: '#ffc107',
+            borderColor: '#e0a800',
+            borderWidth: 1
+          }, {
+            label: getTranslation('rejected-contents'),
+            data: rejectedData,
+            backgroundColor: '#dc3545',
+            borderColor: '#c82333',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'nearest',
+            axis: 'x',
+            intersect: false
+          },
+          scales: {
+            y: { 
+              beginAtZero: true, 
+              grid: { color: '#e0e0e0', drawBorder: false },
+              ticks: {
+                font: {
+                  size: 13,
+                  family: "'Tajawal', 'Arial', sans-serif"
+                }
+              }
+            },
+            x: { 
+              grid: { display: false },
+              ticks: {
+                maxRotation: 0,
+                minRotation: 0,
+                autoSkip: true,
+                maxTicksLimit: 8,
+                font: {
+                  size: 13,
+                  family: "'Tajawal', 'Arial', sans-serif"
+                }
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: {
+                padding: 20,
+                usePointStyle: true,
+                font: {
+                  size: 13,
+                  family: "'Tajawal', 'Arial', sans-serif"
+                }
+              }
+            },
+            tooltip: {
+              enabled: true,
+              mode: 'nearest',
+              intersect: false,
+              callbacks: {
+                label: function(context) {
+                  return context.dataset.label + ': ' + context.parsed.y;
+                }
+              },
+              titleFont: {
+                size: 14,
+                family: "'Tajawal', 'Arial', sans-serif"
+              },
+              bodyFont: {
+                size: 13,
+                family: "'Tajawal', 'Arial', sans-serif"
+              }
+            }
+          }
+        }
+      }
+    );
+  } catch (error) {
+    console.error('Error rendering committee chart:', error);
+  }
+}
+
+// دالة عرض رسم بياني لأداء اللجان (معدل الاعتماد)
+function renderCommitteePerformanceChart(data) {
+  if (!data || data.length === 0) {
+    const canvas = document.getElementById('committeePerformanceChart');
+    if (canvas) {
+      canvas.style.display = 'none';
+      canvas.parentElement.innerHTML = '<div class="chart-loading">لا توجد بيانات متاحة</div>';
+    }
+    return;
+  }
+
+  const lang = localStorage.getItem('language') || document.documentElement.lang || 'ar';
+  const labels = data.map(c => getCommitteeNameByLanguage(c.committee_name, lang));
+  const approvalRates = data.map(c => parseFloat(c.approval_rate) || 0);
+
+  try {
+    new Chart(
+      document.getElementById('committeePerformanceChart').getContext('2d'),
+      {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{
+            data: approvalRates,
+            backgroundColor: [
+              '#28a745', '#20c997', '#17a2b8', '#6f42c1', '#fd7e14',
+              '#e83e8c', '#6c757d', '#343a40', '#007bff', '#6610f2'
+            ],
+            borderWidth: 2,
+            borderColor: '#fff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'nearest',
+            intersect: false
+          },
+          plugins: {
+            legend: {
+              position: 'right',
+              labels: {
+                padding: 15,
+                usePointStyle: true,
+                font: {
+                  size: 13,
+                  family: "'Tajawal', 'Arial', sans-serif"
+                }
+              }
+            },
+            tooltip: {
+              enabled: true,
+              mode: 'nearest',
+              intersect: false,
+              callbacks: {
+                label: function(context) {
+                  return context.label + ': ' + context.parsed + '%';
+                }
+              },
+              titleFont: {
+                size: 14,
+                family: "'Tajawal', 'Arial', sans-serif"
+              },
+              bodyFont: {
+                size: 13,
+                family: "'Tajawal', 'Arial', sans-serif"
+              }
+            }
+          }
+        }
+      }
+    );
+  } catch (error) {
+    console.error('Error rendering committee performance chart:', error);
+  }
+}
+
+// دالة عرض رسم بياني خطي للأداء الشهري
+function renderMonthlyTrendsChart(data) {
+  if (!data || data.length === 0) {
+    const canvas = document.getElementById('monthlyTrendsChart');
+    if (canvas) {
+      canvas.style.display = 'none';
+      canvas.parentElement.innerHTML = '<div class="chart-loading">لا توجد بيانات متاحة</div>';
+    }
+    return;
+  }
+
+  const lang = localStorage.getItem('language') || document.documentElement.lang || 'ar';
+  const labels = data.map(m => {
+    const [year, month] = m.month.split('-');
+    const date = new Date(year, month - 1);
+    return date.toLocaleDateString(lang === 'en' ? 'en-US' : 'ar-SA', { 
+      year: 'numeric', 
+      month: 'short' 
+    });
+  });
+  const totalData = data.map(m => m.total_contents);
+  const approvedData = data.map(m => m.approved_contents);
+  const pendingData = data.map(m => m.pending_contents);
+
+  try {
+    new Chart(
+      document.getElementById('monthlyTrendsChart').getContext('2d'),
+      {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: getTranslation('total-contents'),
+            data: totalData,
+            borderColor: '#007bff',
+            backgroundColor: 'rgba(0, 123, 255, 0.1)',
+            borderWidth: 3,
+            fill: false,
+            tension: 0.4
+          }, {
+            label: getTranslation('approved-contents'),
+            data: approvedData,
+            borderColor: '#28a745',
+            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+            borderWidth: 3,
+            fill: false,
+            tension: 0.4
+          }, {
+            label: getTranslation('pending-contents'),
+            data: pendingData,
+            borderColor: '#ffc107',
+            backgroundColor: 'rgba(255, 193, 7, 0.1)',
+            borderWidth: 3,
+            fill: false,
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'nearest',
+            axis: 'x',
+            intersect: false
+          },
+          scales: {
+            y: { 
+              beginAtZero: true, 
+              grid: { color: '#e0e0e0', drawBorder: false },
+              ticks: {
+                font: {
+                  size: 13,
+                  family: "'Tajawal', 'Arial', sans-serif"
+                }
+              }
+            },
+            x: { 
+              grid: { color: '#e0e0e0', drawBorder: false },
+              ticks: {
+                font: {
+                  size: 13,
+                  family: "'Tajawal', 'Arial', sans-serif"
+                }
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: {
+                padding: 20,
+                usePointStyle: true,
+                font: {
+                  size: 13,
+                  family: "'Tajawal', 'Arial', sans-serif"
+                }
+              }
+            },
+            tooltip: {
+              enabled: true,
+              mode: 'index',
+              intersect: false,
+              callbacks: {
+                label: function(context) {
+                  return context.dataset.label + ': ' + context.parsed.y;
+                }
+              },
+              titleFont: {
+                size: 14,
+                family: "'Tajawal', 'Arial', sans-serif"
+              },
+              bodyFont: {
+                size: 13,
+                family: "'Tajawal', 'Arial', sans-serif"
+              }
+            }
+          }
+        }
+      }
+    );
+  } catch (error) {
+    console.error('Error rendering monthly trends chart:', error);
+  }
 }
 
 (async () => {
-  const stats     = await fetchStats();
-  const closed7d  = await fetchClosedWeek();
-  renderStats(stats);
-  renderChart(closed7d);
-  makeCardsClickable();
+  try {
+    // إظهار حالة التحميل
+    showLoadingState();
+    
+    // تنظيف الرسوم البيانية الموجودة
+    destroyExistingCharts();
+    
+    // جلب جميع البيانات
+    const [stats, closed7d, departmentStats, committeeStats, monthlyPerformance] = await Promise.all([
+      fetchStats(),
+      fetchClosedWeek(),
+      fetchDepartmentStats(),
+      fetchCommitteeStats(),
+      fetchMonthlyPerformance()
+    ]);
+    
+    // عرض البيانات
+    renderStats(stats);
+    renderChart(closed7d);
+    renderDepartmentChart(departmentStats);
+    renderDepartmentPerformanceChart(departmentStats);
+    renderCommitteeChart(committeeStats);
+    renderCommitteePerformanceChart(committeeStats);
+    renderMonthlyTrendsChart(monthlyPerformance);
+    
+    // جعل البطاقات قابلة للنقر
+    makeCardsClickable();
+    
+    // تحديث العناوين حسب اللغة
+    updateChartTitles();
+    
+    // انتظار قليل لضمان اكتمال عرض الرسوم البيانية
+    setTimeout(() => {
+      // تمكين التفاعل مع الرسوم البيانية
+      enableChartClicks();
+      ensureTooltipsWork(); // تأكد من أن التلميحات تعمل
+      
+      // تشخيص مشاكل التلميحات (للتطوير فقط)
+      debugTooltips();
+      
+      // إضافة معالج للتأكد من عمل التلميحات
+      const canvases = document.querySelectorAll('.chart-container canvas');
+      canvases.forEach(canvas => {
+        canvas.addEventListener('mouseenter', function() {
+          const chart = Chart.getChart(this);
+          if (chart && chart.options.plugins && chart.options.plugins.tooltip) {
+            chart.options.plugins.tooltip.enabled = true;
+            console.log('Tooltip enabled for chart:', chart.id);
+          }
+        });
+      });
+    }, 500);
+    
+    // إخفاء حالة التحميل
+    hideLoadingState();
+    
+  } catch (error) {
+    console.error('خطأ في تحميل البيانات:', error);
+    showToast(getTranslation('loading-error'), 'error');
+    hideLoadingState();
+  }
 })();
+
+// دالة إظهار حالة التحميل
+function showLoadingState() {
+  const chartContainers = document.querySelectorAll('.chart-container');
+  chartContainers.forEach(container => {
+    if (!container.querySelector('canvas')) {
+      container.innerHTML = '<div class="chart-loading">جاري التحميل...</div>';
+    }
+  });
+}
+
+// دالة إخفاء حالة التحميل
+function hideLoadingState() {
+  const loadingElements = document.querySelectorAll('.chart-loading');
+  loadingElements.forEach(element => {
+    if (element.textContent === 'جاري التحميل...') {
+      element.remove();
+    }
+  });
+}
+
+// معالج الأخطاء العام
+window.addEventListener('error', function(event) {
+  console.error('Global error caught:', event.error);
+  showToast('حدث خطأ غير متوقع. يرجى تحديث الصفحة.', 'error');
+});
+
+// معالج الأخطاء للوعود المرفوضة
+window.addEventListener('unhandledrejection', function(event) {
+  console.error('Unhandled promise rejection:', event.reason);
+  showToast('حدث خطأ في معالجة البيانات. يرجى المحاولة مرة أخرى.', 'error');
+});
+
+// استماع لتغيير اللغة
+document.addEventListener('DOMContentLoaded', function() {
+  // تحديث العناوين عند تحميل الصفحة
+  updateChartTitles();
+  
+  // استماع لتغيير اللغة
+  const languageButtons = document.querySelectorAll('[data-lang]');
+  languageButtons.forEach(button => {
+    // إزالة event listeners الموجودة
+    const newButton = button.cloneNode(true);
+    button.parentNode.replaceChild(newButton, button);
+    
+    newButton.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      setTimeout(() => {
+        updateChartTitles();
+        // إعادة تحديث الرسوم البيانية إذا لزم الأمر
+        const charts = document.querySelectorAll('canvas');
+        charts.forEach(canvas => {
+          const chart = Chart.getChart(canvas);
+          if (chart) {
+            chart.update();
+          }
+        });
+      }, 100);
+    });
+  });
+  
+  // منع النقر المزدوج على البطاقات
+  const statCards = document.querySelectorAll('.stat-card');
+  statCards.forEach(card => {
+    let isProcessing = false;
+    card.addEventListener('click', function(e) {
+      if (isProcessing) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      isProcessing = true;
+      setTimeout(() => {
+        isProcessing = false;
+      }, 1000);
+    });
+  });
+});

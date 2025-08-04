@@ -259,6 +259,134 @@ const exportDashboardExcel = async (req, res) => {
         (SELECT COUNT(*) FROM committee_contents WHERE approval_status = 'pending') AS committee_contents_pending
     `);
 
+    // جلب إحصائيات الأقسام
+    let departmentStatsSql, departmentStatsParams = [];
+    if (canViewAll) {
+      departmentStatsSql = `
+        SELECT 
+          d.name AS department_name,
+          COUNT(c.id) AS total_contents,
+          SUM(CASE WHEN c.is_approved = 1 THEN 1 ELSE 0 END) AS approved_contents,
+          SUM(CASE WHEN c.is_approved = 0 THEN 1 ELSE 0 END) AS pending_contents,
+          ROUND((SUM(CASE WHEN c.is_approved = 1 THEN 1 ELSE 0 END) / COUNT(c.id)) * 100, 1) AS approval_rate
+        FROM departments d
+        LEFT JOIN folders f ON f.department_id = d.id
+        LEFT JOIN contents c ON c.folder_id = f.id
+        GROUP BY d.id, d.name
+        HAVING total_contents > 0
+        ORDER BY approval_rate DESC, total_contents DESC
+        LIMIT 10
+      `;
+    } else {
+      departmentStatsSql = `
+        SELECT 
+          d.name AS department_name,
+          COUNT(c.id) AS total_contents,
+          SUM(CASE WHEN c.is_approved = 1 THEN 1 ELSE 0 END) AS approved_contents,
+          SUM(CASE WHEN c.is_approved = 0 THEN 1 ELSE 0 END) AS pending_contents,
+          ROUND((SUM(CASE WHEN c.is_approved = 1 THEN 1 ELSE 0 END) / COUNT(c.id)) * 100, 1) AS approval_rate
+        FROM departments d
+        LEFT JOIN folders f ON f.department_id = d.id
+        LEFT JOIN contents c ON c.folder_id = f.id
+        WHERE d.id IN (
+          SELECT DISTINCT department_id 
+          FROM user_departments 
+          WHERE user_id = ?
+        )
+        GROUP BY d.id, d.name
+        HAVING total_contents > 0
+        ORDER BY approval_rate DESC, total_contents DESC
+        LIMIT 10
+      `;
+      departmentStatsParams.push(userId);
+    }
+
+    const [departmentStatsRows] = await db.execute(departmentStatsSql, departmentStatsParams);
+
+    // جلب إحصائيات اللجان
+    let committeeStatsSql, committeeStatsParams = [];
+    if (canViewAll) {
+      committeeStatsSql = `
+        SELECT 
+          c.name AS committee_name,
+          COUNT(cc.id) AS total_contents,
+          SUM(CASE WHEN cc.approval_status = 'approved' THEN 1 ELSE 0 END) AS approved_contents,
+          SUM(CASE WHEN cc.approval_status = 'pending' THEN 1 ELSE 0 END) AS pending_contents,
+          SUM(CASE WHEN cc.approval_status = 'rejected' THEN 1 ELSE 0 END) AS rejected_contents,
+          ROUND((SUM(CASE WHEN cc.approval_status = 'approved' THEN 1 ELSE 0 END) / COUNT(cc.id)) * 100, 1) AS approval_rate
+        FROM committees c
+        LEFT JOIN committee_folders cf ON cf.committee_id = c.id
+        LEFT JOIN committee_contents cc ON cc.folder_id = cf.id
+        GROUP BY c.id, c.name
+        HAVING total_contents > 0
+        ORDER BY approval_rate DESC, total_contents DESC
+        LIMIT 10
+      `;
+    } else {
+      committeeStatsSql = `
+        SELECT 
+          c.name AS committee_name,
+          COUNT(cc.id) AS total_contents,
+          SUM(CASE WHEN cc.approval_status = 'approved' THEN 1 ELSE 0 END) AS approved_contents,
+          SUM(CASE WHEN cc.approval_status = 'pending' THEN 1 ELSE 0 END) AS pending_contents,
+          SUM(CASE WHEN cc.approval_status = 'rejected' THEN 1 ELSE 0 END) AS rejected_contents,
+          ROUND((SUM(CASE WHEN cc.approval_status = 'approved' THEN 1 ELSE 0 END) / COUNT(cc.id)) * 100, 1) AS approval_rate
+        FROM committees c
+        LEFT JOIN committee_folders cf ON cf.committee_id = c.id
+        LEFT JOIN committee_contents cc ON cc.folder_id = cf.id
+        WHERE c.id IN (
+          SELECT DISTINCT committee_id 
+          FROM committee_members 
+          WHERE user_id = ?
+        )
+        GROUP BY c.id, c.name
+        HAVING total_contents > 0
+        ORDER BY approval_rate DESC, total_contents DESC
+        LIMIT 10
+      `;
+      committeeStatsParams.push(userId);
+    }
+
+    const [committeeStatsRows] = await db.execute(committeeStatsSql, committeeStatsParams);
+
+    // جلب الأداء الشهري
+    let monthlyStatsSql, monthlyStatsParams = [];
+    if (canViewAll) {
+      monthlyStatsSql = `
+        SELECT 
+          DATE_FORMAT(c.created_at, '%Y-%m') AS month,
+          COUNT(c.id) AS total_contents,
+          SUM(CASE WHEN c.is_approved = 1 THEN 1 ELSE 0 END) AS approved_contents,
+          SUM(CASE WHEN c.is_approved = 0 THEN 1 ELSE 0 END) AS pending_contents
+        FROM contents c
+        LEFT JOIN folders f ON f.id = c.folder_id
+        WHERE c.created_at >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+        GROUP BY DATE_FORMAT(c.created_at, '%Y-%m')
+        ORDER BY month ASC
+      `;
+    } else {
+      monthlyStatsSql = `
+        SELECT 
+          DATE_FORMAT(c.created_at, '%Y-%m') AS month,
+          COUNT(c.id) AS total_contents,
+          SUM(CASE WHEN c.is_approved = 1 THEN 1 ELSE 0 END) AS approved_contents,
+          SUM(CASE WHEN c.is_approved = 0 THEN 1 ELSE 0 END) AS pending_contents
+        FROM contents c
+        LEFT JOIN folders f ON f.id = c.folder_id
+        WHERE c.created_at >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+          AND f.department_id IN (
+            SELECT DISTINCT department_id 
+            FROM user_departments 
+            WHERE user_id = ?
+          )
+        GROUP BY DATE_FORMAT(c.created_at, '%Y-%m')
+        ORDER BY month ASC
+      `;
+      monthlyStatsParams.push(userId);
+    }
+
+    const [monthlyStatsRows] = await db.execute(monthlyStatsSql, monthlyStatsParams);
+
     // جلب بيانات الأحداث المغلقة خلال الأسبوع
     let weekSql, weekParams = [];
     if (canViewAll) {
@@ -537,6 +665,264 @@ const exportDashboardExcel = async (req, res) => {
         };
       });
     }
+
+    // ورقة إحصائيات الأقسام
+    const departmentSheet = workbook.addWorksheet('إحصائيات الأقسام');
+    
+    // إضافة عنوان
+    const deptTitleRow = departmentSheet.addRow(['إحصائيات الأقسام - تحليل المحتويات والاعتماد']);
+    deptTitleRow.font = { bold: true, size: 18, color: { argb: 'FF2E86AB' } };
+    deptTitleRow.alignment = { horizontal: 'center' };
+    departmentSheet.mergeCells('A1:F1');
+    
+    // إضافة مسافة
+    departmentSheet.addRow([]);
+    
+    // رؤوس الأعمدة
+    const deptHeaders = departmentSheet.addRow([
+      'اسم القسم',
+      'إجمالي المحتويات',
+      'المحتويات المعتمدة',
+      'المحتويات بانتظار الاعتماد',
+      'معدل الاعتماد (%)',
+      'التقييم'
+    ]);
+    deptHeaders.font = { bold: true, size: 12 };
+    deptHeaders.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFF0F8FF' }
+    };
+    
+    // دالة معالجة اسم القسم حسب اللغة
+    function getDepartmentNameByLanguage(departmentNameData) {
+      try {
+        // إذا كان الاسم JSON يحتوي على اللغتين
+        if (typeof departmentNameData === 'string' && departmentNameData.startsWith('{')) {
+          const parsed = JSON.parse(departmentNameData);
+          return parsed['ar'] || parsed['en'] || departmentNameData;
+        }
+        // إذا كان نص عادي
+        return departmentNameData || 'غير معروف';
+      } catch (error) {
+        // في حالة فشل التحليل، إرجاع النص كما هو
+        return departmentNameData || 'غير معروف';
+      }
+    }
+
+    // بيانات الأقسام
+    departmentStatsRows.forEach(row => {
+      const rate = parseFloat(row.approval_rate) || 0;
+      let evaluation = '';
+      if (rate >= 80) evaluation = 'ممتاز';
+      else if (rate >= 60) evaluation = 'جيد';
+      else if (rate >= 40) evaluation = 'مقبول';
+      else evaluation = 'يحتاج تحسين';
+      
+      departmentSheet.addRow([
+        getDepartmentNameByLanguage(row.department_name),
+        row.total_contents,
+        row.approved_contents,
+        row.pending_contents,
+        `${rate}%`,
+        evaluation
+      ]);
+    });
+    
+    // تنسيق ورقة الأقسام
+    departmentSheet.columns.forEach(column => {
+      column.width = 20;
+    });
+    
+    // إضافة حدود للخلايا
+    for (let i = 1; i <= departmentSheet.rowCount; i++) {
+      const row = departmentSheet.getRow(i);
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+      });
+    }
+
+    // ورقة إحصائيات اللجان
+    const committeeSheet = workbook.addWorksheet('إحصائيات اللجان');
+    
+    // إضافة عنوان
+    const commTitleRow = committeeSheet.addRow(['إحصائيات اللجان - تحليل المحتويات والاعتماد']);
+    commTitleRow.font = { bold: true, size: 18, color: { argb: 'FF2E86AB' } };
+    commTitleRow.alignment = { horizontal: 'center' };
+    committeeSheet.mergeCells('A1:G1');
+    
+    // إضافة مسافة
+    committeeSheet.addRow([]);
+    
+    // رؤوس الأعمدة
+    const commHeaders = committeeSheet.addRow([
+      'اسم اللجنة',
+      'إجمالي المحتويات',
+      'المحتويات المعتمدة',
+      'المحتويات بانتظار الاعتماد',
+      'المحتويات المرفوضة',
+      'معدل الاعتماد (%)',
+      'التقييم'
+    ]);
+    commHeaders.font = { bold: true, size: 12 };
+    commHeaders.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFF0F8FF' }
+    };
+    
+    // دالة معالجة اسم اللجنة حسب اللغة
+    function getCommitteeNameByLanguage(committeeNameData) {
+      try {
+        // إذا كان الاسم object يحتوي على اللغتين
+        if (typeof committeeNameData === 'object' && committeeNameData !== null) {
+          // إذا كان object يحتوي على خصائص اللغة
+          if (committeeNameData['ar']) {
+            return committeeNameData['ar'];
+          }
+          if (committeeNameData['en']) {
+            return committeeNameData['en'];
+          }
+          // إذا لم تكن هناك خصائص لغة، جرب الخصائص الأخرى
+          if (committeeNameData.name) {
+            return committeeNameData.name;
+          }
+          if (committeeNameData.title) {
+            return committeeNameData.title;
+          }
+          if (committeeNameData.text) {
+            return committeeNameData.text;
+          }
+          if (committeeNameData.value) {
+            return committeeNameData.value;
+          }
+          // كحل أخير، إرجاع string representation
+          const result = JSON.stringify(committeeNameData);
+          return result;
+        }
+        // إذا كان الاسم JSON string يحتوي على اللغتين
+        if (typeof committeeNameData === 'string' && committeeNameData.startsWith('{')) {
+          const parsed = JSON.parse(committeeNameData);
+          return parsed['ar'] || parsed['en'] || committeeNameData;
+        }
+        // إذا كان نص عادي
+        return committeeNameData || 'غير معروف';
+      } catch (error) {
+        console.error('Error in getCommitteeNameByLanguage:', error);
+        // في حالة فشل التحليل، إرجاع النص كما هو
+        return String(committeeNameData) || 'غير معروف';
+      }
+    }
+
+    // بيانات اللجان
+    committeeStatsRows.forEach(row => {
+      const rate = parseFloat(row.approval_rate) || 0;
+      let evaluation = '';
+      if (rate >= 80) evaluation = 'ممتاز';
+      else if (rate >= 60) evaluation = 'جيد';
+      else if (rate >= 40) evaluation = 'مقبول';
+      else evaluation = 'يحتاج تحسين';
+      
+      committeeSheet.addRow([
+        getCommitteeNameByLanguage(row.committee_name),
+        row.total_contents,
+        row.approved_contents,
+        row.pending_contents,
+        row.rejected_contents,
+        `${rate}%`,
+        evaluation
+      ]);
+    });
+    
+    // تنسيق ورقة اللجان
+    committeeSheet.columns.forEach(column => {
+      column.width = 18;
+    });
+    
+    // إضافة حدود للخلايا
+    for (let i = 1; i <= committeeSheet.rowCount; i++) {
+      const row = committeeSheet.getRow(i);
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+      });
+    }
+
+    // ورقة الأداء الشهري
+    const monthlySheet = workbook.addWorksheet('الأداء الشهري');
+    
+    // إضافة عنوان
+    const monthTitleRow = monthlySheet.addRow(['الأداء الشهري - تحليل المحتويات على مدار 6 أشهر']);
+    monthTitleRow.font = { bold: true, size: 18, color: { argb: 'FF2E86AB' } };
+    monthTitleRow.alignment = { horizontal: 'center' };
+    monthlySheet.mergeCells('A1:E1');
+    
+    // إضافة مسافة
+    monthlySheet.addRow([]);
+    
+    // رؤوس الأعمدة
+    const monthHeaders = monthlySheet.addRow([
+      'الشهر',
+      'إجمالي المحتويات',
+      'المحتويات المعتمدة',
+      'المحتويات بانتظار الاعتماد',
+      'معدل الاعتماد (%)'
+    ]);
+    monthHeaders.font = { bold: true, size: 12 };
+    monthHeaders.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFF0F8FF' }
+    };
+    
+    // بيانات الأداء الشهري
+    monthlyStatsRows.forEach(row => {
+      const total = row.total_contents || 0;
+      const approved = row.approved_contents || 0;
+      const rate = total > 0 ? ((approved / total) * 100).toFixed(1) : 0;
+      
+      // تنسيق الشهر
+      const [year, month] = row.month.split('-');
+      const monthName = new Date(year, month - 1).toLocaleDateString('ar-SA', { 
+        year: 'numeric', 
+        month: 'long' 
+      });
+      
+      monthlySheet.addRow([
+        monthName,
+        total,
+        approved,
+        row.pending_contents || 0,
+        `${rate}%`
+      ]);
+    });
+    
+    // تنسيق ورقة الأداء الشهري
+    monthlySheet.columns.forEach(column => {
+      column.width = 22;
+    });
+    
+    // إضافة حدود للخلايا
+    for (let i = 1; i <= monthlySheet.rowCount; i++) {
+      const row = monthlySheet.getRow(i);
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+      });
+    }
     
     // إرسال الملف
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -551,4 +937,193 @@ const exportDashboardExcel = async (req, res) => {
   }
 };
 
-module.exports = { getStats, getClosedWeek, exportDashboardExcel };
+const getDepartmentStats = async (req, res) => {
+  try {
+    const auth = req.headers.authorization;
+    if (!auth?.startsWith('Bearer ')) {
+      return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+    }
+    const token = auth.slice(7);
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = payload.id;
+    const userRole = payload.role;
+
+    const permsSet = await getUserPerms(userId);
+    const canViewAll = (userRole === 'admin') || permsSet.has('view_dashboard');
+
+    let sql, params = [];
+          if (canViewAll) {
+        sql = `
+          SELECT
+            d.name AS department_name,
+            COUNT(c.id) AS total_contents,
+            SUM(CASE WHEN c.is_approved = 1 THEN 1 ELSE 0 END) AS approved_contents,
+            SUM(CASE WHEN c.is_approved = 0 THEN 1 ELSE 0 END) AS pending_contents,
+            ROUND((SUM(CASE WHEN c.is_approved = 1 THEN 1 ELSE 0 END) / COUNT(c.id)) * 100, 1) AS approval_rate
+          FROM departments d
+          LEFT JOIN folders f ON f.department_id = d.id
+          LEFT JOIN contents c ON c.folder_id = f.id
+          GROUP BY d.id, d.name
+          HAVING total_contents > 0
+          ORDER BY approval_rate DESC, total_contents DESC
+          LIMIT 10
+        `;
+      } else {
+        sql = `
+          SELECT
+            d.name AS department_name,
+            COUNT(c.id) AS total_contents,
+            SUM(CASE WHEN c.is_approved = 1 THEN 1 ELSE 0 END) AS approved_contents,
+            SUM(CASE WHEN c.is_approved = 0 THEN 1 ELSE 0 END) AS pending_contents,
+            ROUND((SUM(CASE WHEN c.is_approved = 1 THEN 1 ELSE 0 END) / COUNT(c.id)) * 100, 1) AS approval_rate
+          FROM departments d
+          LEFT JOIN folders f ON f.department_id = d.id
+          LEFT JOIN contents c ON c.folder_id = f.id
+          WHERE d.id IN (
+            SELECT DISTINCT department_id
+            FROM user_departments
+            WHERE user_id = ?
+          )
+          GROUP BY d.id, d.name
+          HAVING total_contents > 0
+          ORDER BY approval_rate DESC, total_contents DESC
+          LIMIT 10
+        `;
+        params.push(userId);
+      }
+
+    const [rows] = await db.execute(sql, params);
+    return res.status(200).json({ status: 'success', data: rows });
+
+  } catch (err) {
+    console.error('getDepartmentStats error:', err);
+    res.status(500).json({ message: 'Error getting department statistics.' });
+  }
+};
+
+const getCommitteeStats = async (req, res) => {
+  try {
+    const auth = req.headers.authorization;
+    if (!auth?.startsWith('Bearer ')) {
+      return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+    }
+    const token = auth.slice(7);
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = payload.id;
+    const userRole = payload.role;
+
+    const permsSet = await getUserPerms(userId);
+    const canViewAll = (userRole === 'admin') || permsSet.has('view_dashboard');
+
+    let sql, params = [];
+          if (canViewAll) {
+        sql = `
+          SELECT
+            c.name AS committee_name,
+            COUNT(cc.id) AS total_contents,
+            SUM(CASE WHEN cc.approval_status = 'approved' THEN 1 ELSE 0 END) AS approved_contents,
+            SUM(CASE WHEN cc.approval_status = 'pending' THEN 1 ELSE 0 END) AS pending_contents,
+            SUM(CASE WHEN cc.approval_status = 'rejected' THEN 1 ELSE 0 END) AS rejected_contents,
+            ROUND((SUM(CASE WHEN cc.approval_status = 'approved' THEN 1 ELSE 0 END) / COUNT(cc.id)) * 100, 1) AS approval_rate
+          FROM committees c
+          LEFT JOIN committee_folders cf ON cf.committee_id = c.id
+          LEFT JOIN committee_contents cc ON cc.folder_id = cf.id
+          GROUP BY c.id, c.name
+          HAVING total_contents > 0
+          ORDER BY approval_rate DESC, total_contents DESC
+          LIMIT 10
+        `;
+      } else {
+        sql = `
+          SELECT
+            c.name AS committee_name,
+            COUNT(cc.id) AS total_contents,
+            SUM(CASE WHEN cc.approval_status = 'approved' THEN 1 ELSE 0 END) AS approved_contents,
+            SUM(CASE WHEN cc.approval_status = 'pending' THEN 1 ELSE 0 END) AS pending_contents,
+            SUM(CASE WHEN cc.approval_status = 'rejected' THEN 1 ELSE 0 END) AS rejected_contents,
+            ROUND((SUM(CASE WHEN cc.approval_status = 'approved' THEN 1 ELSE 0 END) / COUNT(cc.id)) * 100, 1) AS approval_rate
+          FROM committees c
+          LEFT JOIN committee_folders cf ON cf.committee_id = c.id
+          LEFT JOIN committee_contents cc ON cc.folder_id = cf.id
+          WHERE c.id IN (
+            SELECT DISTINCT committee_id
+            FROM committee_members
+            WHERE user_id = ?
+          )
+          GROUP BY c.id, c.name
+          HAVING total_contents > 0
+          ORDER BY approval_rate DESC, total_contents DESC
+          LIMIT 10
+        `;
+        params.push(userId);
+      }
+
+    const [rows] = await db.execute(sql, params);
+    return res.status(200).json({ status: 'success', data: rows });
+
+  } catch (err) {
+    console.error('getCommitteeStats error:', err);
+    res.status(500).json({ message: 'Error getting committee statistics.' });
+  }
+};
+
+const getMonthlyPerformance = async (req, res) => {
+  try {
+    const auth = req.headers.authorization;
+    if (!auth?.startsWith('Bearer ')) {
+      return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+    }
+    const token = auth.slice(7);
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = payload.id;
+    const userRole = payload.role;
+
+    const permsSet = await getUserPerms(userId);
+    const canViewAll = (userRole === 'admin') || permsSet.has('view_dashboard');
+
+    let sql, params = [];
+    if (canViewAll) {
+      sql = `
+        SELECT 
+          DATE_FORMAT(c.created_at, '%Y-%m') AS month,
+          COUNT(c.id) AS total_contents,
+          SUM(CASE WHEN c.is_approved = 1 THEN 1 ELSE 0 END) AS approved_contents,
+          SUM(CASE WHEN c.is_approved = 0 THEN 1 ELSE 0 END) AS pending_contents,
+          ROUND((SUM(CASE WHEN c.is_approved = 1 THEN 1 ELSE 0 END) / COUNT(c.id)) * 100, 1) AS approval_rate
+        FROM contents c
+        WHERE c.created_at >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+        GROUP BY DATE_FORMAT(c.created_at, '%Y-%m')
+        ORDER BY month ASC
+      `;
+    } else {
+      sql = `
+        SELECT 
+          DATE_FORMAT(c.created_at, '%Y-%m') AS month,
+          COUNT(c.id) AS total_contents,
+          SUM(CASE WHEN c.is_approved = 1 THEN 1 ELSE 0 END) AS approved_contents,
+          SUM(CASE WHEN c.is_approved = 0 THEN 1 ELSE 0 END) AS pending_contents,
+          ROUND((SUM(CASE WHEN c.is_approved = 1 THEN 1 ELSE 0 END) / COUNT(c.id)) * 100, 1) AS approval_rate
+        FROM contents c
+        JOIN folders f ON c.folder_id = f.id
+        WHERE c.created_at >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+          AND f.department_id IN (
+            SELECT DISTINCT department_id 
+            FROM user_departments 
+            WHERE user_id = ?
+          )
+        GROUP BY DATE_FORMAT(c.created_at, '%Y-%m')
+        ORDER BY month ASC
+      `;
+      params.push(userId);
+    }
+
+    const [rows] = await db.execute(sql, params);
+    return res.status(200).json({ status: 'success', data: rows });
+
+  } catch (err) {
+    console.error('getMonthlyPerformance error:', err);
+    res.status(500).json({ message: 'Error getting monthly performance.' });
+  }
+};
+
+module.exports = { getStats, getClosedWeek, exportDashboardExcel, getDepartmentStats, getCommitteeStats, getMonthlyPerformance };

@@ -99,6 +99,25 @@ const translations = {
         'enter-en-name': 'ادخل الاسم  بالانجليزية',
         'clear-cache': 'مسح الكاش ميموري',
         
+        // Dashboard Chart Labels
+        'department-statistics': 'إحصائيات الأقسام',
+        'department-approval-rate': 'معدل اعتماد الأقسام',
+        'department-performance': 'أداء الأقسام',
+        'committee-statistics': 'إحصائيات اللجان',
+        'committee-approval-status': 'حالة اعتماد اللجان',
+        'committee-performance': 'أداء اللجان',
+        'monthly-analysis': 'التحليل الشهري',
+        'monthly-trends': 'الاتجاهات الشهرية',
+        'approval-rate': 'معدل الاعتماد',
+        'total-contents': 'إجمالي المحتويات',
+        'rejected-contents': 'المحتويات المرفوضة',
+        'loading-error': 'خطأ في التحميل',
+        'export-excel': 'تصدير Excel',
+        'exporting': 'جاري التصدير...',
+        'export-success': 'تم التصدير بنجاح',
+        'export-error': 'خطأ في التصدير',
+        'please-login': 'يرجى تسجيل الدخول',
+        
         // Names fields
             'first-name': 'الاسم الأول',
     'second-name': 'الاسم الثاني',
@@ -1002,10 +1021,26 @@ const translations = {
         'committee-count': 'عدد اللجان',
         'view-details': 'عرض الحدث',
         'pending-committee-contents': 'محتويات اللجان (قيد الاعتماد)',
-  'accept-all-proxy-confirm': 'هل توافق على قبول جميع التفويضات بالنيابة عن الشخص في جميع الملفات؟',
-'revoke_delegations':'الغاء جميع التفويضات',
-'revoke-delegations':'الغاء جميع التفويضات',
-'all-months': 'جميع الشهور',
+        
+        // New Dashboard Charts
+        'department-statistics': 'إحصائيات الأقسام',
+        'department-approval-rate': 'معدل اعتماد الأقسام',
+        'department-performance': 'أداء الأقسام الشهري',
+        'committee-statistics': 'إحصائيات اللجان',
+        'committee-approval-status': 'حالة اعتماد اللجان',
+        'committee-performance': 'أداء اللجان',
+        'monthly-analysis': 'التحليل الشهري',
+        'monthly-trends': 'الاتجاهات الشهرية للمحتويات',
+        'approval-rate': 'معدل الاعتماد',
+        'total-contents': 'إجمالي المحتويات',
+        'rejected-contents': 'المحتويات المرفوضة',
+        'loading-error': 'خطأ في تحميل البيانات',
+        'export-excel': 'تصدير Excel',
+        'exporting': 'جاري التصدير...',
+        'export-success': 'تم التصدير بنجاح',
+        'export-error': 'خطأ في التصدير',
+        'please-login': 'يرجى تسجيل الدخول',
+
         // Profile Pag
         'profile-title': 'ملفي الشخصي',
         'username-label': 'اسم المستخدم:',
@@ -1232,7 +1267,7 @@ const translations = {
         'harm-level-F-desc': 'An error occurred that may have contributed to, or resulted in temporary harm (minor injury) to the individual and required intervention and initial or prolonged hospitalization.',
         'harm-level-G-desc': 'An error occurred that may have contributed to, or resulted in individual harm (serious injury – prolonged the stay or extensive follow‑up).',
         'harm-level-H-desc': 'An error occurred that resulted in life‑threatening injury or multiple serious injuries causing hospitalization and required intervention necessary to sustain life.',
-        'harm-level-I-desc': 'An error occurred that may have contributed to or resulted in the patient’s death.',
+        'harm-level-I-desc': 'An error occurred that may have contributed to or resulted in the patient\'s death.',
       'good-catch': 'Good Catch',
       
       // Manage Settings
@@ -1360,7 +1395,7 @@ const translations = {
         'error-minor-harm-hospital': 'An error occurred that may have contributed to, or resulted in temporary harm (minor injury) to the individual and required intervention and initial or prolonged hospitalization.',
         'error-serious-harm': 'An error occurred that may have contributed to, or resulted in individual harm (serious injury – prolonged the stay or extensive follow‑up).',
         'error-life-threatening': 'An error occurred that resulted in life‑threatening injury or multiple serious injuries causing hospitalization and required intervention necessary to sustain life.',
-        'error-death': 'An error occurred that may have contributed to or resulted in the patient’s death.',
+        'error-death': 'An error occurred that may have contributed to or resulted in the patient\'s death.',
       // English
 'all-fields-required': 'All fields are required',
 'folder-name-added-success': 'Folder name added successfully',
@@ -1408,7 +1443,7 @@ const translations = {
         // System title
         'system-title': 'Quality and Safety Management System',
 'dashboard-overview': 'Dashboard Overview',
-'delete-folder-name-confirm': 'Are you sure you want to delete this folder name? This will only remove the name from the list and won’t affect any existing contents that uses it.',
+'delete-folder-name-confirm': 'Are you sure you want to delete this folder name? This will only remove the name from the list and won\'t affect any existing contents that uses it.',
 'delete-folder-name-title': 'Delete Folder Name',
         // Login & Register
         'login': 'Login',
@@ -1495,7 +1530,7 @@ const translations = {
         'manage_ovr_settings': 'Manage OVR Settings',
 'edit-content-name': 'Edit Content Name',
 'delete-content-name-title': 'Delete Content Name',
-'delete-content-name-confirm': 'Are you sure you want to delete this content name? This will only remove the name from the list and won’t affect any existing content that uses it.',
+'delete-content-name-confirm': 'Are you sure you want to delete this content name? This will only remove the name from the list and won\'t affect any existing content that uses it.',
         // Approvals
         'approval-list': 'Approval List',
         'approval-details': 'Approval Details',
@@ -2061,6 +2096,25 @@ const translations = {
         'in-progress': 'In Progress',
         'completed': 'Completed',
         'closed': 'Closed',
+        
+        // Dashboard Chart Labels
+        'department-statistics': 'Department Statistics',
+        'department-approval-rate': 'Department Approval Rate',
+        'department-performance': 'Department Performance',
+        'committee-statistics': 'Committee Statistics',
+        'committee-approval-status': 'Committee Approval Status',
+        'committee-performance': 'Committee Performance',
+        'monthly-analysis': 'Monthly Analysis',
+        'monthly-trends': 'Monthly Trends',
+        'approval-rate': 'Approval Rate',
+        'total-contents': 'Total Contents',
+        'rejected-contents': 'Rejected Contents',
+        'loading-error': 'Loading Error',
+        'export-excel': 'Export Excel',
+        'exporting': 'Exporting...',
+        'export-success': 'Export successful',
+        'export-error': 'Export error',
+        'please-login': 'Please login',
 
         // Ticket Details Page Translations
         'view-ticket': 'View OVR',
@@ -2297,6 +2351,26 @@ const translations = {
         'approved-contents': 'Approved Contents',
         'committee-count': 'Committee Count',
         'pending-committee-contents': 'Pending Committee Contents',
+        
+        // New Dashboard Charts
+        'department-statistics': 'Department Statistics',
+        'department-approval-rate': 'Department Approval Rate',
+        'department-performance': 'Department Monthly Performance',
+        'committee-statistics': 'Committee Statistics',
+        'committee-approval-status': 'Committee Approval Status',
+        'committee-performance': 'Committee Performance',
+        'monthly-analysis': 'Monthly Analysis',
+        'monthly-trends': 'Monthly Content Trends',
+        'approval-rate': 'Approval Rate',
+        'total-contents': 'Total Contents',
+        'rejected-contents': 'Rejected Contents',
+        'loading-error': 'Error loading data',
+        'export-excel': 'Export Excel',
+        'exporting': 'Exporting...',
+        'export-success': 'Export successful',
+        'export-error': 'Export error',
+        'please-login': 'Please login',
+        
         // Profile Page
         'profile-title': 'My Profile',
         'username-label': 'Username:',
