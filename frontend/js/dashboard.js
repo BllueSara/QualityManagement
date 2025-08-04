@@ -190,6 +190,30 @@ function makeCardsClickable() {
       });
     }
   }
+
+  // جعل بطاقة عدد المستخدمين قابلة للنقر
+  const totalUsersElement = document.getElementById('total-users');
+  if (totalUsersElement) {
+    const totalUsersCard = totalUsersElement.closest('.stat-card');
+    if (totalUsersCard) {
+      totalUsersCard.style.cursor = 'pointer';
+      totalUsersCard.addEventListener('click', () => {
+        window.location.href = 'permissions.html';
+      });
+    }
+  }
+
+  // جعل بطاقة عدد المشرفين قابلة للنقر
+  const adminCountElement = document.getElementById('admin-count');
+  if (adminCountElement) {
+    const adminCountCard = adminCountElement.closest('.stat-card');
+    if (adminCountCard) {
+      adminCountCard.style.cursor = 'pointer';
+      adminCountCard.addEventListener('click', () => {
+        window.location.href = 'permissions.html';
+      });
+    }
+  }
 }
 
 

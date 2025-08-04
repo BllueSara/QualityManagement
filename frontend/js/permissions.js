@@ -269,7 +269,11 @@ const departmentSelect = document.getElementById('department');
 // زر تعديل معلومات المستخدم
 const btnEditUserInfo = document.getElementById('btn-edit-user-info');
 const editUserModal = document.getElementById('editUserModal');
-const editUserName = document.getElementById('editUserName');
+const editFirstName = document.getElementById('editFirstName');
+const editSecondName = document.getElementById('editSecondName');
+const editThirdName = document.getElementById('editThirdName');
+const editLastName = document.getElementById('editLastName');
+const editUsername = document.getElementById('editUsername');
 const editEmployeeNumber = document.getElementById('editEmployeeNumber');
 const editJobTitle = document.getElementById('editJobTitle');
 const editDepartment = document.getElementById('editDepartment');
@@ -563,7 +567,7 @@ document.querySelector('.user-profile-header')?.classList.add('active');
     if (btnRevokeFiles) {
       btnRevokeFiles.style.display = 'none';
     }
-    return;
+    // لا نضع return هنا لنسمح بتنفيذ showEditUserInfoButton
   }
 
   // أظهر قسم الصلاحيات للمستخدمين غير Admin
@@ -803,12 +807,11 @@ if (btnAdd) {
   btnAdd.addEventListener('click', () => {
     selectedUserId = null;
     document.getElementById('addUserModal').style.display = 'flex';
-document.querySelector('.modal-title').textContent = getTranslation('add-user');
-    ['userName','email','password'].forEach(id => {
+    document.querySelector('.modal-title').textContent = getTranslation('add-user');
+    ['userName','userSecondName','userThirdName','userLastName','email','password'].forEach(id => {
       document.getElementById(id).value = '';
-        fetchDepartments(); // ✅ هنا تستدعي الأقسام وتعبئها
-
     });
+    fetchDepartments(); // ✅ هنا تستدعي الأقسام وتعبئها
   });
 }
 const btnCancel = document.getElementById('cancelAddUser');
@@ -824,20 +827,39 @@ if (btnCancel) {
 const btnSaveUser = document.getElementById('saveUser');
 if (btnSaveUser) {
   btnSaveUser.addEventListener('click', async () => {
+    // جمع الأسماء
+    const firstName = document.getElementById('userName').value.trim();
+    const secondName = document.getElementById('userSecondName').value.trim();
+    const thirdName = document.getElementById('userThirdName').value.trim();
+    const lastName = document.getElementById('userLastName').value.trim();
+    const username = document.getElementById('userName').value.trim();
+    
+    // تحقق من الحقول المطلوبة
+    if (!firstName || !lastName || !username) {
+      showToast('الاسم الأول واسم العائلة واسم المستخدم مطلوبان.', 'warning');
+      return;
+    }
+    
+    // بناء الاسم الكامل
+    const names = [firstName, secondName, thirdName, lastName].filter(name => name);
+    const fullName = names.join(' ');
 
-const data = {
-  name: document.getElementById('userName').value,
-  departmentId: document.getElementById('department').value,
-  email: document.getElementById('email').value,
-  password: document.getElementById('password').value,
-  role: document.getElementById('role')?.value || 'user',
-  employeeNumber: document.getElementById('employeeNumber').value,
-  jobTitle: document.getElementById('jobTitle').value
-};
+    const data = {
+      name: username,
+      first_name: firstName,
+      second_name: secondName,
+      third_name: thirdName,
+      last_name: lastName,
+      departmentId: document.getElementById('department').value,
+      email: document.getElementById('email').value,
+      password: document.getElementById('password').value,
+      role: document.getElementById('role')?.value || 'user',
+      employeeNumber: document.getElementById('employeeNumber').value,
+      jobTitle: document.getElementById('jobTitle').value
+    };
 
-console.log('🚀 departmentId:', data.departmentId);
-
-        console.log('🚀 Sending user data:', data);
+    console.log('🚀 departmentId:', data.departmentId);
+    console.log('🚀 Sending user data:', data);
 
     const method = selectedUserId ? 'PUT' : 'POST';
     const url    = selectedUserId
@@ -1150,8 +1172,10 @@ async function showEditUserInfoButton(u) {
   const payload = JSON.parse(atob(authToken.split('.')[1] || '{}'));
   const myRole = payload.role;
   const myId = payload.id;
-  // إذا كان المستخدم المستهدف admin، فقط admin نفسه يمكنه التعديل
+  
+  // إذا كان المستخدم المستهدف admin
   if (u.role === 'admin') {
+    // فقط admin نفسه يمكنه تعديل معلوماته
     if (myRole === 'admin' && Number(u.id) === Number(myId)) {
       btnEditUserInfo.style.display = '';
     } else {
@@ -1159,7 +1183,8 @@ async function showEditUserInfoButton(u) {
     }
     return;
   }
-  // غير admin: admin أو من لديه الصلاحية
+  
+  // للمستخدمين غير admin: admin أو من لديه الصلاحية يمكنه التعديل
   if (myRole === 'admin' || myPermsSet.has('change_user_info')) {
     btnEditUserInfo.style.display = '';
   } else {
@@ -1171,19 +1196,31 @@ async function showEditUserInfoButton(u) {
 if (btnEditUserInfo) {
   btnEditUserInfo.addEventListener('click', async () => {
     if (!selectedUserId) return;
+    
     // جلب بيانات المستخدم الحالي
     const u = await fetchJSON(`${apiBase}/users/${selectedUserId}`);
     const authToken = localStorage.getItem('token') || '';
     const payload = JSON.parse(atob(authToken.split('.')[1] || '{}'));
+    
     // تحقق: إذا كان المستهدف admin، فقط admin نفسه يمكنه التعديل
     if (u.role === 'admin' && !(payload.role === 'admin' && Number(u.id) === Number(payload.id))) {
+      showToast('لا يمكن تعديل معلومات admin آخر', 'warning');
       return;
     }
-    editUserName.value = u.name || '';
+    
+    // تقسيم الاسم الكامل إلى أسماء منفصلة
+    const nameParts = (u.name || '').split(' ').filter(part => part.trim());
+    editFirstName.value = nameParts[0] || '';
+    editSecondName.value = nameParts[1] || '';
+    editThirdName.value = nameParts[2] || '';
+    editLastName.value = nameParts.slice(3).join(' ') || '';
+    editUsername.value = u.username || '';
+    
     editEmployeeNumber.value = u.employee_number || '';
     editJobTitle.value = u.job_title || '';
     editEmail.value = u.email || '';
     editUserRole = u.role || null;
+    
     // جلب الأقسام وتعبئة الدروب داون
     await fetchDepartmentsForEditModal(u.departmentId, u.departmentName);
     editUserModal.style.display = 'flex';
@@ -1260,13 +1297,43 @@ if (btnCancelEditUser) {
 if (btnSaveEditUser) {
   btnSaveEditUser.addEventListener('click', async () => {
     if (!selectedUserId) return;
+    
+    // جمع الأسماء
+    const firstName = editFirstName.value.trim();
+    const secondName = editSecondName.value.trim();
+    const thirdName = editThirdName.value.trim();
+    const lastName = editLastName.value.trim();
+    const username = editUsername.value.trim();
+    
     // تحقق من الحقول المطلوبة
-    if (!editUserName.value.trim() || !editEmployeeNumber.value.trim() || !editJobTitle.value.trim() || !editDepartment.value || !editEmail.value.trim()) {
-      showToast('جميع الحقول مطلوبة.', 'warning');
-      return;
+    // للادمن: فقط الاسم الأول واسم العائلة واسم المستخدم مطلوبة
+    // للمستخدمين الآخرين: جميع الحقول مطلوبة
+    const isAdmin = editUserRole === 'admin';
+    
+    if (isAdmin) {
+      // للادمن: فقط الحقول الأساسية مطلوبة
+      if (!firstName || !lastName || !username) {
+        showToast('الاسم الأول واسم العائلة واسم المستخدم مطلوبة للادمن.', 'warning');
+        return;
+      }
+    } else {
+      // للمستخدمين الآخرين: جميع الحقول مطلوبة
+      if (!firstName || !lastName || !username || !editEmployeeNumber.value.trim() || !editJobTitle.value.trim() || !editDepartment.value || !editEmail.value.trim()) {
+        showToast('الاسم الأول واسم العائلة واسم المستخدم وجميع الحقول الأخرى مطلوبة.', 'warning');
+        return;
+      }
     }
+    
+    // بناء الاسم الكامل
+    const names = [firstName, secondName, thirdName, lastName].filter(name => name);
+    const fullName = names.join(' ');
+    
     const data = {
-      name: editUserName.value,
+      name: username,
+      first_name: firstName,
+      second_name: secondName,
+      third_name: thirdName,
+      last_name: lastName,
       employee_number: editEmployeeNumber.value,
       job_title: editJobTitle.value,
       departmentId: editDepartment.value,

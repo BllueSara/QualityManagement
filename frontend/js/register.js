@@ -36,9 +36,13 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('register.js script loaded and DOMContentLoaded event fired.');
     const registerForm = document.getElementById('registerForm');
     const departmentSelect = document.getElementById('reg-department');
+    const firstNameInput = document.getElementById('reg-first-name');
+    const secondNameInput = document.getElementById('reg-second-name');
+    const thirdNameInput = document.getElementById('reg-third-name');
+    const lastNameInput = document.getElementById('reg-last-name');
     const usernameInput = document.getElementById('reg-username');
     const departmentGroup = departmentSelect.closest('.form-group');
-  const employeeInput   = document.getElementById('reg-employee');
+    const employeeInput   = document.getElementById('reg-employee');
     const employeeGroup   = employeeInput.closest('.form-group');
 
     // عناصر النموذج المنبثق لإضافة قسم
@@ -65,25 +69,39 @@ function closeModal(modal) {
 }
 
 
-  usernameInput.addEventListener('input', function() {
-    const username = this.value.trim().toLowerCase();
-    if (username === 'admin') {
-      // أخفِ القسم والموظف
-      departmentGroup.style.display = 'none';
-      departmentSelect.removeAttribute('required');
-      departmentSelect.value = '';
+  // دالة لبناء اسم المستخدم من الأسماء للتحقق من admin
+  function buildUsername() {
+    const firstName = firstNameInput.value.trim();
+    const secondName = secondNameInput.value.trim();
+    const thirdName = thirdNameInput.value.trim();
+    const lastName = lastNameInput.value.trim();
+    
+    const names = [firstName, secondName, thirdName, lastName].filter(name => name);
+    return names.join(' ').toLowerCase().replace(/\s+/g, '');
+  }
 
-      employeeGroup.style.display = 'none';
-      employeeInput.removeAttribute('required');
-      employeeInput.value = '';
-    } else {
-      // أعِد ظهورهما
-      departmentGroup.style.display = 'block';
-      departmentSelect.setAttribute('required', 'required');
+  // مراقبة تغييرات الأسماء للتحقق من admin
+  [firstNameInput, secondNameInput, thirdNameInput, lastNameInput].forEach(input => {
+    input.addEventListener('input', function() {
+      const username = buildUsername();
+      if (username === 'admin') {
+        // أخفِ القسم والموظف
+        departmentGroup.style.display = 'none';
+        departmentSelect.removeAttribute('required');
+        departmentSelect.value = '';
 
-      employeeGroup.style.display = 'block';
-      employeeInput.setAttribute('required', 'required');
-    }
+        employeeGroup.style.display = 'none';
+        employeeInput.removeAttribute('required');
+        employeeInput.value = '';
+      } else {
+        // أعِد ظهورهما
+        departmentGroup.style.display = 'block';
+        departmentSelect.setAttribute('required', 'required');
+
+        employeeGroup.style.display = 'block';
+        employeeInput.setAttribute('required', 'required');
+      }
+    });
   });
 
     // دالة لجلب الأقسام من الباك اند وتعبئة قائمة الاختيار
@@ -244,18 +262,33 @@ registerForm.addEventListener('submit', async function(e) {
   e.preventDefault();
   
   // جمع البيانات من النموذج
+  const firstName = firstNameInput.value.trim();
+  const secondName = secondNameInput.value.trim();
+  const thirdName = thirdNameInput.value.trim();
+  const lastName = lastNameInput.value.trim();
+  const username = usernameInput.value.trim();
+  
   const formData = {
-    username: document.getElementById('reg-username').value.trim(),
-    email:    document.getElementById('reg-email').value.trim(),
+    first_name: firstName,
+    second_name: secondName,
+    third_name: thirdName,
+    last_name: lastName,
+    username: username,
+    email: document.getElementById('reg-email').value.trim(),
     password: document.getElementById('reg-password').value,
     department_id: departmentSelect.value,
     employee_number: document.getElementById('reg-employee').value.trim(),
     job_title: document.getElementById('reg-job-title').value.trim()
   };
 
+  // تحقق من الأسماء المطلوبة
+  if (!firstName || !lastName || !username) {
+    showToast('الاسم الأول واسم العائلة واسم المستخدم مطلوبان.', 'warning');
+    return;
+  }
+
   // تحقق من القسم (مال admins)
-  const username = formData.username.toLowerCase();
-  if (username !== 'admin') {
+  if (username.toLowerCase() !== 'admin') {
     if (!formData.department_id || formData.department_id === '__ADD_NEW_DEPARTMENT__') {
       showToast('الرجاء اختيار قسم أو إضافة قسم جديد.', 'warning');
       return;
@@ -270,16 +303,16 @@ registerForm.addEventListener('submit', async function(e) {
   }
 
   // **تحقق من وجود الرقم الوظيفي**
-if (username !== 'admin' && !formData.employee_number) {
-  showToast('الرجاء إدخال الرقم الوظيفي.', 'warning');
-  return;
-}
+  if (username !== 'admin' && !formData.employee_number) {
+    showToast('الرجاء إدخال الرقم الوظيفي.', 'warning');
+    return;
+  }
 
   // **تحقق من وجود المسمى الوظيفي**
-if (username !== 'admin' && !formData.job_title) {
-  showToast('الرجاء إدخال المسمى الوظيفي.', 'warning');
-  return;
-}
+  if (username !== 'admin' && !formData.job_title) {
+    showToast('الرجاء إدخال المسمى الوظيفي.', 'warning');
+    return;
+  }
 
   try {
     const response = await fetch('http://localhost:3006/api/auth/register', {

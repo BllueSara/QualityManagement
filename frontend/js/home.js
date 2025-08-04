@@ -94,10 +94,22 @@ function centerLastVisibleCard() {
 
   // 3) ربط البطاقات
   document.querySelectorAll('.cards-grid .card').forEach(card => {
-    card.addEventListener('click', () => {
-      const url = card.getAttribute('data-url');
-      if (url) window.location.href = url;
-    });
+    // إضافة cursor pointer لجميع البطاقات الظاهرة فقط
+    if (window.getComputedStyle(card).display !== 'none') {
+      card.style.cursor = 'pointer';
+      
+      // التأكد من أن النقر يعمل بشكل صحيح
+      card.addEventListener('click', (e) => {
+        // تحقق من أن البطاقة لا تزال ظاهرة (لم يتم إخفاؤها بسبب الصلاحيات)
+        if (window.getComputedStyle(card).display === 'none') {
+          e.preventDefault();
+          return; // لا تفعل شيئاً إذا كانت البطاقة مخفية
+        }
+        
+        // السماح بالانتقال الطبيعي للرابط
+        // لا حاجة لمنع السلوك الافتراضي أو إعادة التوجيه يدوياً
+      });
+    }
   });
 
   // 4) جلب عدد الإشعارات غير المقروءة
