@@ -68,6 +68,7 @@ const profileName   = document.getElementById('profile-name');
 const profileStatus = document.getElementById('profile-status');
 const profileDept   = document.getElementById('profile-department');
 const profileRoleEl = document.getElementById('profile-role');
+const profileJobTitle = document.getElementById('profile-job-title');
 const permissionsSection = document.querySelector('.permission-section');
 const btnDeleteUser = document.getElementById('btn-delete-user');
 const btnResetPwd   = document.getElementById('btn-reset-password');
@@ -270,6 +271,7 @@ const btnEditUserInfo = document.getElementById('btn-edit-user-info');
 const editUserModal = document.getElementById('editUserModal');
 const editUserName = document.getElementById('editUserName');
 const editEmployeeNumber = document.getElementById('editEmployeeNumber');
+const editJobTitle = document.getElementById('editJobTitle');
 const editDepartment = document.getElementById('editDepartment');
 const editEmail = document.getElementById('editEmail');
 const btnCancelEditUser = document.getElementById('cancelEditUser');
@@ -541,6 +543,7 @@ try {
   profileDept.textContent = '—';
 }
   profileRoleEl.textContent = u.role           || '—';
+  profileJobTitle.textContent = u.job_title    || '—';
 document.querySelector('.user-profile-header')?.classList.add('active');
 
   // دور المستخدم الحالي
@@ -629,6 +632,7 @@ document.querySelector('.user-profile-header')?.classList.add('active');
             const excludedPermissions = [
               'disable_tickets',           // اخفاء الاحداث العارضة
               'disable_departments',       // اخفاء الاقسام
+              'disable_comittees',         // اخفاء اللجان
               'disable_approvals',         // اخفاء الاعتمادات
               'disable_notifications',     // إلغاء الإشعارات
               'disable_emails',            // إلغاء الإيميلات
@@ -827,7 +831,8 @@ const data = {
   email: document.getElementById('email').value,
   password: document.getElementById('password').value,
   role: document.getElementById('role')?.value || 'user',
-  employeeNumber: document.getElementById('employeeNumber').value  // ✅ أضف هذا
+  employeeNumber: document.getElementById('employeeNumber').value,
+  jobTitle: document.getElementById('jobTitle').value
 };
 
 console.log('🚀 departmentId:', data.departmentId);
@@ -1176,6 +1181,7 @@ if (btnEditUserInfo) {
     }
     editUserName.value = u.name || '';
     editEmployeeNumber.value = u.employee_number || '';
+    editJobTitle.value = u.job_title || '';
     editEmail.value = u.email || '';
     editUserRole = u.role || null;
     // جلب الأقسام وتعبئة الدروب داون
@@ -1255,13 +1261,14 @@ if (btnSaveEditUser) {
   btnSaveEditUser.addEventListener('click', async () => {
     if (!selectedUserId) return;
     // تحقق من الحقول المطلوبة
-    if (!editUserName.value.trim() || !editEmployeeNumber.value.trim() || !editDepartment.value || !editEmail.value.trim()) {
+    if (!editUserName.value.trim() || !editEmployeeNumber.value.trim() || !editJobTitle.value.trim() || !editDepartment.value || !editEmail.value.trim()) {
       showToast('جميع الحقول مطلوبة.', 'warning');
       return;
     }
     const data = {
       name: editUserName.value,
       employee_number: editEmployeeNumber.value,
+      job_title: editJobTitle.value,
       departmentId: editDepartment.value,
       email: editEmail.value,
       role: editUserRole

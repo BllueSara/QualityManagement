@@ -887,11 +887,14 @@ if (btnDelegateConfirm) {
       const contentType = document.querySelector(`tr[data-id="${selectedContentId}"]`).dataset.type;
       const endpoint = contentType === 'committee' ? 'committee-approvals' : 'approvals';
       try {
-        await fetchJSON(`${apiBase}/${endpoint}/${selectedContentId}/delegate`, {
+        // استخدام delegate-single بدلاً من delegate لتجنب إضافة المستخدم إلى active_delegations
+        await fetchJSON(`${apiBase}/${endpoint}/delegate-single`, {
           method: 'POST',
           body: JSON.stringify({
             delegateTo: userId,
-            notes: notes
+            notes: notes,
+            contentId: selectedContentId,
+            contentType: contentType
           })
         });
         showToast(getTranslation('success-delegated'), 'success');

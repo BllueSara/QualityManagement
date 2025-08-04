@@ -2,7 +2,6 @@ const mysql = require('mysql2/promise');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
-const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
 
 const { logAction } = require('../models/logger');
 const { insertNotification, sendProxyNotification, sendOwnerApprovalNotification, sendPartialApprovalNotification } = require('../models/notfications-utils');
@@ -282,19 +281,34 @@ async function handleCommitteeApproval(req, res) {
     let delegatedBy = null;
     let isProxy = false;
 
-    // تحقق إذا كان المستخدم مفوض له من active_delegations
+    // تحقق إذا كان المستخدم مفوض له من active_delegations (التفويض الجماعي)
     const [delegationRows] = await db.execute(
       'SELECT user_id FROM active_delegations WHERE delegate_id = ?',
       [currentUserId]
     );
 
+    // تحقق من التفويضات الفردية المقبولة للجان
+    const [singleDelegationRows] = await db.execute(`
+      SELECT delegated_by, signed_as_proxy
+      FROM committee_approval_logs
+      WHERE content_id = ? AND approver_id = ? AND signed_as_proxy = 1 AND status = 'accepted'
+      LIMIT 1
+    `, [contentId, currentUserId]);
+
     if (delegationRows.length) {
       const delegatorId = delegationRows[0].user_id;
       
-      // المستخدم مفوض له - سيتم الاعتماد مرتين تلقائياً
+      // المستخدم مفوض له تفويض جماعي - سيتم الاعتماد مرتين تلقائياً
       // التوقيع الأول: شخصي
       delegatedBy = null;
       isProxy = false;
+    } else if (singleDelegationRows.length) {
+      // المستخدم مفوض له تفويض فردي مقبول
+      const delegatorId = singleDelegationRows[0].delegated_by;
+      
+      // التوقيع بالنيابة عن المفوض الأصلي
+      delegatedBy = delegatorId;
+      isProxy = true;
     } else {
       // المستخدم ليس مفوض له، تحقق من السجلات القديمة
       if (on_behalf_of) {
@@ -650,6 +664,16 @@ async function handleCommitteeApproval(req, res) {
       `, [contentId, approverId]);
     }
 
+    // إزالة التفويض الفردي بعد التوقيع
+    if (singleDelegationRows && singleDelegationRows.length > 0) {
+      await db.execute(`
+        UPDATE committee_approval_logs 
+        SET status = 'completed' 
+        WHERE content_id = ? AND approver_id = ? AND signed_as_proxy = 1 AND status = 'accepted'
+      `, [contentId, currentUserId]);
+      console.log('✅ Single committee delegation marked as completed for user:', currentUserId);
+    }
+
     // الاعتماد النهائي للملف
     if (shouldApproveFile) {
       console.log('🎉 Committee file ready for final approval! Updating file status...');
@@ -940,6 +964,7 @@ async function delegateCommitteeApproval(req, res) {
 }
 
 
+
 /**
  * 5. Get pending approvals where I'm the proxy
  */
@@ -987,99 +1012,281 @@ async function getProxyCommitteeApprovals(req, res) {
  * Helper: generate final signed PDF for committee
  */
 async function generateFinalSignedCommitteePDF(contentId) {
-  const [rows] = await db.execute(
+  // 1) جلب مسار الملف
+  const [fileRows] = await db.execute(
     `SELECT file_path FROM committee_contents WHERE id = ?`,
     [contentId]
   );
-  if (!rows.length) return console.error('Committee content not found');
-
-  const fullPath = path.join(__dirname, '../..', rows[0].file_path);
-  if (!fs.existsSync(fullPath)) return console.error('File not found', fullPath);
-
-  const pdfBytes = fs.readFileSync(fullPath);
-  const pdfDoc   = await PDFDocument.load(pdfBytes);
-
-  // 6) جلب سجلات الاعتماد مع بيانات النيابة
-  const [logs] = await db.execute(`
-    SELECT
-      al.signature,
-      al.electronic_signature,
-      al.signed_as_proxy,
-      al.delegated_by,
-      u_actual.username   AS actual_signer,
-      u_proxy.username    AS original_user,
-      al.comments
-    FROM committee_approval_logs al
-    JOIN users u_actual ON al.approver_id = u_actual.id
-    LEFT JOIN users u_proxy ON al.delegated_by = u_proxy.id
-    WHERE al.content_id = ? AND al.status = 'approved'
-  `, [contentId]);
-
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  let page = pdfDoc.addPage();
-  let y    = 750;
-
-  page.drawText('Committee Signatures Summary', {
-    x: 200, y, size: 20, font, color: rgb(0,0,0)
-  });
-  y -= 40;
-
-  // 7) رسم التوقيعات مع "on behalf of"
-  for (const log of logs) {
-    if (y < 200) { page = pdfDoc.addPage(); y = 750; }
-    const label = log.signed_as_proxy
-      ? `Signed by ${log.actual_signer} on behalf of ${log.original_user}`
-      : `Signed by ${log.actual_signer}`;
-    page.drawText(label, { x: 50, y, size: 14, font });
-    y -= 25;
-
-    // hand signature
-    if (log.signature?.startsWith('data:image')) {
-      const imgBytes = Buffer.from(log.signature.split(',')[1], 'base64');
-      const img      = await pdfDoc.embedPng(imgBytes);
-      const dims     = img.scale(0.4);
-      page.drawImage(img, {
-        x: 150,
-        y: y - dims.height + 10,
-        width: dims.width,
-        height: dims.height
-      });
-      y -= dims.height + 30;
-    }
-
-    // electronic signature
-    if (log.electronic_signature) {
-      const stampPath  = path.join(__dirname, '../e3teamdelc.png');
-      const stampBytes = fs.readFileSync(stampPath);
-      const stampImg   = await pdfDoc.embedPng(stampBytes);
-      const stampDims  = stampImg.scale(0.5);
-      page.drawImage(stampImg, {
-        x: 150,
-        y: y - stampDims.height + 10,
-        width: stampDims.width,
-        height: stampDims.height
-      });
-      y -= stampDims.height + 30;
-    }
-
-    if (log.comments) {
-      page.drawText(`Comments: ${log.comments}`, { x:50, y, size:12, font });
-      y -= 20;
-    }
-
-    page.drawLine({
-      start: { x:50, y },
-      end:   { x:550, y },
-      thickness: 1,
-      color: rgb(0.8,0.8,0.8)
-    });
-    y -= 30;
+  if (!fileRows.length) {
+    return console.error('📁 Committee content not found for ID', contentId);
+  }
+  const relativePath = fileRows[0].file_path;
+  const fullPath = path.join(__dirname, '../..', relativePath);
+  if (!fs.existsSync(fullPath)) {
+    return console.error('❌ File not found on disk:', fullPath);
   }
 
-  // 8) حفظ التعديلات
-  const finalBytes = await pdfDoc.save();
-  fs.writeFileSync(fullPath, finalBytes);
-  console.log('✅ Committee signature page added:', fullPath);
+  // 2) تحميل وثيقة الـ PDF الأصلية
+  let originalPdfBytes;
+  let electronicSealDataUrl;
+  try {
+    originalPdfBytes = fs.readFileSync(fullPath);
+    // قراءة ختم الاعتماد الإلكتروني كـ base64 مرة واحدة
+    const electronicSealBase64 = fs.readFileSync(path.join(__dirname, '../e3teamdelc.png')).toString('base64');
+    electronicSealDataUrl = 'data:image/png;base64,' + electronicSealBase64;
+  } catch (err) {
+    return console.error('❌ Failed to load original PDF or electronic seal:', err);
+  }
+
+  // 3) جلب سجلات الاعتماد بما فيها التفويض مع معلومات إضافية
+  const [logs] = await db.execute(`
+    SELECT
+      al.signed_as_proxy,
+      u_actual.username   AS actual_signer,
+      u_original.username AS original_user,
+      al.signature,
+      al.electronic_signature,
+      al.comments,
+      al.created_at,
+      u_actual.job_title AS signer_job_title,
+      u_original.job_title AS original_job_title
+    FROM committee_approval_logs al
+    JOIN users u_actual
+      ON al.approver_id = u_actual.id
+    LEFT JOIN users u_original
+      ON al.delegated_by = u_original.id
+    WHERE al.content_id = ? AND al.status = 'approved'
+    ORDER BY al.created_at
+  `, [contentId]);
+
+  console.log('Committee PDF logs:', logs); // للتأكد من القيم
+
+  if (!logs.length) {
+    console.warn('⚠️ No approved signatures found for committee content', contentId);
+    return;
+  }
+
+  // 4) إعداد pdfmake
+  const PdfPrinter = require('pdfmake/src/printer');
+  
+  // دالة مساعدة لحل مشكلة ترتيب الكلمات العربية
+  const fixArabicOrder = (text) => {
+    if (typeof text === 'string' && /[\u0600-\u06FF]/.test(text)) {
+      // عكس ترتيب الكلمات للنص العربي لحل مشكلة الترتيب
+      return text.split(' ').reverse().join(' ');
+    }
+    return text;
+  };
+
+  // تعريف خط Amiri العربي
+  const fonts = {
+    Amiri: {
+      normal: path.join(__dirname, '../../fonts/Amiri-Regular.ttf'),
+      bold: path.join(__dirname, '../../fonts/Amiri-Regular.ttf'),
+      italics: path.join(__dirname, '../../fonts/Amiri-Regular.ttf'),
+      bolditalics: path.join(__dirname, '../../fonts/Amiri-Regular.ttf')
+    }
+  };
+
+  let printer;
+  try {
+    printer = new PdfPrinter(fonts);
+  } catch (fontError) {
+    console.log('⚠️ Error with Amiri font, using default fonts');
+    printer = new PdfPrinter();
+  }
+
+  // 5) جلب اسم الملف لعرضه كعنوان
+  const [contentRows] = await db.execute(
+    `SELECT title FROM committee_contents WHERE id = ?`,
+    [contentId]
+  );
+  const fileName = contentRows.length > 0 ? contentRows[0].title : `Committee File ${contentId}`;
+
+  // 6) إنشاء محتوى صفحة الاعتمادات باستخدام pdfmake
+  const approvalTableBody = [];
+  
+  // إضافة رأس الجدول
+  approvalTableBody.push([
+    { text: 'Approvals', style: 'tableHeader' },
+    { text: 'Name', style: 'tableHeader' },
+    { text: 'Position', style: 'tableHeader' },
+    { text: 'Approval Method', style: 'tableHeader' },
+    { text: 'Signature', style: 'tableHeader' },
+    { text: 'Date', style: 'tableHeader' }
+  ]);
+
+  // إضافة بيانات الاعتمادات
+  let rowIndex = 1;
+  const getSignatureCell = (log) => {
+    if (log.signature && log.signature.startsWith('data:image')) {
+      // صورة توقيع يدوي
+      return { image: log.signature, width: 40, height: 20, alignment: 'center' };
+    } else if (log.electronic_signature) {
+      // اعتماد إلكتروني: دائماً صورة الختم
+      return { image: electronicSealDataUrl, width: 40, height: 20, alignment: 'center' };
+    } else {
+      // لا يوجد توقيع
+      return { text: '✓', style: 'tableCell' };
+    }
+  };
+  
+  for (const log of logs) {
+    // نوع الاعتماد
+    const approvalType = rowIndex === 1 ? 'Reviewed' : 
+                        rowIndex === logs.length ? 'Approver' : 'Reviewed';
+    
+    // طريقة الاعتماد
+    const approvalMethod = log.signature ? 'Hand Signature' : 
+                          log.electronic_signature ? 'Electronic Signature' : 'Not Specified';
+    
+    // التاريخ
+    const approvalDate = new Date(log.created_at).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+
+    // إضافة صف الاعتماد مع معالجة النصوص العربية والتواقيع
+    approvalTableBody.push([
+      { text: approvalType, style: 'tableCell' },
+      { text: fixArabicOrder(log.actual_signer || 'N/A'), style: 'tableCell' },
+      { text: fixArabicOrder(log.signer_job_title || 'Not Specified'), style: 'tableCell' },
+      { text: approvalMethod, style: 'tableCell' },
+      getSignatureCell(log),
+      { text: approvalDate, style: 'tableCell' }
+    ]);
+
+    // إذا كان تفويض، أضف صف إضافي للمفوض الأصلي
+    if (log.signed_as_proxy && log.original_user) {
+      approvalTableBody.push([
+        { text: '(Proxy for)', style: 'proxyCell' },
+        { text: fixArabicOrder(log.original_user || 'N/A'), style: 'proxyCell' },
+        { text: fixArabicOrder(log.original_job_title || 'Not Specified'), style: 'proxyCell' },
+        { text: 'Delegated', style: 'proxyCell' },
+        { text: '-', style: 'proxyCell' },
+        { text: '-', style: 'proxyCell' }
+      ]);
+    }
+
+    rowIndex++;
+  }
+
+  // 7) إنشاء تعريف المستند باستخدام pdfmake
+  const docDefinition = {
+    pageSize: 'A4',
+    pageMargins: [40, 60, 40, 60],
+    defaultStyle: {
+      font: 'Amiri',
+      fontSize: 10
+    },
+    styles: {
+      title: {
+        fontSize: 18,
+        bold: true,
+        alignment: 'center',
+        margin: [0, 0, 0, 20]
+      },
+      tableHeader: {
+        bold: true,
+        fontSize: 9,
+        color: 'black',
+        alignment: 'center',
+        fillColor: '#e6e6e6'
+      },
+      tableCell: {
+        fontSize: 8,
+        alignment: 'center'
+      },
+      proxyCell: {
+        fontSize: 8,
+        alignment: 'center',
+        color: '#666666',
+        fillColor: '#f9f9f9'
+      }
+    },
+    content: [
+      // عنوان الملف مع معالجة النص العربي
+      {
+        text: fixArabicOrder(fileName),
+        style: 'title'
+      },
+      // جدول الاعتمادات
+      {
+        table: {
+          headerRows: 1,
+          widths: ['15%', '20%', '20%', '20%', '10%', '15%'],
+          body: approvalTableBody
+        },
+        layout: {
+          hLineWidth: function(i, node) {
+            return 1;
+          },
+          vLineWidth: function(i, node) {
+            return 1;
+          },
+          hLineColor: function(i, node) {
+            return '#000000';
+          },
+          vLineColor: function(i, node) {
+            return '#000000';
+          }
+        }
+      }
+    ]
+  };
+
+  // 8) إنشاء PDF جديد باستخدام pdfmake
+  try {
+    const approvalPdfDoc = printer.createPdfKitDocument(docDefinition);
+    const approvalPdfChunks = [];
+    
+    approvalPdfDoc.on('data', (chunk) => {
+      approvalPdfChunks.push(chunk);
+    });
+    
+    approvalPdfDoc.on('end', async () => {
+      try {
+        const approvalPdfBuffer = Buffer.concat(approvalPdfChunks);
+        
+        // 9) دمج صفحة الاعتمادات مع PDF الأصلي
+        const { PDFDocument } = require('pdf-lib');
+        const mergedPdf = await PDFDocument.create();
+        
+        // إضافة صفحة الاعتمادات
+        const approvalPdfDoc = await PDFDocument.load(approvalPdfBuffer);
+        const approvalPages = await mergedPdf.copyPages(approvalPdfDoc, approvalPdfDoc.getPageIndices());
+        approvalPages.forEach((page) => mergedPdf.addPage(page));
+        
+        // إضافة صفحات PDF الأصلي
+        const originalPdfDoc = await PDFDocument.load(originalPdfBytes);
+        const originalPages = await mergedPdf.copyPages(originalPdfDoc, originalPdfDoc.getPageIndices());
+        originalPages.forEach((page) => mergedPdf.addPage(page));
+        
+        // حفظ PDF المدمج
+        const finalPdfBytes = await mergedPdf.save();
+        fs.writeFileSync(fullPath, finalPdfBytes);
+        console.log(`✅ Committee PDF updated with approval table using pdfmake: ${fullPath}`);
+      } catch (mergeError) {
+        console.error('❌ Error merging committee PDFs:', mergeError);
+        // في حالة فشل الدمج، احفظ صفحة الاعتمادات فقط
+        try {
+          fs.writeFileSync(fullPath, approvalPdfBuffer);
+          console.log(`✅ Saved committee approval page only: ${fullPath}`);
+        } catch (saveError) {
+          console.error('❌ Error saving committee approval page:', saveError);
+        }
+      }
+    });
+    
+    approvalPdfDoc.on('error', (error) => {
+      console.error('❌ Error in committee PDF generation:', error);
+    });
+    
+    approvalPdfDoc.end();
+  } catch (err) {
+    console.error('❌ Error creating committee approval PDF:', err);
+  }
 }
 
 // Helper function to get committee name by language
@@ -1418,9 +1625,341 @@ const getCommitteeDelegationSummaryByUser = async (req, res) => {
   }
 };
 
+// دالة لجلب التفويضات الفردية المعلقة للجان
+const getSingleCommitteeDelegations = async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ status: 'error', message: 'لا يوجد توكن' });
+    jwt.verify(token, process.env.JWT_SECRET);
+    const { userId } = req.params;
+    if (!userId) return res.status(400).json({ status: 'error', message: 'يرجى تحديد المستخدم' });
 
+    // جلب التفويضات الفردية المعلقة من committee_approval_logs (اللجان فقط)
+    const [singleDelegations] = await db.execute(`
+      SELECT 
+        cal.id,
+        cal.content_id,
+        cal.delegated_by,
+        cal.created_at,
+        cal.comments,
+        u.username as delegated_by_name,
+        cc.title as content_title,
+        'committee' as type
+      FROM committee_approval_logs cal
+      JOIN users u ON cal.delegated_by = u.id
+      JOIN committee_contents cc ON cal.content_id = cc.id
+      WHERE cal.approver_id = ? 
+        AND cal.signed_as_proxy = 1 
+        AND cal.status = 'pending'
+        AND cal.content_id IS NOT NULL
+      ORDER BY cal.created_at DESC
+    `, [userId]);
 
+    res.status(200).json({ status: 'success', data: singleDelegations });
+  } catch (err) {
+    console.error('getSingleCommitteeDelegations error:', err);
+    res.status(500).json({ status: 'error', message: 'فشل جلب التفويضات الفردية للجان' });
+  }
+};
 
+// دالة معالجة التفويضات الفردية للجان (قبول/رفض)
+const processSingleCommitteeDelegationUnified = async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ status: 'error', message: 'لا يوجد توكن' });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const currentUserId = decoded.id;
+    
+    const { contentId, action, contentType, reason } = req.body;
+    if (!contentId || !action || !contentType) {
+      return res.status(400).json({ status: 'error', message: 'يرجى تحديد الملف والإجراء والنوع' });
+    }
+
+    // جلب معلومات التفويض
+    const [delegationRows] = await db.execute(`
+      SELECT * FROM committee_approval_logs 
+      WHERE content_id = ? AND approver_id = ? AND signed_as_proxy = 1 AND status = 'pending'
+    `, [contentId, currentUserId]);
+
+    if (delegationRows.length === 0) {
+      return res.status(404).json({ status: 'error', message: 'لم يتم العثور على التفويض' });
+    }
+
+    const delegation = delegationRows[0];
+    const delegatorId = delegation.delegated_by;
+
+    if (action === 'accept') {
+      // قبول التفويض الفردي للجان
+      // تحديث حالة التفويض إلى مقبول
+      await db.execute(`
+        UPDATE committee_approval_logs 
+        SET status = 'accepted' 
+        WHERE id = ?
+      `, [delegation.id]);
+
+      // لا نضيف المستخدم إلى committee_content_approvers بشكل دائم
+      // التفويض الفردي يكون مؤقت فقط لهذا الملف المحدد
+      // سيتم التعامل معه عند التوقيع الفعلي
+
+      // إرسال إشعار للمفوض الأصلي
+      await insertNotification(
+        delegatorId,
+        'single_committee_delegation_accepted',
+        JSON.stringify({ 
+          ar: `تم قبول تفويض ملف اللجنة الفردي من قبل ${currentUserId}`,
+          en: `Single committee file delegation accepted by ${currentUserId}`
+        }),
+        'committee_contents',
+        contentId
+      );
+
+      res.status(200).json({ status: 'success', message: 'تم قبول تفويض ملف اللجنة الفردي بنجاح' });
+
+    } else if (action === 'reject') {
+      // رفض التفويض الفردي للجان
+      // تحديث حالة التفويض إلى مرفوض
+      await db.execute(`
+        UPDATE committee_approval_logs 
+        SET status = 'rejected', comments = ? 
+        WHERE id = ?
+      `, [reason || null, delegation.id]);
+
+      // إعادة المفوض الأصلي إلى committee_content_approvers
+      await db.execute(
+        `INSERT IGNORE INTO committee_content_approvers (content_id, user_id) VALUES (?, ?)`,
+        [contentId, delegatorId]
+      );
+
+      // إرسال إشعار للمفوض الأصلي
+      await insertNotification(
+        delegatorId,
+        'single_committee_delegation_rejected',
+        JSON.stringify({ 
+          ar: `تم رفض تفويض ملف اللجنة الفردي من قبل ${currentUserId}`,
+          en: `Single committee file delegation rejected by ${currentUserId}`
+        }),
+        'committee_contents',
+        contentId
+      );
+
+      res.status(200).json({ status: 'success', message: 'تم رفض تفويض ملف اللجنة الفردي بنجاح' });
+    } else {
+      res.status(400).json({ status: 'error', message: 'إجراء غير صحيح' });
+    }
+
+  } catch (err) {
+    console.error('processSingleCommitteeDelegationUnified error:', err);
+    res.status(500).json({ status: 'error', message: 'فشل معالجة تفويض ملف اللجنة الفردي' });
+  }
+};
+
+// دالة لجلب سجلات التفويضات للجان لمستخدم معين
+const getCommitteeDelegationLogs = async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ status: 'error', message: 'لا يوجد توكن' });
+    jwt.verify(token, process.env.JWT_SECRET);
+    const { userId, delegatorId } = req.params;
+    if (!userId || !delegatorId) return res.status(400).json({ status: 'error', message: 'يرجى تحديد المستخدم والمفوض' });
+
+    // جلب سجلات التفويضات من committee_approval_logs
+    const [delegationLogs] = await db.execute(`
+      SELECT 
+        cal.id,
+        cal.content_id,
+        cal.approver_id,
+        cal.delegated_by,
+        cal.status,
+        cal.signed_as_proxy,
+        cal.created_at,
+        cal.comments,
+        cc.title as content_title,
+        u.username as approver_name,
+        d.username as delegator_name
+      FROM committee_approval_logs cal
+      JOIN committee_contents cc ON cal.content_id = cc.id
+      JOIN users u ON cal.approver_id = u.id
+      JOIN users d ON cal.delegated_by = d.id
+      WHERE cal.approver_id = ? AND cal.delegated_by = ? AND cal.signed_as_proxy = 1
+      ORDER BY cal.created_at DESC
+    `, [userId, delegatorId]);
+
+    res.status(200).json({ status: 'success', data: delegationLogs });
+  } catch (err) {
+    console.error('getCommitteeDelegationLogs error:', err);
+    res.status(500).json({ status: 'error', message: 'فشل جلب سجلات تفويضات اللجان' });
+  }
+};
+
+// دالة فحص نوع التفويض في active_delegations للجان
+const checkActiveCommitteeDelegationType = async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ status: 'error', message: 'لا يوجد توكن' });
+    jwt.verify(token, process.env.JWT_SECRET);
+    
+    const { delegateId, delegatorId } = req.params;
+    if (!delegateId || !delegatorId) {
+      return res.status(400).json({ status: 'error', message: 'يرجى تحديد المعرفات المطلوبة' });
+    }
+
+    // فحص إذا كان هناك تفويض شامل (content_id = NULL)
+    const [bulkCommitteeDelegations] = await db.execute(`
+      SELECT 'bulk' as type
+      FROM committee_approval_logs 
+      WHERE approver_id = ? AND delegated_by = ? AND signed_as_proxy = 1 AND content_id IS NULL AND status = 'pending'
+      LIMIT 1
+    `, [delegateId, delegatorId]);
+
+    // فحص إذا كان هناك تفويض فردي (content_id IS NOT NULL)
+    const [singleCommitteeDelegations] = await db.execute(`
+      SELECT 'single' as type
+      FROM committee_approval_logs 
+      WHERE approver_id = ? AND delegated_by = ? AND signed_as_proxy = 1 AND content_id IS NOT NULL AND status = 'pending'
+      LIMIT 1
+    `, [delegateId, delegatorId]);
+
+    let delegationType = 'bulk'; // افتراضي
+
+    // إذا وجد تفويض شامل، فهو شامل
+    if (bulkCommitteeDelegations.length > 0) {
+      delegationType = 'bulk';
+    }
+    // إذا وجد تفويض فردي فقط، فهو فردي
+    else if (singleCommitteeDelegations.length > 0) {
+      delegationType = 'single';
+    }
+
+    res.status(200).json({ 
+      status: 'success', 
+      data: { 
+        delegationType,
+        hasBulkDelegations: bulkCommitteeDelegations.length > 0,
+        hasSingleDelegations: singleCommitteeDelegations.length > 0
+      }
+    });
+  } catch (err) {
+    console.error('خطأ في فحص نوع التفويض للجان:', err);
+    res.status(500).json({ status: 'error', message: 'فشل فحص نوع التفويض للجان' });
+  }
+};
+
+// دالة التفويض الفردي للجان
+const delegateSingleCommitteeApproval = async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ status: 'error', message: 'لا يوجد توكن' });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const currentUserId = decoded.id;
+    const { delegateTo, notes, contentId, contentType } = req.body;
+    
+    if (!delegateTo || !contentId || !contentType) {
+      return res.status(400).json({ status: 'error', message: 'بيانات مفقودة أو غير صحيحة للتفويض' });
+    }
+    
+    // تحويل contentId من 'comm-42' إلى '42' إذا كان يحتوي على بادئة
+    let cleanContentId = contentId;
+    if (typeof contentId === 'string' && contentId.startsWith('comm-')) {
+      cleanContentId = contentId.replace('comm-', '');
+    }
+    
+    console.log('🔍 Cleaned contentId:', { original: contentId, cleaned: cleanContentId });
+
+    // التحقق من ملف اللجنة
+    console.log('🔍 Checking committee content:', { cleanContentId, contentType });
+    
+    // أولاً، دعنا نرى ما هو موجود في الجدول
+    const [allContentRows] = await db.execute(`
+      SELECT cc.id, cc.title, cc.approval_status, cc.is_approved
+      FROM committee_contents cc 
+      WHERE cc.id = ?
+    `, [cleanContentId]);
+    
+    console.log('🔍 All committee content rows:', allContentRows);
+    
+    if (!allContentRows.length) {
+      return res.status(404).json({ status: 'error', message: 'ملف اللجنة غير موجود' });
+    }
+    
+    const content = allContentRows[0];
+    console.log('🔍 Found committee content:', content);
+    
+    // التحقق من حالة الملف (قد يكون approval_status أو is_approved)
+    const isPending = content.approval_status === 'pending' || content.is_approved === 0;
+    
+    if (!isPending) {
+      return res.status(404).json({ 
+        status: 'error', 
+        message: `ملف اللجنة تم اعتماده مسبقاً. الحالة: ${content.approval_status || content.is_approved}` 
+      });
+    }
+
+    // التحقق من أن المستخدم الحالي معتمد على هذا الملف
+    const [approverRows] = await db.execute(`
+      SELECT * FROM committee_content_approvers 
+      WHERE content_id = ? AND user_id = ?
+    `, [cleanContentId, currentUserId]);
+
+    if (!approverRows.length) {
+      return res.status(403).json({ status: 'error', message: 'ليس لديك صلاحية تفويض هذا الملف' });
+    }
+
+    const contentTitle = content.title;
+
+    // جلب اسم المفوض
+    const [delegatorRows] = await db.execute('SELECT username FROM users WHERE id = ?', [currentUserId]);
+    const delegatorName = delegatorRows.length ? delegatorRows[0].username : '';
+
+    // إضافة المستخدم مباشرة إلى committee_content_approvers
+    await db.execute(
+      'INSERT IGNORE INTO committee_content_approvers (content_id, user_id) VALUES (?, ?)',
+      [cleanContentId, delegateTo]
+    );
+    
+    // إنشاء سجل تفويض بالنيابة للجان
+    await db.execute(`
+      INSERT IGNORE INTO committee_approval_logs (
+        content_id,
+        approver_id,
+        delegated_by,
+        signed_as_proxy,
+        status,
+        comments,
+        created_at
+      ) VALUES (?, ?, ?, 1, 'pending', ?, NOW())
+    `, [cleanContentId, delegateTo, currentUserId, notes || null]);
+    
+    // حذف المفوض الأصلي من committee_content_approvers
+    await db.execute(
+      'DELETE FROM committee_content_approvers WHERE content_id = ? AND user_id = ?',
+      [cleanContentId, currentUserId]
+    );
+
+    // إرسال إشعار للمفوض له
+    await sendProxyNotification(delegateTo, cleanContentId, true);
+
+    // تسجيل الحركة
+    await logAction(
+      currentUserId,
+      'delegate_committee_signature',
+      JSON.stringify({
+        ar: `تم تفويض توقيع ملف اللجنة "${contentTitle}" للمستخدم ${delegateTo}`,
+        en: `Delegated committee file signature "${contentTitle}" to user ${delegateTo}`
+      }),
+      'approval',
+      cleanContentId
+    );
+
+    res.status(200).json({ 
+      status: 'success', 
+      message: 'تم تفويض ملف اللجنة بنجاح' 
+    });
+
+  } catch (err) {
+    console.error('delegateSingleCommitteeApproval error:', err);
+    res.status(500).json({ status: 'error', message: 'فشل تفويض ملف اللجنة' });
+  }
+};
 
 module.exports = {
   getUserPendingCommitteeApprovals,
@@ -1433,6 +1972,11 @@ module.exports = {
   revokeAllCommitteeDelegations,
   revokeCommitteeDelegation,
   getCommitteeDelegationsByUser,
-  getCommitteeDelegationSummaryByUser
+  getCommitteeDelegationSummaryByUser,
+  getSingleCommitteeDelegations,
+  processSingleCommitteeDelegationUnified,
+  getCommitteeDelegationLogs,
+  checkActiveCommitteeDelegationType,
+  delegateSingleCommitteeApproval
 };
 

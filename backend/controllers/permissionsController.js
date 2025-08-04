@@ -428,6 +428,7 @@ const grantAllPermissions = async (req, res) => {
       const excludedPermissions = [
         'disable_tickets',           // اخفاء الاحداث العارضة
         'disable_departments',       // اخفاء الاقسام
+        'disable_comittees',        // اخفاء اللجان
         'disable_approvals',         // اخفاء الاعتمادات
         'disable_notifications',     // إلغاء الإشعارات
         'disable_emails',            // إلغاء الإيميلات

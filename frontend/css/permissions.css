@@ -761,10 +761,11 @@ select::placeholder {
   flex-wrap: wrap; /* يسمح بالالتفاف على الشاشات الضيقة */
 }
 
-/* 2) الشارات (status + القسم + الرول) */
+/* 2) الشارات (status + القسم + الرول + مسمى الوظيفي) */
 .user-profile-header .status,
 #profile-department,
-#profile-role {
+#profile-role,
+#profile-job-title {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -794,6 +795,9 @@ select::placeholder {
 }
 #profile-role {
   background-color: #43a047; /* أخضر للرول */
+}
+#profile-job-title {
+  background-color: #ff9800; /* برتقالي لمسمى الوظيفي */
 }
 
 /* 4) تأكد من ظهور هذه الشارات فقط عند اختيار مستخدم */

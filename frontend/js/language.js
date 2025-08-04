@@ -239,6 +239,8 @@ const translations = {
         // Register specific
         'employee-number': 'الرقم الوظيفي',
         'enter-employee-number': 'أدخل الرقم الوظيفي',
+        'job-title': 'المسمى الوظيفي',
+        'enter-job-title': 'أدخل المسمى الوظيفي',
         'department': 'القسم',
         'select-department': 'اختر القسم',
         'add-new-department': 'إضافة قسم جديد',
@@ -826,7 +828,7 @@ const translations = {
         'add-user-title': 'إضافة مستخدم جديد',
         'user-info': 'معلومات المستخدم',
         'user-name-label': 'اسم المستخدم',
-        'user-name-placeholder': 'أدخل اسم المستخدم',
+        'user-name-placeholder': 'أدخل الاسم الاول والثاني',
         'job-title-label': 'المسمى الوظيفي',
         'job-title-placeholder': 'أدخل المسمى الوظيفي',
         'department-label': 'القسم',
@@ -840,7 +842,7 @@ const translations = {
         'save': 'حفظ',
         'content-name-ar': 'اسم المحتوى (عربي)',
         'content-name-en': 'اسم المحتوى (انجليزي)',
-        'enter-username-only': 'ادخل اسم المستخدم ',
+        'enter-username-only': 'ادخل الاسم الاول والثاني ',
         // Permissions Page (Groups)
         'general-group': 'عامّ',
         'departments-group': 'الأقسام',
@@ -994,6 +996,7 @@ const translations = {
         'logout-success': 'تم تسجيل الخروج بنجاح.',
         'department-label': 'القسم:',
         'employee-number-label': 'رقم الموظف:',
+        'job-title-label': 'المسمى الوظيفي:',
         'selected-file': 'تم اختيار: ',
         'no-files-selected': 'لم يتم اختيار أي ملفات',
         'select-classification': 'اختر تصنيفًا واحدًا على الأقل',
@@ -1340,6 +1343,7 @@ const translations = {
         'click-to-enter': 'Click to Enter',
         'employee-number-label': 'Employee Number:',
         'department-label': 'Department:',
+        'job-title-label': 'Job Title:',
         // System title
         'system-title': 'Quality and Safety Management System',
 'dashboard-overview': 'Dashboard Overview',
@@ -1498,6 +1502,8 @@ const translations = {
         // Register specific
         'employee-number': 'Employee Number',
         'enter-employee-number': 'Enter employee number',
+        'job-title': 'Job Title',
+        'enter-job-title': 'Enter job title',
         'department': 'Department',
         'select-department': 'Select Department',
         'add-new-department': 'Add New Department',
@@ -1538,6 +1544,8 @@ const translations = {
 'delete-content-name': 'Delete Content Name',
         // Committees
                 'disable_notifications': 'Disable Notifications',
+                              'enter-username-only': 'Enter First Name and Last Name',
+        'user-name-placeholder': 'Enter First Name and Last Name',
         'disable_emails': 'Disable Emails',
         'disable_logs': 'Disable Logs',
         'all-months': 'All Months',

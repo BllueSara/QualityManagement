@@ -249,7 +249,8 @@ registerForm.addEventListener('submit', async function(e) {
     email:    document.getElementById('reg-email').value.trim(),
     password: document.getElementById('reg-password').value,
     department_id: departmentSelect.value,
-    employee_number: document.getElementById('reg-employee').value.trim()  // ← هنا
+    employee_number: document.getElementById('reg-employee').value.trim(),
+    job_title: document.getElementById('reg-job-title').value.trim()
   };
 
   // تحقق من القسم (مال admins)
@@ -271,6 +272,12 @@ registerForm.addEventListener('submit', async function(e) {
   // **تحقق من وجود الرقم الوظيفي**
 if (username !== 'admin' && !formData.employee_number) {
   showToast('الرجاء إدخال الرقم الوظيفي.', 'warning');
+  return;
+}
+
+  // **تحقق من وجود المسمى الوظيفي**
+if (username !== 'admin' && !formData.job_title) {
+  showToast('الرجاء إدخال المسمى الوظيفي.', 'warning');
   return;
 }
 
