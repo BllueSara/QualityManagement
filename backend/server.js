@@ -34,6 +34,7 @@ const globalContentRouter = require('./routes/globalContentRoutes');
 const reportsRoutes = require('./routes/reportsRoutes');
 const ticketReportRoutes = require('./routes/ticketReportRoutes');
 const logsRoutes = require('./routes/logsRoutes');
+const jobTitlesRoutes = require('./routes/jobTitles');
 
  
 
@@ -85,6 +86,7 @@ app.use('/api', globalContentRouter); // 👈 هذا يعطيك: /api/content-na
 app.use('/api/reports', reportsRoutes);
 app.use('/api/tickets/report', ticketReportRoutes);
 app.use('/api/logs', logsRoutes);
+app.use('/api/job-titles', jobTitlesRoutes);
 
 // Ensure all committee routes are correctly loaded
 

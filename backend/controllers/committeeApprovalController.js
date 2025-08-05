@@ -1056,13 +1056,17 @@ async function generateFinalSignedCommitteePDF(contentId) {
       al.electronic_signature,
       al.comments,
       al.created_at,
-      u_actual.job_title AS signer_job_title,
-      u_original.job_title AS original_job_title
+      jt_actual.title AS signer_job_title,
+      jt_original.title AS original_job_title
     FROM committee_approval_logs al
     JOIN users u_actual
       ON al.approver_id = u_actual.id
+    LEFT JOIN job_titles jt_actual
+      ON u_actual.job_title_id = jt_actual.id
     LEFT JOIN users u_original
       ON al.delegated_by = u_original.id
+    LEFT JOIN job_titles jt_original
+      ON u_original.job_title_id = jt_original.id
     WHERE al.content_id = ? AND al.status = 'approved'
     ORDER BY al.created_at
   `, [contentId]);
