@@ -98,6 +98,7 @@ const translations = {
         'enter-ar-name': 'ادخل الاسم  بالعربية',
         'enter-en-name': 'ادخل الاسم  بالانجليزية',
         'clear-cache': 'مسح الكاش ميموري',
+        'select-section': 'تحديد القسم',
         
         // Dashboard Chart Labels
         'department-statistics': 'إحصائيات الأقسام',
@@ -1337,6 +1338,7 @@ const translations = {
       'department-or-committee': 'Department or Committee',
               'select-files-to-revoke': 'Select files to revoke',
         'clear-cache': 'Clear Cache Memory',
+        'select-section': 'Select Section',
         
         // Names fields
         'first-name': 'First Name',

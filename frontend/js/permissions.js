@@ -898,6 +898,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   loadUsers();
   initializeCommitteesDropdown();
+  initializeSectionButtons();
   
   // إخفاء زر سحب الملفات في البداية
   if (btnRevokeFiles) {
@@ -1823,3 +1824,164 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeJobTitlesForAddUser();
   initializeAddJobTitleFromUserModal();
 });
+
+// =====================
+// Section Selection Buttons
+// =====================
+
+// تعريف الصلاحيات لكل قسم مع الاستثناءات
+const sectionPermissions = {
+  general: [
+    'view_logs',
+    'view_dashboard', 
+    'view_reports'
+  ],
+  departments: [
+    'add_section',
+    'edit_section', 
+    'delete_section'
+    // استثناء: view_own_department
+  ],
+  folder: [
+    'add_folder',
+    'add_folder_name',
+    'edit_folder',
+    'edit_folder_name',
+    'delete_folder',
+    'delete_folder_name'
+  ],
+  content: [
+    'add_content',
+    'add_old_content',
+    'edit_content',
+    'delete_content'
+  ],
+  committees: [
+    'add_committee',
+    'edit_committee',
+    'delete_committee'
+    // استثناء: view_own_committees
+  ],
+  'committee-folders': [
+    'add_folder_committee',
+    'add_folder_committee_name',
+    'edit_folder_committee',
+    'edit_folder_committee_name',
+    'delete_folder_committee',
+    'delete_folder_committee_name'
+  ],
+  'committee-content': [
+    'add_content_committee',
+    'add_approved_content_committee',
+    'edit_content_committee',
+    'delete_content_committee'
+  ],
+  tickets: [
+    'view_tickets',
+    'transfer_tickets',
+    'track_tickets',
+    'delete_ticket',
+    'edit_ticket',
+    'manage_ovr_settings'
+  ],
+  'ticket-reports': [
+    'view_all_reports_tickets',
+    'download_reports_tickets'
+    // استثناء: view_reports_by_person_tickets
+  ],
+  approvals: [
+    'view_credits',
+    'transfer_credits',
+    'track_credits'
+  ],
+  'approval-reports': [
+    'view_all_reports_approvals',
+    'download_reports_approvals'
+    // استثناء: view_reports_by_person_approvals
+  ],
+  signature: [
+    'sign',
+    'sign_on_behalf',
+    'delegate_all',
+    'revoke_delegations'
+  ],
+  accounts: [
+    'add_user',
+    'change_status',
+    'change_role',
+    'delete_user',
+    'change_password',
+    'change_user_info'
+  ]
+};
+
+// تهيئة أزرار تحديد الأقسام
+function initializeSectionButtons() {
+  const sectionButtons = document.querySelectorAll('.btn-select-section');
+  
+  sectionButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const section = button.dataset.section;
+      selectSectionPermissions(section);
+    });
+  });
+}
+
+// تحديد صلاحيات قسم معين
+async function selectSectionPermissions(section) {
+  if (!selectedUserId) {
+    showToast(getTranslation('please-select-user') || 'الرجاء اختيار مستخدم أولاً', 'warning');
+    return;
+  }
+
+  const permissions = sectionPermissions[section];
+  if (!permissions) {
+    showToast('قسم غير معروف', 'error');
+    return;
+  }
+
+  try {
+    // تحديد جميع الصلاحيات في القسم
+    const promises = permissions.map(permission => 
+      fetchJSON(`${apiBase}/users/${selectedUserId}/permissions/${encodeURIComponent(permission)}`, {
+        method: 'POST'
+      })
+    );
+
+    await Promise.all(promises);
+
+    // تحديث الواجهة
+    permissions.forEach(permission => {
+      const checkbox = document.querySelector(`label.switch[data-key="${permission}"] input[type="checkbox"]`);
+      if (checkbox) {
+        checkbox.checked = true;
+      }
+    });
+
+    showToast(`تم تحديد جميع صلاحيات قسم ${getSectionName(section)}`, 'success');
+  } catch (error) {
+    console.error('خطأ في تحديد صلاحيات القسم:', error);
+    showToast('فشل في تحديد صلاحيات القسم: ' + error.message, 'error');
+  }
+}
+
+// الحصول على اسم القسم باللغة الحالية
+function getSectionName(section) {
+  const sectionNames = {
+    general: getTranslation('general-group') || 'عامّ',
+    departments: getTranslation('departments-group') || 'الأقسام',
+    folder: getTranslation('folder-group') || 'المجلد',
+    content: getTranslation('content-group') || 'المحتوى',
+    committees: getTranslation('committees-group') || 'اللجان',
+    'committee-folders': getTranslation('committee-folders-group') || 'مجلدات اللجان',
+    'committee-content': getTranslation('committee-content-group') || 'محتوى اللجان',
+    tickets: getTranslation('tickets-group') || 'التذاكر',
+    'ticket-reports': getTranslation('report-group-tickets') || 'تقارير التذاكر',
+    approvals: getTranslation('approvals-group') || 'الاعتمادات',
+    'approval-reports': getTranslation('report-group-approvals') || 'تقارير الاعتمادات',
+    signature: getTranslation('signature-group') || 'التوقيع',
+    accounts: getTranslation('accounts-group') || 'الحسابات'
+  };
+  
+  return sectionNames[section] || section;
+}
