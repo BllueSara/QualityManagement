@@ -101,8 +101,7 @@ async function loadPendingApprovals() {
   ]);
 
   // DEBUG: Log raw data from backend
-  console.log('DEBUG: Raw Department Pending Approvals Data:', JSON.parse(JSON.stringify(departmentApprovals)));
-  console.log('DEBUG: Raw Committee Pending Approvals Data:', JSON.parse(JSON.stringify(committeeApprovals)));
+  
 
   const uniqueApprovalsMap = new Map();
   
@@ -119,7 +118,7 @@ async function loadPendingApprovals() {
   const rawApprovals = Array.from(uniqueApprovalsMap.values());
 
   // DEBUG: Log rawApprovals after initial mapping and de-duplication
-  console.log('DEBUG: Raw Approvals after initial mapping and de-duplication:', JSON.parse(JSON.stringify(rawApprovals)));
+  
 
   const tbody = document.querySelector('.approvals-table tbody');
   tbody.innerHTML = '';
@@ -174,6 +173,7 @@ async function loadPendingApprovals() {
       ? item.approvers_required
       : JSON.parse(item.approvers_required || '[]');
     tr.dataset.assignedIds = JSON.stringify(assignedApproverIds);
+    
 
     // 4) الغِ innerHTML القديمة أو أضف فوقها
     tr.innerHTML = `
@@ -209,6 +209,9 @@ ${parseLocalizedName(item.title)}
           ${hasApprovers ? getTranslation('add-more') : getTranslation('send')}
           <span style="font-size: 10px; margin-left: 4px; opacity: 0.8;">(${getTranslation('sequential')})</span>
         </button>
+                 <button class="btn-deadline" data-content-id="${item.id}" data-content-type="${item.type}" data-content-title="${item.title}" data-source-name="${item.source_name || ''}" title="${getTranslation('set-deadline')}">
+           <i class="bi bi-clock"></i> ${getTranslation('set-deadline')}
+         </button>
         ${item.file_path
           ? `<button class="btn-view" data-file-path="${item.file_path}" style="margin-right:5px;padding:6px 12px;">
                <i class="bi bi-eye"></i> ${getTranslation('view')}
@@ -266,7 +269,7 @@ ${parseLocalizedName(item.title)}
         let filePath = item.file_path;
         
         // للتأكد من القيمة
-        console.log('DEBUG: item.file_path =', filePath);
+
 
         // استخدام نفس منطق approvals-recived.js
         const baseApiUrl = apiBase.replace('/api', '');
@@ -290,12 +293,26 @@ ${parseLocalizedName(item.title)}
         }
 
         const url = `${fileBaseUrl}/${filePath}`;
-        console.log('DEBUG: Final URL =', url);
-        window.open(url, '_blank');
-      });
-    }
-  });
-}
+
+                 window.open(url, '_blank');
+       });
+     }
+
+     // إضافة event listener لزر المواعيد النهائية
+     const deadlineButton = tr.querySelector('.btn-deadline');
+     if (deadlineButton) {
+       deadlineButton.addEventListener('click', (e) => {
+         e.preventDefault();
+         const contentId = deadlineButton.dataset.contentId;
+         const contentType = deadlineButton.dataset.contentType;
+         const contentTitle = deadlineButton.dataset.contentTitle;
+         const sourceName = deadlineButton.dataset.sourceName;
+         
+         openDeadlineModal(contentId, contentType, contentTitle, sourceName);
+       });
+     }
+   });
+ }
 
 async function initDropdowns() {
   const departments = await fetchJSON(`${apiBase}/departments/all`);
@@ -681,3 +698,230 @@ function parseLocalizedName(name) {
     return name;
   }
 }
+
+// ===== وظائف المواعيد النهائية =====
+
+let currentDeadlineData = {
+  contentId: null,
+  contentType: null,
+  contentTitle: null,
+  sourceName: null
+};
+
+// فتح النافذة المنبثقة للمواعيد النهائية
+async function openDeadlineModal(contentId, contentType, contentTitle, sourceName) {
+  try {
+    currentDeadlineData = {
+      contentId,
+      contentType,
+      contentTitle,
+      sourceName
+    };
+
+    // تحديث معلومات المحتوى في النافذة
+    document.getElementById('deadlineContentTitle').textContent = `${getTranslation('title')}: ${parseLocalizedName(contentTitle)}`;
+    document.getElementById('deadlineContentType').textContent = `${getTranslation('type')}: ${contentType === 'committee' ? getTranslation('committee-file') : getTranslation('department-report')}`;
+    // جلب المعتمدين الحاليين
+    let row = document.querySelector(`tr[data-id="${contentId}"]`);
+    if (!row) {
+      // إذا لم يتم العثور على الصف، جرب البحث بالبادئة
+      const prefix = contentType === 'department' ? 'dept-' : 'comm-';
+      const prefixedId = `${prefix}${contentId}`;
+      row = document.querySelector(`tr[data-id="${prefixedId}"]`);
+    }
+    if (!row) {
+      showToast('لم يتم العثور على بيانات المحتوى', 'error');
+      return;
+    }
+
+    const assignedNames = JSON.parse(row.dataset.assignedNames || '[]');
+    const assignedIds = JSON.parse(row.dataset.assignedIds || '[]');
+
+    if (assignedNames.length === 0) {
+      showToast('لا يوجد معتمدين محددين لهذا المحتوى', 'error');
+      return;
+    }
+
+    // إذا كانت assignedIds فارغة ولكن assignedNames موجودة، نحتاج لجلب الـ IDs
+    if (assignedIds.length === 0 && assignedNames.length > 0) {
+      showToast('يتم جلب بيانات المعتمدين...', 'info');
+      
+      try {
+        // جلب الـ IDs من الخادم
+        const response = await fetch(`${apiBase}/users/get-ids-by-names`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+          },
+          body: JSON.stringify({ names: assignedNames })
+        });
+        
+                 if (response.ok) {
+           const data = await response.json();
+           if (data.userIds && data.userIds.length > 0) {
+             // تحديث assignedIds
+             assignedIds.length = 0;
+             assignedIds.push(...data.userIds);
+           }
+         }
+      } catch (error) {
+        console.error('Error fetching user IDs:', error);
+        showToast('فشل في جلب بيانات المعتمدين', 'error');
+        return;
+      }
+    }
+
+    // بناء قائمة المعتمدين في النافذة
+    const deadlineList = document.getElementById('deadlineList');
+    deadlineList.innerHTML = '';
+
+    for (let i = 0; i < assignedNames.length; i++) {
+      const name = assignedNames[i];
+      const userId = assignedIds[i];
+      
+      const deadlineItem = document.createElement('div');
+      deadlineItem.className = 'deadline-item';
+      deadlineItem.innerHTML = `
+        <div class="deadline-item-info">
+          <div class="deadline-item-name">${i + 1}. ${name}</div>
+          <div class="deadline-item-department">${getTranslation('approver')}</div>
+        </div>
+        <div class="deadline-time-inputs">
+          <div class="deadline-time-group">
+            <label>${getTranslation('days')}</label>
+            <input type="number" class="deadline-time-input" id="days_${userId}" min="0" max="365" value="1">
+          </div>
+          <div class="deadline-time-group">
+            <label>${getTranslation('hours')}</label>
+            <input type="number" class="deadline-time-input" id="hours_${userId}" min="0" max="23" value="0">
+          </div>
+          <div class="deadline-time-group">
+            <label>${getTranslation('minutes')}</label>
+            <input type="number" class="deadline-time-input" id="minutes_${userId}" min="0" max="59" value="0">
+          </div>
+        </div>
+      `;
+      deadlineList.appendChild(deadlineItem);
+    }
+
+    // عرض النافذة المنبثقة
+    document.getElementById('deadlineModal').style.display = 'block';
+
+  } catch (error) {
+    console.error('Error opening deadline modal:', error);
+    showToast('حدث خطأ أثناء فتح نافذة المواعيد النهائية', 'error');
+  }
+}
+
+// إغلاق النافذة المنبثقة
+function closeDeadlineModal() {
+  document.getElementById('deadlineModal').style.display = 'none';
+  currentDeadlineData = {
+    contentId: null,
+    contentType: null,
+    contentTitle: null,
+    sourceName: null
+  };
+}
+
+// حفظ المواعيد النهائية
+async function saveDeadlines() {
+  try {
+    const { contentId, contentType } = currentDeadlineData;
+    
+    if (!contentId || !contentType) {
+      showToast('بيانات غير صحيحة', 'error');
+      return;
+    }
+
+    let row = document.querySelector(`tr[data-id="${contentId}"]`);
+    if (!row) {
+      // إذا لم يتم العثور على الصف، جرب البحث بالبادئة
+      const prefix = contentType === 'department' ? 'dept-' : 'comm-';
+      const prefixedId = `${prefix}${contentId}`;
+      row = document.querySelector(`tr[data-id="${prefixedId}"]`);
+    }
+    if (!row) {
+      showToast('لم يتم العثور على بيانات المحتوى', 'error');
+      return;
+    }
+
+    const assignedIds = JSON.parse(row.dataset.assignedIds || '[]');
+    const deadlines = [];
+
+    // جمع البيانات من النافذة
+    for (const userId of assignedIds) {
+      const daysInput = document.getElementById(`days_${userId}`);
+      const hoursInput = document.getElementById(`hours_${userId}`);
+      const minutesInput = document.getElementById(`minutes_${userId}`);
+      
+      if (daysInput && hoursInput && minutesInput) {
+        const days = parseInt(daysInput.value) || 0;
+        const hours = parseInt(hoursInput.value) || 0;
+        const minutes = parseInt(minutesInput.value) || 0;
+        
+        if (days > 0 || hours > 0 || minutes > 0) {
+          deadlines.push({
+            approverId: userId,
+            days,
+            hours,
+            minutes
+          });
+        }
+      }
+    }
+
+    if (deadlines.length === 0) {
+      showToast('يرجى تحديد وقت (أيام، ساعات، أو دقائق) لمعتمد واحد على الأقل', 'warning');
+      return;
+    }
+
+    // إرسال البيانات إلى الخادم
+    const response = await fetch(`${apiBase}/deadlines/set-deadlines`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+      },
+      body: JSON.stringify({
+        contentId,
+        contentType,
+        deadlines
+      })
+    });
+
+    const responseData = await response.json();
+
+    if (responseData.status === 'success') {
+      showToast('تم تعيين المواعيد النهائية بنجاح', 'success');
+      closeDeadlineModal();
+      
+      // تحديث الواجهة لعرض المواعيد النهائية
+      await loadPendingApprovals();
+    } else {
+      showToast('فشل في تعيين المواعيد النهائية', 'error');
+    }
+
+  } catch (error) {
+    console.error('Error saving deadlines:', error);
+    showToast('حدث خطأ أثناء حفظ المواعيد النهائية', 'error');
+  }
+}
+
+// إغلاق النافذة المنبثقة عند النقر خارجها
+document.addEventListener('click', function(event) {
+  const modal = document.getElementById('deadlineModal');
+  const modalContent = document.querySelector('.deadline-modal-content');
+  
+  if (event.target === modal) {
+    closeDeadlineModal();
+  }
+});
+
+// إغلاق النافذة المنبثقة عند الضغط على ESC
+document.addEventListener('keydown', function(event) {
+  if (event.key === 'Escape') {
+    closeDeadlineModal();
+  }
+});

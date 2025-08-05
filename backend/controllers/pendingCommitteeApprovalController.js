@@ -92,7 +92,7 @@ exports.getPendingApprovals = async (req, res) => {
             cf.name AS folder_name,
             u.username AS created_by_username,
             'committee' AS type,
-            CAST(cc.approvers_required AS CHAR) AS approvers_required,
+            cc.approvers_required,
             cc.created_at
         FROM committee_contents cc
         JOIN committee_folders cf ON cc.folder_id = cf.id

@@ -35,6 +35,7 @@ const reportsRoutes = require('./routes/reportsRoutes');
 const ticketReportRoutes = require('./routes/ticketReportRoutes');
 const logsRoutes = require('./routes/logsRoutes');
 const jobTitlesRoutes = require('./routes/jobTitles');
+const deadlineRoutes = require('./routes/deadlineRoutes');
 
  
 
@@ -87,6 +88,7 @@ app.use('/api/reports', reportsRoutes);
 app.use('/api/tickets/report', ticketReportRoutes);
 app.use('/api/logs', logsRoutes);
 app.use('/api/job-titles', jobTitlesRoutes);
+app.use('/api/deadlines', deadlineRoutes);
 
 // Ensure all committee routes are correctly loaded
 
@@ -110,7 +112,7 @@ const cleanupOldLogs = async () => {
     });
     
     // حذف جميع السجلات بالنيابة التي لا تتوافق مع active_delegations
-    await pool.execute(`
+    const [result] = await pool.execute(`
       DELETE FROM approval_logs 
       WHERE signed_as_proxy = 1 
       AND delegated_by IS NOT NULL
@@ -119,16 +121,152 @@ const cleanupOldLogs = async () => {
         FROM active_delegations ad
       )
     `);
-    console.log('✅ تم تنظيف السجلات القديمة من approval_logs عند بدء التطبيق');
     await pool.end();
   } catch (err) {
-    console.error('❌ خطأ في تنظيف approval_logs:', err);
+    // يمكن إبقاء رسالة الخطأ الأساسية فقط
+    console.error('خطأ في تنظيف approval_logs:', err);
+  }
+};
+
+// إضافة scheduler للمواعيد النهائية
+const deadlineModel = require('./models/deadlineModel');
+const { insertNotification } = require('./models/notfications-utils');
+
+// إنشاء جدول المواعيد النهائية عند بدء التطبيق
+deadlineModel.createDeadlinesTable().then(() => {
+  // console.log('✅ Deadlines table created/verified successfully');
+}).catch(err => {
+  // console.error('❌ Error creating deadlines table:', err);
+});
+
+// دالة لاستخراج النص العربي من JSON object (للإيميل)
+function extractArabicText(text) {
+  if (!text) return '';
+  
+  try {
+    // محاولة تحليل النص كـ JSON
+    const parsed = JSON.parse(text);
+    if (parsed && typeof parsed === 'object') {
+      // إذا كان JSON object، استخدم النص العربي
+      return parsed.ar || parsed.arabic || text;
+    }
+  } catch (e) {
+    // إذا لم يكن JSON، استخدم النص كما هو
+  }
+  
+  return text;
+}
+
+// دالة للحفاظ على JSON object كما هو (للإشعارات)
+function preserveJsonText(text) {
+  if (!text) return '';
+  
+  try {
+    // محاولة تحليل النص كـ JSON
+    const parsed = JSON.parse(text);
+    if (parsed && typeof parsed === 'object') {
+      // إذا كان JSON object، احتفظ به كما هو
+      return text;
+    }
+  } catch (e) {
+    // إذا لم يكن JSON، استخدم النص كما هو
+  }
+  
+  return text;
+}
+
+// دالة فحص المواعيد النهائية المنتهية الصلاحية
+const checkExpiredDeadlines = async () => {
+  try {
+    const expiredDeadlines = await deadlineModel.getExpiredDeadlines();
+    
+    for (const deadline of expiredDeadlines) {
+      await deadlineModel.updateDeadlineStatus(deadline.id, 'expired');
+      
+      // بناء رسالة الإشعار حسب نوع المحتوى
+      let notificationMessage;
+      
+      if (deadline.content_type === 'department') {
+        // للمحتوى من قسم: إظهار نوع القسم + اسم القسم + نوع المحتوى
+        let departmentName = deadline.department_or_committee_name || deadline.source_name;
+        const contentTypeName = deadline.content_type_name || '';
+        const departmentType = deadline.department_type || 'department';
+        
+        // ترجمة نوع القسم
+        let typeText;
+        switch (departmentType) {
+          case 'administration':
+            typeText = 'إدارة';
+            break;
+          case 'executive_administration':
+            typeText = 'إدارة تنفيذية';
+            break;
+          default:
+            typeText = 'قسم';
+        }
+        
+        // رسالة للإشعارات (تحتوي على JSON object)
+        const notificationDepartmentName = preserveJsonText(departmentName);
+        const notificationMessage = `انتهت مهلة الاعتماد للمحتوى "${deadline.content_title}" من ${typeText} "${notificationDepartmentName}". يرجى مراجعة المحتوى والاعتماد عليه في أقرب وقت ممكن.`;
+        
+        // رسالة للإيميل (تحتوي على النص العربي)
+        const emailDepartmentName = extractArabicText(departmentName);
+        const emailMessage = `انتهت مهلة الاعتماد للمحتوى "${deadline.content_title}" من ${typeText} "${emailDepartmentName}". يرجى مراجعة المحتوى والاعتماد عليه في أقرب وقت ممكن.`;
+        
+        await insertNotification(
+          deadline.approver_id,
+          'انتهت مهلة الاعتماد',
+          notificationMessage,
+          'alert',
+          { emailMessage } // تمرير رسالة الإيميل المنفصلة
+        );
+      } else {
+        // للمحتوى من لجنة: إظهار اسم اللجنة فقط (لأنه يبدأ بـ "لجنة")
+        let committeeName = deadline.department_or_committee_name || deadline.source_name;
+        
+        // رسالة للإشعارات (تحتوي على JSON object)
+        const notificationCommitteeName = preserveJsonText(committeeName);
+        const notificationMessage = `انتهت مهلة الاعتماد للمحتوى "${deadline.content_title}" من "${notificationCommitteeName}". يرجى مراجعة المحتوى والاعتماد عليه في أقرب وقت ممكن.`;
+        
+        // رسالة للإيميل (تحتوي على النص العربي)
+        const emailCommitteeName = extractArabicText(committeeName);
+        const emailMessage = `انتهت مهلة الاعتماد للمحتوى "${deadline.content_title}" من "${emailCommitteeName}". يرجى مراجعة المحتوى والاعتماد عليه في أقرب وقت ممكن.`;
+        
+        await insertNotification(
+          deadline.approver_id,
+          'انتهت مهلة الاعتماد',
+          notificationMessage,
+          'alert',
+          { emailMessage } // تمرير رسالة الإيميل المنفصلة
+        );
+      }
+    }
+  } catch (error) {
+    console.error('خطأ في فحص المواعيد النهائية:', error);
+  }
+};
+
+// تشغيل فحص المواعيد النهائية كل 5 دقائق
+setInterval(checkExpiredDeadlines, 5 * 60 * 1000);
+
+// إنشاء جدول المواعيد النهائية عند بدء التطبيق
+const initializeDeadlines = async () => {
+  try {
+    await deadlineModel.createDeadlinesTable();
+  } catch (error) {
+    console.error('خطأ في إنشاء جدول المواعيد النهائية:', error);
   }
 };
 
 const PORT = process.env.PORT || 3006;
 app.listen(PORT, async () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-  // تنظيف السجلات القديمة عند بدء التطبيق
-  await cleanupOldLogs();
+  try {
+      console.log(`Server running on http://localhost:${PORT}`);
+
+    await cleanupOldLogs();
+    await initializeDeadlines();
+    await checkExpiredDeadlines();
+  } catch (error) {
+    console.error('خطأ في تهيئة النظام:', error);
+  }
 });

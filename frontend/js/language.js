@@ -68,6 +68,25 @@ const translations = {
         'add-more': 'إضافة معتمدين جدد',
         'no-new-approvers': 'لا يوجد معتمدين جدد لإرسالهم',
         'add-more-success': 'تم إضافة معتمدين جدد بنجاح',
+        
+        // المواعيد النهائية
+        'set-deadline': 'تحديد وقت',
+        'set-deadlines': 'تحديد المواعيد النهائية',
+        'content-info': 'معلومات المحتوى',
+        'approver': 'معتمد',
+        'days': 'أيام',
+        'hours': 'ساعات',
+        'cancel': 'إلغاء',
+        'save': 'حفظ',
+        'deadline-set-success': 'تم تعيين المواعيد النهائية بنجاح',
+        'deadline-set-failed': 'فشل في تعيين المواعيد النهائية',
+        'deadline-save-error': 'حدث خطأ أثناء حفظ المواعيد النهائية',
+        'deadline-no-approvers': 'لا يوجد معتمدين محددين لهذا المحتوى',
+        'deadline-content-not-found': 'لم يتم العثور على بيانات المحتوى',
+        'deadline-invalid-data': 'بيانات غير صحيحة',
+        'deadline-select-time': 'يرجى تحديد وقت لمعتمد واحد على الأقل',
+        'deadline-expired': 'انتهت مهلة الاعتماد',
+        'deadline-expired-message': 'انتهت مهلة الاعتماد للمحتوى "{title}" من {source}. يرجى مراجعة المحتوى والاعتماد عليه في أقرب وقت ممكن.',
 
 'view_reports' : 'عرض التقارير',
 'report-group-tickets' : 'تقارير الاحداث العارضة',
@@ -305,7 +324,7 @@ const translations = {
         'revoke-delegations': 'الغاء جميع التفويضات ',
         // Labels
         'identifier-label': 'اسم المستخدم / البريد / الرقم الوظيفي',
-        
+        'pending-approvals-subtitle':'الملفات التي تحتاج إلى مراجعة واعتماد من قبلك',
         // Placeholders
         'enter-username': 'اسم المستخدم / البريد / الرقم الوظيفي',
         'enter-email': 'name@moh.gov.sa',
@@ -1260,6 +1279,10 @@ const translations = {
         'of': 'من',
         'total-departments': 'إجمالي الأقسام',
         'total-committees': 'إجمالي اللجان',
+        'title': 'العنوان',
+        'type': 'النوع',
+        'minutes': 'دقائق',
+        'deadline-modal-open-error': 'حدث خطأ أثناء فتح نافذة المواعيد النهائية',
     },
     en: {
               // Names fields
@@ -1548,6 +1571,7 @@ const translations = {
 'delete-content-name-confirm': 'Are you sure you want to delete this content name? This will only remove the name from the list and won\'t affect any existing content that uses it.',
         // Approvals
         'approval-list': 'Approval List',
+        'pending-approvals-subtitle': 'Files that require your approval',
         'approval-details': 'Approval Details',
         'approval-status': 'Approval Status',
         'approval-type': 'Approval Type',
@@ -1743,6 +1767,25 @@ const translations = {
     // أضف هذا السطر:
     'no-new-approvers': 'No new approvers to send',
     'add-more-success': 'New approvers added successfully',
+    
+    // Deadlines
+    'set-deadline': 'Set Deadline',
+    'set-deadlines': 'Set Deadlines',
+    'content-info': 'Content Information',
+    'approver': 'Approver',
+    'days': 'Days',
+    'hours': 'Hours',
+    'cancel': 'Cancel',
+    'save': 'Save',
+    'deadline-set-success': 'Deadlines set successfully',
+    'deadline-set-failed': 'Failed to set deadlines',
+    'deadline-save-error': 'Error saving deadlines',
+    'deadline-no-approvers': 'No approvers assigned to this content',
+    'deadline-content-not-found': 'Content data not found',
+    'deadline-invalid-data': 'Invalid data',
+    'deadline-select-time': 'Please set time for at least one approver',
+    'deadline-expired': 'Approval deadline expired',
+    'deadline-expired-message': 'Approval deadline for content "{title}" from {source} has expired. Please review and approve the content as soon as possible.',
         'error-occurred': 'An error occurred',
         'please-try-again': 'Please try again',
         'no-folders': 'No folders in this department.',
@@ -2504,6 +2547,10 @@ const translations = {
         'choose-type': 'Choose Type',
         'yes': 'Yes',
         'no': 'No',
+        'title': 'Title',
+        'type': 'Type',
+        'minutes': 'Minutes',
+        'deadline-modal-open-error': 'An error occurred while opening the deadline modal',
     }
 };
 window.translations = translations;

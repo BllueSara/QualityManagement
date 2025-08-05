@@ -658,3 +658,544 @@ body[lang="en"] .toast-container,
     opacity: 0.8;
     font-weight: normal;
 }
+
+/* ===== النافذة المنبثقة للمواعيد النهائية ===== */
+.deadline-modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+}
+
+.deadline-modal-content {
+  background-color: #ffffff;
+  margin: 3% auto;
+  border-radius: 15px;
+  width: 90%;
+  max-width: 700px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  max-height: 85vh;
+  overflow: hidden;
+  border: 1px solid #e1e8ed;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.deadline-modal-header {
+  background: linear-gradient(135deg, #007bff 0%, #007bff 100%);
+  color: white;
+  padding: 25px 30px;
+  border-radius: 15px 15px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+}
+
+.deadline-modal-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #ffd700, #ffed4e, #ffd700);
+}
+
+.deadline-modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: 'Tajawal', sans-serif;
+}
+
+.deadline-modal-close {
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  font-weight: bold;
+}
+
+.deadline-modal-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: scale(1.1);
+}
+
+.deadline-modal-body {
+  padding: 30px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.deadline-info {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 25px;
+  border-radius: 12px;
+  margin-bottom: 30px;
+  border: 2px solid #dee2e6;
+  position: relative;
+  overflow: hidden;
+}
+
+.deadline-info::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 5px;
+  height: 100%;
+  background: linear-gradient(180deg, #007bff, #007bff);
+}
+
+.deadline-info h3 {
+  margin: 0 0 20px 0;
+  color: #007bff;
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-family: 'Tajawal', sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.deadline-info h3::before {
+  content: '📋';
+  font-size: 1.2rem;
+}
+
+.deadline-info p {
+  margin: 12px 0;
+  color: #495057;
+  font-size: 1rem;
+  line-height: 1.6;
+  font-weight: 500;
+  padding-left: 15px;
+}
+
+.deadline-list {
+  max-height: 350px;
+  overflow-y: auto;
+  padding-right: 5px;
+}
+
+.deadline-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.deadline-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.deadline-list::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #007bff, #007bff);
+  border-radius: 10px;
+}
+
+.deadline-list::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #007bff, #007bff);
+}
+
+.deadline-item {
+  background: #ffffff;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  padding: 25px;
+  margin-bottom: 20px;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.deadline-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #007bff, #007bff);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.deadline-item:hover {
+  border-color: #1e3c72;
+  box-shadow: 0 8px 25px rgba(30, 60, 114, 0.15);
+  transform: translateY(-3px);
+}
+
+.deadline-item:hover::before {
+  transform: scaleX(1);
+}
+
+.deadline-item-info {
+  margin-bottom: 20px;
+}
+
+.deadline-item-name {
+  font-weight: 700;
+  color: #1e3c72;
+  font-size: 1.2rem;
+  margin-bottom: 8px;
+  font-family: 'Tajawal', sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.deadline-item-name::before {
+  content: '👤';
+  font-size: 1.1rem;
+}
+
+.deadline-item-department {
+  color: #6c757d;
+  font-size: 0.95rem;
+  font-weight: 500;
+  background: #f8f9fa;
+  padding: 8px 15px;
+  border-radius: 20px;
+  display: inline-block;
+  border: 1px solid #e9ecef;
+}
+
+.deadline-time-inputs {
+  display: flex;
+  gap: 15px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.deadline-time-group {
+  flex: 1;
+  min-width: 80px;
+  position: relative;
+}
+
+.deadline-time-group label {
+  display: block;
+  margin-bottom: 12px;
+  color: #1e3c72;
+  font-weight: 600;
+  font-size: 1rem;
+  font-family: 'Tajawal', sans-serif;
+  text-align: center;
+}
+
+.deadline-time-input {
+  width: 100%;
+  padding: 15px 20px;
+  border: 2px solid #e9ecef;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  background: #f8f9fa;
+  text-align: center;
+  color: #1e3c72;
+  font-family: 'Tajawal', sans-serif;
+}
+
+.deadline-time-input:focus {
+  outline: none;
+  border-color: #1e3c72;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(30, 60, 114, 0.1);
+  transform: translateY(-2px);
+}
+
+.deadline-time-input:hover {
+  border-color: #2a5298;
+  background: #ffffff;
+}
+
+.deadline-time-input::-webkit-inner-spin-button,
+.deadline-time-input::-webkit-outer-spin-button {
+  opacity: 1;
+  height: 30px;
+}
+
+.deadline-modal-footer {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 25px 30px;
+  border-radius: 0 0 15px 15px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 20px;
+  border-top: 2px solid #dee2e6;
+}
+
+.deadline-btn {
+  padding: 15px 30px;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  min-width: 120px;
+  font-family: 'Tajawal', sans-serif;
+  position: relative;
+  overflow: hidden;
+}
+
+.deadline-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.deadline-btn:hover::before {
+  left: 100%;
+}
+
+.deadline-btn-cancel {
+  background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+  color: white;
+  border: 2px solid #6c757d;
+}
+
+.deadline-btn-cancel:hover {
+  background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(108, 117, 125, 0.3);
+  border-color: #495057;
+}
+
+.deadline-btn-save {
+  background: linear-gradient(135deg, #007bff 0%, #007bff 100%);
+  color: white;
+  border: 2px solid #1e3c72;
+}
+
+.deadline-btn-save:hover {
+  background: linear-gradient(135deg, #007bff 0%, #007bff 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(30, 60, 114, 0.3);
+  border-color: #152a5e;
+}
+
+/* زر تحديد الوقت في الجدول */
+.btn-deadline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  font-family: 'Tajawal', sans-serif;
+  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+}
+
+.btn-deadline:hover {
+  background: linear-gradient(135deg, #ee5a52 0%, #d63031 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+}
+
+.btn-deadline i {
+  font-size: 1rem;
+}
+
+/* عرض المواعيد النهائية في الجدول */
+.deadline-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 15px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin: 2px;
+  box-shadow: 0 2px 6px rgba(255, 107, 107, 0.3);
+}
+
+.deadline-badge.expired {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  box-shadow: 0 2px 6px rgba(220, 53, 69, 0.3);
+}
+
+.deadline-badge.warning {
+  background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+  color: #212529;
+  box-shadow: 0 2px 6px rgba(255, 193, 7, 0.3);
+}
+
+/* تحسينات للواجهة العربية */
+[dir="rtl"] .deadline-modal-header {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .deadline-item {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .deadline-time-inputs {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .deadline-modal-footer {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .btn-deadline i {
+  margin-right: 0;
+  margin-left: 4px;
+}
+
+/* تحسينات إضافية للتصميم */
+.deadline-modal-content {
+  position: relative;
+}
+
+.deadline-modal-content::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, #007bff, #007bff, #007bff);
+  border-radius: 17px;
+  z-index: -1;
+  opacity: 0.1;
+}
+
+.deadline-item {
+  position: relative;
+}
+
+.deadline-item::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 20px 20px 0;
+  border-color: transparent #007bff transparent transparent;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.deadline-item:hover::after {
+  opacity: 0.1;
+}
+
+/* تحسين تأثيرات الأزرار */
+.deadline-btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.deadline-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.3);
+}
+
+/* تحسين تأثيرات الحقول */
+.deadline-time-input:active {
+  transform: translateY(0);
+}
+
+/* تحسين تأثيرات الأيقونات */
+.deadline-item-name::before,
+.deadline-info h3::before {
+  transition: transform 0.3s ease;
+}
+
+.deadline-item:hover .deadline-item-name::before,
+.deadline-info:hover h3::before {
+  transform: scale(1.2);
+}
+
+/* تحسينات للأجهزة المحمولة */
+@media (max-width: 768px) {
+  .deadline-modal-content {
+    width: 95%;
+    margin: 5% auto;
+    max-height: 90vh;
+  }
+  
+  .deadline-modal-header {
+    padding: 20px 25px;
+  }
+  
+  .deadline-modal-header h2 {
+    font-size: 1.3rem;
+  }
+  
+  .deadline-modal-body {
+    padding: 20px;
+    max-height: 65vh;
+  }
+  
+  .deadline-time-inputs {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .deadline-modal-footer {
+    flex-direction: column;
+    padding: 20px 25px;
+  }
+  
+  .deadline-btn {
+    width: 100%;
+    padding: 18px 30px;
+  }
+  
+  .deadline-item {
+    padding: 20px;
+  }
+}
+
+/* تحسينات للشاشات المتوسطة */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .deadline-modal-content {
+    max-width: 600px;
+  }
+  
+  .deadline-time-inputs {
+    gap: 15px;
+  }
+}

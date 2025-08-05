@@ -1192,6 +1192,37 @@ const revokeUserFromFiles = async (req, res) => {
 };
 
 
+// جلب الـ IDs من الأسماء
+const getIdsByNames = async (req, res) => {
+  const { names } = req.body;
+
+  try {
+    if (!names || !Array.isArray(names) || names.length === 0) {
+      return res.status(400).json({ message: 'يجب تحديد أسماء المستخدمين' });
+    }
+
+    // إنشاء placeholders للـ IN clause
+    const placeholders = names.map(() => '?').join(',');
+    
+    const [rows] = await db.execute(
+      `SELECT id, username FROM users WHERE username IN (${placeholders})`,
+      names
+    );
+
+    const userIds = rows.map(row => row.id);
+
+    res.status(200).json({
+      status: 'success',
+      userIds: userIds,
+      foundUsers: rows
+    });
+
+  } catch (error) {
+    console.error('Error getting IDs by names:', error);
+    res.status(500).json({ message: 'خطأ في جلب بيانات المستخدمين' });
+  }
+};
+
 module.exports = {
   getUsers,
   getUserById,
@@ -1210,5 +1241,6 @@ module.exports = {
   updateUserStatus,
   getDelegationStatus,
   getUserApprovalSequenceFiles,
-  revokeUserFromFiles
+  revokeUserFromFiles,
+  getIdsByNames
 };

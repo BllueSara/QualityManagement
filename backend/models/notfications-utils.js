@@ -234,9 +234,13 @@ async function insertNotification(userId, title, message, type = 'ticket', messa
 
       if (userRows.length > 0 && userRows[0].email) {
         const user = userRows[0];
+        
+        // استخدام رسالة الإيميل المنفصلة إذا كانت متوفرة
+        const emailMessage = messageData && messageData.emailMessage ? messageData.emailMessage : message;
+        
         const notification = {
           title,
-          message,
+          message: emailMessage, // استخدام رسالة الإيميل المنفصلة
           type,
           created_at: new Date(),
           userName: user.username // تمرير اسم المستخدم

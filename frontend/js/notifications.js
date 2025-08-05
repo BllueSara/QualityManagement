@@ -74,6 +74,7 @@ function extractText(jsonOrString) {
   return jsonOrString.replace(/\{[^}]+\}/g, match => {
     try {
       const obj = JSON.parse(match);
+      // استخدم اللغة الحالية، وإذا لم تكن متوفرة استخدم العربية ثم الإنجليزية
       return obj[currentLang] || obj.ar || obj.en || '';
     } catch {
       return match;
@@ -240,6 +241,37 @@ function getNotificationTranslation(text) {
   }
   if (text==='اقترب انتهاء صلاحية المحتوى') {
     return 'The content has expired soon';
+  }
+
+  // إشعارات انتهاء مهلة الاعتماد
+  if (text === 'انتهت مهلة الاعتماد') {
+    return 'Approval deadline has expired';
+  }
+  
+  // ترجمة إشعار انتهاء مهلة الاعتماد للمحتوى من قسم/إدارة
+  const approvalDeadlineMatch = text.match(/^انتهت مهلة الاعتماد للمحتوى "(.+)" من (قسم|إدارة|إدارة تنفيذية) "(.+)"(?: - (.+))?\. يرجى مراجعة المحتوى والاعتماد عليه في أقرب وقت ممكن\.?$/);
+  if (approvalDeadlineMatch) {
+    const [, title, type, deptName, contentType] = approvalDeadlineMatch;
+    let typeText;
+    switch (type) {
+      case 'إدارة':
+        typeText = 'administration';
+        break;
+      case 'إدارة تنفيذية':
+        typeText = 'executive administration';
+        break;
+      default:
+        typeText = 'department';
+    }
+    const contentTypeText = contentType ? ` - ${contentType}` : '';
+    return `The approval deadline for content "${title}" from ${typeText} "${deptName}"${contentTypeText} has expired. Please review and approve the content as soon as possible.`;
+  }
+  
+  // ترجمة إشعار انتهاء مهلة الاعتماد للمحتوى من لجنة
+  const committeeApprovalDeadlineMatch = text.match(/^انتهت مهلة الاعتماد للمحتوى "(.+)" من "(.+)"\. يرجى مراجعة المحتوى والاعتماد عليه في أقرب وقت ممكن\.?$/);
+  if (committeeApprovalDeadlineMatch) {
+    const [, title, committeeName] = committeeApprovalDeadlineMatch;
+    return `The approval deadline for content "${title}" from "${committeeName}" has expired. Please review and approve the content as soon as possible.`;
   }
 
   

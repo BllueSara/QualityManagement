@@ -21,7 +21,8 @@ const {
   resetNotificationSettings,
   getDelegationStatus,
   getUserApprovalSequenceFiles,
-  revokeUserFromFiles
+  revokeUserFromFiles,
+  getIdsByNames
 } = require('../controllers/usersController');
 
 const router = express.Router();
@@ -43,6 +44,7 @@ router.get('/:id', authenticateToken, getUserById);
 router.get('/:id/delegation-status', authenticateToken, getDelegationStatus);
 router.get('/:id/approvals-sequence-files', authenticateToken, getUserApprovalSequenceFiles);
 router.post('/:id/revoke-files', authenticateToken, revokeUserFromFiles);
+router.post('/get-ids-by-names', authenticateToken, getIdsByNames);
 router.post('/', authenticateToken, addUser);
 router.put('/:id', authenticateToken, updateUser);
 router.delete('/:id', authenticateToken, deleteUser);
