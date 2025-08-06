@@ -329,3 +329,15 @@ body[lang="en"] .toast-container,
     left: auto !important;
     right: 20px !important;
 }
+#profile-department,
+#profile-job-title {
+    display: inline !important;
+    background-color: transparent !important;
+    color: inherit !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    height: auto !important;
+    font-size: inherit !important;
+    font-weight: inherit !important;
+}

@@ -242,7 +242,7 @@ if (btnRevokeFiles) {
               method: 'POST',
               body: JSON.stringify({ fileIds: checked })
             });
-            showToast('تم سحب الملفات المحددة', 'success');
+            showToast('تم سحب الملفات المحددة وإعادة ترتيب التسلسل', 'success');
             document.body.removeChild(overlay);
           } catch (error) {
             showToast('فشل في سحب الملفات: ' + error.message, 'error');

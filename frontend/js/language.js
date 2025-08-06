@@ -1047,6 +1047,20 @@ const translations = {
         'notes-bulk': 'ملاحظات (تعمل على جميع الملفات)',
         // Dashboard Stats Cards
         'new-tickets': 'الاحداث العارضة الجديدة',
+                
+        // Logs deletion translations
+        'select-all': 'تحديد الكل',
+        'delete-selected': 'حذف المحدد',
+        'delete-all': 'حذف الكل',
+        'delete-log': 'حذف السجل',
+        'actions': 'الإجراءات',
+        'log-deleted-successfully': 'تم حذف السجل بنجاح',
+        'logs-deleted-successfully': 'تم حذف السجلات بنجاح',
+        'all-logs-deleted-successfully': 'تم حذف جميع السجلات بنجاح',
+        'error-deleting-log': 'خطأ في حذف السجل',
+        'error-deleting-logs': 'خطأ في حذف السجلات',
+        'error-deleting-all-logs': 'خطأ في حذف جميع السجلات',
+        'edit-profile' : 'تعديل الملف الشخصي',
         'total-users': 'عدد المستخدمين',
         'admin-count': 'عدد المشرفين',
         'pending-contents': 'محتويات بانتظار الاعتماد',
@@ -1572,6 +1586,26 @@ const translations = {
         // Approvals
         'approval-list': 'Approval List',
         'pending-approvals-subtitle': 'Files that require your approval',
+                
+        // Logs deletion translations
+        'select-all': 'Select All',
+        'delete-selected': 'Delete Selected',
+        'delete-all': 'Delete All',
+        'delete-log': 'Delete Log',
+        'actions': 'Actions',
+        'log-deleted-successfully': 'Log deleted successfully',
+        'logs-deleted-successfully': 'Logs deleted successfully',
+        'all-logs-deleted-successfully': 'All logs deleted successfully',
+        'error-deleting-log': 'Error deleting log',
+        'error-deleting-logs': 'Error deleting logs',
+        'error-deleting-all-logs': 'Error deleting all logs',
+        'export-logs': 'Export Logs',
+        'exporting-logs': 'Exporting logs...',
+        'logs-exported-successfully': 'Logs exported successfully',
+        'error-exporting-logs': 'Error exporting logs',
+                'edit-profile' : 'Edit Profile',
+
+
         'approval-details': 'Approval Details',
         'approval-status': 'Approval Status',
         'approval-type': 'Approval Type',

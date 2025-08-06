@@ -649,6 +649,9 @@ async function loadDelegations() {
     const commData = commJson.data.map(d => ({ ...d, type: 'committee', delegationType: 'bulk' }));
     let allData = [...deptData, ...commData];
 
+    // إضافة تعليق توضيحي
+    console.log('🔍 Bulk delegations loaded:', { dept: deptData.length, committee: commData.length });
+
          // جلب التفويضات الفردية أيضاً
      try {
        const [deptSingleRes, commSingleRes] = await Promise.all([
@@ -694,9 +697,22 @@ async function loadDelegations() {
      }
 
     // طباعة بيانات التفويضات في الكونسول للتشخيص
-    console.log('allData:', allData);
+    console.log('🔍 Total delegations loaded:', allData.length);
+    console.log('🔍 Breakdown by type:', {
+      bulk: allData.filter(d => d.delegationType === 'bulk').length,
+      single: allData.filter(d => d.delegationType === 'single').length
+    });
 
-    if (allData.length === 0) {
+    // إزالة التكرار بناءً على content_id و type
+    const uniqueData = allData.filter((item, index, self) => 
+      index === self.findIndex(t => 
+        t.id === item.id && t.type === item.type && t.delegationType === item.delegationType
+      )
+    );
+
+    console.log('🔍 After removing duplicates:', uniqueData.length);
+
+    if (uniqueData.length === 0) {
       tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:20px;">${getTranslation('no-documents')}</td></tr>`;
       return;
     }

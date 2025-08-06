@@ -22,7 +22,11 @@ const {
   getDelegationStatus,
   getUserApprovalSequenceFiles,
   revokeUserFromFiles,
-  getIdsByNames
+  getIdsByNames,
+    deleteLog,
+  deleteMultipleLogs,
+  deleteAllLogs,
+  exportLogsToExcel
 } = require('../controllers/usersController');
 
 const router = express.Router();
@@ -33,13 +37,20 @@ router.get('/logs', authenticateToken, getLogs);
 router.get('/action-types', authenticateToken, getActionTypes);
 router.get('/roles', authenticateToken, getRoles);
 
-// 2) الراوتات المرتبطة بـ notifications — ✨ رتب من الأكثر تحديداً إلى الأقل
+// 2) راوتات حذف السجلات
+router.delete('/logs/bulk-delete', authenticateToken, deleteMultipleLogs);
+router.delete('/logs/delete-all', authenticateToken, deleteAllLogs);
+router.delete('/logs/:id', authenticateToken, deleteLog);
+
+// 3) راوتات تصدير السجلات
+router.get('/logs/export/excel', authenticateToken, exportLogsToExcel);
+// 4) الراوتات المرتبطة بـ notifications — ✨ رتب من الأكثر تحديداً إلى الأقل
 router.get('/:id/notifications/unread-count', authenticateToken, getUnreadCount);
 router.put('/:id/notifications/mark-read', authenticateToken, markAllAsRead);
 router.delete('/:id/notifications/:nid', authenticateToken, deleteNotification);
 router.get('/:id/notifications', authenticateToken, getNotifications);
 
-// 3) الراوتات الباقية
+// 5) الراوتات الباقية
 router.get('/:id', authenticateToken, getUserById);
 router.get('/:id/delegation-status', authenticateToken, getDelegationStatus);
 router.get('/:id/approvals-sequence-files', authenticateToken, getUserApprovalSequenceFiles);

@@ -116,10 +116,9 @@ async function getUserPendingCommitteeApprovals(req, res) {
         FROM committee_contents cc
         JOIN committee_folders cf     ON cc.folder_id = cf.id
         JOIN committees com           ON cf.committee_id = com.id
-        LEFT JOIN committee_content_approvers cca ON cca.content_id = cc.id
+        JOIN committee_content_approvers cca ON cca.content_id = cc.id AND cca.user_id = ?
         LEFT JOIN users u2            ON cca.user_id = u2.id
         WHERE cc.is_approved = 0
-          AND JSON_CONTAINS(cc.approvers_required, JSON_ARRAY(?))
           AND NOT EXISTS (
             SELECT 1 FROM committee_approval_logs cal
             WHERE cal.content_id = cc.id
@@ -127,14 +126,47 @@ async function getUserPendingCommitteeApprovals(req, res) {
               AND cal.status = 'approved'
           )
           AND (
-            -- التحقق من أن جميع المعتمدين السابقين قد وقعوا
+            -- التحقق من أن جميع المعتمدين السابقين قد وقعوا - للمستخدمين المفوض لهم
             cca.sequence_number = 1 
-            OR NOT EXISTS (
-              SELECT 1 FROM committee_content_approvers cca2
-              JOIN committee_approval_logs cal ON cal.content_id = cca2.content_id AND cal.approver_id = cca2.user_id
+            OR (
+              SELECT COUNT(*) FROM committee_content_approvers cca2
               WHERE cca2.content_id = cc.id 
                 AND cca2.sequence_number < cca.sequence_number
-                AND cal.status = 'approved'
+                AND (
+                  -- للمستخدمين العاديين: لا يوجد توقيع شخصي
+                  (cca2.user_id NOT IN (
+                    SELECT delegate_id FROM active_delegations
+                  ) AND NOT EXISTS (
+                    SELECT 1 FROM committee_approval_logs cal
+                    WHERE cal.content_id = cca2.content_id 
+                      AND cal.approver_id = cca2.user_id
+                      AND cal.signed_as_proxy = 0
+                      AND cal.status = 'approved'
+                  ))
+                  OR
+                  -- للمستخدمين المفوض لهم: لا يوجد توقيع شخصي أو لا يوجد توقيع بالنيابة
+                  (cca2.user_id IN (
+                    SELECT delegate_id FROM active_delegations
+                  ) AND (
+                    -- لا يوجد توقيع شخصي
+                    NOT EXISTS (
+                      SELECT 1 FROM committee_approval_logs cal
+                      WHERE cal.content_id = cca2.content_id 
+                        AND cal.approver_id = cca2.user_id
+                        AND cal.signed_as_proxy = 0
+                        AND cal.status = 'approved'
+                    )
+                    OR
+                    -- لا يوجد توقيع بالنيابة
+                    NOT EXISTS (
+                      SELECT 1 FROM committee_approval_logs cal
+                      WHERE cal.content_id = cca2.content_id 
+                        AND cal.approver_id = cca2.user_id
+                        AND cal.signed_as_proxy = 1
+                        AND cal.status = 'approved'
+                    )
+                  ))
+                )
             ) = 0
           )
         GROUP BY cc.id, cca.sequence_number
@@ -162,10 +194,9 @@ async function getUserPendingCommitteeApprovals(req, res) {
         FROM committee_contents cc
         JOIN committee_folders cf     ON cc.folder_id = cf.id
         JOIN committees com           ON cf.committee_id = com.id
-        LEFT JOIN committee_content_approvers cca ON cca.content_id = cc.id
+        JOIN committee_content_approvers cca ON cca.content_id = cc.id AND cca.user_id = ?
         LEFT JOIN users u2            ON cca.user_id = u2.id
         WHERE cc.is_approved = 0
-          AND JSON_CONTAINS(cc.approvers_required, JSON_ARRAY(?))
           AND NOT EXISTS (
             SELECT 1 FROM committee_approval_logs cal
             WHERE cal.content_id = cc.id
@@ -173,14 +204,47 @@ async function getUserPendingCommitteeApprovals(req, res) {
               AND cal.status = 'approved'
           )
           AND (
-            -- التحقق من أن جميع المعتمدين السابقين قد وقعوا
+            -- التحقق من أن جميع المعتمدين السابقين قد وقعوا - للمستخدمين العاديين
             cca.sequence_number = 1 
-            OR NOT EXISTS (
-              SELECT 1 FROM committee_content_approvers cca2
-              JOIN committee_approval_logs cal ON cal.content_id = cca2.content_id AND cal.approver_id = cca2.user_id
+            OR (
+              SELECT COUNT(*) FROM committee_content_approvers cca2
               WHERE cca2.content_id = cc.id 
                 AND cca2.sequence_number < cca.sequence_number
-                AND cal.status = 'approved'
+                AND (
+                  -- للمستخدمين العاديين: لا يوجد توقيع شخصي
+                  (cca2.user_id NOT IN (
+                    SELECT delegate_id FROM active_delegations
+                  ) AND NOT EXISTS (
+                    SELECT 1 FROM committee_approval_logs cal
+                    WHERE cal.content_id = cca2.content_id 
+                      AND cal.approver_id = cca2.user_id
+                      AND cal.signed_as_proxy = 0
+                      AND cal.status = 'approved'
+                  ))
+                  OR
+                  -- للمستخدمين المفوض لهم: لا يوجد توقيع شخصي أو لا يوجد توقيع بالنيابة
+                  (cca2.user_id IN (
+                    SELECT delegate_id FROM active_delegations
+                  ) AND (
+                    -- لا يوجد توقيع شخصي
+                    NOT EXISTS (
+                      SELECT 1 FROM committee_approval_logs cal
+                      WHERE cal.content_id = cca2.content_id 
+                        AND cal.approver_id = cca2.user_id
+                        AND cal.signed_as_proxy = 0
+                        AND cal.status = 'approved'
+                    )
+                    OR
+                    -- لا يوجد توقيع بالنيابة
+                    NOT EXISTS (
+                      SELECT 1 FROM committee_approval_logs cal
+                      WHERE cal.content_id = cca2.content_id 
+                        AND cal.approver_id = cca2.user_id
+                        AND cal.signed_as_proxy = 1
+                        AND cal.status = 'approved'
+                    )
+                  ))
+                )
             ) = 0
           )
         GROUP BY cc.id, cca.sequence_number
@@ -330,15 +394,7 @@ async function handleCommitteeApproval(req, res) {
     // 3) الموقّع الفعلي دائماً currentUserId
     const approverId = currentUserId;
 
-    // Debug logging - يمكن إزالته بعد التأكد من عمل النظام
-    // console.log('🔍 Committee Approval Debug:', {
-    //   currentUserId,
-    //   approverId,
-    //   delegatedBy,
-    //   isProxy,
-    //   on_behalf_of,
-    //   delegationRows: delegationRows.length
-    // });
+
 
     if (approved && !signature && !electronic_signature) {
       return res.status(400).json({ status: 'error', message: 'التوقيع مفقود' });
@@ -348,11 +404,7 @@ async function handleCommitteeApproval(req, res) {
     if (delegationRows.length) {
       const delegatorId = delegationRows[0].user_id;
       
-      console.log('🔍 Saving dual committee approval for delegated user:', {
-        userId: currentUserId,
-        delegatorId,
-        contentId
-      });
+
       
       // التوقيع الأول: شخصي
       const [personalLog] = await db.execute(
@@ -373,7 +425,7 @@ async function handleCommitteeApproval(req, res) {
           electronic_signature || null,
           notes || ''
         ]);
-        console.log('✅ Inserted personal committee approval for user:', currentUserId);
+
       } else if (personalLog[0].status !== (approved ? 'approved' : 'rejected')) {
         // حدّث السجل ليصبح معتمد
         await db.execute(
@@ -386,9 +438,9 @@ async function handleCommitteeApproval(req, res) {
             personalLog[0].id
           ]
         );
-        console.log('✅ Updated personal committee approval for user:', currentUserId);
+
       } else {
-        console.log('ℹ️ Personal committee approval already exists and is up to date.');
+
       }
       
       // التوقيع الثاني: بالنيابة
@@ -421,7 +473,7 @@ async function handleCommitteeApproval(req, res) {
           electronic_signature || null,
           notes || ''
         ]);
-        console.log('✅ Saved proxy committee approval for user:', currentUserId, 'on behalf of:', delegatorId);
+
       } else {
         // تحديث التوقيع بالنيابة
         await db.execute(
@@ -436,16 +488,10 @@ async function handleCommitteeApproval(req, res) {
             delegatorId
           ]
         );
-        console.log('✅ Updated proxy committee approval for user:', currentUserId, 'on behalf of:', delegatorId);
+
       }
       
-      console.log('✅ تم الاعتماد المزدوج للجنة للمستخدم المفوض له:', {
-        userId: currentUserId,
-        delegatorId,
-        contentId,
-        personalLogs: personalLog.length,
-        proxyLogs: existingProxyLogs.length
-      });
+
       
     } else {
       // المستخدم عادي - اعتماد واحد فقط
@@ -530,89 +576,58 @@ async function handleCommitteeApproval(req, res) {
 
     // منطق جديد للاعتماد النهائي مع دعم الأدمن
     let shouldApproveFile = false;
+    let remainingCount = 0;
     
     if (isAdmin && approved) {
       // الأدمن يمكنه اعتماد الملف مباشرة
       shouldApproveFile = true;
-      console.log('🎉 Admin approval - approving file directly');
     } else {
       // منطق الاعتماد العادي للمستخدمين العاديين
-      const [approvers] = await db.execute(
-        'SELECT user_id FROM committee_content_approvers WHERE content_id = ?',
-        [contentId]
-      );
+      // استعلام مبسط ومحسن للتحقق من المعتمدين المتبقين - استخدام المنطق الصحيح
+      const [remaining] = await db.execute(`
+        SELECT COUNT(*) as count
+        FROM committee_content_approvers cca
+        WHERE cca.content_id = ? 
+          AND (
+            -- للمستخدمين العاديين: لا يوجد توقيع شخصي
+            (cca.user_id NOT IN (
+              SELECT delegate_id FROM active_delegations
+            ) AND NOT EXISTS (
+              SELECT 1 FROM committee_approval_logs cal
+              WHERE cal.content_id = cca.content_id 
+                AND cal.approver_id = cca.user_id
+                AND cal.signed_as_proxy = 0
+                AND cal.status = 'approved'
+            ))
+            OR
+            -- للمستخدمين المفوض لهم: لا يوجد توقيع شخصي أو لا يوجد توقيع بالنيابة
+            (cca.user_id IN (
+              SELECT delegate_id FROM active_delegations
+            ) AND (
+              -- لا يوجد توقيع شخصي
+              NOT EXISTS (
+                SELECT 1 FROM committee_approval_logs cal
+                WHERE cal.content_id = cca.content_id 
+                  AND cal.approver_id = cca.user_id
+                  AND cal.signed_as_proxy = 0
+                  AND cal.status = 'approved'
+              )
+              OR
+              -- لا يوجد توقيع بالنيابة
+              NOT EXISTS (
+                SELECT 1 FROM committee_approval_logs cal
+                WHERE cal.content_id = cca.content_id 
+                  AND cal.approver_id = cca.user_id
+                  AND cal.signed_as_proxy = 1
+                  AND cal.status = 'approved'
+              )
+            ))
+          )
+      `, [contentId]);
 
-      let requiredApprovals = 1;
-      let isCurrentUserDelegate = false;
-      if (approvers.length === 1) {
-        // تحقق إذا كان هو مفوض له
-        const [isDelegate] = await db.execute(
-          'SELECT * FROM active_delegations WHERE delegate_id = ?',
-          [approvers[0].user_id]
-        );
-        if (isDelegate.length) {
-          isCurrentUserDelegate = true;
-          requiredApprovals = 1;
-        }
-      } else if (approvers.length > 1 && delegationRows.length) {
-        // إذا كان هناك أكثر من معتمد والمستخدم مفوض له، يحتاج توقيعين
-        isCurrentUserDelegate = true;
-        requiredApprovals = 2;
-      }
+      remainingCount = remaining[0].count;
 
-      // جلب عدد التواقيع للمستخدم الحالي
-      const [userApprovals] = await db.execute(
-        `SELECT COUNT(*) as count FROM committee_approval_logs 
-         WHERE content_id = ? AND approver_id = ? AND status = 'approved'`,
-        [contentId, currentUserId]
-      );
 
-      // عدل شرط remaining بناءً على المنطق الجديد
-      let remainingCount = 0;
-      if (isCurrentUserDelegate) {
-        if (userApprovals[0].count < requiredApprovals) {
-          remainingCount = 1;
-        }
-      } else {
-        // منطق المستخدم العادي: لم يوقع بعد
-        if (userApprovals[0].count < 1) {
-          remainingCount = 1;
-        }
-      }
-
-      // جلب عدد التوقيعات للمستخدم الحالي للتشخيص
-      const [currentUserLogs] = await db.execute(`
-        SELECT COUNT(*) as count FROM committee_approval_logs 
-        WHERE content_id = ? AND approver_id = ? AND status = 'approved'
-      `, [contentId, currentUserId]);
-
-      // جلب التفويضات النشطة للمستخدم الحالي
-      const [activeDelegations] = await db.execute(`
-        SELECT COUNT(*) as count FROM active_delegations 
-        WHERE delegate_id = ?
-      `, [currentUserId]);
-
-      // استعلام تشخيصي للتوقيعات المفصلة
-      const [detailedLogs] = await db.execute(`
-        SELECT 
-          approver_id,
-          signed_as_proxy,
-          delegated_by,
-          status,
-          created_at
-        FROM committee_approval_logs 
-        WHERE content_id = ? AND approver_id = ?
-        ORDER BY created_at
-      `, [contentId, currentUserId]);
-
-      console.log('🔍 Committee remaining approvers check:', {
-        contentId,
-        remainingCount: remainingCount,
-        delegationRows: delegationRows.length,
-        currentUserApprovals: currentUserLogs[0].count,
-        activeDelegations: activeDelegations[0].count,
-        detailedLogs: detailedLogs
-      });
 
       // إشعار لصاحب الملف عند قبول أو رفض التوقيع
       // جلب صاحب الملف
@@ -633,31 +648,36 @@ async function handleCommitteeApproval(req, res) {
         }
       }
 
-      // تحقق من اعتماد جميع المعتمدين قبل الاعتماد النهائي (لملفات اللجان)
-      // 1. جلب جميع المعتمدين
-      const [allApproversRows] = await db.execute(
-        'SELECT user_id FROM committee_content_approvers WHERE content_id = ?',
-        [contentId]
+      // تحقق من اكتمال الاعتماد بناءً على remainingCount
+      shouldApproveFile = remainingCount === 0;
+    }
+
+    // إضافة تحسين: للمستخدمين المفوض لهم، نتأكد من وجودهم في committee_content_approvers
+    // حتى لو لم يكونوا موجودين مسبقاً (مثل حالة التفويض الشامل)
+    if (delegationRows.length > 0) {
+      await db.execute(`
+        INSERT IGNORE INTO committee_content_approvers (content_id, user_id)
+        VALUES(?, ?)
+      `, [contentId, approverId]);
+    }
+
+    // إضافة تحسين إضافي: تأكد من وجود المستخدم في committee_content_approvers قبل حساب المعتمدين المتبقين
+    if (delegationRows.length > 0) {
+      const [existingApprover] = await db.execute(
+        `SELECT * FROM committee_content_approvers WHERE content_id = ? AND user_id = ?`,
+        [contentId, approverId]
       );
-      const approverIds = allApproversRows.map(r => r.user_id);
-
-      // 2. جلب عدد من وقع فعلاً (approved)
-      let approvedApproverCount = 0;
-      if (approverIds.length > 0) {
-        const [approvedLogsRows] = await db.execute(
-          `SELECT approver_id FROM committee_approval_logs WHERE content_id = ? AND status = 'approved' AND approver_id IN (${approverIds.map(() => '?').join(',')}) GROUP BY approver_id`,
-          [contentId, ...approverIds]
+      if (!existingApprover.length) {
+        await db.execute(
+          `INSERT INTO committee_content_approvers (content_id, user_id) VALUES (?, ?)`,
+          [contentId, approverId]
         );
-        approvedApproverCount = approvedLogsRows.length;
       }
-
-      // 3. إذا كل المعتمدين وقعوا، اعتمد الملف نهائياً
-      const allApproved = approverIds.length > 0 && approvedApproverCount === approverIds.length;
-      shouldApproveFile = allApproved;
     }
 
     // إضافة المستخدم المفوض له إلى committee_content_approvers إذا لم يكن موجوداً
-    if (isProxy && approved) {
+    // للمستخدمين المفوض لهم، نضيفهم في كلا الحالتين (شخصي وبالنيابة)
+    if ((isProxy && approved) || (delegationRows.length > 0 && approved)) {
       await db.execute(`
         INSERT IGNORE INTO committee_content_approvers (content_id, user_id)
         VALUES(?, ?)
@@ -671,12 +691,15 @@ async function handleCommitteeApproval(req, res) {
         SET status = 'completed' 
         WHERE content_id = ? AND approver_id = ? AND signed_as_proxy = 1 AND status = 'accepted'
       `, [contentId, currentUserId]);
-      console.log('✅ Single committee delegation marked as completed for user:', currentUserId);
+    }
+
+    // تحديث PDF بعد كل اعتماد للجان
+    if (approved) {
+      await updateCommitteePDFAfterApproval(contentId);
     }
 
     // الاعتماد النهائي للملف
     if (shouldApproveFile) {
-      console.log('🎉 Committee file ready for final approval! Updating file status...');
       await generateFinalSignedCommitteePDF(contentId);
       const updateResult = await db.execute(`
         UPDATE committee_contents
@@ -686,7 +709,6 @@ async function handleCommitteeApproval(req, res) {
             updated_at      = NOW()
         WHERE id = ?
       `, [approverId, contentId]);
-      console.log('✅ Committee file status updated:', updateResult);
       
       // إشعار لصاحب الملف عند الاعتماد النهائي
       let [ownerRows] = await db.execute(`SELECT created_by, title FROM committee_contents WHERE id = ?`, [contentId]);
@@ -696,23 +718,10 @@ async function handleCommitteeApproval(req, res) {
         await sendOwnerApprovalNotification(ownerId, fileTitle, approved, true);
       }
       
-      // حذف الملف من قائمة المعتمدين المفوض لهم بعد الاعتماد النهائي
-      if (delegationRows.length) {
-        const delegatorId = delegationRows[0].user_id;
-        console.log('🗑️ Removing delegated file from approvers after final approval');
-        await db.execute(`
-          DELETE FROM committee_content_approvers 
-          WHERE content_id = ? AND user_id = ?
-        `, [contentId, currentUserId]);
-        
-        // حذف سجلات التفويض المعلقة
-        await db.execute(`
-          DELETE FROM committee_approval_logs 
-          WHERE content_id = ? AND approver_id = ? AND signed_as_proxy = 1 AND status = 'pending'
-        `, [contentId, currentUserId]);
-      }
+      // لا نحذف المستخدم المفوض له من قائمة المعتمدين حتى نتحقق من اكتمال الاعتماد
+      // هذا الحذف سيتم في مكان آخر عند الحاجة
     } else {
-      console.log('⏳ Still waiting for other committee approvers or admin approval');
+      // Still waiting for remaining approvers or admin approval
     }
 
     res.json({ status: 'success', message: 'تم التوقيع بنجاح' });
@@ -721,6 +730,7 @@ async function handleCommitteeApproval(req, res) {
     res.status(500).json({ status: 'error', message: 'خطأ أثناء معالجة الاعتماد' });
   }
 }
+
 
 /**
  * 3. List all committee contents assigned to me or created by me
@@ -745,31 +755,71 @@ async function getAssignedCommitteeApprovals(req, res) {
     const perms = new Set(permRows.map(r => r.permission_key));
     const canViewAll = (userRole === 'admin' || perms.has('transfer_credits'));
 
-    // 2) قاعدة الاستعلام مع دعم التسلسل
-    let baseQuery = `
-      SELECT 
-        CONCAT('comm-', cc.id)                AS id,
-        cc.title,
-        cc.file_path,
-        cc.approval_status,
-        GROUP_CONCAT(DISTINCT u2.username ORDER BY cca.sequence_number)    AS assigned_approvers,
-        com.name                              AS source_name,
-        cf.name                               AS folder_name,
-        u.username                            AS created_by_username,
-        'committee'                           AS type,
-        CAST(cc.approvers_required AS CHAR)   AS approvers_required,
-        cc.created_at,
-        cca.sequence_number
-      FROM committee_contents cc
-      JOIN committee_folders cf       ON cc.folder_id = cf.id
-      JOIN committees com             ON cf.committee_id = com.id
-      JOIN users u                    ON cc.created_by = u.id
-    `;
+    let allRows = [];
 
-    const params = [];
+    if (canViewAll) {
+      // للمستخدمين المفوّض لهم - جلب جميع الملفات
+      const [rows] = await db.execute(`
+        SELECT 
+          CONCAT('comm-', cc.id)                AS id,
+          cc.title,
+          cc.file_path,
+          cc.approval_status,
+          GROUP_CONCAT(DISTINCT u2.username ORDER BY cca.sequence_number)    AS assigned_approvers,
+          com.name                              AS source_name,
+          cf.name                               AS folder_name,
+          u.username                            AS created_by_username,
+          'committee'                           AS type,
+          CAST(cc.approvers_required AS CHAR)   AS approvers_required,
+          cc.created_at,
+          cca.sequence_number
+        FROM committee_contents cc
+        JOIN committee_folders cf       ON cc.folder_id = cf.id
+        JOIN committees com             ON cf.committee_id = com.id
+        JOIN users u                    ON cc.created_by = u.id
+        LEFT JOIN committee_content_approvers cca 
+          ON cca.content_id = cc.id
+        LEFT JOIN users u2 
+          ON u2.id = cca.user_id
+        WHERE NOT EXISTS (
+          SELECT 1 FROM committee_approval_logs cal
+          WHERE cal.content_id = cc.id
+            AND cal.delegated_by = ?
+            AND cal.signed_as_proxy = 1
+            AND cal.status = 'accepted'
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM committee_approval_logs cal2
+          WHERE cal2.content_id = cc.id
+            AND cal2.approver_id = ?
+            AND cal2.signed_as_proxy = 1
+            AND cal2.status = 'accepted'
+        )
+        GROUP BY cc.id, cca.sequence_number
+        ORDER BY cc.created_at DESC, cca.sequence_number
+      `, [userId, userId]);
 
-    if (!canViewAll) {
-      baseQuery += `
+      allRows = rows;
+    } else {
+      // للمستخدمين العاديين - جلب الملفات المخصصة لهم فقط
+      const [rows] = await db.execute(`
+        SELECT 
+          CONCAT('comm-', cc.id)                AS id,
+          cc.title,
+          cc.file_path,
+          cc.approval_status,
+          GROUP_CONCAT(DISTINCT u2.username ORDER BY cca.sequence_number)    AS assigned_approvers,
+          com.name                              AS source_name,
+          cf.name                               AS folder_name,
+          u.username                            AS created_by_username,
+          'committee'                           AS type,
+          CAST(cc.approvers_required AS CHAR)   AS approvers_required,
+          cc.created_at,
+          cca.sequence_number
+        FROM committee_contents cc
+        JOIN committee_folders cf       ON cc.folder_id = cf.id
+        JOIN committees com             ON cf.committee_id = com.id
+        JOIN users u                    ON cc.created_by = u.id
         JOIN committee_content_approvers cca 
           ON cca.content_id = cc.id 
          AND cca.user_id = ?
@@ -789,52 +839,47 @@ async function getAssignedCommitteeApprovals(req, res) {
             AND cal2.signed_as_proxy = 1
             AND cal2.status = 'accepted'
         )
-        AND (
-          -- التحقق من أن جميع المعتمدين السابقين قد وقعوا
-          cca.sequence_number = 1 
-          OR NOT EXISTS (
-            SELECT 1 FROM committee_content_approvers cca2
-            JOIN committee_approval_logs cal ON cal.content_id = cca2.content_id AND cal.approver_id = cca2.user_id
-            WHERE cca2.content_id = cc.id 
-              AND cca2.sequence_number < cca.sequence_number
-              AND cal.status = 'approved'
-          ) = 0
-        )
-      `;
-      params.push(userId, userId, userId);
-    } else {
-      baseQuery += `
-        LEFT JOIN committee_content_approvers cca 
-          ON cca.content_id = cc.id
-        LEFT JOIN users u2 
-          ON u2.id = cca.user_id
-        WHERE NOT EXISTS (
-          SELECT 1 FROM committee_approval_logs cal
-          WHERE cal.content_id = cc.id
-            AND cal.delegated_by = ?
-            AND cal.signed_as_proxy = 1
-            AND cal.status = 'accepted'
-        )
         AND NOT EXISTS (
-          SELECT 1 FROM committee_approval_logs cal2
-          WHERE cal2.content_id = cc.id
-            AND cal2.approver_id = ?
-            AND cal2.signed_as_proxy = 1
-            AND cal2.status = 'accepted'
+          SELECT 1 FROM committee_approval_logs cal3
+          WHERE cal3.content_id = cc.id
+            AND cal3.approver_id = ?
+            AND cal3.status = 'approved'
         )
-      `;
-      params.push(userId, userId);
-    }
-    baseQuery += `
-      GROUP BY cc.id, cca.sequence_number
-      ORDER BY cc.created_at DESC, cca.sequence_number
-    `;
+        GROUP BY cc.id, cca.sequence_number
+        ORDER BY cc.created_at DESC, cca.sequence_number
+      `, [userId, userId, userId, userId]);
 
-    // 6) تنفيذ الاستعلام
-    const [rows] = await db.execute(baseQuery, params);
+      allRows = rows;
+    }
+
+    // فلترة النتائج حسب التسلسل
+    const filteredRows = [];
+    const processedContentIds = new Set();
+
+    for (const row of allRows) {
+      const contentId = row.id;
+      const sequenceNumber = row.sequence_number;
+
+      // إذا كان هذا أول معتمد في التسلسل
+      if (sequenceNumber === 1) {
+        if (!processedContentIds.has(contentId)) {
+          filteredRows.push(row);
+          processedContentIds.add(contentId);
+        }
+        continue;
+      }
+
+      // التحقق من أن جميع المعتمدين السابقين قد وقعوا
+      const isReadyForApproval = await checkPreviousCommitteeApproversSigned(contentId, sequenceNumber);
+      
+      if (isReadyForApproval && !processedContentIds.has(contentId)) {
+        filteredRows.push(row);
+        processedContentIds.add(contentId);
+      }
+    }
 
     // تحويل الحقل من نص JSON إلى مصفوفة
-    rows.forEach(row => {
+    filteredRows.forEach(row => {
       try {
         row.approvers_required = JSON.parse(row.approvers_required);
       } catch {
@@ -842,10 +887,66 @@ async function getAssignedCommitteeApprovals(req, res) {
       }
     });
 
-    return res.json({ status: 'success', data: rows });
+    return res.json({ status: 'success', data: filteredRows });
   } catch (err) {
     console.error('Error in getAssignedCommitteeApprovals:', err);
     return res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+  }
+}
+
+// دالة مساعدة للتحقق من توقيع المعتمدين السابقين في اللجان
+async function checkPreviousCommitteeApproversSigned(contentId, currentSequence) {
+  try {
+    const actualContentId = contentId.replace('comm-', '');
+    
+    // جلب عدد المعتمدين السابقين الذين لم يكملوا اعتمادهم
+    const [remainingApprovers] = await db.execute(`
+      SELECT COUNT(*) as count
+      FROM committee_content_approvers cca
+      WHERE cca.content_id = ? 
+        AND cca.sequence_number < ?
+        AND (
+          -- للمستخدمين العاديين: لا يوجد توقيع شخصي
+          (cca.user_id NOT IN (
+            SELECT delegate_id FROM active_delegations
+          ) AND NOT EXISTS (
+            SELECT 1 FROM committee_approval_logs cal
+            WHERE cal.content_id = cca.content_id 
+              AND cal.approver_id = cca.user_id
+              AND cal.signed_as_proxy = 0
+              AND cal.status = 'approved'
+          ))
+          OR
+          -- للمستخدمين المفوض لهم: لا يوجد توقيع شخصي أو لا يوجد توقيع بالنيابة
+          (cca.user_id IN (
+            SELECT delegate_id FROM active_delegations
+          ) AND (
+            -- لا يوجد توقيع شخصي
+            NOT EXISTS (
+              SELECT 1 FROM committee_approval_logs cal
+              WHERE cal.content_id = cca.content_id 
+                AND cal.approver_id = cca.user_id
+                AND cal.signed_as_proxy = 0
+                AND cal.status = 'approved'
+            )
+            OR
+            -- لا يوجد توقيع بالنيابة
+            NOT EXISTS (
+              SELECT 1 FROM committee_approval_logs cal
+              WHERE cal.content_id = cca.content_id 
+                AND cal.approver_id = cca.user_id
+                AND cal.signed_as_proxy = 1
+                AND cal.status = 'approved'
+            )
+          ))
+        )
+    `, [actualContentId, currentSequence]);
+
+    // إذا كان عدد المعتمدين المتبقين = 0، فهذا يعني أن جميع المعتمدين السابقين قد أكملوا اعتمادهم
+    return remainingApprovers[0].count === 0;
+  } catch (err) {
+    console.error('Error in checkPreviousCommitteeApproversSigned:', err);
+    return false;
   }
 }
 
@@ -974,7 +1075,7 @@ async function getProxyCommitteeApprovals(req, res) {
     if (!token) return res.status(401).json({ status: 'error', message: 'لا يوجد توكن' });
     const { id: userId } = jwt.verify(token, process.env.JWT_SECRET);
 
-    // جلب الملفات المفوضة التي لم يتم اعتمادها بعد
+    // جلب الملفات المفوضة التي لم يتم اعتمادها بعد (التفويضات الجماعية فقط)
     const [rows] = await db.execute(`
       SELECT DISTINCT
         CONCAT('comm-', cc.id) AS id,
@@ -997,6 +1098,11 @@ async function getProxyCommitteeApprovals(req, res) {
             AND al.approver_id = ? 
             AND al.signed_as_proxy = 1 
             AND al.status = 'pending'
+            AND EXISTS (
+              SELECT 1 FROM active_delegations ad 
+              WHERE ad.delegate_id = al.approver_id 
+              AND ad.user_id = al.delegated_by
+            )
         )
     `, [userId, userId]);
 
@@ -1287,12 +1393,26 @@ async function generateFinalSignedCommitteePDF(contentId) {
         const { PDFDocument } = require('pdf-lib');
         const mergedPdf = await PDFDocument.create();
         
-        // إضافة صفحات PDF الأصلي أولاً
+        // إضافة صفحات PDF الأصلي أولاً (بدون صفحة الاعتمادات السابقة)
         const originalPdfDoc = await PDFDocument.load(originalPdfBytes);
-        const originalPages = await mergedPdf.copyPages(originalPdfDoc, originalPdfDoc.getPageIndices());
+        const originalPageCount = originalPdfDoc.getPageCount();
+        
+        // نسخ جميع صفحات PDF الأصلي ما عدا الصفحة الأخيرة إذا كانت صفحة اعتمادات
+        const pagesToCopy = [];
+        for (let i = 0; i < originalPageCount; i++) {
+          pagesToCopy.push(i);
+        }
+        
+        // إذا كان PDF يحتوي على أكثر من صفحة واحدة، نتجاهل الصفحة الأخيرة
+        // لأنها قد تكون صفحة اعتمادات سابقة
+        if (originalPageCount > 1) {
+          pagesToCopy.pop(); // إزالة الصفحة الأخيرة
+        }
+        
+        const originalPages = await mergedPdf.copyPages(originalPdfDoc, pagesToCopy);
         originalPages.forEach((page) => mergedPdf.addPage(page));
         
-        // إضافة صفحة الاعتمادات في النهاية
+        // إضافة صفحة الاعتمادات المحدثة في النهاية
         const approvalPdfDoc = await PDFDocument.load(approvalPdfBuffer);
         const approvalPages = await mergedPdf.copyPages(approvalPdfDoc, approvalPdfDoc.getPageIndices());
         approvalPages.forEach((page) => mergedPdf.addPage(page));
@@ -1320,6 +1440,317 @@ async function generateFinalSignedCommitteePDF(contentId) {
     approvalPdfDoc.end();
   } catch (err) {
     console.error('❌ Error creating committee approval PDF:', err);
+  }
+}
+
+// دالة تحديث PDF بعد كل اعتماد للجان
+async function updateCommitteePDFAfterApproval(contentId) {
+  try {
+    // 1) جلب مسار الملف
+    const [fileRows] = await db.execute(
+      `SELECT file_path FROM committee_contents WHERE id = ?`,
+      [contentId]
+    );
+    if (!fileRows.length) {
+      return console.error('📁 Committee content not found for ID', contentId);
+    }
+    const relativePath = fileRows[0].file_path;
+    const fullPath = path.join(__dirname, '../..', relativePath);
+    if (!fs.existsSync(fullPath)) {
+      return console.error('❌ File not found on disk:', fullPath);
+    }
+
+    // 2) تحميل وثيقة الـ PDF الأصلية
+    let originalPdfBytes;
+    let electronicSealDataUrl;
+    try {
+      originalPdfBytes = fs.readFileSync(fullPath);
+      // قراءة ختم الاعتماد الإلكتروني كـ base64 مرة واحدة
+      const electronicSealBase64 = fs.readFileSync(path.join(__dirname, '../e3teamdelc.png')).toString('base64');
+      electronicSealDataUrl = 'data:image/png;base64,' + electronicSealBase64;
+    } catch (err) {
+      return console.error('❌ Failed to load original PDF or electronic seal:', err);
+    }
+
+    // 3) جلب سجلات الاعتماد بما فيها التفويض مع معلومات إضافية
+    const [logs] = await db.execute(`
+      SELECT
+        al.signed_as_proxy,
+        u_actual.username   AS actual_signer,
+        u_original.username AS original_user,
+        u_actual.first_name AS actual_first_name,
+        u_actual.second_name AS actual_second_name,
+        u_actual.third_name AS actual_third_name,
+        u_actual.last_name AS actual_last_name,
+        u_original.first_name AS original_first_name,
+        u_original.second_name AS original_second_name,
+        u_original.third_name AS original_third_name,
+        u_original.last_name AS original_last_name,
+        al.signature,
+        al.electronic_signature,
+        al.comments,
+        al.created_at,
+        jt_actual.title AS signer_job_title,
+        jt_original.title AS original_job_title
+      FROM committee_approval_logs al
+      JOIN users u_actual
+        ON al.approver_id = u_actual.id
+      LEFT JOIN job_titles jt_actual
+        ON u_actual.job_title_id = jt_actual.id
+      LEFT JOIN users u_original
+        ON al.delegated_by = u_original.id
+      LEFT JOIN job_titles jt_original
+        ON u_original.job_title_id = jt_original.id
+      WHERE al.content_id = ? AND al.status = 'approved'
+      ORDER BY al.created_at
+    `, [contentId]);
+
+    if (!logs.length) {
+      console.warn('⚠️ No approved signatures found for committee content', contentId);
+      return;
+    }
+
+    // 4) إعداد pdfmake
+    const PdfPrinter = require('pdfmake/src/printer');
+    
+    // دالة مساعدة لحل مشكلة ترتيب الكلمات العربية
+    const fixArabicOrder = (text) => {
+      if (typeof text === 'string' && /[\u0600-\u06FF]/.test(text)) {
+        return text.split(' ').reverse().join(' ');
+      }
+      return text;
+    };
+
+    // دالة مساعدة لبناء الاسم الكامل من الأجزاء
+    const buildFullName = (firstName, secondName, thirdName, lastName) => {
+      const nameParts = [firstName, secondName, thirdName, lastName].filter(part => part && part.trim());
+      return nameParts.join(' ');
+    };
+
+    // تعريف خط Amiri العربي
+    const fonts = {
+      Amiri: {
+        normal: path.join(__dirname, '../../fonts/Amiri-Regular.ttf'),
+        bold: path.join(__dirname, '../../fonts/Amiri-Regular.ttf'),
+        italics: path.join(__dirname, '../../fonts/Amiri-Regular.ttf'),
+        bolditalics: path.join(__dirname, '../../fonts/Amiri-Regular.ttf')
+      }
+    };
+
+    let printer;
+    try {
+      printer = new PdfPrinter(fonts);
+    } catch (fontError) {
+      console.log('⚠️ Error with Amiri font, using default fonts');
+      printer = new PdfPrinter();
+    }
+
+    // 5) جلب اسم الملف لعرضه كعنوان
+    const [contentRows] = await db.execute(
+      `SELECT title FROM committee_contents WHERE id = ?`,
+      [contentId]
+    );
+    const fileName = contentRows.length > 0 ? contentRows[0].title : `Committee File ${contentId}`;
+
+    // 6) إنشاء محتوى صفحة الاعتمادات باستخدام pdfmake
+    const approvalTableBody = [];
+    
+    // إضافة رأس الجدول
+    approvalTableBody.push([
+      { text: 'Approvals', style: 'tableHeader' },
+      { text: 'Name', style: 'tableHeader' },
+      { text: 'Position', style: 'tableHeader' },
+      { text: 'Approval Method', style: 'tableHeader' },
+      { text: 'Signature', style: 'tableHeader' },
+      { text: 'Date', style: 'tableHeader' }
+    ]);
+
+    // إضافة بيانات الاعتمادات
+    let rowIndex = 1;
+    const getSignatureCell = (log) => {
+      if (log.signature && log.signature.startsWith('data:image')) {
+        return { image: log.signature, width: 40, height: 20, alignment: 'center' };
+      } else if (log.electronic_signature) {
+        return { image: electronicSealDataUrl, width: 40, height: 20, alignment: 'center' };
+      } else {
+        return { text: '✓', style: 'tableCell' };
+      }
+    };
+
+    for (const log of logs) {
+      const approvalType = rowIndex === 1 ? 'Reviewed' : 
+                          rowIndex === logs.length ? 'Approver' : 'Reviewed';
+      
+      const approvalMethod = log.signature ? 'Hand Signature' : 
+                            log.electronic_signature ? 'Electronic Signature' : 'Not Specified';
+      
+      const approvalDate = new Date(log.created_at).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+
+      const actualSignerFullName = buildFullName(
+        log.actual_first_name,
+        log.actual_second_name,
+        log.actual_third_name,
+        log.actual_last_name
+      ) || log.actual_signer || 'N/A';
+
+      approvalTableBody.push([
+        { text: approvalType, style: 'tableCell' },
+        { text: fixArabicOrder(actualSignerFullName), style: 'tableCell' },
+        { text: fixArabicOrder(log.signer_job_title || 'Not Specified'), style: 'tableCell' },
+        { text: approvalMethod, style: 'tableCell' },
+        getSignatureCell(log),
+        { text: approvalDate, style: 'tableCell' }
+      ]);
+
+      if (log.signed_as_proxy && log.original_user) {
+        const originalUserFullName = buildFullName(
+          log.original_first_name,
+          log.original_second_name,
+          log.original_third_name,
+          log.original_last_name
+        ) || log.original_user || 'N/A';
+
+        approvalTableBody.push([
+          { text: '(Proxy for)', style: 'proxyCell' },
+          { text: fixArabicOrder(originalUserFullName), style: 'proxyCell' },
+          { text: fixArabicOrder(log.original_job_title || 'Not Specified'), style: 'proxyCell' },
+          { text: 'Delegated', style: 'proxyCell' },
+          { text: '-', style: 'proxyCell' },
+          { text: '-', style: 'proxyCell' }
+        ]);
+      }
+
+      rowIndex++;
+    }
+
+    // 7) إنشاء تعريف المستند باستخدام pdfmake
+    const docDefinition = {
+      pageSize: 'A4',
+      pageMargins: [40, 60, 40, 60],
+      defaultStyle: {
+        font: 'Amiri',
+        fontSize: 10
+      },
+      styles: {
+        title: {
+          fontSize: 18,
+          bold: true,
+          alignment: 'center',
+          margin: [0, 0, 0, 20]
+        },
+        tableHeader: {
+          bold: true,
+          fontSize: 9,
+          color: 'black',
+          alignment: 'center',
+          fillColor: '#e6e6e6'
+        },
+        tableCell: {
+          fontSize: 8,
+          alignment: 'center'
+        },
+        proxyCell: {
+          fontSize: 8,
+          alignment: 'center',
+          color: '#666666',
+          fillColor: '#f9f9f9'
+        }
+      },
+      content: [
+        {
+          text: fixArabicOrder(fileName),
+          style: 'title'
+        },
+        {
+          table: {
+            headerRows: 1,
+            widths: ['15%', '20%', '20%', '20%', '10%', '15%'],
+            body: approvalTableBody
+          },
+          layout: {
+            hLineWidth: function(i, node) {
+              return 1;
+            },
+            vLineWidth: function(i, node) {
+              return 1;
+            },
+            hLineColor: function(i, node) {
+              return '#000000';
+            },
+            vLineColor: function(i, node) {
+              return '#000000';
+            }
+          }
+        }
+      ]
+    };
+
+    // 8) إنشاء PDF جديد باستخدام pdfmake
+    const approvalPdfDoc = printer.createPdfKitDocument(docDefinition);
+    const approvalPdfChunks = [];
+    
+    approvalPdfDoc.on('data', (chunk) => {
+      approvalPdfChunks.push(chunk);
+    });
+    
+    approvalPdfDoc.on('end', async () => {
+      try {
+        const approvalPdfBuffer = Buffer.concat(approvalPdfChunks);
+        
+        // 9) دمج صفحة الاعتمادات مع PDF الأصلي
+        const { PDFDocument } = require('pdf-lib');
+        const mergedPdf = await PDFDocument.create();
+        
+        // إضافة صفحات PDF الأصلي أولاً (بدون صفحة الاعتمادات السابقة)
+        const originalPdfDoc = await PDFDocument.load(originalPdfBytes);
+        const originalPageCount = originalPdfDoc.getPageCount();
+        
+        // نسخ جميع صفحات PDF الأصلي ما عدا الصفحة الأخيرة إذا كانت صفحة اعتمادات
+        const pagesToCopy = [];
+        for (let i = 0; i < originalPageCount; i++) {
+          pagesToCopy.push(i);
+        }
+        
+        // إذا كان PDF يحتوي على أكثر من صفحة واحدة، نتجاهل الصفحة الأخيرة
+        // لأنها قد تكون صفحة اعتمادات سابقة
+        if (originalPageCount > 1) {
+          pagesToCopy.pop(); // إزالة الصفحة الأخيرة
+        }
+        
+        const originalPages = await mergedPdf.copyPages(originalPdfDoc, pagesToCopy);
+        originalPages.forEach((page) => mergedPdf.addPage(page));
+        
+        // إضافة صفحة الاعتمادات المحدثة في النهاية
+        const approvalPdfDoc = await PDFDocument.load(approvalPdfBuffer);
+        const approvalPages = await mergedPdf.copyPages(approvalPdfDoc, approvalPdfDoc.getPageIndices());
+        approvalPages.forEach((page) => mergedPdf.addPage(page));
+        
+        // حفظ PDF المدمج
+        const finalPdfBytes = await mergedPdf.save();
+        fs.writeFileSync(fullPath, finalPdfBytes);
+        console.log(`✅ Committee PDF updated with approval table after each approval: ${fullPath}`);
+      } catch (mergeError) {
+        console.error('❌ Error merging committee PDFs:', mergeError);
+        try {
+          fs.writeFileSync(fullPath, approvalPdfBuffer);
+          console.log(`✅ Saved committee approval page only: ${fullPath}`);
+        } catch (saveError) {
+          console.error('❌ Error saving committee approval page:', saveError);
+        }
+      }
+    });
+    
+    approvalPdfDoc.on('error', (error) => {
+      console.error('❌ Error in committee PDF generation:', error);
+    });
+    
+    approvalPdfDoc.end();
+  } catch (err) {
+    console.error('❌ Error updating committee PDF after approval:', err);
   }
 }
 
@@ -1538,21 +1969,66 @@ const revokeAllCommitteeDelegations = async (req, res) => {
     
     // حذف أو تعديل كل التفويضات (إرجاعها للوضع الطبيعي)
     for (const row of rows) {
+      // جلب التسلسل الحالي للمفوض له
+      const [delegateeSequence] = await db.execute(
+        'SELECT sequence_number FROM committee_content_approvers WHERE content_id = ? AND user_id = ?',
+        [row.content_id, row.approver_id]
+      );
+
       // حذف سجل التفويض من committee_approval_logs
       await db.execute(
         `DELETE FROM committee_approval_logs WHERE content_id = ? AND approver_id = ? AND delegated_by = ? AND signed_as_proxy = 1 AND status = 'pending'`,
         [row.content_id, row.approver_id, userId]
       );
+      
       // إعادة المفوض الأصلي إلى جدول committee_content_approvers إذا لم يكن موجوداً
-      await db.execute(
-        `INSERT IGNORE INTO committee_content_approvers (content_id, user_id) VALUES (?, ?)`,
+      const [wasApprover] = await db.execute(
+        `SELECT * FROM committee_approval_logs WHERE content_id = ? AND approver_id = ? AND signed_as_proxy = 0`,
         [row.content_id, userId]
       );
+      
+      if (wasApprover.length) {
+        // إعادة المفوض الأصلي إلى مكانه في التسلسل
+        if (delegateeSequence.length > 0) {
+          const originalSequence = delegateeSequence[0].sequence_number;
+          
+          // إدراج المفوض الأصلي في نفس المكان في التسلسل
+          await db.execute(
+            `INSERT INTO committee_content_approvers (content_id, user_id, sequence_number) VALUES (?, ?, ?)`,
+            [row.content_id, userId, originalSequence]
+          );
+          
+          // إعادة ترتيب التسلسل للمعتمدين المتبقين
+          const [remainingApprovers] = await db.execute(
+            'SELECT user_id, sequence_number FROM committee_content_approvers WHERE content_id = ? AND user_id != ? ORDER BY sequence_number',
+            [row.content_id, userId]
+          );
+          
+          for (let i = 0; i < remainingApprovers.length; i++) {
+            let newSequence = i + 1;
+            if (newSequence >= originalSequence) {
+              newSequence = i + 2; // تخطي المكان الذي أخذته المفوض الأصلي
+            }
+            await db.execute(
+              'UPDATE committee_content_approvers SET sequence_number = ? WHERE content_id = ? AND user_id = ?',
+              [newSequence, row.content_id, remainingApprovers[i].user_id]
+            );
+          }
+        } else {
+          // إذا لم يكن هناك تسلسل محدد، أضفه في النهاية
+          await db.execute(
+            `INSERT IGNORE INTO committee_content_approvers (content_id, user_id) VALUES (?, ?)`,
+            [row.content_id, userId]
+          );
+        }
+      }
+      
       // حذف المفوض له من جدول committee_content_approvers فقط إذا كان وجوده بسبب التفويض
       const [proxyRows] = await db.execute(
         `SELECT * FROM committee_approval_logs WHERE content_id = ? AND approver_id = ? AND signed_as_proxy = 1 AND status = 'pending'`,
         [row.content_id, row.approver_id]
       );
+      
       if (proxyRows.length === 0) {
         // لا يوجد سجل تفويض بالنيابة، لا تحذف
       } else {
@@ -1561,6 +2037,19 @@ const revokeAllCommitteeDelegations = async (req, res) => {
           `DELETE FROM committee_content_approvers WHERE content_id = ? AND user_id = ?`,
           [row.content_id, row.approver_id]
         );
+        
+        // إعادة ترتيب التسلسل بعد الحذف
+        const [remainingApprovers] = await db.execute(
+          'SELECT user_id, sequence_number FROM committee_content_approvers WHERE content_id = ? ORDER BY sequence_number',
+          [row.content_id]
+        );
+        
+        for (let i = 0; i < remainingApprovers.length; i++) {
+          await db.execute(
+            'UPDATE committee_content_approvers SET sequence_number = ? WHERE content_id = ? AND user_id = ?',
+            [i + 1, row.content_id, remainingApprovers[i].user_id]
+          );
+        }
       }
     }
     
@@ -1568,8 +2057,8 @@ const revokeAllCommitteeDelegations = async (req, res) => {
     await db.execute('DELETE FROM active_delegations WHERE user_id = ?', [userId]);
     
     // تسجيل لوق
-    await logAction(adminId, 'revoke_all_committee_delegations', JSON.stringify({ ar: `تم إلغاء جميع تفويضات اللجان التي أعطاها المستخدم رقم ${userId}` }), 'user', userId);
-    res.status(200).json({ status: 'success', message: 'تم إلغاء جميع تفويضات اللجان بنجاح.' });
+    await logAction(adminId, 'revoke_all_committee_delegations', JSON.stringify({ ar: `تم إلغاء جميع تفويضات اللجان التي أعطاها المستخدم رقم ${userId} وإعادة ترتيب التسلسل` }), 'user', userId);
+    res.status(200).json({ status: 'success', message: 'تم إلغاء جميع تفويضات اللجان بنجاح وإعادة ترتيب التسلسل.' });
   } catch (err) {
     console.error('خطأ أثناء إلغاء جميع تفويضات اللجان:', err);
     res.status(500).json({ status: 'error', message: 'فشل إلغاء جميع تفويضات اللجان' });
@@ -1587,27 +2076,103 @@ const revokeCommitteeDelegation = async (req, res) => {
     const { delegateeId } = req.body; // المفوض له
     if (!id || !delegateeId) return res.status(400).json({ status: 'error', message: 'يرجى تحديد الملف والمفوض له' });
 
+    // جلب التسلسل الحالي للمفوض له
+    const [delegateeSequence] = await db.execute(
+      'SELECT sequence_number FROM committee_content_approvers WHERE content_id = ? AND user_id = ?',
+      [id, delegateeId]
+    );
+
     // حذف سجل التفويض
     await db.execute(
       `DELETE FROM committee_approval_logs WHERE content_id = ? AND approver_id = ? AND signed_as_proxy = 1 AND status = 'pending'`,
       [id, delegateeId]
     );
+    
     // إعادة المفوض الأصلي إلى جدول committee_content_approvers إذا لم يكن موجوداً
     const [delegationRow] = await db.execute(
       `SELECT delegated_by FROM committee_approval_logs WHERE content_id = ? AND approver_id = ?`,
       [id, delegateeId]
     );
+    
     if (delegationRow.length && delegationRow[0].delegated_by) {
-      await db.execute(
-        `INSERT IGNORE INTO committee_content_approvers (content_id, user_id) VALUES (?, ?)`,
-        [id, delegationRow[0].delegated_by]
+      const originalDelegatorId = delegationRow[0].delegated_by;
+      
+      // تحقق إذا كان المفوض الأصلي كان معتمدًا قبل التفويض
+      const [wasApprover] = await db.execute(
+        `SELECT * FROM committee_approval_logs WHERE content_id = ? AND approver_id = ? AND signed_as_proxy = 0`,
+        [id, originalDelegatorId]
       );
+      
+      if (wasApprover.length) {
+        // إعادة المفوض الأصلي إلى مكانه في التسلسل
+        if (delegateeSequence.length > 0) {
+          const originalSequence = delegateeSequence[0].sequence_number;
+          
+          // إدراج المفوض الأصلي في نفس المكان في التسلسل
+          await db.execute(
+            `INSERT INTO committee_content_approvers (content_id, user_id, sequence_number) VALUES (?, ?, ?)`,
+            [id, originalDelegatorId, originalSequence]
+          );
+          
+          // إعادة ترتيب التسلسل للمعتمدين المتبقين
+          const [remainingApprovers] = await db.execute(
+            'SELECT user_id, sequence_number FROM committee_content_approvers WHERE content_id = ? AND user_id != ? ORDER BY sequence_number',
+            [id, originalDelegatorId]
+          );
+          
+          for (let i = 0; i < remainingApprovers.length; i++) {
+            let newSequence = i + 1;
+            if (newSequence >= originalSequence) {
+              newSequence = i + 2; // تخطي المكان الذي أخذته المفوض الأصلي
+            }
+            await db.execute(
+              'UPDATE committee_content_approvers SET sequence_number = ? WHERE content_id = ? AND user_id = ?',
+              [newSequence, id, remainingApprovers[i].user_id]
+            );
+          }
+        } else {
+          // إذا لم يكن هناك تسلسل محدد، أضفه في النهاية
+          await db.execute(
+            `INSERT IGNORE INTO committee_content_approvers (content_id, user_id) VALUES (?, ?)`,
+            [id, originalDelegatorId]
+          );
+        }
+      }
+      
+      // تحقق إذا كان المفوض له ليس له توقيع شخصي (أي وجوده فقط بسبب التفويض)
+      const [hasPersonalLog] = await db.execute(
+        `SELECT * FROM committee_approval_logs WHERE content_id = ? AND approver_id = ? AND signed_as_proxy = 0`,
+        [id, delegateeId]
+      );
+      
+      if (!hasPersonalLog.length) {
+        // احذفه من committee_content_approvers
+        await db.execute(
+          `DELETE FROM committee_content_approvers WHERE content_id = ? AND user_id = ?`,
+          [id, delegateeId]
+        );
+        
+        // إعادة ترتيب التسلسل بعد الحذف
+        const [remainingApprovers] = await db.execute(
+          'SELECT user_id, sequence_number FROM committee_content_approvers WHERE content_id = ? ORDER BY sequence_number',
+          [id]
+        );
+        
+        for (let i = 0; i < remainingApprovers.length; i++) {
+          await db.execute(
+            'UPDATE committee_content_approvers SET sequence_number = ? WHERE content_id = ? AND user_id = ?',
+            [i + 1, id, remainingApprovers[i].user_id]
+          );
+        }
+      }
     }
+    
     // حذف سجل active_delegations
     await db.execute('DELETE FROM active_delegations WHERE user_id = ? AND delegate_id = ?', [delegateeId, id]);
+    
     // تسجيل لوق
-    await logAction(adminId, 'revoke_committee_delegation', JSON.stringify({ ar: `تم إلغاء تفويض ملف اللجنة رقم ${id} من المستخدم رقم ${delegateeId}` }), 'committee_content', id);
-    res.status(200).json({ status: 'success', message: 'تم إلغاء التفويض بنجاح.' });
+    await logAction(adminId, 'revoke_committee_delegation', JSON.stringify({ ar: `تم إلغاء تفويض ملف اللجنة رقم ${id} من المستخدم رقم ${delegateeId} وإعادة ترتيب التسلسل` }), 'committee_content', id);
+    res.status(200).json({ status: 'success', message: 'تم إلغاء التفويض بنجاح وإعادة ترتيب التسلسل.' });
   } catch (err) {
     console.error('خطأ أثناء إلغاء تفويض اللجنة:', err);
     res.status(500).json({ status: 'error', message: 'فشل إلغاء تفويض اللجنة' });
@@ -1731,9 +2296,17 @@ const processSingleCommitteeDelegationUnified = async (req, res) => {
         WHERE id = ?
       `, [delegation.id]);
 
-      // لا نضيف المستخدم إلى committee_content_approvers بشكل دائم
-      // التفويض الفردي يكون مؤقت فقط لهذا الملف المحدد
-      // سيتم التعامل معه عند التوقيع الفعلي
+      // إضافة المفوض له إلى committee_content_approvers
+      await db.execute(
+        `INSERT IGNORE INTO committee_content_approvers (content_id, user_id) VALUES (?, ?)`,
+        [contentId, currentUserId]
+      );
+
+      // حذف المفوض الأصلي من committee_content_approvers (فقد صلاحيته)
+      await db.execute(
+        `DELETE FROM committee_content_approvers WHERE content_id = ? AND user_id = ?`,
+        [contentId, delegatorId]
+      );
 
       // إرسال إشعار للمفوض الأصلي
       await insertNotification(
