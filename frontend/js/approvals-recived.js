@@ -290,18 +290,46 @@ function renderApprovals(items) {
       actions += `<button class="btn-reject"><i class="fas fa-times"></i> ${getTranslation('reject')}</button>`;
       actions += `<button class="btn-preview"><i class="fas fa-eye"></i> ${getTranslation('preview')}</button>`;
     }
+    // إضافة زر تتبع الطلب لجميع الحالات
+    actions += `<button class="btn-track" data-id="${item.id}" data-type="${item.type}">${getTranslation('track')}</button>`;
 
     const contentType = item.type === 'committee'
       ? getTranslation('committee-file')
       : getTranslation('department-report');
 
+    // Debug: طباعة البيانات للتحقق
+    console.log('Item data:', item);
+    console.log('Start date:', item.start_date);
+    console.log('End date:', item.end_date);
+    
+    // تنسيق التواريخ
+    const formatDate = (dateString) => {
+      if (!dateString) return '-';
+      const date = new Date(dateString);
+      return date.toLocaleDateString(localStorage.getItem('language') === 'ar' ? 'ar-EG' : 'en-US');
+    };
+    
+    const startDate = formatDate(item.start_date);
+    const endDate = formatDate(item.end_date);
+    
+    // عرض تواريخ الملف فقط إذا كانت موجودة
+    let dateRange = '-';
+    if (item.start_date && item.end_date) {
+      dateRange = `${startDate} - ${endDate}`;
+    } else if (item.start_date) {
+      dateRange = `${getTranslation('from')}: ${startDate}`;
+    } else if (item.end_date) {
+      dateRange = `${getTranslation('to')}: ${endDate}`;
+    }
+
     tr.innerHTML = `
       <td class="col-id">${item.id}</td>
       <td>
         ${getLocalizedName(item.title)}
-        <div class="content-meta">(${contentType} - ${getLocalizedName(item.source_name)} - ${getLocalizedName(item.folder_name || item.folderName || '')})</div>
+        <div class="content-meta">(${contentType} - ${getLocalizedName(item.folder_name || item.folderName || '')})</div>
       </td>
       <td>${getLocalizedName(item.source_name) || '-'}</td>
+      <td class="col-dates">${dateRange}</td>
       <td class="col-response">${statusLabel(item.approval_status)}</td>
       <td class="col-actions">${actions}</td>
     `;
@@ -464,6 +492,15 @@ else {
     window.open(url, '_blank');
   });
 });
+
+  // إضافة معالج حدث لزر تتبع الطلب
+  document.querySelectorAll('.btn-track').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id;
+      const type = btn.dataset.type;
+      window.location.href = `/frontend/html/track-request.html?id=${id}&type=${type}`;
+    });
+  });
 
 }
 

@@ -253,20 +253,33 @@ setInterval(checkExpiredDeadlines, 5 * 60 * 1000);
 const initializeDeadlines = async () => {
   try {
     await deadlineModel.createDeadlinesTable();
+    console.log('تم تهيئة جدول المواعيد النهائية بنجاح');
   } catch (error) {
     console.error('خطأ في إنشاء جدول المواعيد النهائية:', error);
+    // لا نريد إيقاف الخادم بسبب خطأ في إنشاء الجدول
+    console.log('سيستمر الخادم في العمل رغم خطأ إنشاء الجدول');
   }
 };
 
 const PORT = process.env.PORT || 3006;
 app.listen(PORT, async () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+  
   try {
-      console.log(`Server running on http://localhost:${PORT}`);
-
     await cleanupOldLogs();
+  } catch (error) {
+    console.error('خطأ في تنظيف السجلات القديمة:', error);
+  }
+  
+  try {
     await initializeDeadlines();
+  } catch (error) {
+    console.error('خطأ في تهيئة المواعيد النهائية:', error);
+  }
+  
+  try {
     await checkExpiredDeadlines();
   } catch (error) {
-    console.error('خطأ في تهيئة النظام:', error);
+    console.error('خطأ في فحص المواعيد النهائية:', error);
   }
 });

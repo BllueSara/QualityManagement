@@ -980,6 +980,8 @@ const getMyUploadedContent = async (req, res) => {
            c.created_at AS createdAt,
            c.is_approved,
            c.approval_status,
+           c.start_date,
+           c.end_date,
            f.name AS folderName,
            COALESCE(d.name, '-') AS source_name
          FROM contents c
@@ -997,6 +999,8 @@ const getMyUploadedContent = async (req, res) => {
         createdAt:      r.createdAt,
         is_approved:    r.is_approved,
         approval_status: r.approval_status,
+        start_date:     r.start_date,
+        end_date:       r.end_date,
         folderName:     r.folderName,
         source_name:    r.source_name,
         type:           'department'

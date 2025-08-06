@@ -275,6 +275,7 @@ const editThirdName = document.getElementById('editThirdName');
 const editLastName = document.getElementById('editLastName');
 const editUsername = document.getElementById('editUsername');
 const editEmployeeNumber = document.getElementById('editEmployeeNumber');
+const editNationalId = document.getElementById('editNationalId');
 const editJobTitle = document.getElementById('editJobTitle');
 const editDepartment = document.getElementById('editDepartment');
 const editEmail = document.getElementById('editEmail');
@@ -1211,15 +1212,15 @@ if (btnEditUserInfo) {
       return;
     }
     
-    // تقسيم الاسم الكامل إلى أسماء منفصلة
-    const nameParts = (u.name || '').split(' ').filter(part => part.trim());
-    editFirstName.value = nameParts[0] || '';
-    editSecondName.value = nameParts[1] || '';
-    editThirdName.value = nameParts[2] || '';
-    editLastName.value = nameParts.slice(3).join(' ') || '';
+    // تعبئة الأسماء المنفصلة مباشرة من البيانات
+    editFirstName.value = u.first_name || '';
+    editSecondName.value = u.second_name || '';
+    editThirdName.value = u.third_name || '';
+    editLastName.value = u.last_name || '';
     editUsername.value = u.username || '';
     
     editEmployeeNumber.value = u.employee_number || '';
+    editNationalId.value = u.national_id || '';
     // جلب المسميات الوظيفية وتعبئة الدروب داون
     await fetchJobTitlesForEditModal(u.job_title_id, u.job_title);
     editEmail.value = u.email || '';
@@ -1236,6 +1237,25 @@ if (btnEditUserInfo) {
       }
     });
     
+    // إضافة التحقق من صحة رقم الهوية أثناء الكتابة
+    editNationalId.addEventListener('input', function() {
+      const value = this.value;
+      // السماح فقط بالأرقام
+      this.value = value.replace(/[^0-9]/g, '');
+      
+      // التحقق من الطول
+      if (value.length > 10) {
+        this.value = value.slice(0, 10);
+      }
+    });
+
+    editNationalId.addEventListener('blur', function() {
+      const value = this.value.trim();
+      if (value && !/^[1-9]\d{9}$/.test(value)) {
+        showToast('رقم الهوية الوطنية أو الإقامة غير صحيح. يجب أن يكون 10 أرقام ولا يبدأ بصفر.', 'warning');
+      }
+    });
+
     editUserModal.style.display = 'flex';
   });
 }
@@ -1392,6 +1412,13 @@ if (btnSaveEditUser) {
       }
     }
     
+    // التحقق من صحة رقم الهوية إذا تم إدخاله
+    const nationalId = editNationalId.value.trim();
+    if (nationalId && !/^[1-9]\d{9}$/.test(nationalId)) {
+      showToast('رقم الهوية الوطنية أو الإقامة غير صحيح. يجب أن يكون 10 أرقام ولا يبدأ بصفر.', 'warning');
+      return;
+    }
+
     // بناء الاسم الكامل
     const names = [firstName, secondName, thirdName, lastName].filter(name => name);
     const fullName = names.join(' ');
@@ -1403,6 +1430,7 @@ if (btnSaveEditUser) {
       third_name: thirdName,
       last_name: lastName,
       employee_number: editEmployeeNumber.value,
+      national_id: editNationalId.value,
       job_title_id: editJobTitle.value,
       departmentId: editDepartment.value,
       email: editEmail.value,
@@ -1422,105 +1450,51 @@ if (btnSaveEditUser) {
   });
 }
 
-// دالة فتح popup إلغاء التفويضات
-async function openRevokeDelegationsPopup() {
-  if (!selectedUserId) return showToast(getTranslation('please-select-user'), 'warning');
-  // جلب ملخص الأشخاص المفوض لهم (ملفات + لجان)
-  let fileDelegates = [];
-  let committeeDelegates = [];
+// دالة إلغاء التفويض بالكامل (تربط على window)
+window.__revokeAllToUser = async function(delegatorId, delegateeId, isCommittee, btn) {
+  if (!confirm(getTranslation('confirm-revoke-all') || 'هل أنت متأكد من إلغاء جميع التفويضات لهذا الشخص؟')) return;
+  btn.disabled = true;
+  btn.textContent = '...';
   try {
-    // جلب ملخص الملفات
-    const res = await fetch(`${apiBase}/approvals/delegation-summary/${selectedUserId}`, {
+    const url = isCommittee
+      ? `${apiBase}/committee-approvals/delegations/by-user/${delegatorId}?to=${delegateeId}`
+      : `${apiBase}/approvals/delegations/by-user/${delegatorId}?to=${delegateeId}`;
+    const res = await fetch(url, {
+      method: 'DELETE',
       headers: { 'Authorization': `Bearer ${authToken}` }
     });
     const json = await res.json();
-    if (json.status === 'success' && Array.isArray(json.data)) {
-      fileDelegates = json.data;
-    }
-    // جلب ملخص اللجان
-    const resComm = await fetch(`${apiBase}/committee-approvals/delegation-summary/${selectedUserId}`, {
-      headers: { 'Authorization': `Bearer ${authToken}` }
-    });
-    const jsonComm = await resComm.json();
-    if (jsonComm.status === 'success' && Array.isArray(jsonComm.data)) {
-      committeeDelegates = jsonComm.data;
-    }
-  } catch (err) {
-    showToast(getTranslation('error-occurred'), 'error');
-    return;
-  }
-  // بناء popup
-  const overlay = document.createElement('div');
-  overlay.style = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.4);z-index:9999;display:flex;align-items:center;justify-content:center;';
-  const box = document.createElement('div');
-  box.style = 'background:#fff;padding:32px 24px;border-radius:12px;max-width:600px;min-width:340px;text-align:center;box-shadow:0 2px 16px #0002;max-height:80vh;overflow:auto;';
-  box.innerHTML = `<div style='font-size:1.2rem;margin-bottom:18px;'>${getTranslation('revoke-delegations')} (${getTranslation('by-person')})</div>`;
-  if (fileDelegates.length === 0 && committeeDelegates.length === 0) {
-    box.innerHTML += `<div style='margin:24px 0;'>${getTranslation('no-active-delegations')}</div>`;
-  } else {
-    if (fileDelegates.length > 0) {
-      box.innerHTML += `<div style='font-weight:bold;margin:12px 0 6px;'>${getTranslation('file-delegations')}:</div>`;
-      fileDelegates.forEach(d => {
-        box.innerHTML += `<div style='margin:8px 0;padding:8px 0;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:space-between;'>
-          <span style='flex:1;text-align:right;'>${d.approver_name || d.email || getTranslation('user') + ' ' + d.approver_id} <span style='color:#888;font-size:0.95em;'>(${getTranslation('files-count')}: ${d.files_count})</span></span>
-          <button style='background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:4px 16px;cursor:pointer;margin-right:12px;' onclick='window.__revokeAllToUser(${selectedUserId},${d.approver_id},false,this)'>${getTranslation('revoke-delegations')}</button>
-        </div>`;
-      });
-    }
-    if (committeeDelegates.length > 0) {
-      box.innerHTML += `<div style='font-weight:bold;margin:18px 0 6px;'>${getTranslation('committee-delegations')}:</div>`;
-      committeeDelegates.forEach(d => {
-        box.innerHTML += `<div style='margin:8px 0;padding:8px 0;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:space-between;'>
-          <span style='flex:1;text-align:right;'>${d.approver_name || d.email || getTranslation('user') + ' ' + d.approver_id} <span style='color:#888;font-size:0.95em;'>(${getTranslation('files-count')}: ${d.files_count})</span></span>
-          <button style='background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:4px 16px;cursor:pointer;margin-right:12px;' onclick='window.__revokeAllToUser(${selectedUserId},${d.approver_id},true,this)'>${getTranslation('revoke-delegations')}</button>
-        </div>`;
-      });
-    }
-  }
-  // زر إغلاق
-  const btnClose = document.createElement('button');
-  btnClose.textContent = getTranslation('cancel') || 'إغلاق';
-  btnClose.style = 'margin-top:18px;background:#888;color:#fff;border:none;border-radius:6px;padding:8px 24px;font-size:1rem;cursor:pointer;';
-  btnClose.onclick = () => document.body.removeChild(overlay);
-  box.appendChild(btnClose);
-  overlay.appendChild(box);
-  document.body.appendChild(overlay);
-  // دالة إلغاء التفويض بالكامل (تربط على window)
-  window.__revokeAllToUser = async function(delegatorId, delegateeId, isCommittee, btn) {
-    if (!confirm(getTranslation('confirm-revoke-all') || 'هل أنت متأكد من إلغاء جميع التفويضات لهذا الشخص؟')) return;
-    btn.disabled = true;
-    btn.textContent = '...';
-    try {
-      const url = isCommittee
-        ? `${apiBase}/committee-approvals/delegations/by-user/${delegatorId}?to=${delegateeId}`
-        : `${apiBase}/approvals/delegations/by-user/${delegatorId}?to=${delegateeId}`;
-      const res = await fetch(url, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${authToken}` }
-      });
-      const json = await res.json();
-      if (json.status === 'success') {
-        btn.parentNode.style.opacity = '0.5';
-        btn.textContent = getTranslation('revoked') || 'تم الإلغاء';
-        btn.disabled = true;
-        setTimeout(() => {
-          const stillActive = overlay.querySelectorAll('button:not([disabled])').length;
-          if (!stillActive) {
-            document.body.removeChild(overlay);
-            loadUsers();
-          }
-        }, 700);
-      } else {
-        btn.disabled = false;
-        btn.textContent = getTranslation('revoke-delegations');
-        showToast(json.message || getTranslation('error-occurred'), 'error');
-      }
-    } catch (err) {
+    if (json.status === 'success') {
+      btn.parentNode.style.opacity = '0.5';
+      btn.textContent = getTranslation('revoked') || 'تم الإلغاء';
+      btn.disabled = true;
+      setTimeout(() => {
+        const stillActive = overlay.querySelectorAll('button:not([disabled])').length;
+        if (!stillActive) {
+          document.body.removeChild(overlay);
+          loadUsers();
+        }
+      }, 700);
+    } else {
       btn.disabled = false;
       btn.textContent = getTranslation('revoke-delegations');
-      showToast(getTranslation('error-occurred'), 'error');
+      showToast(json.message || getTranslation('error-occurred'), 'error');
     }
-  };
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = getTranslation('revoke-delegations');
+    showToast(getTranslation('error-occurred'), 'error');
+  }
+};
+
+// Manage Users Functions
+function initializeManageUsers() {
+  const btnManageUsers = document.getElementById('btn-manage-users');
+  if (btnManageUsers) {
+    btnManageUsers.addEventListener('click', () => {
+      window.location.href = 'manage-users.html';
+    });
+  }
 }
 
 // Job Titles Management Functions
@@ -1823,6 +1797,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeJobTitlesManagement();
   initializeJobTitlesForAddUser();
   initializeAddJobTitleFromUserModal();
+  initializeManageUsers();
 });
 
 // =====================
@@ -1984,4 +1959,78 @@ function getSectionName(section) {
   };
   
   return sectionNames[section] || section;
+}
+
+// دالة فتح popup إلغاء التفويضات
+async function openRevokeDelegationsPopup() {
+  if (!selectedUserId) return showToast(getTranslation('please-select-user'), 'warning');
+  // جلب ملخص الأشخاص المفوض لهم (ملفات + لجان)
+  let fileDelegates = [];
+  let committeeDelegates = [];
+  try {
+    // جلب ملخص الملفات
+    const res = await fetch(`${apiBase}/approvals/delegation-summary/${selectedUserId}`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    const json = await res.json();
+    if (json.status === 'success' && Array.isArray(json.data)) {
+      fileDelegates = json.data;
+    }
+    // جلب ملخص اللجان
+    const resComm = await fetch(`${apiBase}/committee-approvals/delegation-summary/${selectedUserId}`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    const jsonComm = await resComm.json();
+    if (jsonComm.status === 'success' && Array.isArray(jsonComm.data)) {
+      committeeDelegates = jsonComm.data;
+    }
+  } catch (err) {
+    showToast(getTranslation('error-occurred'), 'error');
+    return;
+  }
+  // بناء popup
+  const overlay = document.createElement('div');
+  overlay.style = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.4);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  const box = document.createElement('div');
+  box.style = 'background:#fff;padding:32px 24px;border-radius:12px;max-width:600px;min-width:340px;text-align:center;box-shadow:0 2px 16px #0002;max-height:80vh;overflow:auto;';
+  box.innerHTML = `<div style='font-size:1.2rem;margin-bottom:18px;'>${getTranslation('revoke-delegations')} (${getTranslation('by-person')})</div>`;
+  if (fileDelegates.length === 0 && committeeDelegates.length === 0) {
+    box.innerHTML += `<div style='margin:24px 0;'>${getTranslation('no-active-delegations')}</div>`;
+  } else {
+    if (fileDelegates.length > 0) {
+      box.innerHTML += `<div style='font-weight:bold;margin:12px 0 6px;'>${getTranslation('file-delegations')}:</div>`;
+      fileDelegates.forEach(d => {
+        box.innerHTML += `<div style='margin:8px 0;padding:8px 0;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:space-between;'>
+          <span style='flex:1;text-align:right;'>${d.approver_name || d.email || getTranslation('user') + ' ' + d.approver_id} <span style='color:#888;font-size:0.95em;'>(${getTranslation('files-count')}: ${d.files_count})</span></span>
+          <button style='background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:4px 16px;cursor:pointer;margin-right:12px;' onclick='window.__revokeAllToUser(${selectedUserId},${d.approver_id},false,this)'>${getTranslation('revoke-delegations')}</button>
+        </div>`;
+      });
+    }
+    if (committeeDelegates.length > 0) {
+      box.innerHTML += `<div style='font-weight:bold;margin:18px 0 6px;'>${getTranslation('committee-delegations')}:</div>`;
+      committeeDelegates.forEach(d => {
+        box.innerHTML += `<div style='margin:8px 0;padding:8px 0;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:space-between;'>
+          <span style='flex:1;text-align:right;'>${d.approver_name || d.email || getTranslation('user') + ' ' + d.approver_id} <span style='color:#888;font-size:0.95em;'>(${getTranslation('files-count')}: ${d.files_count})</span></span>
+          <button style='background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:4px 16px;cursor:pointer;margin-right:12px;' onclick='window.__revokeAllToUser(${selectedUserId},${d.approver_id},true,this)'>${getTranslation('revoke-delegations')}</button>
+        </div>`;
+      });
+    }
+  }
+  // زر إغلاق
+  const btnClose = document.createElement('button');
+  btnClose.textContent = getTranslation('cancel') || 'إغلاق';
+  btnClose.style = 'margin-top:18px;background:#888;color:#fff;border:none;border-radius:6px;padding:8px 24px;font-size:1rem;cursor:pointer;';
+  btnClose.onclick = () => document.body.removeChild(overlay);
+  box.appendChild(btnClose);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
+
+// إغلاق المودال عند النقر خارج المحتوى
+if (editUserModal) {
+  editUserModal.addEventListener('click', function(event) {
+    if (event.target === this) {
+      editUserModal.style.display = 'none';
+    }
+  });
 }

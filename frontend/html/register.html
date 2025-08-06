@@ -89,7 +89,7 @@
                 <h2 data-translate="register">إنشاء حساب جديد</h2>
                 <p data-translate="register-description">أدخل بياناتك لإنشاء حساب جديد</p>
 
-                <div class="form-group">
+                <div class="form-group" id="firstNameGroup">
                     <label for="reg-first-name" data-translate="first-name-label">الاسم الأول *</label>
                     <div class="input-icon-wrapper">
                         <input type="text" id="reg-first-name" name="first_name" data-placeholder="enter-first-name" placeholder="أدخل الاسم الأول" required>
@@ -97,7 +97,7 @@
                     </div>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" id="secondNameGroup">
                     <label for="reg-second-name" data-translate="second-name-label">الاسم الثاني</label>
                     <div class="input-icon-wrapper">
                         <input type="text" id="reg-second-name" name="second_name" data-placeholder="enter-second-name" placeholder="أدخل الاسم الثاني (اختياري)">
@@ -105,7 +105,7 @@
                     </div>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" id="thirdNameGroup">
                     <label for="reg-third-name" data-translate="third-name-label">الاسم الثالث</label>
                     <div class="input-icon-wrapper">
                         <input type="text" id="reg-third-name" name="third_name" data-placeholder="enter-third-name" placeholder="أدخل الاسم الثالث (اختياري)">
@@ -113,7 +113,7 @@
                     </div>
                 </div>
 
-                        <div class="form-group">
+                        <div class="form-group" id="lastNameGroup">
             <label for="reg-last-name" data-translate="last-name-label">اسم العائلة *</label>
             <div class="input-icon-wrapper">
                 <input type="text" id="reg-last-name" name="last_name" data-placeholder="enter-last-name" placeholder="أدخل اسم العائلة" required>
@@ -137,7 +137,24 @@
                     </div>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" id="nationalIdGroup">
+                    <label for="reg-national-id" data-translate="national-id">رقم الهوية الوطنية / الإقامة</label>
+                    <div class="input-icon-wrapper">
+                        <input 
+                            type="text" 
+                            id="reg-national-id" 
+                            name="national_id" 
+                            data-placeholder="enter-national-id" 
+                            placeholder="أدخل رقم الهوية الوطنية أو الإقامة" 
+                            maxlength="10"
+                            pattern="[0-9]{10}"
+                            required
+                        >
+                        <img src="../images/id-card.png" alt="أيقونة هوية" class="icon">
+                    </div>
+                </div>
+
+                <div class="form-group" id="employeeGroup">
                     <label for="reg-employee" data-translate="employee-number">الرقم الوظيفي</label>
                     <div class="input-icon-wrapper">
                         <input
@@ -152,7 +169,7 @@
                     </div>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" id="jobTitleGroup">
                     <label for="reg-job-title" data-translate="job-title">المسمى الوظيفي</label>
                     <div class="input-icon-wrapper">
                         <select
@@ -183,7 +200,7 @@
                     </div>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" id="departmentGroup">
                     <label for="reg-department" data-translate="department">القسم</label>
                     <div class="input-icon-wrapper">
                         <select id="reg-department" name="department" required>

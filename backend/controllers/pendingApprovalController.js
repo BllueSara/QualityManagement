@@ -94,7 +94,9 @@ exports.getPendingApprovals = async (req, res) => {
             u.username AS created_by_username,
             'department_content' AS content_type,
             c.approvers_required,
-            c.created_at
+            c.created_at,
+            c.start_date,
+            c.end_date
         FROM contents c
         JOIN folders f ON c.folder_id = f.id
         JOIN departments d ON f.department_id = d.id

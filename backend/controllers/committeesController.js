@@ -1001,6 +1001,8 @@ exports.getMyUploadedCommitteeContents = async (req, res) => {
                 cc.file_path,
                 cc.approval_status AS is_approved,
                 cc.created_at,
+                cc.start_date,
+                cc.end_date,
                 cf.name AS folderName,
                 com.name AS source_name
             FROM committee_contents cc
@@ -1091,6 +1093,8 @@ exports.trackCommitteeContent = async (req, res) => {
                 cc.file_path,
                 cc.approval_status,
                 cc.created_at,
+                cc.start_date,
+                cc.end_date,
                 cf.name AS folderName,
                 com.name AS source_name
             FROM committee_contents cc

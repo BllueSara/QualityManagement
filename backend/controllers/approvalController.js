@@ -142,6 +142,8 @@ const getUserPendingApprovals = async (req, res) => {
           CAST(c.approvers_required AS CHAR) AS approvers_required,
           c.approvals_log, 
           c.created_at,
+          c.start_date,
+          c.end_date,
           f.name AS folderName,
           COALESCE(d.name, '-') AS source_name,
           GROUP_CONCAT(DISTINCT u2.username ORDER BY ca.sequence_number) AS assigned_approvers,
@@ -192,6 +194,8 @@ const getUserPendingApprovals = async (req, res) => {
           CAST(c.approvers_required AS CHAR) AS approvers_required,
           c.approvals_log, 
           c.created_at,
+          c.start_date,
+          c.end_date,
           f.name AS folderName,
           COALESCE(d.name, '-') AS source_name,
           GROUP_CONCAT(DISTINCT u2.username ORDER BY ca.sequence_number) AS assigned_approvers,
@@ -1391,6 +1395,8 @@ const getAssignedApprovals = async (req, res) => {
           'committee' AS type,
           CAST(cc.approvers_required AS CHAR) AS approvers_required,
           cc.created_at,
+          cc.start_date,
+          cc.end_date,
           cca.sequence_number
         FROM committee_contents cc
         JOIN committee_folders cf      ON cc.folder_id = cf.id
@@ -1463,6 +1469,8 @@ const getAssignedApprovals = async (req, res) => {
           'committee' AS type,
           CAST(cc.approvers_required AS CHAR) AS approvers_required,
           cc.created_at,
+          cc.start_date,
+          cc.end_date,
           cca.sequence_number
         FROM committee_contents cc
         JOIN committee_folders cf      ON cc.folder_id = cf.id

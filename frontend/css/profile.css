@@ -166,13 +166,38 @@ main {
 
     .profile-container {
         padding: 25px;
+        margin-top: 80px;
     }
 
     .profile-container h2 {
         font-size: 1.8em;
     }
 
+    .profile-info {
+        padding: 20px;
+    }
+
     .profile-info p {
+        font-size: 1em;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+
+    .profile-info strong {
+        margin-left: 0;
+        margin-bottom: 5px;
+        min-width: auto;
+    }
+
+    .profile-info span {
+        text-align: right;
+    }
+
+    .btn-primary,
+    .btn-secondary,
+    #edit-profile-button {
+        padding: 12px 20px;
         font-size: 1em;
     }
 }
@@ -340,4 +365,25 @@ body[lang="en"] .toast-container,
     height: auto !important;
     font-size: inherit !important;
     font-weight: inherit !important;
+}
+
+/* تحسينات للغة الإنجليزية */
+body[dir="ltr"] .profile-container,
+body[dir="ltr"] .profile-info p,
+body[dir="ltr"] .profile-actions {
+    direction: ltr !important;
+    text-align: left !important;
+}
+
+body[dir="ltr"] .profile-info p {
+    flex-direction: row-reverse;
+}
+
+body[dir="ltr"] .profile-info strong {
+    margin-left: 0;
+    margin-right: 15px;
+}
+
+body[dir="ltr"] .profile-info span {
+    text-align: right;
 }

@@ -58,6 +58,7 @@
           <i class="fas fa-search search-icon"></i>
         </div>
         <button class="add-user-btn" id="add-user-btn"><i class="fas fa-user-plus"></i><span data-translate="add-user">إضافة مستخدم جديد</span></button>
+        <button class="btn-primary" id="btn-manage-users" style="margin-top: 10px;"><i class="fas fa-users-cog"></i><span data-translate="manage-users">إدارة المستخدمين</span></button>
         <button class="btn-primary" id="btn-manage-job-titles" style="margin-top: 10px;"><i class="fas fa-briefcase"></i><span data-translate="manage-job-titles">إدارة المسميات الوظيفية</span></button>
         <button class="btn-primary" id="btn-revoke-files" style="margin-top: 10px; display: none;"><i class="fas fa-file-export"></i> <span>سحب الملفات</span></button>
         <div class="user-list" id="user-list">
@@ -1126,14 +1127,18 @@
           <input type="text" id="editEmployeeNumber" data-translate-placeholder="employee-number-placeholder" placeholder="أدخل الرقم الوظيفي">
         </div>
         <div class="form-group">
-                                  <label for="editJobTitle" data-translate="job-title-label">المسمى الوظيفي</label>
-                        <select id="editJobTitle" required>
-                            <option value="" data-translate="select-job-title">اختر المسمى الوظيفي</option>
-                        </select>
+          <label for="editNationalId" data-translate="national-id">رقم الهوية الوطنية / الإقامة</label>
+          <input type="text" id="editNationalId" data-translate-placeholder="enter-national-id" placeholder="أدخل رقم الهوية الوطنية أو الإقامة" maxlength="10" pattern="[0-9]{10}">
         </div>
       </div>
 
       <div class="form-row">
+        <div class="form-group">
+          <label for="editJobTitle" data-translate="job-title-label">المسمى الوظيفي</label>
+          <select id="editJobTitle" required>
+            <option value="" data-translate="select-job-title">اختر المسمى الوظيفي</option>
+          </select>
+        </div>
         <div class="form-group">
           <label for="editDepartment" data-translate="department-label">القسم</label>
           <select id="editDepartment">
@@ -1141,6 +1146,8 @@
           </select>
         </div>
       </div>
+
+
     </div>
     <div class="modal-actions">
       <button class="btn-secondary" id="cancelEditUser"><span data-translate="cancel">إلغاء</span></button>

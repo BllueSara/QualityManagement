@@ -31,18 +31,30 @@ async function createDeadlinesTable() {
           INDEX idx_deadline (deadline_date)
         )
       `);
+      console.log('تم إنشاء جدول content_deadlines بنجاح');
     } else {
+      console.log('جدول content_deadlines موجود بالفعل');
       // تحقق من نوع البيانات في العمود content_id
-      const [columns] = await db.execute(`DESCRIBE content_deadlines`);
-      
-      const contentIdColumn = columns.find(col => col.Field === 'content_id');
-      
-      if (contentIdColumn && contentIdColumn.Type.includes('int')) {
-        // تغيير نوع البيانات من INT إلى VARCHAR
-        await db.execute(`ALTER TABLE content_deadlines MODIFY COLUMN content_id VARCHAR(50) NOT NULL`);
+      try {
+        const [columns] = await db.execute(`DESCRIBE content_deadlines`);
+        
+        const contentIdColumn = columns.find(col => col.Field === 'content_id');
+        
+        if (contentIdColumn && contentIdColumn.Type.includes('int')) {
+          // تغيير نوع البيانات من INT إلى VARCHAR
+          await db.execute(`ALTER TABLE content_deadlines MODIFY COLUMN content_id VARCHAR(50) NOT NULL`);
+          console.log('تم تحديث نوع البيانات للعمود content_id');
+        }
+      } catch (alterError) {
+        console.log('لا حاجة لتحديث هيكل الجدول:', alterError.message);
       }
     }
   } catch (error) {
+    // إذا كان الخطأ بسبب وجود الجدول بالفعل، تجاهل الخطأ
+    if (error.code === 'ER_TABLE_EXISTS_ERROR') {
+      console.log('جدول content_deadlines موجود بالفعل');
+      return;
+    }
     console.error('Error creating/updating deadlines table:', error);
     throw error;
   }

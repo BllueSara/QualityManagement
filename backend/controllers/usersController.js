@@ -103,6 +103,7 @@ const getUserById = async (req, res) => {
          u.department_id AS departmentId,
          d.name AS departmentName,
          u.employee_number,
+         u.national_id,
          u.job_title_id,
          jt.title AS job_title,
          u.first_name,
@@ -139,7 +140,8 @@ const getUserById = async (req, res) => {
       userData.last_name
     );
     
-    userData.name = fullName || userData.username;
+    // إصلاح مشكلة عرض اسم المستخدم - نعرض username بدلاً من الاسم الكامل
+    userData.name = userData.username;
     
     res.status(200).json({
       status: 'success',
@@ -263,7 +265,7 @@ const updateUser = async (req, res) => {
   const userLang = getUserLang(req);
 
   const id = req.params.id;
-  const { first_name, second_name, third_name, last_name, name, email, departmentId, role, employee_number, job_title_id } = req.body;
+  const { first_name, second_name, third_name, last_name, name, email, departmentId, role, employee_number, job_title_id, national_id } = req.body;
 
   // للادمن: فقط الاسم الأول واسم العائلة واسم المستخدم والدور مطلوبة
   // للمستخدمين الآخرين: جميع الحقول مطلوبة
@@ -307,6 +309,29 @@ const updateUser = async (req, res) => {
       }
     }
 
+    // التحقق من صحة رقم الهوية إذا تم إدخاله
+    if (national_id && !/^[1-9]\d{9}$/.test(national_id)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'رقم الهوية الوطنية أو الإقامة غير صحيح. يجب أن يكون 10 أرقام ولا يبدأ بصفر'
+      });
+    }
+
+    // التحقق من عدم تكرار رقم الهوية مع مستخدم آخر
+    if (national_id && national_id.trim()) {
+      const [existingUser] = await db.execute(
+        'SELECT id FROM users WHERE national_id = ? AND id != ?',
+        [national_id, id]
+      );
+
+      if (existingUser.length > 0) {
+        return res.status(409).json({ 
+          status: 'error', 
+          message: 'رقم الهوية الوطنية أو الإقامة مستخدم بالفعل' 
+        });
+      }
+    }
+
     // Fetch new department details for logging
     let newDepartmentName = null;
     if (departmentId) {
@@ -329,13 +354,14 @@ const updateUser = async (req, res) => {
            role = ?,
            employee_number = ?,
            job_title_id = ?,
+           national_id = ?,
            first_name = ?,
            second_name = ?,
            third_name = ?,
            last_name = ?,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,
-      [name, email, departmentId || null, role, employee_number, job_title_id, first_name, second_name || null, third_name || null, last_name, id]
+      [name, email, departmentId || null, role, employee_number, job_title_id, national_id || null, first_name, second_name || null, third_name || null, last_name, id]
     );
 
     if (!result.affectedRows) {
@@ -376,6 +402,10 @@ const updateUser = async (req, res) => {
     if (req.body.job_title_id !== undefined && req.body.job_title_id !== oldUser.job_title_id) {
       changesAr.push(`المسمى الوظيفي: '${oldUser.job_title || ''}' ← '${req.body.job_title_id || ''}'`);
       changesEn.push(`Job Title: '${oldUser.job_title || ''}' → '${req.body.job_title_id || ''}'`);
+    }
+    if (req.body.national_id !== undefined && req.body.national_id !== oldUser.national_id) {
+      changesAr.push(`رقم الهوية: '${oldUser.national_id || ''}' ← '${req.body.national_id || ''}'`);
+      changesEn.push(`National ID: '${oldUser.national_id || ''}' → '${req.body.national_id || ''}'`);
     }
     if (role !== oldUser.role) {
       changesAr.push(`الدور: '${oldUser.role}' ← '${role}'`);

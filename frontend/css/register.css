@@ -356,6 +356,11 @@ html[dir="ltr"] .toast-container {
     background-color: #17a2b8;
 }
 
+.toast.warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
 @keyframes slideIn {
     to {
         opacity: 1;

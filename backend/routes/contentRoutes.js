@@ -49,7 +49,7 @@ router.get('/track/:contentId', async (req, res) => {
   try {
     const { contentId } = req.params;
 
-    const [contentRows] = await db.execute('SELECT * FROM contents WHERE id = ?', [contentId]);
+    const [contentRows] = await db.execute('SELECT *, start_date, end_date FROM contents WHERE id = ?', [contentId]);
     if (contentRows.length === 0) {
       return res.status(404).json({ status: 'error', message: 'Content not found.' });
     }

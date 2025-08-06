@@ -70,6 +70,8 @@ async function getUserPendingCommitteeApprovals(req, res) {
           cc.approval_status,
           CAST(cc.approvers_required AS CHAR) AS approvers_required,
           cc.created_at,
+          cc.start_date,
+          cc.end_date,
           cf.name AS folderName,
           com.name  AS source_name,
           'committee' AS type,
@@ -107,6 +109,8 @@ async function getUserPendingCommitteeApprovals(req, res) {
           cc.approval_status,
           CAST(cc.approvers_required AS CHAR) AS approvers_required,
           cc.created_at,
+          cc.start_date,
+          cc.end_date,
           cf.name AS folderName,
           com.name  AS source_name,
           'committee' AS type,
@@ -185,6 +189,8 @@ async function getUserPendingCommitteeApprovals(req, res) {
           cc.approval_status,
           CAST(cc.approvers_required AS CHAR) AS approvers_required,
           cc.created_at,
+          cc.start_date,
+          cc.end_date,
           cf.name AS folderName,
           com.name  AS source_name,
           'committee' AS type,
@@ -772,6 +778,8 @@ async function getAssignedCommitteeApprovals(req, res) {
           'committee'                           AS type,
           CAST(cc.approvers_required AS CHAR)   AS approvers_required,
           cc.created_at,
+          cc.start_date,
+          cc.end_date,
           cca.sequence_number
         FROM committee_contents cc
         JOIN committee_folders cf       ON cc.folder_id = cf.id
@@ -815,6 +823,8 @@ async function getAssignedCommitteeApprovals(req, res) {
           'committee'                           AS type,
           CAST(cc.approvers_required AS CHAR)   AS approvers_required,
           cc.created_at,
+          cc.start_date,
+          cc.end_date,
           cca.sequence_number
         FROM committee_contents cc
         JOIN committee_folders cf       ON cc.folder_id = cf.id

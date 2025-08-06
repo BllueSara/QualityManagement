@@ -1,3 +1,5 @@
+
+
 function getTranslation(key) {
     const lang = localStorage.getItem('language') || document.documentElement.lang || 'ar';
     if (window.translations && window.translations[lang] && window.translations[lang][key]) {
@@ -34,6 +36,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const emailSpan = document.getElementById('profile-email');
     const departmentSpan = document.getElementById('profile-department');
     const employeeNumberSpan = document.getElementById('profile-employee-number');
+    const nationalIdSpan = document.getElementById('profile-national-id');
     const jobTitleSpan = document.getElementById('profile-job-title');
 
     const logoutButton = document.getElementById('logout-button');
@@ -126,6 +129,7 @@ document.addEventListener('DOMContentLoaded', function() {
             emailSpan.textContent = getTranslation('loading') || 'جاري التحميل...';
             usernameSpan.textContent = getTranslation('loading') || 'جاري التحميل...';
             employeeNumberSpan.textContent = getTranslation('loading') || 'جاري التحميل...';
+            nationalIdSpan.textContent = getTranslation('loading') || 'جاري التحميل...';
             jobTitleSpan.textContent = getTranslation('loading') || 'جاري التحميل...';
             departmentSpan.textContent = getTranslation('loading') || 'جاري التحميل...';
             
@@ -138,8 +142,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     // ✅ عرض جميع المعلومات من الخادم (البيانات الأحدث والأكثر دقة)
                     emailSpan.textContent = userData.email || getTranslation('not-available');
-                    usernameSpan.textContent = userData.name || getTranslation('not-available');
+                    usernameSpan.textContent = userData.username || getTranslation('not-available');
                     employeeNumberSpan.textContent = userData.employee_number || getTranslation('not-available');
+                    nationalIdSpan.textContent = userData.national_id || getTranslation('not-available');
                     
                     // معالجة خاصة للمسمى الوظيفي
                     const jobTitle = userData.job_title;
@@ -155,6 +160,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     emailSpan.textContent = user.email || getTranslation('not-available');
                     usernameSpan.textContent = user.username || getTranslation('not-available');
                     employeeNumberSpan.textContent = user.employee_number || getTranslation('not-available');
+                    nationalIdSpan.textContent = user.national_id || getTranslation('not-available');
                     
                     // معالجة خاصة للمسمى الوظيفي (احتياطي)
                     const jobTitle = user.job_title;
@@ -172,6 +178,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 emailSpan.textContent = user.email || getTranslation('not-available');
                 usernameSpan.textContent = user.username || getTranslation('not-available');
                 employeeNumberSpan.textContent = user.employee_number || getTranslation('not-available');
+                nationalIdSpan.textContent = user.national_id || getTranslation('not-available');
                 
                 // معالجة خاصة للمسمى الوظيفي (في حالة الخطأ)
                 const jobTitle = user.job_title;
@@ -255,14 +262,18 @@ function createEditProfileModal() {
                         <input type="text" id="editEmployeeNumber" data-translate-placeholder="employee-number-placeholder" placeholder="أدخل الرقم الوظيفي">
                     </div>
                     <div class="form-group">
+                        <label for="editNationalId" data-translate="national-id">رقم الهوية الوطنية / الإقامة</label>
+                        <input type="text" id="editNationalId" data-translate-placeholder="enter-national-id" placeholder="أدخل رقم الهوية الوطنية أو الإقامة" maxlength="10" pattern="[0-9]{10}">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
                         <label for="editJobTitle" data-translate="job-title-label">المسمى الوظيفي</label>
                         <select id="editJobTitle">
                             <option value="" data-translate="select-job-title">اختر المسمى الوظيفي</option>
                         </select>
                     </div>
-                </div>
-
-                <div class="form-row">
                     <div class="form-group">
                         <label for="editDepartment" data-translate="department-label">القسم</label>
                         <select id="editDepartment">
@@ -270,6 +281,8 @@ function createEditProfileModal() {
                         </select>
                     </div>
                 </div>
+
+
             </div>
             <div class="modal-actions">
                 <button class="btn-secondary" id="cancelEditProfile"><span data-translate="cancel">إلغاء</span></button>
@@ -313,6 +326,7 @@ async function openEditProfileModal() {
             document.getElementById('editLastName').value = nameParts.slice(3).join(' ') || '';
             document.getElementById('editUsername').value = userData.username || '';
             document.getElementById('editEmployeeNumber').value = userData.employee_number || '';
+            document.getElementById('editNationalId').value = userData.national_id || '';
             document.getElementById('editEmail').value = userData.email || '';
             
                          // جلب الأقسام والمسميات الوظيفية
@@ -351,6 +365,7 @@ async function saveProfileChanges() {
         const lastName = document.getElementById('editLastName').value.trim();
         const username = document.getElementById('editUsername').value.trim();
         const employeeNumber = document.getElementById('editEmployeeNumber').value.trim();
+        const nationalId = document.getElementById('editNationalId').value.trim();
                  const email = document.getElementById('editEmail').value.trim();
          const departmentId = document.getElementById('editDepartment').value;
          const jobTitleId = document.getElementById('editJobTitle').value;
@@ -358,6 +373,12 @@ async function saveProfileChanges() {
         // التحقق من الحقول المطلوبة
         if (!firstName || !lastName || !username || !email) {
             alert(getTranslation('required-fields') || 'يرجى ملء جميع الحقول المطلوبة');
+            return;
+        }
+
+        // التحقق من صحة رقم الهوية إذا تم إدخاله
+        if (nationalId && !/^[1-9]\d{9}$/.test(nationalId)) {
+            alert('رقم الهوية الوطنية أو الإقامة غير صحيح. يجب أن يكون 10 أرقام ولا يبدأ بصفر.');
             return;
         }
         
@@ -372,6 +393,7 @@ async function saveProfileChanges() {
              third_name: thirdName,
              last_name: lastName,
              employee_number: employeeNumber,
+             national_id: nationalId,
              email: email,
              departmentId: departmentId,
              job_title_id: jobTitleId
