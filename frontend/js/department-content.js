@@ -68,6 +68,22 @@ function getUserRoleFromToken() {
       return null;
   }
 }
+
+function getUserIdFromToken() {
+  const token = localStorage.getItem('token');
+  if (!token) return null;
+  try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      return JSON.parse(jsonPayload).id; // يفترض أن معرف المستخدم موجود في الحمولة كـ 'id'
+  } catch (e) {
+      console.error('Error decoding token:', e);
+      return null;
+  }
+}
 // 1) جلب الأسماء
 async function loadFolderNames() {
   if (!currentDepartmentId) return;
@@ -541,15 +557,20 @@ async function fetchFolders(departmentId) {
       return;
     }
 
+    // تصفية المجلدات حسب نوعها وصلاحيات المستخدم
+    const userRole = getUserRoleFromToken();
+    const userDepartmentId = currentDepartmentId;
+    const filteredFolders = await filterFoldersByType(data.data, userRole, userDepartmentId);
+
     const foldersList = document.querySelector('.folders-list');
     foldersList.innerHTML = '';
     folderContentTitle.textContent = data.departmentName || 'مجلدات القسم';
     currentDepartmentName = data.departmentName || 'قسم';
 
-    if (data.data.length) {
+    if (filteredFolders.length) {
       const lang = localStorage.getItem('language') || 'ar';
 
-      data.data.forEach(folder => {
+      filteredFolders.forEach(folder => {
         // فكّ الـ JSON واختيار الاسم حسب اللغة
         let displayName = folder.name;
         try {
@@ -573,10 +594,19 @@ async function fetchFolders(departmentId) {
           icons += '</div>';
         }
 
+        // إضافة بادج نوع المجلد
+        const folderType = folder.type || 'public';
+        const typeTranslations = {
+          'public': getTranslation('folder-type-public'),
+          'private': getTranslation('folder-type-private'),
+          'shared': getTranslation('folder-type-shared')
+        };
+        const typeBadge = `<span class="folder-type-badge ${folderType}">${typeTranslations[folderType]}</span>`;
+
         card.innerHTML = icons +
           `<img src="../images/folders.svg">
            <div class="folder-info">
-             <div class="folder-name">${displayName}</div>
+             <div class="folder-name">${typeBadge}${displayName}</div>
            </div>`;
 
         foldersList.appendChild(card);
@@ -820,11 +850,15 @@ function closeAddFolderModal() {
   document.getElementById('folderNameSearch').value = '';
   // إغلاق الدروبداون
   closeDropdown();
+  // إعادة تعيين نوع المجلد إلى "عام"
+  const publicRadio = document.querySelector('input[name="folderType"][value="public"]');
+  if (publicRadio) publicRadio.checked = true;
 }
     // Function to handle Create Folder
     async function handleCreateFolder() {
         const folderName = document.getElementById('folderName').value;
-        console.log('Attempting to create folder with name:', folderName, 'for departmentId:', currentDepartmentId);
+        const folderType = document.querySelector('input[name="folderType"]:checked').value;
+        console.log('Attempting to create folder with name:', folderName, 'type:', folderType, 'for departmentId:', currentDepartmentId);
 
         if (!currentDepartmentId || !folderName) {
             showToast(getTranslation('folder-name-required'), 'error');
@@ -839,7 +873,10 @@ function closeAddFolderModal() {
                     'Authorization': `Bearer ${getToken()}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ name: folderName })
+                body: JSON.stringify({ 
+                    name: folderName,
+                    type: folderType
+                })
             });
 
             const data = await response.json();
@@ -1000,7 +1037,14 @@ async function openEditFolderModal(folderId) {
   // ✅ الآن نرسم القوائم (بدون ما نلمس الزر داخلها)
   renderEditFolderNames(folderNames);
 
-  // 8) أظهر المودال
+  // 8) تعيين نوع المجلد
+  const folderType = folderData.type || 'public';
+  const editFolderTypeInput = document.querySelector(`input[name="editFolderType"][value="${folderType}"]`);
+  if (editFolderTypeInput) {
+    editFolderTypeInput.checked = true;
+  }
+
+  // 9) أظهر المودال
   if (editFolderModal) {
     editFolderModal.style.display = 'flex';
     // حفظ الـ ID في الحقل المخفي
@@ -1033,6 +1077,9 @@ function closeEditFolderModal() {
       'اختر من القائمة... <span class="arrow">▾</span>';
     // تأكد إن قائمة الاختيار مقفولة
     closeEditDropdown();
+    // إعادة تعيين نوع المجلد إلى "عام"
+    const publicRadio = document.querySelector('input[name="editFolderType"][value="public"]');
+    if (publicRadio) publicRadio.checked = true;
   }
 }
 
@@ -1040,6 +1087,7 @@ function closeEditFolderModal() {
 async function handleUpdateFolder() {
   const folderId = document.getElementById('editFolderId').value;
   const selectedFolderNameId = document.getElementById('editSelectedFolderNameId').value;
+  const folderType = document.querySelector('input[name="editFolderType"]:checked').value;
   
   // استخدم القيمة المختارة من الدروبداون بدلاً من نص الزر
   const folderName = selectedFolderNameId;
@@ -1089,7 +1137,10 @@ async function handleUpdateFolder() {
         'Authorization': `Bearer ${getToken()}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ name: namePayload })
+      body: JSON.stringify({ 
+        name: namePayload,
+        type: folderType
+      })
     });
 
     const data = await res.json();
@@ -1528,6 +1579,9 @@ createFolderBtn.onclick = async () => {
     namePayload = { ar: chosen.name, en: chosen.name };
   }
 
+  // احصل على نوع المجلد المختار
+  const folderType = document.querySelector('input[name="folderType"]:checked').value;
+
   try {
     const res = await fetch(
       `${apiBase}/departments/${currentDepartmentId}/folders`,
@@ -1538,7 +1592,10 @@ createFolderBtn.onclick = async () => {
           'Content-Type':  'application/json'
         },
         // ابعث الكائن مباشرة
-        body: JSON.stringify({ name: namePayload })
+        body: JSON.stringify({ 
+          name: namePayload,
+          type: folderType
+        })
       }
     );
     const data = await res.json();
@@ -1997,7 +2054,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // ربط بحث الفولدرات
   const folderSearchInput = document.querySelector('.folder-controls-bar .search-bar input');
   if (folderSearchInput) {
-    folderSearchInput.addEventListener('input', function(e) {
+    folderSearchInput.addEventListener('input', async function(e) {
       const q = e.target.value.trim().toLowerCase();
       // فلترة الفولدرات حسب الاسم (عربي أو إنجليزي)
       const lang = localStorage.getItem('language') || 'ar';
@@ -2006,7 +2063,14 @@ document.addEventListener('DOMContentLoaded', function() {
       if (!foldersList) return;
       // احصل على البيانات الأصلية (من آخر fetch)
       if (typeof window._lastFoldersData === 'undefined') return;
-      const filtered = window._lastFoldersData.filter(folder => {
+      
+      // تصفية المجلدات حسب نوعها وصلاحيات المستخدم أولاً
+      const userRole = getUserRoleFromToken();
+      const userDepartmentId = currentDepartmentId;
+      const accessibleFolders = await filterFoldersByType(window._lastFoldersData, userRole, userDepartmentId);
+      
+      // ثم تصفية حسب البحث
+      const filtered = accessibleFolders.filter(folder => {
         let displayName = folder.name;
         try {
           const parsed = JSON.parse(folder.name);
@@ -2035,10 +2099,20 @@ document.addEventListener('DOMContentLoaded', function() {
               icons += `<a href="#" class="delete-icon"><img src="../images/delet.svg" alt="حذف"></a>`;
             icons += '</div>';
           }
+          
+          // إضافة بادج نوع المجلد
+          const folderType = folder.type || 'public';
+          const typeTranslations = {
+            'public': getTranslation('folder-type-public'),
+            'private': getTranslation('folder-type-private'),
+            'shared': getTranslation('folder-type-shared')
+          };
+          const typeBadge = `<span class="folder-type-badge ${folderType}">${typeTranslations[folderType]}</span>`;
+
           card.innerHTML = icons +
             `<img src="../images/folders.svg">
              <div class="folder-info">
-               <div class="folder-name">${displayName}</div>
+               <div class="folder-name">${typeBadge}${displayName}</div>
              </div>`;
           foldersList.appendChild(card);
           card.addEventListener('click', e => {
@@ -2161,6 +2235,69 @@ window.translations = window.translations || {};
     window.translations[lang]['soon-expire'] = lang === 'ar' ? 'اقترب انتهاء الصلاحية' : 'Expiring soon';
   }
 });
+
+// دالة للتحقق من الوصول للمجلدات المشتركة
+async function checkSharedFolderAccess(folderId, userId) {
+  try {
+    const response = await fetch(`${apiBase}/folders/${folderId}/shared-users`, {
+      headers: { 'Authorization': `Bearer ${getToken()}` }
+    });
+    if (response.ok) {
+      const { data: sharedUsers } = await response.json();
+      return sharedUsers.some(user => user.id === userId);
+    }
+  } catch (error) {
+    console.error('Error checking shared folder access:', error);
+  }
+  return false;
+}
+
+// دالة لتصفية المجلدات حسب نوعها
+async function filterFoldersByType(folders, userRole, userDepartmentId) {
+  if (userRole === 'admin') {
+    return folders; // المسؤول يرى كل المجلدات
+  }
+
+  // احصل على معرف المستخدم الحالي
+  const token = getToken();
+  if (!token) return folders;
+  
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const userId = payload.id;
+    
+    const filteredFolders = [];
+    
+    for (const folder of folders) {
+      const folderType = folder.type || 'public';
+      
+      switch (folderType) {
+        case 'public':
+          filteredFolders.push(folder); // المجلدات العامة يراها الجميع
+          break;
+        case 'private':
+          if (folder.department_id === userDepartmentId) {
+            filteredFolders.push(folder); // المجلدات الخاصة فقط لأعضاء القسم
+          }
+          break;
+        case 'shared':
+          // المجلدات المشتركة للأشخاص المرسل لهم ملفات للاعتماد
+          const hasAccess = await checkSharedFolderAccess(folder.id, userId);
+          if (hasAccess) {
+            filteredFolders.push(folder);
+          }
+          break;
+        default:
+          filteredFolders.push(folder);
+      }
+    }
+    
+    return filteredFolders;
+  } catch (error) {
+    console.error('Error filtering folders by type:', error);
+    return folders;
+  }
+}
 
 // أضف الدالة بعد closeAddContentModal
 function openAddContentModal() {

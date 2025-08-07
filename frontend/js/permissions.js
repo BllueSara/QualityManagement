@@ -89,6 +89,12 @@ if (btnAddUser && btnAddUser.parentNode) {
 // إظهار الزر فقط إذا كان للمستخدم صلاحية (admin أو من لديه صلاحية revoke_delegations)
 btnRevokeDelegations.style.display = 'none';
 
+// إضافة زر عرض اقرارات التفويض
+const btnViewDelegationConfirmations = document.getElementById('btn-view-delegation-confirmations');
+if (btnViewDelegationConfirmations) {
+  btnViewDelegationConfirmations.onclick = openDelegationConfirmationsModal;
+}
+
 // زر مسح الكاش ميموري - للادمن فقط
 if (btnClearCache) {
   btnClearCache.onclick = async () => {
@@ -2033,4 +2039,247 @@ if (editUserModal) {
       editUserModal.style.display = 'none';
     }
   });
+}
+
+// دالة فتح modal اقرارات التفويض
+async function openDelegationConfirmationsModal() {
+  try {
+    console.log('Opening delegation confirmations modal...');
+    console.log('Current authToken:', authToken ? 'exists' : 'missing');
+    
+    // إظهار loading
+    const modal = document.getElementById('delegationConfirmationsModal');
+    const listContainer = document.getElementById('delegationConfirmationsList');
+    
+    if (!modal) {
+      console.error('Modal element not found');
+      showToast('خطأ في فتح النافذة', 'error');
+      return;
+    }
+    
+    if (!listContainer) {
+      console.error('List container element not found');
+      showToast('خطأ في فتح النافذة', 'error');
+      return;
+    }
+    
+    listContainer.innerHTML = '<div style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> جاري التحميل...</div>';
+    modal.style.display = 'flex';
+    
+    // جلب اقرارات التفويض
+    const confirmations = await fetchDelegationConfirmations();
+    
+    if (confirmations.length === 0) {
+      listContainer.innerHTML = `
+        <div class="delegation-confirmations-empty">
+          <i class="fas fa-clipboard-list"></i>
+          <h3>لا توجد اقرارات تفويض</h3>
+          <p>لم يتم العثور على أي اقرارات تفويض حتى الآن</p>
+        </div>
+      `;
+    } else {
+      renderDelegationConfirmations(confirmations);
+    }
+  } catch (error) {
+    console.error('Error opening delegation confirmations modal:', error);
+    showToast('خطأ في تحميل اقرارات التفويض', 'error');
+    
+    const listContainer = document.getElementById('delegationConfirmationsList');
+    if (listContainer) {
+      listContainer.innerHTML = `
+        <div class="delegation-confirmations-empty">
+          <i class="fas fa-exclamation-triangle"></i>
+          <h3>خطأ في التحميل</h3>
+          <p>حدث خطأ أثناء تحميل اقرارات التفويض: ${error.message}</p>
+        </div>
+      `;
+    }
+  }
+}
+
+// دالة إغلاق modal اقرارات التفويض
+function closeDelegationConfirmationsModal() {
+  const modal = document.getElementById('delegationConfirmationsModal');
+  modal.style.display = 'none';
+}
+
+// دالة جلب اقرارات التفويض من الخادم
+async function fetchDelegationConfirmations() {
+  try {
+    // التحقق من وجود token
+    if (!authToken) {
+      console.error('No authentication token found');
+      throw new Error('No authentication token found');
+    }
+
+    console.log('Fetching delegation confirmations with token:', authToken.substring(0, 20) + '...');
+    
+    const response = await fetch(`${apiBase}/approvals/delegation-confirmations`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      }
+    });
+
+    console.log('Response status:', response.status);
+    console.log('Response headers:', response.headers);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Response error text:', errorText);
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('Response data:', data);
+    
+    if (data.status === 'success') {
+      return data.data || [];
+    } else {
+      throw new Error(data.message || 'فشل في جلب اقرارات التفويض');
+    }
+  } catch (error) {
+    console.error('Error fetching delegation confirmations:', error);
+    throw error;
+  }
+}
+
+// دالة عرض اقرارات التفويض
+function renderDelegationConfirmations(confirmations) {
+  console.log('Rendering delegation confirmations:', confirmations);
+  
+  // Debug signature data
+  confirmations.forEach((confirmation, index) => {
+    console.log(`Confirmation ${index + 1}:`, {
+      hasSignature: !!confirmation.signature,
+      hasElectronicSignature: !!confirmation.electronic_signature,
+      signatureLength: confirmation.signature ? confirmation.signature.length : 0,
+      electronicSignatureLength: confirmation.electronic_signature ? confirmation.electronic_signature.length : 0,
+      signaturePreview: confirmation.signature ? confirmation.signature.substring(0, 50) + '...' : 'none',
+      electronicSignaturePreview: confirmation.electronic_signature ? confirmation.electronic_signature.substring(0, 50) + '...' : 'none',
+      signatureIsValid: confirmation.signature ? confirmation.signature.startsWith('data:image') : false,
+      electronicSignatureIsValid: confirmation.electronic_signature ? confirmation.electronic_signature.startsWith('data:image') : false
+    });
+  });
+  
+  const listContainer = document.getElementById('delegationConfirmationsList');
+  
+  const confirmationsHTML = confirmations.map(confirmation => {
+    const confirmationDate = new Date(confirmation.created_at).toLocaleDateString('ar-SA', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const delegationTypeText = confirmation.is_bulk ? 'تفويض شامل' : 'تفويض فردي';
+    const contentTypeText = confirmation.content_type === 'committee' ? 'لجنة' : 'قسم';
+
+    let filesHTML = '';
+    if (confirmation.is_bulk) {
+      filesHTML = `
+        <div class="delegation-confirmation-files">
+          <div class="delegation-confirmation-files-summary">
+            تفويض شامل لجميع الملفات المعلقة
+          </div>
+        </div>
+      `;
+    } else if (confirmation.files && confirmation.files.length > 0) {
+      const filesList = confirmation.files.map(file => `
+        <div class="delegation-confirmation-file-item">
+          <span class="delegation-confirmation-file-name">${file.title || file.name}</span>
+          <span class="delegation-confirmation-file-type">${file.type === 'committee' ? 'لجنة' : 'قسم'}</span>
+        </div>
+      `).join('');
+      
+      filesHTML = `
+        <div class="delegation-confirmation-files">
+          <div class="delegation-confirmation-files-list">
+            ${filesList}
+          </div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="delegation-confirmation-item">
+        <div class="delegation-confirmation-header">
+          <h3 class="delegation-confirmation-title">اقرار تفويض</h3>
+          <span class="delegation-confirmation-date">${confirmationDate}</span>
+        </div>
+        
+        <div class="delegation-confirmation-type">${delegationTypeText}</div>
+        
+        <div class="delegation-confirmation-details">
+          <div class="delegation-confirmation-section">
+            <h4>معلومات الموظف المفوض</h4>
+            <div class="delegation-confirmation-info-row">
+              <span class="delegation-confirmation-label">الاسم:</span>
+              <span class="delegation-confirmation-value">${confirmation.delegator.fullName}</span>
+            </div>
+            <div class="delegation-confirmation-info-row">
+              <span class="delegation-confirmation-label">رقم الهوية:</span>
+              <span class="delegation-confirmation-value">${confirmation.delegator.idNumber}</span>
+            </div>
+          </div>
+          
+          <div class="delegation-confirmation-section">
+            <h4>معلومات الموظف المفوض له</h4>
+            <div class="delegation-confirmation-info-row">
+              <span class="delegation-confirmation-label">الاسم:</span>
+              <span class="delegation-confirmation-value">${confirmation.delegate.fullName}</span>
+            </div>
+            <div class="delegation-confirmation-info-row">
+              <span class="delegation-confirmation-label">رقم الهوية:</span>
+              <span class="delegation-confirmation-value">${confirmation.delegate.idNumber}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="delegation-confirmation-statement">
+          أقر الموظف <strong>${confirmation.delegator.fullName}</strong> 
+          ذو رقم الهوية <strong>${confirmation.delegator.idNumber}</strong> 
+          بأنه يفوض الموظف <strong>${confirmation.delegate.fullName}</strong> 
+          ذو رقم الهوية <strong>${confirmation.delegate.idNumber}</strong> 
+          بالتوقيع بالنيابة عنه على ${confirmation.is_bulk ? 'جميع الملفات المعلقة' : 'الملفات المحددة'}.
+        </div>
+        
+        ${filesHTML}
+        
+        ${(confirmation.signature && confirmation.signature.startsWith('data:image')) || (confirmation.electronic_signature && confirmation.electronic_signature.startsWith('data:image')) ? `
+          <div class="delegation-confirmation-signature">
+            <h4>التوقيع الشخصي</h4>
+            <div class="delegation-confirmation-signature-container">
+              ${confirmation.signature && confirmation.signature.startsWith('data:image') ? `
+                <div class="delegation-confirmation-signature-item">
+                  <span class="delegation-confirmation-signature-label">التوقيع اليدوي:</span>
+                  <img src="${confirmation.signature}" alt="التوقيع اليدوي" class="delegation-confirmation-signature-image" onerror="this.style.display='none'; console.log('Manual signature failed to load')" onload="console.log('Manual signature loaded successfully')" />
+                </div>
+              ` : ''}
+              ${confirmation.electronic_signature && confirmation.electronic_signature.startsWith('data:image') ? `
+                <div class="delegation-confirmation-signature-item">
+                  <span class="delegation-confirmation-signature-label">التوقيع الإلكتروني:</span>
+                  <img src="${confirmation.electronic_signature}" alt="التوقيع الإلكتروني" class="delegation-confirmation-signature-image" onerror="this.style.display='none'; console.log('Electronic signature failed to load')" onload="console.log('Electronic signature loaded successfully')" />
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        ` : (confirmation.signature || confirmation.electronic_signature) ? `
+          <div class="delegation-confirmation-signature">
+            <h4>التوقيع الشخصي</h4>
+            <div class="delegation-confirmation-signature-container">
+              <div class="delegation-confirmation-signature-item">
+                <span class="delegation-confirmation-signature-label">ملاحظة:</span>
+                <span class="delegation-confirmation-signature-value">تم التوقيع ولكن التوقيع غير متاح للعرض</span>
+              </div>
+            </div>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
+
+  listContainer.innerHTML = confirmationsHTML;
 }

@@ -889,3 +889,107 @@ body[lang="en"] .toast-container,
     left: auto !important;
     right: 20px !important;
 }
+
+/* Radio Group Styles */
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.radio-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background-color: #fafafa;
+}
+
+.radio-label:hover {
+    background-color: #f0f0f0;
+    border-color: #ccc;
+}
+
+.radio-label input[type="radio"] {
+    margin: 0;
+    margin-top: 2px;
+    cursor: pointer;
+}
+
+.radio-label input[type="radio"]:checked + .radio-text {
+    color: #007bff;
+    font-weight: 600;
+}
+
+.radio-text {
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.radio-description {
+    font-size: 0.9em;
+    color: #666;
+    display: block;
+    line-height: 1.4;
+}
+
+/* Folder Type Badge */
+.folder-type-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: 500;
+    margin-right: 8px;
+}
+
+.folder-type-badge.public {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.folder-type-badge.private {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.folder-type-badge.shared {
+    background-color: #d1ecf1;
+    color: #0c5460;
+}
+
+/* RTL Support for Radio Groups */
+[dir="rtl"] .radio-label {
+    text-align: right;
+}
+
+[dir="ltr"] .radio-label {
+    text-align: left;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .radio-group {
+        gap: 8px;
+    }
+    
+    .radio-label {
+        padding: 10px;
+        gap: 10px;
+    }
+    
+    .radio-text {
+        font-size: 0.9em;
+    }
+    
+    .radio-description {
+        font-size: 0.8em;
+    }
+}

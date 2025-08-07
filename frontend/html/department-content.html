@@ -129,6 +129,28 @@
           </div>
         </div>
       </div>
+
+      <!-- Folder Type Selection -->
+      <div class="form-group">
+        <label data-translate="folder-type">نوع المجلد</label>
+        <div class="radio-group">
+          <label class="radio-label">
+            <input type="radio" name="folderType" value="public" checked>
+            <span class="radio-text" data-translate="folder-type-public">عام</span>
+            <span class="radio-description" data-translate="folder-type-public-desc">يظهر للجميع</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="folderType" value="private">
+            <span class="radio-text" data-translate="folder-type-private">خاص</span>
+            <span class="radio-description" data-translate="folder-type-private-desc">فقط لأعضاء القسم</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="folderType" value="shared">
+            <span class="radio-text" data-translate="folder-type-shared">مشترك</span>
+            <span class="radio-description" data-translate="folder-type-shared-desc">للأشخاص المرسل لهم ملفات للاعتماد</span>
+          </label>
+        </div>
+      </div>
     </div>
     <div class="modal-buttons">
       <button class="btn-primary" id="createFolderBtn" data-translate="create">إنشاء</button>
@@ -237,6 +259,28 @@
             <div id="editAddNewLink" class="add-folder-new hidden" data-translate="add-folder"></div>
             <div id="editFolderNamesContainer"></div>
           </div>
+        </div>
+      </div>
+
+      <!-- Folder Type Selection -->
+      <div class="form-group">
+        <label data-translate="folder-type">نوع المجلد</label>
+        <div class="radio-group">
+          <label class="radio-label">
+            <input type="radio" name="editFolderType" value="public">
+            <span class="radio-text" data-translate="folder-type-public">عام</span>
+            <span class="radio-description" data-translate="folder-type-public-desc">يظهر للجميع</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="editFolderType" value="private">
+            <span class="radio-text" data-translate="folder-type-private">خاص</span>
+            <span class="radio-description" data-translate="folder-type-private-desc">فقط لأعضاء القسم</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="editFolderType" value="shared">
+            <span class="radio-text" data-translate="folder-type-shared">مشترك</span>
+            <span class="radio-description" data-translate="folder-type-shared-desc">للأشخاص المرسل لهم ملفات للاعتماد</span>
+          </label>
         </div>
       </div>
     </div>

@@ -32,22 +32,7 @@ function showToast(message, type = 'info', duration = 3000) {
     }, duration);
 }
 
-// دالة الترجمة
-function getTranslation(key) {
-  const translations = {
-    'error-loading': 'خطأ في تحميل البيانات',
-    'no-documents': 'لا توجد مستندات',
-    'accept': 'قبول',
-    'reject': 'رفض',
-    'accept-message': 'هل أنت متأكد من قبول هذا التفويض؟',
-    'reject-message': 'يرجى إدخال سبب الرفض:',
-    'reason-required': 'يرجى إدخال سبب الرفض',
-    'reject-success': 'تم رفض التفويض بنجاح',
-    'error-rejecting': 'خطأ في رفض التفويض'
-  };
-  
-  return translations[key] || key;
-}
+// تم إزالة دالة الترجمة المكررة - تستخدم دالة الترجمة من language.js
 
 document.addEventListener('DOMContentLoaded', async () => {
   // إعادة تعيين المتغير عند تحميل الصفحة
@@ -101,13 +86,17 @@ if (token) {
     console.error('فشل استخراج userId من التوكن', e);
   }
 }
-const currentLang = localStorage.getItem('language') || 'ar';
+// const currentLang = localStorage.getItem('language') || 'ar'; // تم إزالة التصريح المكرر - موجود في language.js
+
+// متغير عام لتخزين بيانات التفويض الحالي للمفوض له
+let currentDelegationData = null;
 
 
 function getLocalizedName(jsonString) {
   try {
     const obj = JSON.parse(jsonString);
-    return obj[currentLang] || obj.ar || obj.en || '';
+    const lang = localStorage.getItem('language') || 'ar';
+    return obj[lang] || obj.ar || obj.en || '';
   } catch (e) {
     // لو مش JSON، رجع النص كما هو
     return jsonString;
@@ -187,6 +176,9 @@ async function checkDelegationStatus() {
   }
   
   try {
+    // 0. فحص التفويضات المعلقة التي تحتاج تأكيد (بوب أب)
+    await checkPendingDelegationConfirmations();
+    
     // 1. فحص التفويضات الفردية أولاً (ملف واحد فقط) - ستظهر في الجدول للقبول أو الرفض
     const hasSingleDelegations = await checkSingleDelegations();
     if (hasSingleDelegations) {
@@ -322,6 +314,155 @@ async function checkDelegationStatus() {
   }
 }
 
+async function checkPendingDelegationConfirmations() {
+  try {
+    console.log('🔍 Checking for pending delegation confirmations...');
+    
+    // فحص التفويضات الفردية المعلقة للأقسام
+    const singleDeptResponse = await fetch(`http://localhost:3006/api/approvals/single-delegations/${currentUserId}`, {
+      headers: authHeaders()
+    });
+    
+    if (singleDeptResponse.ok) {
+      const singleDeptData = await singleDeptResponse.json();
+      if (singleDeptData.status === 'success' && singleDeptData.data && singleDeptData.data.length > 0) {
+        console.log('🔍 Found pending single department delegations:', singleDeptData.data.length);
+        
+        for (const delegation of singleDeptData.data) {
+          // جلب بيانات التأكيد للمفوض له
+          const confirmationResponse = await fetch('http://localhost:3006/api/approvals/delegation-confirmation-data', {
+            method: 'POST',
+            headers: {
+              ...authHeaders(),
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              delegationId: delegation.id,
+              delegationType: 'single',
+              contentType: 'department'
+            })
+          });
+          
+          if (confirmationResponse.ok) {
+            const confirmationData = await confirmationResponse.json();
+            if (confirmationData.status === 'success' && confirmationData.confirmationData) {
+              console.log('🔍 Showing single department delegation confirmation popup');
+              showDelegationConfirmationPopup(
+                confirmationData.confirmationData.delegator,
+                confirmationData.confirmationData.delegate,
+                confirmationData.confirmationData.file ? [confirmationData.confirmationData.file] : [],
+                false,
+                {
+                  delegationId: delegation.id,
+                  delegationType: 'single',
+                  contentType: 'department'
+                }
+              );
+              return; // عرض بوب أب واحد فقط
+            }
+          }
+        }
+      }
+    }
+    
+    // فحص التفويضات الفردية المعلقة للجان
+    const singleCommResponse = await fetch(`http://localhost:3006/api/committee-approvals/single-delegations/${currentUserId}`, {
+      headers: authHeaders()
+    });
+    
+    if (singleCommResponse.ok) {
+      const singleCommData = await singleCommResponse.json();
+      if (singleCommData.status === 'success' && singleCommData.data && singleCommData.data.length > 0) {
+        console.log('🔍 Found pending single committee delegations:', singleCommData.data.length);
+        
+        for (const delegation of singleCommData.data) {
+          // جلب بيانات التأكيد للمفوض له
+          const confirmationResponse = await fetch('http://localhost:3006/api/approvals/delegation-confirmation-data', {
+            method: 'POST',
+            headers: {
+              ...authHeaders(),
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              delegationId: delegation.id,
+              delegationType: 'single',
+              contentType: 'committee'
+            })
+          });
+          
+          if (confirmationResponse.ok) {
+            const confirmationData = await confirmationResponse.json();
+            if (confirmationData.status === 'success' && confirmationData.confirmationData) {
+              console.log('🔍 Showing single committee delegation confirmation popup');
+              showDelegationConfirmationPopup(
+                confirmationData.confirmationData.delegator,
+                confirmationData.confirmationData.delegate,
+                confirmationData.confirmationData.file ? [confirmationData.confirmationData.file] : [],
+                false,
+                {
+                  delegationId: delegation.id,
+                  delegationType: 'single',
+                  contentType: 'committee'
+                }
+              );
+              return; // عرض بوب أب واحد فقط
+            }
+          }
+        }
+      }
+    }
+    
+    // فحص التفويضات الشاملة المعلقة
+    const bulkResponse = await fetch(`http://localhost:3006/api/approvals/pending-delegations-unified/${currentUserId}`, {
+      headers: authHeaders()
+    });
+    
+    if (bulkResponse.ok) {
+      const bulkData = await bulkResponse.json();
+      if (bulkData.status === 'success' && bulkData.data && bulkData.data.length > 0) {
+        console.log('🔍 Found pending bulk delegations:', bulkData.data.length);
+        
+        for (const delegation of bulkData.data) {
+          // جلب بيانات التأكيد للمفوض له
+          const confirmationResponse = await fetch('http://localhost:3006/api/approvals/delegation-confirmation-data', {
+            method: 'POST',
+            headers: {
+              ...authHeaders(),
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              delegationId: delegation.id,
+              delegationType: 'bulk'
+            })
+          });
+          
+          if (confirmationResponse.ok) {
+            const confirmationData = await confirmationResponse.json();
+            if (confirmationData.status === 'success' && confirmationData.confirmationData) {
+              console.log('🔍 Showing bulk delegation confirmation popup');
+              showDelegationConfirmationPopup(
+                confirmationData.confirmationData.delegator,
+                confirmationData.confirmationData.delegate,
+                [],
+                true,
+                {
+                  delegationId: delegation.id,
+                  delegationType: 'bulk'
+                }
+              );
+              return; // عرض بوب أب واحد فقط
+            }
+          }
+        }
+      }
+    }
+    
+    console.log('🔍 No pending delegation confirmations found');
+  } catch (error) {
+    console.error('Error checking pending delegation confirmations:', error);
+  }
+}
+
 // دالة موحدة للتحقق من سجلات الموافقة للتفويض
 async function checkDelegationApprovalLogs(delegatorId, delegationType, delegationId = null) {
   try {
@@ -446,22 +587,40 @@ async function showDirectDelegationPopup(delegatorId) {
   hasShownDelegationPopup = true;
   
   try {
-    // جلب اسم المفوض
+    // جلب بيانات المفوض
     const userRes = await fetch(`http://localhost:3006/api/users/${delegatorId}`, { headers: authHeaders() });
     const userJson = await userRes.json();
     const delegatorName = userJson.data?.name || userJson.data?.username || 'المفوض';
+    const delegatorIdNumber = userJson.data?.id_number || 'غير محدد';
+    
+    // جلب بيانات المفوض له
+    const currentUserRes = await fetch(`http://localhost:3006/api/users/${currentUserId}`, { headers: authHeaders() });
+    const currentUserJson = await currentUserRes.json();
+    const delegateName = currentUserJson.data?.name || currentUserJson.data?.username || 'المفوض له';
+    const delegateIdNumber = currentUserJson.data?.id_number || 'غير محدد';
     
     console.log('🔍 Delegator name:', delegatorName);
     
-    showDelegationPopup(
-      `${delegatorName} قام بتفويضك بالنيابة عنه في جميع ملفاته (أقسام ولجان) - تفويض شامل.`,
-      async () => {
-        console.log('🔍 User accepted direct delegation');
-        await processDirectDelegationUnified(delegatorId, 'accept');
-      },
-      async () => {
-        console.log('🔍 User rejected direct delegation');
-        await processDirectDelegationUnified(delegatorId, 'reject');
+    // إنشاء بيانات التفويض
+    const delegatorInfo = {
+      fullName: delegatorName,
+      idNumber: delegatorIdNumber
+    };
+    
+    const delegateInfo = {
+      fullName: delegateName,
+      idNumber: delegateIdNumber
+    };
+    
+    // عرض البوب أب المفصل للتفويض الشامل
+    showDelegationConfirmationPopup(
+      delegatorInfo,
+      delegateInfo,
+      [], // لا توجد ملفات محددة للتفويض الشامل
+      true, // isBulk = true للتفويض الشامل
+      {
+        delegatorId: delegatorId,
+        delegationType: 'direct'
       }
     );
   } catch (err) {
@@ -481,76 +640,66 @@ async function showBulkDelegationPopup(delegationId, delegatorName) {
   console.log('🔍 Showing bulk delegation popup for delegation:', delegationId, 'delegator:', delegatorName);
   hasShownDelegationPopup = true;
   
-  showDelegationPopup(
-    `${delegatorName} قام بتفويضك بالنيابة عنه في جميع ملفاته (أقسام ولجان) - تفويض شامل.`,
-    async () => {
-      console.log('🔍 User accepted bulk delegation');
-      await processBulkDelegationUnified(delegationId, 'accept');
-    },
-    async () => {
-      console.log('🔍 User rejected bulk delegation');
-      await processBulkDelegationUnified(delegationId, 'reject');
+  try {
+    // جلب بيانات التفويض الجماعي للحصول على معرف المفوض
+    const delegationRes = await fetch(`http://localhost:3006/api/approvals/pending-delegations-unified/${currentUserId}`, { 
+      headers: authHeaders() 
+    });
+    
+    if (delegationRes.ok) {
+      const delegationJson = await delegationRes.json();
+      const delegation = delegationJson.data?.find(d => d.id == delegationId);
+      
+      if (delegation) {
+        // جلب بيانات المفوض
+        const delegatorRes = await fetch(`http://localhost:3006/api/users/${delegation.delegated_by}`, { headers: authHeaders() });
+        const delegatorJson = await delegatorRes.json();
+        const delegatorIdNumber = delegatorJson.data?.id_number || 'غير محدد';
+        
+        // جلب بيانات المفوض له
+        const currentUserRes = await fetch(`http://localhost:3006/api/users/${currentUserId}`, { headers: authHeaders() });
+        const currentUserJson = await currentUserRes.json();
+        const delegateName = currentUserJson.data?.name || currentUserJson.data?.username || 'المفوض له';
+        const delegateIdNumber = currentUserJson.data?.id_number || 'غير محدد';
+        
+        // إنشاء بيانات التفويض
+        const delegatorInfo = {
+          fullName: delegatorName,
+          idNumber: delegatorIdNumber
+        };
+        
+        const delegateInfo = {
+          fullName: delegateName,
+          idNumber: delegateIdNumber
+        };
+        
+        // عرض البوب أب المفصل للتفويض الشامل
+        showDelegationConfirmationPopup(
+          delegatorInfo,
+          delegateInfo,
+          [], // لا توجد ملفات محددة للتفويض الشامل
+          true, // isBulk = true للتفويض الشامل
+          {
+            delegationId: delegationId,
+            delegationType: 'bulk'
+          }
+        );
+      } else {
+        throw new Error('Delegation not found');
+      }
+    } else {
+      throw new Error('Failed to fetch delegation data');
     }
-  );
-}
-
-
-
-// دالة موحدة لعرض بوب أب التفويض
-function showDelegationPopup(message, onAccept, onReject) {
-  const overlay = document.createElement('div');
-  overlay.style = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.4);z-index:9999;display:flex;align-items:center;justify-content:center;';
-  
-  const box = document.createElement('div');
-  box.style = 'background:#fff;padding:32px 24px;border-radius:12px;max-width:400px;text-align:center;box-shadow:0 2px 16px #0002;';
-  box.innerHTML = `<div style='font-size:1.2rem;margin-bottom:18px;'>${message}<br>هل توافق على التفويض؟</div>`;
-  
-  const btnAccept = document.createElement('button');
-  btnAccept.textContent = 'موافقة';
-  btnAccept.style = 'background:#1eaa7c;color:#fff;padding:8px 24px;border:none;border-radius:6px;font-size:1rem;margin:0 8px;cursor:pointer;';
-  
-  const btnReject = document.createElement('button');
-  btnReject.textContent = 'رفض';
-  btnReject.style = 'background:#e53e3e;color:#fff;padding:8px 24px;border:none;border-radius:6px;font-size:1rem;margin:0 8px;cursor:pointer;';
-  
-  const closePopup = () => {
-    document.body.removeChild(overlay);
-    // إعادة تعيين المتغير عند إغلاق البوب أب
+  } catch (err) {
+    console.error('خطأ في جلب بيانات التفويض:', err);
+    // إعادة تعيين المتغير في حالة الخطأ
     hasShownDelegationPopup = false;
-  };
-  
-  btnAccept.onclick = async () => {
-    try {
-      await onAccept();
-      showToast('تم قبول التفويض بنجاح', 'success');
-    } catch (err) {
-      showToast('خطأ في قبول التفويض', 'error');
-    }
-    closePopup();
-  };
-  
-  btnReject.onclick = async () => {
-    try {
-      await onReject();
-      showToast('تم رفض التفويض', 'success');
-    } catch (err) {
-      showToast('خطأ في رفض التفويض', 'error');
-    }
-    closePopup();
-  };
-  
-  // إضافة إمكانية إغلاق البوب أب بالنقر خارج الصندوق
-  overlay.onclick = (e) => {
-    if (e.target === overlay) {
-      closePopup();
-    }
-  };
-  
-  box.appendChild(btnAccept);
-  box.appendChild(btnReject);
-  overlay.appendChild(box);
-  document.body.appendChild(overlay);
+  }
 }
+
+
+
+// تم إزالة دالة showDelegationPopup البسيطة - نستخدم showDelegationConfirmationPopup المفصلة لجميع أنواع التفويض
 
 // دالة معالجة التفويض المباشر الموحد
 async function processDirectDelegationUnified(delegatorId, action) {
@@ -577,6 +726,14 @@ async function processDirectDelegationUnified(delegatorId, action) {
     
     // إعادة تعيين المتغير بعد المعالجة الناجحة
     hasShownDelegationPopup = false;
+    
+    // إغلاق البوب أب
+    closeDelegationConfirmationPopup();
+    
+    // تحديث الصفحة
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
   } catch (err) {
     console.error('خطأ في معالجة التفويض المباشر الموحد:', err);
     // إعادة تعيين المتغير في حالة الخطأ
@@ -613,6 +770,14 @@ async function processBulkDelegationUnified(delegationId, action) {
     
     // إعادة تعيين المتغير بعد المعالجة الناجحة
     hasShownDelegationPopup = false;
+    
+    // إغلاق البوب أب
+    closeDelegationConfirmationPopup();
+    
+    // تحديث الصفحة
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
   } catch (err) {
     console.error('خطأ في معالجة التفويض الجماعي الموحد:', err);
     // إعادة تعيين المتغير في حالة الخطأ
@@ -630,6 +795,10 @@ async function loadDelegations() {
     return;
   }
   const tbody = document.querySelector('.proxy-table tbody');
+  if (!tbody) {
+    console.log('proxy-table tbody not found, skipping loadDelegations');
+    return;
+  }
   tbody.innerHTML = '';
 
   try {
@@ -930,4 +1099,674 @@ function setupSignatureCanvas() {
       showToast('خطأ أثناء إرسال التوقيع.', 'error');
     }
   });
+}
+
+function showDelegationConfirmationPopup(delegatorInfo, delegateInfo, files, isBulk = false, delegationData = null) {
+  console.log('🔍 showDelegationConfirmationPopup called with:', { delegatorInfo, delegateInfo, files, isBulk, delegationData });
+  
+  // تخزين بيانات التفويض الحالي
+  currentDelegationData = delegationData;
+  
+  // إزالة أي بوب أب موجود مسبقاً
+  const existingPopup = document.getElementById('delegationConfirmationPopup');
+  if (existingPopup) {
+    existingPopup.remove();
+  }
+
+  // إنشاء البوب أب
+  const popup = document.createElement('div');
+  popup.id = 'delegationConfirmationPopup';
+  popup.className = 'delegation-confirmation-popup';
+  
+  // إضافة inline styles للتأكد من الظهور
+  popup.style.position = 'fixed';
+  popup.style.top = '0';
+  popup.style.left = '0';
+  popup.style.width = '100%';
+  popup.style.height = '100%';
+  popup.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+  popup.style.display = 'flex';
+  popup.style.justifyContent = 'center';
+  popup.style.alignItems = 'center';
+  popup.style.zIndex = '10000';
+  popup.style.direction = 'rtl';
+  
+  // تحضير قائمة الملفات
+  let filesList = '';
+  if (isBulk) {
+    filesList = '<p class="files-summary">تفويض شامل لجميع الملفات المعلقة</p>';
+  } else {
+    filesList = '<div class="files-list">';
+    files.forEach(file => {
+      filesList += `<div class="file-item">
+        <span class="file-name">${file.title || file.name}</span>
+        <span class="file-type">${file.type === 'department' ? 'قسم' : 'لجنة'}</span>
+      </div>`;
+    });
+    filesList += '</div>';
+  }
+
+  popup.innerHTML = `
+    <div class="delegation-confirmation-content" style="background: white; border-radius: 8px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);">
+      <div class="delegation-header">
+        <h3>اقرار التفويض</h3>
+        <button class="close-btn" onclick="closeDelegationConfirmationPopup()">&times;</button>
+      </div>
+      
+      <div class="delegation-body">
+        <div class="delegator-info">
+          <h4>معلومات الموظف المفوض</h4>
+          <div class="info-row">
+            <span class="label">الاسم الكامل:</span>
+            <span class="value">${delegatorInfo.fullName}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">رقم الهوية:</span>
+            <span class="value">${delegatorInfo.idNumber}</span>
+          </div>
+        </div>
+        
+        <div class="delegate-info">
+          <h4>معلومات الموظف المفوض له</h4>
+          <div class="info-row">
+            <span class="label">الاسم الكامل:</span>
+            <span class="value">${delegateInfo.fullName}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">رقم الهوية:</span>
+            <span class="value">${delegateInfo.idNumber}</span>
+          </div>
+        </div>
+        
+        <div class="delegation-details">
+          <h4>تفاصيل التفويض</h4>
+          <div class="delegation-type">
+            <span class="label">نوع التفويض:</span>
+            <span class="value">${isBulk ? 'تفويض شامل' : 'تفويض فردي'}</span>
+          </div>
+          ${filesList}
+        </div>
+        
+        <div class="delegation-statement">
+          <p class="statement-text">
+            أقر بأنني أفوض الموظف <strong>${delegateInfo.fullName}</strong> 
+            ذو رقم الهوية <strong>${delegateInfo.idNumber}</strong> 
+            بالتوقيع بالنيابة عني على ${isBulk ? 'جميع الملفات المعلقة' : 'الملفات المحددة'}.
+          </p>
+        </div>
+      </div>
+      
+      <div class="delegation-footer">
+        <button class="btn btn-danger" onclick="rejectDelegation()">رفض التفويض</button>
+        <button class="btn btn-secondary" onclick="closeDelegationConfirmationPopup()">إلغاء</button>
+        <button class="btn btn-primary" onclick="confirmDelegation()">قبول التفويض</button>
+      </div>
+    </div>
+  `;
+
+  // إضافة ملف CSS للبوب أب
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = '/frontend/css/delegation-confirmation.css';
+  link.id = 'delegation-confirmation-css';
+  
+  // إزالة أي ملف CSS سابق
+  const existingCSS = document.getElementById('delegation-confirmation-css');
+  if (existingCSS) {
+    existingCSS.remove();
+  }
+  
+  // إضافة event listener للتحقق من تحميل CSS
+  link.onload = () => {
+  };
+  
+  link.onerror = () => {
+    console.error('🔍 Failed to load CSS file');
+  };
+  
+  document.head.appendChild(link);
+  document.body.appendChild(popup);
+
+}
+
+function closeDelegationConfirmationPopup() {
+  const popup = document.getElementById('delegationConfirmationPopup');
+  if (popup) {
+    popup.remove();
+  }
+  // إعادة تعيين المتغير عند إغلاق البوب أب
+  hasShownDelegationPopup = false;
+}
+
+// متغيرات عامة لتخزين بيانات التفويض
+let pendingDelegationData = null;
+
+function confirmDelegation() {
+  if (!currentDelegationData) {
+    showToast('خطأ: لا توجد بيانات تفويض', 'error');
+    return;
+  }
+  
+  console.log('🔍 Processing delegation acceptance with data:', currentDelegationData);
+  
+  // معالجة قبول التفويض حسب النوع
+  if (currentDelegationData.delegationType === 'single') {
+    if (currentDelegationData.contentType === 'committee') {
+      // قبول تفويض لجنة فردي
+      processSingleCommitteeDelegationAcceptance(currentDelegationData.delegationId);
+    } else {
+      // قبول تفويض قسم فردي
+      processSingleDepartmentDelegationAcceptance(currentDelegationData.delegationId);
+    }
+  } else if (currentDelegationData.delegationType === 'bulk') {
+    // قبول تفويض شامل
+    processBulkDelegationAcceptance(currentDelegationData.delegationId);
+  } else if (currentDelegationData.delegationType === 'direct') {
+    // قبول تفويض مباشر
+    processDirectDelegationUnified(currentDelegationData.delegatorId, 'accept');
+  }
+  
+  // لا نحتاج لإغلاق البوب أب هنا - سيتم إغلاقه من دوال المعالجة
+}
+
+function rejectDelegation() {
+  if (!currentDelegationData) {
+    showToast('خطأ: لا توجد بيانات تفويض', 'error');
+    return;
+  }
+  
+  console.log('🔍 Processing delegation rejection with data:', currentDelegationData);
+  
+  // معالجة رفض التفويض حسب النوع
+  if (currentDelegationData.delegationType === 'single') {
+    if (currentDelegationData.contentType === 'committee') {
+      // رفض تفويض لجنة فردي
+      processSingleCommitteeDelegationRejection(currentDelegationData.delegationId);
+    } else {
+      // رفض تفويض قسم فردي
+      processSingleDepartmentDelegationRejection(currentDelegationData.delegationId);
+    }
+  } else if (currentDelegationData.delegationType === 'bulk') {
+    // رفض تفويض شامل
+    processBulkDelegationRejection(currentDelegationData.delegationId);
+  } else if (currentDelegationData.delegationType === 'direct') {
+    // رفض تفويض مباشر
+    processDirectDelegationUnified(currentDelegationData.delegatorId, 'reject');
+  }
+  
+  // لا نحتاج لإغلاق البوب أب هنا - سيتم إغلاقه من دوال المعالجة
+}
+
+async function processSingleDepartmentDelegationAcceptance(delegationId) {
+  try {
+    const response = await fetch('http://localhost:3006/api/approvals/single-delegation-unified/process', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders()
+      },
+      body: JSON.stringify({
+        delegationId: delegationId,
+        action: 'accept'
+      })
+    });
+    
+    const result = await response.json();
+    if (result.status === 'success') {
+      showToast('تم قبول التفويض بنجاح', 'success');
+      // إعادة تعيين المتغير بعد المعالجة الناجحة
+      hasShownDelegationPopup = false;
+      // إغلاق البوب أب
+      closeDelegationConfirmationPopup();
+      // تحديث الصفحة
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } else {
+      showToast(result.message || 'فشل في قبول التفويض', 'error');
+    }
+  } catch (error) {
+    console.error('Error accepting single department delegation:', error);
+    showToast('خطأ في قبول التفويض', 'error');
+  }
+}
+
+async function processSingleCommitteeDelegationAcceptance(delegationId) {
+  try {
+    const response = await fetch('http://localhost:3006/api/committee-approvals/single-delegation-unified/process', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders()
+      },
+      body: JSON.stringify({
+        delegationId: delegationId,
+        action: 'accept'
+      })
+    });
+    
+    const result = await response.json();
+    if (result.status === 'success') {
+      showToast('تم قبول التفويض بنجاح', 'success');
+      // إعادة تعيين المتغير بعد المعالجة الناجحة
+      hasShownDelegationPopup = false;
+      // إغلاق البوب أب
+      closeDelegationConfirmationPopup();
+      // تحديث الصفحة
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } else {
+      showToast(result.message || 'فشل في قبول التفويض', 'error');
+    }
+  } catch (error) {
+    console.error('Error accepting single committee delegation:', error);
+    showToast('خطأ في قبول التفويض', 'error');
+  }
+}
+
+async function processBulkDelegationAcceptance(delegationId) {
+  try {
+    const response = await fetch('http://localhost:3006/api/approvals/bulk-delegation-unified/process', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders()
+      },
+      body: JSON.stringify({
+        delegationId: delegationId,
+        action: 'accept'
+      })
+    });
+    
+    const result = await response.json();
+    if (result.status === 'success') {
+      showToast('تم قبول التفويض الشامل بنجاح', 'success');
+      // إعادة تعيين المتغير بعد المعالجة الناجحة
+      hasShownDelegationPopup = false;
+      // إغلاق البوب أب
+      closeDelegationConfirmationPopup();
+      // تحديث الصفحة
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } else {
+      showToast(result.message || 'فشل في قبول التفويض الشامل', 'error');
+    }
+  } catch (error) {
+    console.error('Error accepting bulk delegation:', error);
+    showToast('خطأ في قبول التفويض الشامل', 'error');
+  }
+}
+
+async function processSingleDepartmentDelegationRejection(delegationId) {
+  try {
+    const response = await fetch('http://localhost:3006/api/approvals/single-delegation-unified/process', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders()
+      },
+      body: JSON.stringify({
+        delegationId: delegationId,
+        action: 'reject'
+      })
+    });
+    
+    const result = await response.json();
+    if (result.status === 'success') {
+      showToast('تم رفض التفويض بنجاح', 'success');
+      // إعادة تعيين المتغير بعد المعالجة الناجحة
+      hasShownDelegationPopup = false;
+      // إغلاق البوب أب
+      closeDelegationConfirmationPopup();
+      // تحديث الصفحة
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } else {
+      showToast(result.message || 'فشل في رفض التفويض', 'error');
+    }
+  } catch (error) {
+    console.error('Error rejecting single department delegation:', error);
+    showToast('خطأ في رفض التفويض', 'error');
+  }
+}
+
+async function processSingleCommitteeDelegationRejection(delegationId) {
+  try {
+    const response = await fetch('http://localhost:3006/api/committee-approvals/single-delegation-unified/process', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders()
+      },
+      body: JSON.stringify({
+        delegationId: delegationId,
+        action: 'reject'
+      })
+    });
+    
+    const result = await response.json();
+    if (result.status === 'success') {
+      showToast('تم رفض التفويض بنجاح', 'success');
+      // إعادة تعيين المتغير بعد المعالجة الناجحة
+      hasShownDelegationPopup = false;
+      // إغلاق البوب أب
+      closeDelegationConfirmationPopup();
+      // تحديث الصفحة
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } else {
+      showToast(result.message || 'فشل في رفض التفويض', 'error');
+    }
+  } catch (error) {
+    console.error('Error rejecting single committee delegation:', error);
+    showToast('خطأ في رفض التفويض', 'error');
+  }
+}
+
+async function processBulkDelegationRejection(delegationId) {
+  try {
+    const response = await fetch('http://localhost:3006/api/approvals/bulk-delegation-unified/process', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders()
+      },
+      body: JSON.stringify({
+        delegationId: delegationId,
+        action: 'reject'
+      })
+    });
+    
+    const result = await response.json();
+    if (result.status === 'success') {
+      showToast('تم رفض التفويض الشامل بنجاح', 'success');
+      // إعادة تعيين المتغير بعد المعالجة الناجحة
+      hasShownDelegationPopup = false;
+      // إغلاق البوب أب
+      closeDelegationConfirmationPopup();
+      // تحديث الصفحة
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } else {
+      showToast(result.message || 'فشل في رفض التفويض الشامل', 'error');
+    }
+  } catch (error) {
+    console.error('Error rejecting bulk delegation:', error);
+    showToast('خطأ في رفض التفويض الشامل', 'error');
+  }
+}
+
+// دالة لعرض بوب أب اقرار التفويض الفردي
+async function showSingleDelegationConfirmation(delegateTo, contentId, contentType, notes = '') {
+  try {
+    const response = await fetch('http://localhost:3006/api/delegations/single', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders()
+      },
+      body: JSON.stringify({
+        delegateTo,
+        notes,
+        contentId,
+        contentType,
+        showConfirmation: true
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (result.status === 'success' && result.confirmationData) {
+      const { delegator, delegate, file, isBulk } = result.confirmationData;
+      
+      // تخزين بيانات التفويض
+      pendingDelegationData = {
+        delegateTo,
+        notes,
+        contentId,
+        contentType,
+        isBulk: false
+      };
+      
+      // عرض البوب أب
+      showDelegationConfirmationPopup(delegator, delegate, [file], false);
+    } else {
+      showToast(result.message || 'فشل في جلب بيانات التفويض', 'error');
+    }
+  } catch (error) {
+    console.error('Error showing single delegation confirmation:', error);
+    showToast('خطأ في عرض اقرار التفويض', 'error');
+  }
+}
+
+// دالة لعرض بوب أب اقرار التفويض الشامل
+async function showBulkDelegationConfirmation(delegateTo, notes = '') {
+  try {
+    const response = await fetch('http://localhost:3006/api/delegations/bulk', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders()
+      },
+      body: JSON.stringify({
+        delegateTo,
+        notes,
+        showConfirmation: true
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (result.status === 'success' && result.confirmationData) {
+      const { delegator, delegate, files, isBulk } = result.confirmationData;
+      
+      // تخزين بيانات التفويض
+      pendingDelegationData = {
+        delegateTo,
+        notes,
+        isBulk: true
+      };
+      
+      // عرض البوب أب
+      showDelegationConfirmationPopup(delegator, delegate, files, true);
+    } else {
+      showToast(result.message || 'فشل في جلب بيانات التفويض الشامل', 'error');
+    }
+  } catch (error) {
+    console.error('Error showing bulk delegation confirmation:', error);
+    showToast('خطأ في عرض اقرار التفويض الشامل', 'error');
+  }
+}
+
+// دالة لعرض بوب أب اقرار التفويض الفردي للجان
+async function showSingleCommitteeDelegationConfirmation(delegateTo, contentId, contentType, notes = '') {
+
+  try {
+    const requestBody = {
+      delegateTo,
+      notes,
+      contentId,
+      contentType,
+      showConfirmation: true
+    };
+    
+    const response = await fetch('http://localhost:3006/api/committee-approvals/committee-delegations/single', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders()
+      },
+      body: JSON.stringify({
+        delegateTo,
+        notes,
+        contentId,
+        contentType,
+        showConfirmation: true
+      })
+    });
+    
+    console.log('🔍 API Response status:', response.status);
+    console.log('🔍 API Response headers:', response.headers);
+    
+    const result = await response.json();
+    console.log('🔍 API Response result:', result);
+    
+    if (result.status === 'success' && result.confirmationData) {
+      const { delegator, delegate, file, isBulk } = result.confirmationData;
+      console.log('🔍 Confirmation data extracted:', { delegator, delegate, file, isBulk });
+      
+      // تخزين بيانات التفويض
+      pendingDelegationData = {
+        delegateTo,
+        notes,
+        contentId,
+        contentType,
+        isBulk: false,
+        isCommittee: true
+      };
+    
+      showDelegationConfirmationPopup(delegator, delegate, [file], false);
+      
+      // إضافة alert كاختبار بسيط
+      setTimeout(() => {
+        const popup = document.getElementById('delegationConfirmationPopup');
+        if (popup) {
+          console.log('🔍 Popup found in DOM after creation');
+        } else {
+          console.error('🔍 Popup NOT found in DOM after creation');
+          alert('Popup creation test: Popup should be visible now');
+        }
+      }, 100);
+    } else {
+      console.log('🔍 API call failed or no confirmation data:', result);
+      showToast(result.message || 'فشل في جلب بيانات التفويض', 'error');
+    }
+  } catch (error) {
+    console.error('Error showing single committee delegation confirmation:', error);
+    showToast('خطأ في عرض اقرار التفويض', 'error');
+  }
+}
+
+// دالة لعرض بوب أب اقرار التفويض الشامل للجان
+async function showBulkCommitteeDelegationConfirmation(delegateTo, notes = '') {
+  try {
+    const response = await fetch('http://localhost:3006/api/committee-approvals/committee-delegations/bulk', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders()
+      },
+      body: JSON.stringify({
+        delegateTo,
+        notes,
+        showConfirmation: true
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (result.status === 'success' && result.confirmationData) {
+      const { delegator, delegate, files, isBulk } = result.confirmationData;
+      
+      // تخزين بيانات التفويض
+      pendingDelegationData = {
+        delegateTo,
+        notes,
+        isBulk: true,
+        isCommittee: true
+      };
+      
+      // عرض البوب أب
+      showDelegationConfirmationPopup(delegator, delegate, files, true);
+    } else {
+      showToast(result.message || 'فشل في جلب بيانات التفويض الشامل للجان', 'error');
+    }
+  } catch (error) {
+    console.error('Error showing bulk committee delegation confirmation:', error);
+    showToast('خطأ في عرض اقرار التفويض الشامل للجان', 'error');
+  }
+}
+
+// تحديث دالة processSingleDelegation لدعم اللجان
+async function processSingleDelegation(data) {
+  try {
+    const endpoint = data.isCommittee ? 'http://localhost:3006/api/committee-approvals/committee-delegations/single' : 'http://localhost:3006/api/approvals/delegate-single';
+    
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders()
+      },
+      body: JSON.stringify({
+        delegateTo: data.delegateTo,
+        notes: data.notes,
+        contentId: data.contentId,
+        contentType: data.contentType
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (result.status === 'success') {
+      showToast('تم إرسال طلب التفويض بنجاح', 'success');
+      // تحديث الصفحة أو إعادة تحميل البيانات
+      setTimeout(() => {
+        if (typeof refreshApprovalsData === 'function') {
+          refreshApprovalsData();
+        } else {
+          window.location.reload();
+        }
+      }, 1500);
+    } else {
+      showToast(result.message || 'فشل إرسال طلب التفويض', 'error');
+    }
+  } catch (error) {
+    console.error('Error processing single delegation:', error);
+    showToast('خطأ في إرسال طلب التفويض', 'error');
+  }
+}
+
+// تحديث دالة processBulkDelegation لدعم اللجان
+async function processBulkDelegation(data) {
+  try {
+    const endpoint = data.isCommittee ? 'http://localhost:3006/api/committee-approvals/committee-delegations/bulk' : 'http://localhost:3006/api/approvals/delegate-all-unified';
+    
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders()
+      },
+      body: JSON.stringify({
+        delegateTo: data.delegateTo,
+        notes: data.notes
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (result.status === 'success') {
+      const message = data.isCommittee ? 'تم إرسال طلب التفويض الشامل للجان بنجاح' : 'تم إرسال طلب التفويض الشامل بنجاح';
+      showToast(message, 'success');
+      // تحديث الصفحة أو إعادة تحميل البيانات
+      setTimeout(() => {
+        if (typeof refreshApprovalsData === 'function') {
+          refreshApprovalsData();
+        } else {
+          window.location.reload();
+        }
+      }, 1500);
+    } else {
+      showToast(result.message || 'فشل إرسال طلب التفويض الشامل', 'error');
+    }
+  } catch (error) {
+    console.error('Error processing bulk delegation:', error);
+    showToast('خطأ في إرسال طلب التفويض الشامل', 'error');
+  }
 }

@@ -270,6 +270,7 @@ const getContentsByFolderId = async (req, res) => {
                 c.approvers_required,
                 c.created_at,
                 c.updated_at,
+                c.start_date,
                 c.end_date,
                 c.is_old_content,
                 u.username as created_by_username,

@@ -4,16 +4,23 @@ let filteredItems = [];
 const apiBase = 'http://localhost:3006/api';
 const token = localStorage.getItem('token');
 let permissionsKeys = [];
-let selectedContentId = null;
-let canvas, ctx;
-let currentSignature = null; // لتخزين التوقيع الحالي (رسم أو صورة)
-const currentLang = localStorage.getItem('language') || 'ar';
+// تم إزالة التصريحات المكررة للمتغيرات العامة لأنها موجودة في sign.js
+const currentLang = localStorage.getItem('language') || 'ar'; // تم إزالة التصريح المكرر
 let currentPage   = 1;
 const itemsPerPage = 5;
 let allItems = [];
 // بعد تعريف itemsPerPage …
 const statusList = ['pending', 'approved', 'rejected'];
 let currentGroupIndex = 0;
+
+// متغيرات إضافية مطلوبة
+let selectedContentId = null;
+let currentSignature = null;
+let canvas = null;
+let ctx = null;
+let modalCache = new Map();
+let elementCache = new Map();
+let isBulkDelegation = false;
 
 // دالة إظهار التوست - خارج DOMContentLoaded لتكون متاحة في كل مكان
 function showToast(message, type = 'info', duration = 3000) {
@@ -91,18 +98,47 @@ function getLocalizedName(name) {
   }
 }
 function closeModal(modalId) {
-  const modal = document.getElementById(modalId);
-  if (modal) modal.style.display = 'none';
+  const modal = getCachedElement(modalId);
+  if (modal) {
+    // إغلاق فوري بدون تأخير
+    modal.style.display = 'none';
+    modal.style.opacity = '1';
+    modal.style.transition = '';
+    
+    // تنظيف الذاكرة المؤقتة
+    modalCache.delete(modalId);
+  }
 }
 
 function setupCloseButtons() {
+  // إزالة event listeners السابقة لتجنب التكرار
   document.querySelectorAll('.modal-close').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const modalId = btn.dataset.modal 
-        || btn.closest('.modal-overlay')?.id;
-      if (modalId) closeModal(modalId);
-    });
+    btn.removeEventListener('click', handleCloseClick);
+    btn.addEventListener('click', handleCloseClick);
   });
+  
+  // إزالة event listeners السابقة للنقر خارج المودال
+  document.querySelectorAll('.modal-overlay').forEach(modal => {
+    modal.removeEventListener('click', handleOutsideClick);
+    modal.addEventListener('click', handleOutsideClick);
+  });
+}
+
+// دالة منفصلة لمعالجة النقر على زر الإغلاق
+function handleCloseClick(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  const modalId = e.target.dataset.modal || e.target.closest('.modal-overlay')?.id;
+  if (modalId) {
+    closeModal(modalId);
+  }
+}
+
+// دالة منفصلة لمعالجة النقر خارج المودال
+function handleOutsideClick(e) {
+  if (e.target === e.currentTarget) {
+    closeModal(e.currentTarget.id);
+  }
 }
 // تعريف deptFilter مرة واحدة في الأعلى
 const deptFilter = document.getElementById('deptFilter');
@@ -219,6 +255,7 @@ async function setupFilters(items) {
   document.getElementById('searchInput').addEventListener('input', applyFilters);
 }
 
+// تحسين دالة applyFilters
 function applyFilters() {
   currentPage = 1;  // ترجع للصفحة الأولى عند كل فلتر
   const dept       = document.getElementById('deptFilter').value;
@@ -226,34 +263,21 @@ function applyFilters() {
   const searchText = document.getElementById('searchInput').value.trim().toLowerCase();
 
   // خزّن النتيجة في filteredItems
-filteredItems = allItems.filter(i => {
-  const localizedTitle = getLocalizedName(i.title).toLowerCase();
-  const localizedSource = getLocalizedName(i.source_name).toLowerCase();
-  const okDept   = dept === 'all' || i.source_name === dept;
-  const okStatus = status === 'all' || i.approval_status === status;
-  const okSearch = localizedTitle.includes(searchText) || localizedSource.includes(searchText);
-  return okDept && okStatus && okSearch;
-});
-
-
-  renderApprovals(filteredItems);
-}
-function openModal(modalId) {
-  document.getElementById(modalId).style.display = 'flex';
-}
-
-function closeModal(modalId) {
-  document.getElementById(modalId).style.display = 'none';
-}
-
-function setupCloseButtons() {
-  document.querySelectorAll('.modal-close').forEach(btn => {
-    btn.addEventListener('click', e => {
-      const modalId = btn.dataset.modal || btn.closest('.modal-overlay').id;
-      closeModal(modalId);
-    });
+  filteredItems = allItems.filter(i => {
+    const localizedTitle = getLocalizedName(i.title).toLowerCase();
+    const localizedSource = getLocalizedName(i.source_name).toLowerCase();
+    const okDept   = dept === 'all' || i.source_name === dept;
+    const okStatus = status === 'all' || i.approval_status === status;
+    const okSearch = localizedTitle.includes(searchText) || localizedSource.includes(searchText);
+    return okDept && okStatus && okSearch;
   });
+
+  // استخدام throttled render لتحسين الأداء
+  throttledRenderApprovals(filteredItems);
 }
+// تم إزالة التعريف المكرر - الدالة معرفة أدناه
+
+// تم إزالة التعريف المكرر - الدوال معرفة أعلاه
 
 function renderApprovals(items) {
   const tbody = document.getElementById("approvalsBody");
@@ -301,26 +325,58 @@ function renderApprovals(items) {
     console.log('Item data:', item);
     console.log('Start date:', item.start_date);
     console.log('End date:', item.end_date);
+    console.log('Created at:', item.created_at);
+    console.log('Updated at:', item.updated_at);
     
     // تنسيق التواريخ
     const formatDate = (dateString) => {
       if (!dateString) return '-';
-      const date = new Date(dateString);
-      return date.toLocaleDateString(localStorage.getItem('language') === 'ar' ? 'ar-EG' : 'en-US');
+      try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return '-';
+        return date.toLocaleDateString(localStorage.getItem('language') === 'ar' ? 'ar-EG' : 'en-US');
+      } catch (e) {
+        console.error('Error formatting date:', dateString, e);
+        return '-';
+      }
     };
     
     const startDate = formatDate(item.start_date);
     const endDate = formatDate(item.end_date);
+    const createdDate = formatDate(item.created_at);
+    const updatedDate = formatDate(item.updated_at);
     
-    // عرض تواريخ الملف فقط إذا كانت موجودة
+    // عرض تواريخ الملف ونوع القسم فقط لملفات الأقسام
     let dateRange = '-';
-    if (item.start_date && item.end_date) {
-      dateRange = `${startDate} - ${endDate}`;
-    } else if (item.start_date) {
-      dateRange = `${getTranslation('from')}: ${startDate}`;
-    } else if (item.end_date) {
-      dateRange = `${getTranslation('to')}: ${endDate}`;
+    let departmentDisplay = '-';
+    
+    if (item.type !== 'committee') {
+      // تواريخ الملف - فقط لملفات الأقسام
+      if (item.start_date && item.end_date && item.start_date !== item.end_date) {
+        dateRange = `${startDate} - ${endDate}`;
+      } else if (item.start_date) {
+        dateRange = `${getTranslation('from')}: ${startDate}`;
+      } else if (item.end_date) {
+        dateRange = `${getTranslation('to')}: ${endDate}`;
+      } else if (item.created_at) {
+        // إذا لم تكن هناك تواريخ محددة، استخدم تاريخ الإنشاء
+        dateRange = `${getTranslation('created')}: ${createdDate}`;
+      }
+      
+      // تنسيق اسم القسم مع نوعه - فقط لملفات الأقسام
+      if (item.source_name) {
+        const departmentType = item.department_type || 'department';
+        const departmentTypeTranslation = getTranslation(`department-type-${departmentType}`) || departmentType;
+        departmentDisplay = `${departmentTypeTranslation}: ${getLocalizedName(item.source_name)}`;
+      }
+    } else {
+      // لملفات اللجان - عرض اسم القسم بدون نوع
+      departmentDisplay = item.source_name ? getLocalizedName(item.source_name) : '-';
     }
+    
+    // Debug: طباعة النتيجة النهائية
+    console.log('Final dateRange:', dateRange);
+    console.log('Final departmentDisplay:', departmentDisplay);
 
     tr.innerHTML = `
       <td class="col-id">${item.id}</td>
@@ -328,7 +384,7 @@ function renderApprovals(items) {
         ${getLocalizedName(item.title)}
         <div class="content-meta">(${contentType} - ${getLocalizedName(item.folder_name || item.folderName || '')})</div>
       </td>
-      <td>${getLocalizedName(item.source_name) || '-'}</td>
+      <td>${departmentDisplay}</td>
       <td class="col-dates">${dateRange}</td>
       <td class="col-response">${statusLabel(item.approval_status)}</td>
       <td class="col-actions">${actions}</td>
@@ -387,121 +443,139 @@ function statusLabel(status) {
 
 
 function initActions() {
-  document.querySelectorAll('.btn-sign').forEach(btn => {
-    btn.addEventListener('click', e => {
-      const id = e.target.closest('tr').dataset.id;
-      openSignatureModal(id);
-    });
-  });
+  // استخدام event delegation محسن لتحسين الأداء
+  if (!window.globalClickHandler) {
+    window.globalClickHandler = (e) => {
+      const target = e.target;
+      
+      // زر التوقيع
+      if (target.closest('.btn-sign')) {
+        console.log('🔍 Sign button clicked!');
+        const id = target.closest('tr').dataset.id;
+        console.log('🔍 Opening signature modal for id:', id);
+        openSignatureModal(id);
+        return;
+      }
+      
+      // زر التفويض
+      if (target.closest('.btn-delegate')) {
+        console.log('🔍 Delegation button clicked!');
+        isBulkDelegation = false;
+        selectedContentId = target.closest('tr').dataset.id;
+        console.log('🔍 selectedContentId set to:', selectedContentId);
+        openModal('delegateModal');
+        loadDepartments();
+        document.getElementById('delegateNotes').placeholder = getTranslation('notes') || 'ملاحظات (اختياري)';
+        
+        // إعداد event listener للتفويض بعد فتح المودال
+        setTimeout(() => {
+          setupDelegationEventListener();
+        }, 100);
+        
+        return;
+      }
+      
+      // زر التوقيع الإلكتروني
+      if (target.closest('.btn-qr')) {
+        selectedContentId = target.closest('tr').dataset.id;
+        openModal('qrModal');
+        return;
+      }
+      
+      // زر الرفض
+      if (target.closest('.btn-reject')) {
+        selectedContentId = target.closest('tr').dataset.id;
+        openModal('rejectModal');
+        return;
+      }
+      
+      // زر المعاينة
+      if (target.closest('.btn-preview')) {
+        handlePreviewClick(target);
+        return;
+      }
+      
+      // زر تتبع الطلب
+      if (target.closest('.btn-track')) {
+        const btn = target.closest('.btn-track');
+        const id = btn.dataset.id;
+        const type = btn.dataset.type;
+        window.location.href = `/frontend/html/track-request.html?id=${id}&type=${type}`;
+        return;
+      }
+    };
+    
+    document.addEventListener('click', window.globalClickHandler, { passive: true });
+  }
+}
 
-  document.querySelectorAll('.btn-delegate').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      isBulkDelegation = false;
-      selectedContentId = e.target.closest('tr').dataset.id;
-      openModal('delegateModal');
-      loadDepartments();
-      document.getElementById('delegateNotes').placeholder = getTranslation('notes') || 'ملاحظات (اختياري)';
-    });
-  });
-  
-  document.querySelectorAll('.btn-qr').forEach(btn => {
-    btn.addEventListener('click', e => {
-      selectedContentId = e.target.closest('tr').dataset.id;
-      openModal('qrModal');
-    });
-  });
+// دالة منفصلة لمعالجة النقر على زر المعاينة
+async function handlePreviewClick(target) {
+  const tr = target.closest('tr');
+  const itemId = tr.dataset.id;
+  const item = allItems.find(i => i.id == itemId);
 
-  document.querySelectorAll('.btn-reject').forEach(btn => {
-    btn.addEventListener('click', e => {
-      selectedContentId = e.target.closest('tr').dataset.id;
-      openModal('rejectModal');
-    });
-  });
+  if (!item || !item.file_path) {
+    showToast(getTranslation('no-content'), 'error');
+    return;
+  }
 
-// لو عندك apiBase من قبل:
-// أو بدل هذا استخدم origin ديناميكي:
-// const serverUrl = window.location.origin;
-
-
-document.querySelectorAll('.btn-preview').forEach(btn => {
-  btn.addEventListener('click', async e => {
-    const tr     = e.target.closest('tr');
-    const itemId = tr.dataset.id;
-    const item   = allItems.find(i => i.id == itemId);
-
-    if (!item || !item.file_path) {
-      showToast(getTranslation('no-content'), 'error');
-      return;
-    }
-
-    // تسجيل عرض المحتوى
-    try {
-      let numericItemId = itemId;
-      if (typeof itemId === 'string') {
-        if (itemId.includes('-')) {
-          const match = itemId.match(/\d+$/);
-          numericItemId = match ? match[0] : itemId;
-        } else {
-          numericItemId = parseInt(itemId) || itemId;
-        }
+  // تسجيل عرض المحتوى
+  try {
+    let numericItemId = itemId;
+    if (typeof itemId === 'string') {
+      if (itemId.includes('-')) {
+        const match = itemId.match(/\d+$/);
+        numericItemId = match ? match[0] : itemId;
       } else {
         numericItemId = parseInt(itemId) || itemId;
       }
-      if (!numericItemId || numericItemId <= 0) {
-        console.warn('Invalid content ID:', itemId);
-        return;
-      }
-      await fetchJSON(`${apiBase}/contents/log-view`, {
-        method: 'POST',
-        body: JSON.stringify({
-          contentId: numericItemId,
-          contentType: item.type || 'department',
-          contentTitle: item.title,
-          sourceName: item.source_name,
-          folderName: item.folder_name || item.folderName || ''
-        })
-      });
-    } catch (err) {
-      console.error('Failed to log content view:', err);
-      // لا نوقف العملية إذا فشل تسجيل اللوق
+    } else {
+      numericItemId = parseInt(itemId) || itemId;
     }
-
-const baseApiUrl = apiBase.replace('/api', '');
-
-let filePath = item.file_path;
-let fileBaseUrl;
-
-// حالة ملفات اللجان (مسار يبدأ بـ backend/uploads/)
-if (filePath.startsWith('backend/uploads/')) {
-  fileBaseUrl = `${baseApiUrl}/backend/uploads`;
-  // شيل البادئة بالكامل
-  filePath = filePath.replace(/^backend\/uploads\//, '');
-}
-// حالة ملفات الأقسام (مسار يبدأ بـ uploads/)
-else if (filePath.startsWith('uploads/')) {
-  fileBaseUrl = `${baseApiUrl}/uploads`;
-  // شيل البادئة
-  filePath = filePath.replace(/^uploads\//, '');
-}
-// أي حالة ثانية نفترض نفس مجلد uploads
-else {
-  fileBaseUrl = `${baseApiUrl}/uploads`;
-}
-
-    const url = `${fileBaseUrl}/${filePath}`;
-    window.open(url, '_blank');
-  });
-});
-
-  // إضافة معالج حدث لزر تتبع الطلب
-  document.querySelectorAll('.btn-track').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.dataset.id;
-      const type = btn.dataset.type;
-      window.location.href = `/frontend/html/track-request.html?id=${id}&type=${type}`;
+    if (!numericItemId || numericItemId <= 0) {
+      console.warn('Invalid content ID:', itemId);
+      return;
+    }
+    await fetchJSON(`${apiBase}/contents/log-view`, {
+      method: 'POST',
+      body: JSON.stringify({
+        contentId: numericItemId,
+        contentType: item.type || 'department',
+        contentTitle: item.title,
+        sourceName: item.source_name,
+        folderName: item.folder_name || item.folderName || ''
+      })
     });
-  });
+  } catch (err) {
+    console.error('Failed to log content view:', err);
+    // لا نوقف العملية إذا فشل تسجيل اللوق
+  }
 
+  const baseApiUrl = apiBase.replace('/api', '');
+
+  let filePath = item.file_path;
+  let fileBaseUrl;
+
+  // حالة ملفات اللجان (مسار يبدأ بـ backend/uploads/)
+  if (filePath.startsWith('backend/uploads/')) {
+    fileBaseUrl = `${baseApiUrl}/backend/uploads`;
+    // شيل البادئة بالكامل
+    filePath = filePath.replace(/^backend\/uploads\//, '');
+  }
+  // حالة ملفات الأقسام (مسار يبدأ بـ uploads/)
+  else if (filePath.startsWith('uploads/')) {
+    fileBaseUrl = `${baseApiUrl}/uploads`;
+    // شيل البادئة
+    filePath = filePath.replace(/^uploads\//, '');
+  }
+  // أي حالة ثانية نفترض نفس مجلد uploads
+  else {
+    fileBaseUrl = `${baseApiUrl}/uploads`;
+  }
+
+  const url = `${fileBaseUrl}/${filePath}`;
+  window.open(url, '_blank');
 }
 
 // 1. دالة لجلب سجل الاعتمادات للملف
@@ -862,88 +936,96 @@ document.getElementById('delegateDept').addEventListener('change', async (e) => 
   }
 });
 
-let isBulkDelegation = false;
-
-// عند الضغط على زر تفويض جميع الملفات بالنيابة
-// btnAll.onclick = function() {
-//   isBulkDelegation = true;
-//   selectedContentId = null;
-//   // صفّر الحقول
-//   document.getElementById('delegateDept').value = '';
-//   document.getElementById('delegateUser').innerHTML = '<option value="" disabled selected>' + (getTranslation('select-user') || 'اختر المستخدم') + '</option>';
-//   document.getElementById('delegateNotes').value = '';
-//   openModal('delegateModal');
-//   loadDepartments();
-//   document.getElementById('delegateNotes').placeholder = getTranslation('notes-bulk') || 'ملاحظات (تنطبق على جميع الملفات)';
-// };
-
-// عند الضغط على زر تفويض فردي
-// (تأكد أن هذا الكود موجود فقط مرة واحدة)
-document.querySelectorAll('.btn-delegate').forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    isBulkDelegation = false;
-    selectedContentId = e.target.closest('tr').dataset.id;
-    openModal('delegateModal');
-    loadDepartments();
-    document.getElementById('delegateNotes').placeholder = getTranslation('notes') || 'ملاحظات (اختياري)';
-  });
-});
-
-// عند التأكيد في مودال التفويض
-const btnDelegateConfirm = document.getElementById('btnDelegateConfirm');
-if (btnDelegateConfirm) {
-  btnDelegateConfirm.addEventListener('click', async () => {
-    const userId = document.getElementById('delegateUser').value;
-    const notes = document.getElementById('delegateNotes').value;
-    if (!userId) return showToast(getTranslation('please-select-user'), 'warning');
-    if (isBulkDelegation) {
-      // تفويض جماعي موحد
-      try {
-        const response = await fetch(`${apiBase}/approvals/delegate-all-unified`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ delegateTo: userId, notes })
-        });
-        const result = await response.json();
-        
-        if (result.status === 'success') {
-          const stats = result.stats || {};
-          const message = `${result.message}\nملفات الأقسام: ${stats.departmentFiles || 0}\nملفات اللجان: ${stats.committeeFiles || 0}`;
-          showToast(message, 'success');
-        } else {
-          showToast(result.message || 'حدث خطأ أثناء التفويض الجماعي', 'error');
+// دالة لإعداد event listener للتفويض
+function setupDelegationEventListener() {
+  const btnDelegateConfirm = document.getElementById('btnDelegateConfirm');
+  console.log('🔍 btnDelegateConfirm element found:', btnDelegateConfirm);
+  if (btnDelegateConfirm) {
+    console.log('🔍 Adding click event listener to btnDelegateConfirm');
+    btnDelegateConfirm.addEventListener('click', async () => {
+      console.log('🔍 btnDelegateConfirm clicked!');
+      const userId = document.getElementById('delegateUser').value;
+      const notes = document.getElementById('delegateNotes').value;
+      if (!userId) return showToast(getTranslation('please-select-user'), 'warning');
+      
+      if (isBulkDelegation) {
+        // تفويض جماعي موحد
+        try {
+          const response = await fetch(`${apiBase}/approvals/delegate-all-unified`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ delegateTo: userId, notes })
+          });
+          const result = await response.json();
+          
+          if (result.status === 'success') {
+            const stats = result.stats || {};
+            const message = `${result.message}\nملفات الأقسام: ${stats.departmentFiles || 0}\nملفات اللجان: ${stats.committeeFiles || 0}`;
+            showToast(message, 'success');
+          } else {
+            showToast(result.message || 'حدث خطأ أثناء التفويض الجماعي', 'error');
+          }
+          closeModal('delegateModal');
+          refreshApprovalsData();
+        } catch (err) {
+          console.error('Delegation error:', err);
+          showToast(getTranslation('error-sending') || 'حدث خطأ أثناء التفويض الجماعي', 'error');
         }
-        closeModal('delegateModal');
-        window.location.reload();
-      } catch (err) {
-        console.error('Delegation error:', err);
-        showToast(getTranslation('error-sending') || 'حدث خطأ أثناء التفويض الجماعي', 'error');
-      }
-    } else {
-      // تفويض فردي
-      const contentType = document.querySelector(`tr[data-id="${selectedContentId}"]`).dataset.type;
-      const endpoint = contentType === 'committee' ? 'committee-approvals' : 'approvals';
-      try {
-        // استخدام delegate-single بدلاً من delegate لتجنب إضافة المستخدم إلى active_delegations
-        await fetchJSON(`${apiBase}/${endpoint}/delegate-single`, {
-          method: 'POST',
-          body: JSON.stringify({
+      } else {
+        // تفويض فردي - استخدام نظام بوب أب التأكيد الجديد
+        console.log('🔍 Starting single delegation process...');
+        console.log('🔍 selectedContentId:', selectedContentId);
+        console.log('🔍 userId:', userId);
+        console.log('🔍 notes:', notes);
+        
+        const row = document.querySelector(`tr[data-id="${selectedContentId}"]`);
+        console.log('🔍 Found row:', row);
+        
+        if (!row) {
+          console.error('🔍 Row not found for selectedContentId:', selectedContentId);
+          showToast('خطأ: لم يتم العثور على الملف المحدد', 'error');
+          return;
+        }
+        
+        const contentType = row.dataset.type;
+        console.log('🔍 contentType from dataset:', contentType);
+        
+        try {
+          // إغلاق مودال التفويض الحالي
+          console.log('🔍 Closing delegate modal...');
+          closeModal('delegateModal');
+          
+          // إرسال التفويض مباشرة بدون بوب أب التأكيد
+          console.log('🔍 Sending delegation directly. contentType:', contentType);
+          
+          const delegationData = {
             delegateTo: userId,
             notes: notes,
             contentId: selectedContentId,
-            contentType: contentType
-          })
-        });
-        showToast(getTranslation('success-delegated'), 'success');
-        closeModal('delegateModal');
-        disableActionsFor(selectedContentId);
-      } catch (err) {
-        console.error('Failed to delegate:', err);
-        showToast(getTranslation('error-sending'), 'error');
+            contentType: contentType,
+            isCommittee: (contentType === 'committee')
+          };
+          
+          if (contentType === 'committee') {
+            // تفويض لجنة فردي
+            console.log('🔍 Processing single committee delegation with:', delegationData);
+            await processSingleDelegation(delegationData);
+          } else {
+            // تفويض قسم فردي
+            console.log('🔍 Processing single department delegation with:', delegationData);
+            await processSingleDelegation(delegationData);
+          }
+          
+          showToast(getTranslation('delegation-sent') || 'تم إرسال التفويض بنجاح', 'success');
+          refreshApprovalsData();
+        } catch (err) {
+          console.error('Failed to send delegation:', err);
+          showToast(getTranslation('error-sending') || 'حدث خطأ أثناء إرسال التفويض', 'error');
+        }
       }
-    }
-    isBulkDelegation = false;
-  });
+      isBulkDelegation = false;
+    });
+  }
 }
 
 function disableActionsFor(contentId) {
@@ -952,6 +1034,7 @@ function disableActionsFor(contentId) {
   const actionsCell = row.querySelector('.col-actions');
   if (actionsCell) actionsCell.innerHTML = '';
 }
+
 function updateRecordsInfo(totalItems, startIdx, endIdx) {
   document.getElementById('startRecord').textContent = totalItems === 0 ? 0 : startIdx + 1;
   document.getElementById('endRecord').textContent   = endIdx;
@@ -979,7 +1062,7 @@ function showApprovalsProxyPopup() {
           } else {
             showToast(result.message || getTranslation('accept-all-proxy-error') || 'حدث خطأ أثناء قبول جميع التفويضات', 'error');
           }
-          window.location.reload();
+          refreshApprovalsData();
         } catch (err) {
           console.error('Accept all delegations error:', err);
           showToast(getTranslation('accept-all-proxy-error') || 'حدث خطأ أثناء قبول جميع التفويضات', 'error');
@@ -1000,7 +1083,7 @@ function showApprovalsProxyPopup() {
         } else {
           showToast(result.message || getTranslation('accept-all-proxy-error') || 'حدث خطأ أثناء قبول جميع التفويضات', 'error');
         }
-        window.location.reload();
+        refreshApprovalsData();
       }).catch((err) => {
         console.error('Accept all delegations error:', err);
         showToast(getTranslation('accept-all-proxy-error') || 'حدث خطأ أثناء قبول جميع التفويضات', 'error');
@@ -1015,6 +1098,7 @@ function clearCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
 }
+
 // دالة تغيير حجم الكانفس
 function resizeCanvas() {
   if (!canvas) return;
@@ -1026,6 +1110,7 @@ function resizeCanvas() {
   ctx.lineCap = 'round';
   ctx.strokeStyle = '#000';
 }
+
 // دالة فتح مودال التوقيع
 function openSignatureModal(contentId) {
   selectedContentId = contentId;
@@ -1061,6 +1146,207 @@ function openSignatureModal(contentId) {
 
 // دالة إغلاق مودال التوقيع
 function closeSignatureModal() {
-  document.getElementById('signatureModal').style.display = 'none';
-  clearCanvas();
+  const modal = document.getElementById('signatureModal');
+  if (modal) {
+    // إغلاق فوري بدون تأخير
+    modal.style.display = 'none';
+    modal.style.opacity = '1';
+    modal.style.transition = '';
+    clearCanvas();
+  }
+}
+
+// دالة لتحديث البيانات بدلاً من إعادة تحميل الصفحة
+async function refreshApprovalsData() {
+  try {
+    
+    const deptResp = await fetchJSON(`${apiBase}/approvals/assigned-to-me`);
+    const commResp = await fetchJSON(`${apiBase}/committee-approvals/assigned-to-me`);
+    const combined = [...(deptResp.data||[]), ...(commResp.data||[])];
+    const uniqueMap = new Map();
+    combined.forEach(item => uniqueMap.set(item.id, item));
+    allItems = Array.from(uniqueMap.values());
+    filteredItems = allItems;
+
+    await setupFilters(allItems);
+    renderApprovals(filteredItems);
+    
+  } catch (err) {
+    console.error("Error refreshing approvals:", err);
+    showToast(getTranslation('error-refreshing') || 'حدث خطأ أثناء تحديث البيانات', 'error');
+  }
+}
+
+// تحسين الأداء باستخدام debounce للبحث
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  }
+}
+
+// تحسين دالة البحث
+const debouncedApplyFilters = debounce(applyFilters, 300);
+
+// تحديث event listener للبحث
+document.addEventListener('DOMContentLoaded', () => {
+  const searchInput = document.getElementById('searchInput');
+  if (searchInput) {
+    searchInput.addEventListener('input', debouncedApplyFilters);
+  }
+  
+  // إعداد event listener للتفويض
+  setupDelegationEventListener();
+});
+
+// تحسين الأداء - تخزين مؤقت للعناصر المستخدمة بكثرة
+
+// دالة محسنة للحصول على العناصر مع التخزين المؤقت
+function getCachedElement(id) {
+  if (!elementCache.has(id)) {
+    elementCache.set(id, document.getElementById(id));
+  }
+  return elementCache.get(id);
+}
+
+// دالة محسنة لإغلاق المودال
+function closeModal(modalId) {
+  const modal = getCachedElement(modalId);
+  if (modal) {
+    // إغلاق فوري بدون تأخير
+    modal.style.display = 'none';
+    modal.style.opacity = '1';
+    modal.style.transition = '';
+    
+    // تنظيف الذاكرة المؤقتة
+    modalCache.delete(modalId);
+  }
+}
+
+// دالة محسنة لفتح المودال
+function openModal(modalId) {
+  console.log('🔍 openModal called with modalId:', modalId);
+  const modal = getCachedElement(modalId);
+  console.log('🔍 Modal element found:', modal);
+  if (modal) {
+    // فتح فوري بدون تأخير
+    modal.style.display = 'flex';
+    modal.style.opacity = '1';
+    modal.style.transition = '';
+    
+    // تخزين في الذاكرة المؤقتة
+    modalCache.set(modalId, modal);
+    console.log('🔍 Modal opened successfully');
+  } else {
+    console.error('🔍 Modal not found:', modalId);
+  }
+}
+
+// تحسين الأداء - إضافة throttling للعمليات الثقيلة
+function throttle(func, limit) {
+  let inThrottle;
+  return function() {
+    const args = arguments;
+    const context = this;
+    if (!inThrottle) {
+      func.apply(context, args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  }
+}
+
+// تحسين دالة renderApprovals مع throttling
+const throttledRenderApprovals = throttle(renderApprovals, 100);
+
+function authHeaders() {
+  return {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  };
+}
+
+
+// دالة معالجة التفويض الفردي
+async function processSingleDelegation(data) {
+  try {
+    const endpoint = data.isCommittee ? 'http://localhost:3006/api/committee-approvals/committee-delegations/single' : 'http://localhost:3006/api/approvals/delegate-single';
+    
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders()
+      },
+      body: JSON.stringify({
+        delegateTo: data.delegateTo,
+        notes: data.notes,
+        contentId: data.contentId,
+        contentType: data.contentType
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (result.status === 'success') {
+      showToast('تم إرسال طلب التفويض بنجاح', 'success');
+      // تحديث الصفحة أو إعادة تحميل البيانات
+      setTimeout(() => {
+        if (typeof refreshApprovalsData === 'function') {
+          refreshApprovalsData();
+        } else {
+          window.location.reload();
+        }
+      }, 1500);
+    } else {
+      showToast(result.message || 'فشل إرسال طلب التفويض', 'error');
+    }
+  } catch (error) {
+    console.error('Error processing single delegation:', error);
+    showToast('خطأ في إرسال طلب التفويض', 'error');
+  }
+}
+
+// دالة معالجة التفويض الشامل
+async function processBulkDelegation(data) {
+  try {
+    const endpoint = data.isCommittee ? 'http://localhost:3006/api/committee-approvals/committee-delegations/bulk' : 'http://localhost:3006/api/approvals/delegate-all-unified';
+    
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders()
+      },
+      body: JSON.stringify({
+        delegateTo: data.delegateTo,
+        notes: data.notes
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (result.status === 'success') {
+      const message = data.isCommittee ? 'تم إرسال طلب التفويض الشامل للجان بنجاح' : 'تم إرسال طلب التفويض الشامل بنجاح';
+      showToast(message, 'success');
+      // تحديث الصفحة أو إعادة تحميل البيانات
+      setTimeout(() => {
+        if (typeof refreshApprovalsData === 'function') {
+          refreshApprovalsData();
+        } else {
+          window.location.reload();
+        }
+      }, 1500);
+    } else {
+      showToast(result.message || 'فشل إرسال طلب التفويض الشامل', 'error');
+    }
+  } catch (error) {
+    console.error('Error processing bulk delegation:', error);
+    showToast('خطأ في إرسال طلب التفويض الشامل', 'error');
+  }
 }

@@ -15,16 +15,18 @@ const {
 // 1. Pending approvals for the user
 router.get('/', getUserPendingCommitteeApprovals);
 
-// 2. Approve / reject
-router.post('/:contentId/approve', handleCommitteeApproval);
-
-// 3. All committees assigned to me or created by me
+// 2. All committees assigned to me or created by me
 router.get('/assigned-to-me', getAssignedCommitteeApprovals);
 
-// 4.1. Delegate single committee approval (لا يضيف إلى active_delegations) - يجب أن يكون أولاً
+// 3. Specific delegation routes (must come before parameterized routes)
 router.post('/delegate-single', require('../controllers/committeeApprovalController').delegateSingleCommitteeApproval);
 
-// 4. Delegate my approval
+router.post('/committee-delegations/single', require('../controllers/committeeApprovalController').delegateSingleCommitteeApproval);
+router.post('/committee-delegations/bulk', require('../controllers/committeeApprovalController').delegateAllCommitteeApprovalsUnified);
+router.post('/single-delegation-unified/process', require('../controllers/committeeApprovalController').processSingleCommitteeDelegationUnified);
+
+// 4. Parameterized routes (must come after specific routes)
+router.post('/:contentId/approve', handleCommitteeApproval);
 router.post('/:id/delegate', delegateCommitteeApproval);
 
 // 5. View approvals where I'm proxy
@@ -37,8 +39,6 @@ router.post('/proxy/accept-all', acceptAllProxyDelegationsCommittee);
 
 // جلب التفويضات الفردية للجان
 router.get('/single-delegations/:userId', require('../controllers/committeeApprovalController').getSingleCommitteeDelegations);
-// معالجة التفويضات الفردية للجان (قبول/رفض)
-router.post('/single-delegation-unified/process', require('../controllers/committeeApprovalController').processSingleCommitteeDelegationUnified);
 
 // إلغاء جميع تفويضات اللجان التي أعطاها مستخدم معيّن
 router.delete('/delegations/by-user/:userId', revokeAllCommitteeDelegations);

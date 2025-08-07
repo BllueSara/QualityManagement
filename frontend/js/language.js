@@ -11,6 +11,15 @@ const translations = {
         'folder-name-ar': 'اسم المجلد بالعربية',
         'folder-name-en': 'اسم المجلد بالانجليزية',
         
+        // Folder Types
+        'folder-type': 'نوع المجلد',
+        'folder-type-public': 'عام',
+        'folder-type-public-desc': 'يظهر للجميع',
+        'folder-type-private': 'خاص',
+        'folder-type-private-desc': 'فقط لأعضاء القسم',
+        'folder-type-shared': 'مشترك',
+        'folder-type-shared-desc': 'للأشخاص المرسل لهم ملفات للاعتماد',
+        
         // Main content
         'main-title': 'الصفحة الرئيسية',
         'tickets': 'الاحداث العارضة',
@@ -1303,6 +1312,11 @@ const translations = {
         'type': 'النوع',
         'minutes': 'دقائق',
         'deadline-modal-open-error': 'حدث خطأ أثناء فتح نافذة المواعيد النهائية',
+        // Department Types
+        'department-type-department': 'قسم',
+        'department-type-administration': 'إدارة',
+        'department-type-executive_administration': 'إدارة تنفيذية',
+        'created': 'تاريخ الإنشاء',
     },
     en: {
               // Names fields
@@ -1991,6 +2005,15 @@ const translations = {
         'folder-name-ar': 'Folder Name (Arabic)',
         'content-name-ar': 'Content Name (Arabic)',
         'content-name-en': 'Content Name (English)',
+        
+        // Folder Types
+        'folder-type': 'Folder Type',
+        'folder-type-public': 'Public',
+        'folder-type-public-desc': 'Visible to everyone',
+        'folder-type-private': 'Private',
+        'folder-type-private-desc': 'Only for department members',
+        'folder-type-shared': 'Shared',
+        'folder-type-shared-desc': 'For people sent files for approval',
 
 
 
@@ -2598,6 +2621,11 @@ const translations = {
         'type': 'Type',
         'minutes': 'Minutes',
         'deadline-modal-open-error': 'An error occurred while opening the deadline modal',
+        // Department Types
+        'department-type-department': 'Department',
+        'department-type-administration': 'Administration',
+        'department-type-executive_administration': 'Executive Administration',
+        'created': 'Created Date',
     }
 };
 window.translations = translations;

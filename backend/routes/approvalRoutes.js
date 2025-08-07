@@ -19,6 +19,9 @@ router.get('/assigned-to-me', getAssignedApprovals);
 router.post('/:id/delegate', delegateApproval);
 // دالة التفويض الفردي الجديدة
 router.post('/delegate-single', require('../controllers/approvalController').delegateSingleApproval);
+// API endpoints للبوب أب اقرار التفويض
+router.post('/delegations/single', require('../controllers/approvalController').delegateSingleApproval);
+router.post('/delegations/bulk', require('../controllers/approvalController').delegateAllApprovalsUnified);
 // جلب التفويضات الفردية للأقسام
 router.get('/single-delegations/:userId', require('../controllers/approvalController').getSingleDelegations);
 // معالجة التفويضات الفردية للأقسام (قبول/رفض)
@@ -53,6 +56,12 @@ router.get('/debug-delegations/:userId', require('../controllers/approvalControl
 
 // فحص نوع التفويض في active_delegations
 router.get('/check-delegation-type/:delegateId/:delegatorId', require('../controllers/approvalController').checkActiveDelegationType);
+
+// جلب بيانات تأكيد التفويض للمفوض له
+router.post('/delegation-confirmation-data', require('../controllers/approvalController').getDelegationConfirmationData);
+
+// جلب اقرارات التفويض للمدير
+router.get('/delegation-confirmations', require('../controllers/approvalController').getDelegationConfirmations);
 
 // تنظيف السجلات القديمة من approval_logs (للمشرفين فقط)
 router.post('/cleanup-old-logs', cleanupOldApprovalLogs);
