@@ -5,6 +5,7 @@ const path = require('path');
 
 const { logAction } = require('../models/logger');
 const { insertNotification, sendProxyNotification, sendOwnerApprovalNotification, sendPartialApprovalNotification } = require('../models/notfications-utils');
+const { getFullNameSQLWithAliasAndFallback } = require('../models/userUtils');
 require('dotenv').config();
 
 // متغير global لحفظ علاقات التفويض الدائم (delegateeId -> delegatorId)
@@ -75,7 +76,7 @@ async function getUserPendingCommitteeApprovals(req, res) {
           cf.name AS folderName,
           com.name  AS source_name,
           'committee' AS type,
-          GROUP_CONCAT(DISTINCT u2.username ORDER BY cca.sequence_number) AS assigned_approvers,
+          GROUP_CONCAT(DISTINCT ${getFullNameSQLWithAliasAndFallback('u2')} ORDER BY cca.sequence_number) AS assigned_approvers,
           'admin' AS signature_type,
           cca.sequence_number
         FROM committee_contents cc
@@ -114,7 +115,7 @@ async function getUserPendingCommitteeApprovals(req, res) {
           cf.name AS folderName,
           com.name  AS source_name,
           'committee' AS type,
-          GROUP_CONCAT(DISTINCT u2.username ORDER BY cca.sequence_number) AS assigned_approvers,
+          GROUP_CONCAT(DISTINCT ${getFullNameSQLWithAliasAndFallback('u2')} ORDER BY cca.sequence_number) AS assigned_approvers,
           'dual' AS signature_type,
           cca.sequence_number
         FROM committee_contents cc
@@ -194,7 +195,7 @@ async function getUserPendingCommitteeApprovals(req, res) {
           cf.name AS folderName,
           com.name  AS source_name,
           'committee' AS type,
-          GROUP_CONCAT(DISTINCT u2.username ORDER BY cca.sequence_number) AS assigned_approvers,
+          GROUP_CONCAT(DISTINCT ${getFullNameSQLWithAliasAndFallback('u2')} ORDER BY cca.sequence_number) AS assigned_approvers,
           'normal' AS signature_type,
           cca.sequence_number
         FROM committee_contents cc
@@ -644,8 +645,16 @@ async function handleCommitteeApproval(req, res) {
     // إذا لم يكتمل الاعتماد النهائي، أرسل إشعار اعتماد جزئي
     if (approved && remainingCount > 0) {
       // جلب اسم المعتمد
-      const [approverRows] = await db.execute('SELECT username FROM users WHERE id = ?', [approverId]);
-      const approverName = approverRows.length ? approverRows[0].username : '';
+      const [approverRows] = await db.execute(`
+        SELECT
+          CONCAT(
+            COALESCE(first_name, ''),
+            CASE WHEN second_name IS NOT NULL AND second_name != '' THEN CONCAT(' ', second_name) ELSE '' END,
+            CASE WHEN third_name IS NOT NULL AND third_name != '' THEN CONCAT(' ', third_name) ELSE '' END,
+            CASE WHEN last_name IS NOT NULL AND last_name != '' THEN CONCAT(' ', last_name) ELSE '' END
+          ) AS full_name
+        FROM users WHERE id = ?`, [approverId]);
+      const approverName = approverRows.length ? approverRows[0].full_name : '';
       await sendPartialApprovalNotification(ownerId, fileTitle, approverName, true);
     }
     // إذا اكتمل الاعتماد النهائي، أرسل إشعار "تم اعتماد الملف من الإدارة"
@@ -749,10 +758,10 @@ async function getAssignedCommitteeApprovals(req, res) {
           cc.title,
           cc.file_path,
           cc.approval_status,
-          GROUP_CONCAT(DISTINCT u2.username ORDER BY cca.sequence_number)    AS assigned_approvers,
+          GROUP_CONCAT(DISTINCT ${getFullNameSQLWithAliasAndFallback('u2')} ORDER BY cca.sequence_number)    AS assigned_approvers,
           com.name                              AS source_name,
           cf.name                               AS folder_name,
-          u.username                            AS created_by_username,
+          ${getFullNameSQLWithAliasAndFallback('u')}                            AS created_by_username,
           'committee'                           AS type,
           CAST(cc.approvers_required AS CHAR)   AS approvers_required,
           cc.created_at,
@@ -794,10 +803,10 @@ async function getAssignedCommitteeApprovals(req, res) {
           cc.title,
           cc.file_path,
           cc.approval_status,
-          GROUP_CONCAT(DISTINCT u2.username ORDER BY cca.sequence_number)    AS assigned_approvers,
+          GROUP_CONCAT(DISTINCT ${getFullNameSQLWithAliasAndFallback('u2')} ORDER BY cca.sequence_number)    AS assigned_approvers,
           com.name                              AS source_name,
           cf.name                               AS folder_name,
-          u.username                            AS created_by_username,
+          ${getFullNameSQLWithAliasAndFallback('u')}                            AS created_by_username,
           'committee'                           AS type,
           CAST(cc.approvers_required AS CHAR)   AS approvers_required,
           cc.created_at,
@@ -991,12 +1000,19 @@ async function delegateCommitteeApproval(req, res) {
 
 
     // 4) جلب اسم المفوَّض
-    const [delegateeRows] = await db.execute(
-      'SELECT username FROM users WHERE id = ?', 
+    const [delegateeRows] = await db.execute(`
+      SELECT
+        CONCAT(
+          COALESCE(first_name, ''),
+          CASE WHEN second_name IS NOT NULL AND second_name != '' THEN CONCAT(' ', second_name) ELSE '' END,
+          CASE WHEN third_name IS NOT NULL AND third_name != '' THEN CONCAT(' ', third_name) ELSE '' END,
+          CASE WHEN last_name IS NOT NULL AND last_name != '' THEN CONCAT(' ', last_name) ELSE '' END
+        ) AS full_name
+      FROM users WHERE id = ?`, 
       [delegateTo]
     );
     const delegateeUsername = delegateeRows.length
-      ? delegateeRows[0].username
+      ? delegateeRows[0].full_name
       : String(delegateTo);
 
     // 5) جلب عنوان المحتوى من جدول committee_contents
@@ -1027,8 +1043,16 @@ async function delegateCommitteeApproval(req, res) {
 
     // إرسال إشعار فوري للمفوض له
     let delegatorName = '';
-    const [delegatorRows] = await db.execute('SELECT username FROM users WHERE id = ?', [currentUserId]);
-    delegatorName = delegatorRows.length ? delegatorRows[0].username : '';
+    const [delegatorRows] = await db.execute(`
+      SELECT
+        CONCAT(
+          COALESCE(first_name, ''),
+          CASE WHEN second_name IS NOT NULL AND second_name != '' THEN CONCAT(' ', second_name) ELSE '' END,
+          CASE WHEN third_name IS NOT NULL AND third_name != '' THEN CONCAT(' ', third_name) ELSE '' END,
+          CASE WHEN last_name IS NOT NULL AND last_name != '' THEN CONCAT(' ', last_name) ELSE '' END
+        ) AS full_name
+      FROM users WHERE id = ?`, [currentUserId]);
+    delegatorName = delegatorRows.length ? delegatorRows[0].full_name : '';
     await insertNotification(
       delegateTo,
       'تم تفويضك للتوقيع',
@@ -1070,7 +1094,7 @@ async function getProxyCommitteeApprovals(req, res) {
         cc.title,
         cc.approval_status,
         com.name AS committeeName,
-        u.username AS delegated_by,
+        ${getFullNameSQLWithAliasAndFallback('u')} AS delegated_by,
         u.id AS delegated_by_id
       FROM committee_contents cc
       JOIN committee_folders cf ON cc.folder_id = cf.id
@@ -1136,8 +1160,8 @@ async function generateFinalSignedCommitteePDF(contentId) {
   const [logs] = await db.execute(`
     SELECT
       al.signed_as_proxy,
-      u_actual.username   AS actual_signer,
-      u_original.username AS original_user,
+      ${getFullNameSQLWithAliasAndFallback('u_actual')}   AS actual_signer,
+      ${getFullNameSQLWithAliasAndFallback('u_original')} AS original_user,
       u_actual.first_name AS actual_first_name,
       u_actual.second_name AS actual_second_name,
       u_actual.third_name AS actual_third_name,
@@ -1464,8 +1488,8 @@ async function updateCommitteePDFAfterApproval(contentId) {
     const [logs] = await db.execute(`
       SELECT
         al.signed_as_proxy,
-        u_actual.username   AS actual_signer,
-        u_original.username AS original_user,
+              ${getFullNameSQLWithAliasAndFallback('u_actual')}   AS actual_signer,
+      ${getFullNameSQLWithAliasAndFallback('u_original')} AS original_user,
         u_actual.first_name AS actual_first_name,
         u_actual.second_name AS actual_second_name,
         u_actual.third_name AS actual_third_name,
@@ -1814,8 +1838,16 @@ const acceptProxyDelegationCommittee = async (req, res) => {
     // جلب اسم المفوض الأصلي
     let delegatedByName = '';
     if (delegatedBy) {
-      const [delegatedByRows] = await db.execute('SELECT username FROM users WHERE id = ?', [delegatedBy]);
-      delegatedByName = delegatedByRows.length ? delegatedByRows[0].username : '';
+      const [delegatedByRows] = await db.execute(`
+        SELECT
+          CONCAT(
+            COALESCE(first_name, ''),
+            CASE WHEN second_name IS NOT NULL AND second_name != '' THEN CONCAT(' ', second_name) ELSE '' END,
+            CASE WHEN third_name IS NOT NULL AND third_name != '' THEN CONCAT(' ', third_name) ELSE '' END,
+            CASE WHEN last_name IS NOT NULL AND last_name != '' THEN CONCAT(' ', last_name) ELSE '' END
+          ) AS full_name
+        FROM users WHERE id = ?`, [delegatedBy]);
+      delegatedByName = delegatedByRows.length ? delegatedByRows[0].full_name : '';
     }
     
     console.log('✅ Committee proxy delegation accepted:', {
@@ -2198,11 +2230,11 @@ const getCommitteeDelegationSummaryByUser = async (req, res) => {
     const { userId } = req.params;
     if (!userId) return res.status(400).json({ status: 'error', message: 'يرجى تحديد المستخدم' });
     const [rows] = await db.execute(
-      `SELECT al.approver_id, u.username AS approver_name, u.email, COUNT(al.content_id) AS files_count
+      `SELECT al.approver_id, ${getFullNameSQLWithAliasAndFallback('u')} AS approver_name, u.email, COUNT(al.content_id) AS files_count
        FROM committee_approval_logs al
        JOIN users u ON al.approver_id = u.id
        WHERE al.delegated_by = ? AND al.signed_as_proxy = 1 AND al.status = 'pending'
-       GROUP BY al.approver_id, u.username, u.email`,
+       GROUP BY al.approver_id, ${getFullNameSQLWithAliasAndFallback('u')}, u.email`,
       [userId]
     );
     res.status(200).json({ status: 'success', data: rows });
@@ -2229,7 +2261,7 @@ const getSingleCommitteeDelegations = async (req, res) => {
         cal.delegated_by,
         cal.created_at,
         cal.comments,
-        u.username as delegated_by_name,
+        ${getFullNameSQLWithAliasAndFallback('u')} as delegated_by_name,
         cc.title as content_title,
         'committee' as type
       FROM committee_approval_logs cal
@@ -2370,8 +2402,8 @@ const getCommitteeDelegationLogs = async (req, res) => {
         cal.created_at,
         cal.comments,
         cc.title as content_title,
-        u.username as approver_name,
-        d.username as delegator_name
+        ${getFullNameSQLWithAliasAndFallback('u')} as approver_name,
+        ${getFullNameSQLWithAliasAndFallback('d')} as delegator_name
       FROM committee_approval_logs cal
       JOIN committee_contents cc ON cal.content_id = cc.id
       JOIN users u ON cal.approver_id = u.id
@@ -2453,8 +2485,16 @@ const delegateAllCommitteeApprovalsUnified = async (req, res) => {
 
     
     // جلب اسم المفوض
-    const [delegatorRows] = await db.execute('SELECT username FROM users WHERE id = ?', [currentUserId]);
-    const delegatorName = delegatorRows.length ? delegatorRows[0].username : '';
+    const [delegatorRows] = await db.execute(`
+      SELECT
+        CONCAT(
+          COALESCE(first_name, ''),
+          CASE WHEN second_name IS NOT NULL AND second_name != '' THEN CONCAT(' ', second_name) ELSE '' END,
+          CASE WHEN third_name IS NOT NULL AND third_name != '' THEN CONCAT(' ', third_name) ELSE '' END,
+          CASE WHEN last_name IS NOT NULL AND last_name != '' THEN CONCAT(' ', last_name) ELSE '' END
+        ) AS full_name
+      FROM users WHERE id = ?`, [currentUserId]);
+    const delegatorName = delegatorRows.length ? delegatorRows[0].full_name : '';
 
     // جلب جميع ملفات اللجان المعلقة للمستخدم الحالي
     const [committeeRows] = await db.execute(`
@@ -2632,8 +2672,16 @@ const delegateSingleCommitteeApproval = async (req, res) => {
     const contentTitle = content.title;
 
     // جلب اسم المفوض
-    const [delegatorRows] = await db.execute('SELECT username FROM users WHERE id = ?', [currentUserId]);
-    const delegatorName = delegatorRows.length ? delegatorRows[0].username : '';
+    const [delegatorRows] = await db.execute(`
+      SELECT
+        CONCAT(
+          COALESCE(first_name, ''),
+          CASE WHEN second_name IS NOT NULL AND second_name != '' THEN CONCAT(' ', second_name) ELSE '' END,
+          CASE WHEN third_name IS NOT NULL AND third_name != '' THEN CONCAT(' ', third_name) ELSE '' END,
+          CASE WHEN last_name IS NOT NULL AND last_name != '' THEN CONCAT(' ', last_name) ELSE '' END
+        ) AS full_name
+      FROM users WHERE id = ?`, [currentUserId]);
+    const delegatorName = delegatorRows.length ? delegatorRows[0].full_name : '';
 
     // إنشاء سجل تفويض بالنيابة للجان (بدون نقل المسؤولية بعد)
     await db.execute(`

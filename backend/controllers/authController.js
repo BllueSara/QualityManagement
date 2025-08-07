@@ -276,17 +276,38 @@ const [departmentRows] = await db.query(
 );
 
 const departmentName = departmentRows[0]?.name || '';
+    // بناء الاسم الكامل
+    const buildFullName = (firstName, secondName, thirdName, lastName) => {
+      const nameParts = [firstName, secondName, thirdName, lastName].filter(part => part && part.trim());
+      return nameParts.join(' ');
+    };
+    
+    // جلب الأسماء من قاعدة البيانات
+    const [nameRows] = await db.execute(
+      'SELECT first_name, second_name, third_name, last_name FROM users WHERE id = ?',
+      [user.id]
+    );
+    
+    const userNames = nameRows[0] || {};
+    const fullName = buildFullName(
+      userNames.first_name,
+      userNames.second_name,
+      userNames.third_name,
+      userNames.last_name
+    );
+    
     // إنشاء التوكن
     const token = jwt.sign(
       {
         id: user.id,
         username: user.username,
+        full_name: fullName || user.username,
         email: user.email,
         employee_number: user.employee_number,
         job_title_id: user.job_title_id,
         job_title: user.job_title,
         department_id: user.department_id,
-        department_name: departmentName, // ✅ أضف اسم القسم هنا
+        department_name: departmentName,
         role: user.role
       },
       process.env.JWT_SECRET

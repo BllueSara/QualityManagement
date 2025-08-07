@@ -16,6 +16,7 @@ const { getContentById } = require('../controllers/contentController');
 const { updateContent } = require('../controllers/contentController');
 const { deleteContent } = require('../controllers/contentController');
 const { logContentView } = require('../controllers/contentController');
+const { getFullNameSQLWithAliasAndFallback } = require('../models/userUtils');
 
 
 const router = express.Router();
@@ -59,7 +60,7 @@ router.get('/track/:contentId', async (req, res) => {
     const [timelineRows] = await db.execute(`
       SELECT 
         al.status, al.comments, al.created_at, 
-        u.username AS approver, 
+        ${getFullNameSQLWithAliasAndFallback('u')} AS approver, 
         d.name AS department
       FROM approval_logs al
       JOIN users u ON al.approver_id = u.id
@@ -73,7 +74,7 @@ router.get('/track/:contentId', async (req, res) => {
     // ✅ استعلام المعتمدين اللي ما وقعوا
     const [pendingApproversRows] = await db.execute(`
       SELECT 
-        u.username AS approver, 
+        ${getFullNameSQLWithAliasAndFallback('u')} AS approver, 
         d.name AS department
       FROM content_approvers ca
       JOIN users u ON ca.user_id = u.id

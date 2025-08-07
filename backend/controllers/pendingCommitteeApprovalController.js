@@ -2,6 +2,7 @@ const mysql = require('mysql2/promise');
 const jwt   = require('jsonwebtoken');
 const { logAction } = require('../models/logger');
 const { insertNotification } = require('../models/notfications-utils');
+const { getFullNameSQLWithAliasAndFallback } = require('../models/userUtils');
 
 function getUserLang(req) {
   const auth = req.headers.authorization;
@@ -87,10 +88,10 @@ exports.getPendingApprovals = async (req, res) => {
             cc.title,
             cc.file_path,
             cc.approval_status,
-            GROUP_CONCAT(DISTINCT u2.username ORDER BY cca.sequence_number) AS assigned_approvers,
+            GROUP_CONCAT(DISTINCT ${getFullNameSQLWithAliasAndFallback('u2')} ORDER BY cca.sequence_number) AS assigned_approvers,
             com.name AS source_name,
             cf.name AS folder_name,
-            u.username AS created_by_username,
+            ${getFullNameSQLWithAliasAndFallback('u')} AS created_by_username,
             'committee' AS type,
             cc.approvers_required,
             cc.created_at,
@@ -251,11 +252,18 @@ exports.sendApprovalRequest = async (req, res) => {
     }
 
     // جلب أسماء المعتمدين للـ logging
-    const [approverUsers] = await conn.query(
-      `SELECT username FROM users WHERE id IN (?)`,
+    const [approverUsers] = await conn.query(`
+      SELECT
+        CONCAT(
+          COALESCE(first_name, ''),
+          CASE WHEN second_name IS NOT NULL AND second_name != '' THEN CONCAT(' ', second_name) ELSE '' END,
+          CASE WHEN third_name IS NOT NULL AND third_name != '' THEN CONCAT(' ', third_name) ELSE '' END,
+          CASE WHEN last_name IS NOT NULL AND last_name != '' THEN CONCAT(' ', last_name) ELSE '' END
+        ) AS full_name
+      FROM users WHERE id IN (?)`,
       [finalApprovers]
     );
-    const approverNames = approverUsers.map(u => u.username).join(', ');
+    const approverNames = approverUsers.map(u => u.full_name).join(', ');
 
     await conn.beginTransaction();
 
@@ -420,8 +428,15 @@ exports.delegateCommitteeApproval = async (req, res) => {
             [contentId]
         );
 
-        const [[delegateeUser]] = await conn.execute(
-            `SELECT username FROM users WHERE id = ?`,
+        const [[delegateeUser]] = await conn.execute(`
+            SELECT
+              CONCAT(
+                COALESCE(first_name, ''),
+                CASE WHEN second_name IS NOT NULL AND second_name != '' THEN CONCAT(' ', second_name) ELSE '' END,
+                CASE WHEN third_name IS NOT NULL AND third_name != '' THEN CONCAT(' ', third_name) ELSE '' END,
+                CASE WHEN last_name IS NOT NULL AND last_name != '' THEN CONCAT(' ', last_name) ELSE '' END
+              ) AS full_name
+            FROM users WHERE id = ?`,
             [delegateTo]
         );
 
@@ -459,8 +474,8 @@ exports.delegateCommitteeApproval = async (req, res) => {
         const titleEN = getLocalizedName(contentDetails.title, 'en');
 
         const logDescription = {
-          ar: `تم تفويض الموافقة على محتوى اللجنة: '${titleAR}' في اللجنة: '${committeeNameAR}' إلى: ${delegateeUser.username}`,
-          en: `Delegated approval for committee content: '${titleEN}' in committee: '${committeeNameEN}' to: ${delegateeUser.username}`
+          ar: `تم تفويض الموافقة على محتوى اللجنة: '${titleAR}' في اللجنة: '${committeeNameAR}' إلى: ${delegateeUser.full_name}`,
+          en: `Delegated approval for committee content: '${titleEN}' in committee: '${committeeNameEN}' to: ${delegateeUser.full_name}`
         };
         
         await logAction(currentUserId, 'delegate_committee_approval', JSON.stringify(logDescription), 'committee_content', contentId);

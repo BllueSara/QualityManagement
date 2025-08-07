@@ -261,8 +261,18 @@ static async findById(id, userId, userRole) {
           t.*, 
           rd.name AS reporting_dept_name, 
           sd.name AS responding_dept_name,
-          u1.username AS created_by_name,
-          u2.username AS assigned_to_name,
+          CONCAT(
+            COALESCE(u1.first_name, ''),
+            CASE WHEN u1.second_name IS NOT NULL AND u1.second_name != '' THEN CONCAT(' ', u1.second_name) ELSE '' END,
+            CASE WHEN u1.third_name IS NOT NULL AND u1.third_name != '' THEN CONCAT(' ', u1.third_name) ELSE '' END,
+            CASE WHEN u1.last_name IS NOT NULL AND u1.last_name != '' THEN CONCAT(' ', u1.last_name) ELSE '' END
+          ) AS created_by_name,
+          CONCAT(
+            COALESCE(u2.first_name, ''),
+            CASE WHEN u2.second_name IS NOT NULL AND u2.second_name != '' THEN CONCAT(' ', u2.second_name) ELSE '' END,
+            CASE WHEN u2.third_name IS NOT NULL AND u2.third_name != '' THEN CONCAT(' ', u2.third_name) ELSE '' END,
+            CASE WHEN u2.last_name IS NOT NULL AND u2.last_name != '' THEN CONCAT(' ', u2.last_name) ELSE '' END
+          ) AS assigned_to_name,
           h.code AS harm_level_code,
           h.name_ar AS harm_level_name_ar,
           h.name_en AS harm_level_name_en,
@@ -329,7 +339,12 @@ static async findById(id, userId, userRole) {
       const [history] = await conn.query(
         `SELECT
            h.id, h.status, h.comments, h.created_at,
-           u.username AS changed_by_name
+           CONCAT(
+             COALESCE(u.first_name, ''),
+             CASE WHEN u.second_name IS NOT NULL AND u.second_name != '' THEN CONCAT(' ', u.second_name) ELSE '' END,
+             CASE WHEN u.third_name IS NOT NULL AND u.third_name != '' THEN CONCAT(' ', u.third_name) ELSE '' END,
+             CASE WHEN u.last_name IS NOT NULL AND u.last_name != '' THEN CONCAT(' ', u.last_name) ELSE '' END
+           ) AS changed_by_name
          FROM ticket_status_history h
          LEFT JOIN users u ON h.changed_by = u.id
          WHERE h.ticket_id = ?

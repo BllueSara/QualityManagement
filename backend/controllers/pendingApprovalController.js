@@ -3,6 +3,7 @@ const mysql = require('mysql2/promise');
 const jwt   = require('jsonwebtoken');
 const { logAction } = require('../models/logger');
 const { insertNotification } = require('../models/notfications-utils');
+const { getFullNameSQLWithAliasAndFallback } = require('../models/userUtils');
 
 function getUserLang(req) {
   const auth = req.headers.authorization;
@@ -88,10 +89,10 @@ exports.getPendingApprovals = async (req, res) => {
             c.title,
             c.file_path,
             c.approval_status,
-            GROUP_CONCAT(DISTINCT u2.username ORDER BY ca.sequence_number) AS assigned_approvers,
+            GROUP_CONCAT(DISTINCT ${getFullNameSQLWithAliasAndFallback('u2')} ORDER BY ca.sequence_number) AS assigned_approvers,
             d.name AS source_name,
             f.name AS folder_name,
-            u.username AS created_by_username,
+            ${getFullNameSQLWithAliasAndFallback('u')} AS created_by_username,
             'department_content' AS content_type,
             c.approvers_required,
             c.created_at,
@@ -232,11 +233,18 @@ exports.sendApprovalRequest = async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'لا يوجد معتمدين صالحين بعد معالجة التفويضات.' });
     }
 
-    const [approverUsers] = await conn.query(
-      `SELECT username FROM users WHERE id IN (?)`,
+    const [approverUsers] = await conn.query(`
+      SELECT
+        CONCAT(
+          COALESCE(first_name, ''),
+          CASE WHEN second_name IS NOT NULL AND second_name != '' THEN CONCAT(' ', second_name) ELSE '' END,
+          CASE WHEN third_name IS NOT NULL AND third_name != '' THEN CONCAT(' ', third_name) ELSE '' END,
+          CASE WHEN last_name IS NOT NULL AND last_name != '' THEN CONCAT(' ', last_name) ELSE '' END
+        ) AS full_name
+      FROM users WHERE id IN (?)`,
       [finalApprovers]
     );
-    const approverNames = approverUsers.map(u => u.username).join(', ');
+    const approverNames = approverUsers.map(u => u.full_name).join(', ');
 
     await conn.beginTransaction();
 
@@ -402,11 +410,18 @@ exports.delegateApproval = async (req, res) => {
         [contentId]
     );
 
-    const [delegateeUser] = await conn.execute(
-      `SELECT username FROM users WHERE id = ?`,
+    const [delegateeUser] = await conn.execute(`
+      SELECT
+        CONCAT(
+          COALESCE(first_name, ''),
+          CASE WHEN second_name IS NOT NULL AND second_name != '' THEN CONCAT(' ', second_name) ELSE '' END,
+          CASE WHEN third_name IS NOT NULL AND third_name != '' THEN CONCAT(' ', third_name) ELSE '' END,
+          CASE WHEN last_name IS NOT NULL AND last_name != '' THEN CONCAT(' ', last_name) ELSE '' END
+        ) AS full_name
+      FROM users WHERE id = ?`,
       [delegateeUserId]
     );
-    const delegateeUsername = delegateeUser.map(u => u.username)[0] || '';
+    const delegateeUsername = delegateeUser.map(u => u.full_name)[0] || '';
 
     await conn.beginTransaction();
 

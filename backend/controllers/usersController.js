@@ -11,6 +11,7 @@ const db = mysql.createPool({
   database: process.env.DB_NAME || 'Quality'
 });
 const { logAction } = require('../models/logger');
+const { buildFullName, getFullNameSQLWithAlias, getFullNameSQLWithAliasAndFallback } = require('../models/userUtils');
 const { insertNotification } = require('../models/notfications-utils');
 
 function getUserLang(req) {
@@ -55,7 +56,8 @@ const getUsers = async (req, res) => {
     let query = `
       SELECT 
         u.id,
-        u.username AS name,
+        ${getFullNameSQLWithAliasAndFallback('u')} AS name,
+        u.username,
         u.email,
         u.role,
         u.status,  
@@ -110,6 +112,7 @@ const getUserById = async (req, res) => {
          u.second_name,
          u.third_name,
          u.last_name,
+         ${getFullNameSQLWithAliasAndFallback('u')} AS name,
          u.created_at,
          u.updated_at
        FROM users u
@@ -125,23 +128,6 @@ const getUserById = async (req, res) => {
     }
     
     const userData = rows[0];
-    
-    // بناء الاسم الكامل من الأجزاء
-    const buildFullName = (firstName, secondName, thirdName, lastName) => {
-      const nameParts = [firstName, secondName, thirdName, lastName].filter(part => part && part.trim());
-      return nameParts.join(' ');
-    };
-    
-    // إضافة الاسم الكامل أو اليوزرنيم كـ name
-    const fullName = buildFullName(
-      userData.first_name,
-      userData.second_name,
-      userData.third_name,
-      userData.last_name
-    );
-    
-    // إصلاح مشكلة عرض اسم المستخدم - نعرض username بدلاً من الاسم الكامل
-    userData.name = userData.username;
     
     res.status(200).json({
       status: 'success',
@@ -206,8 +192,7 @@ const addUser = async (req, res) => {
     const cleanDeptId = departmentId && departmentId !== '' ? departmentId : null;
 
     // بناء الاسم الكامل من الأسماء
-    const names = [first_name, second_name, third_name, last_name].filter(name => name);
-    const fullName = names.join(' ');
+    const fullName = buildFullName(first_name, second_name, third_name, last_name);
 
     const [result] = await db.execute(
   `INSERT INTO users (
@@ -231,8 +216,8 @@ const addUser = async (req, res) => {
     // Add to logs
     const localizedDeptName = getLocalizedName(departmentName, userLang);
     const logDescription = {
-      ar: `تم إضافة مستخدم جديد: ${fullName}`,
-      en: `Added new user: ${fullName}`
+      ar: `تم إضافة مستخدم جديد: ${fullName || name}`,
+      en: `Added new user: ${fullName || name}`
     };
     
     await logAction(adminUserId, 'add_user', JSON.stringify(logDescription), 'user', result.insertId);
@@ -343,8 +328,7 @@ const updateUser = async (req, res) => {
     }
 
     // بناء الاسم الكامل من الأسماء
-    const names = [first_name, second_name, third_name, last_name].filter(name => name);
-    const fullName = names.join(' ');
+    const fullName = buildFullName(first_name, second_name, third_name, last_name);
 
     const [result] = await db.execute(
       `UPDATE users 
@@ -420,12 +404,13 @@ const updateUser = async (req, res) => {
       changesEn.push(`Department: '${oldDeptNameEn || 'None'}' → '${newDeptNameEn || 'None'}'`);
     }
     let logMessageAr, logMessageEn;
+    const userFullName = buildFullName(oldUser.first_name, oldUser.second_name, oldUser.third_name, oldUser.last_name) || oldUser.username;
     if (changesAr.length > 0) {
-      logMessageAr = `تم تعديل المستخدم '${oldUser.username}':\n${changesAr.join('\n')}`;
-      logMessageEn = `Updated user '${oldUser.username}' (no changes)`;
+      logMessageAr = `تم تعديل المستخدم '${userFullName}':\n${changesAr.join('\n')}`;
+      logMessageEn = `Updated user '${userFullName}':\n${changesEn.join('\n')}`;
     } else {
-      logMessageAr = `تم تعديل المستخدم '${oldUser.username}' (لا توجد تغييرات)`;
-      logMessageEn = `Updated user '${oldUser.username}' (no changes)`;
+      logMessageAr = `تم تعديل المستخدم '${userFullName}' (لا توجد تغييرات)`;
+      logMessageEn = `Updated user '${userFullName}' (no changes)`;
     }
     // ✅ تسجيل اللوق بعد نجاح تعديل المستخدم
     try {
@@ -466,7 +451,7 @@ const deleteUser = async (req, res) => {
   try {
     // جلب تفاصيل المستخدم قبل الحذف للتسجيل
     const [[userDetails]] = await db.execute(
-      'SELECT username FROM users WHERE id = ?',
+      `SELECT ${getFullNameSQLWithFallback()} AS full_name FROM users WHERE id = ?`,
       [id]
     );
 
@@ -499,8 +484,8 @@ const deleteUser = async (req, res) => {
       // ✅ تسجيل اللوق بعد نجاح حذف المستخدم
       try {
           const logDescription = {
-              ar: `تم حذف مستخدم: ${userDetails.username}`,
-              en: `Deleted user: ${userDetails.username}`
+              ar: `تم حذف مستخدم: ${userDetails.full_name}`,
+              en: `Deleted user: ${userDetails.full_name}`
           };
           
           await logAction(adminUserId, 'delete_user', JSON.stringify(logDescription), 'user', id);
@@ -556,7 +541,7 @@ const changeUserRole = async (req, res) => {
   try {
     // Fetch user details for logging
     const [[userDetails]] = await db.execute(
-      'SELECT username, role as old_role FROM users WHERE id = ?',
+      `SELECT ${getFullNameSQLWithFallback()} AS full_name, role as old_role FROM users WHERE id = ?`,
       [id]
     );
 
@@ -575,8 +560,8 @@ const changeUserRole = async (req, res) => {
 
     // Add to logs
     const logDescription = {
-        ar: `تم تغيير دور المستخدم: ${userDetails.username} إلى: ${role}`,
-        en: `Changed user role: ${userDetails.username} to: ${role}`
+        ar: `تم تغيير دور المستخدم: ${userDetails.full_name} إلى: ${role}`,
+        en: `Changed user role: ${userDetails.full_name} to: ${role}`
     };
     
     await logAction(adminUserId, 'change_role', JSON.stringify(logDescription), 'user', id);
@@ -616,7 +601,7 @@ const adminResetPassword = async (req, res) => {
   try {
     // Fetch user details for logging
     const [[userDetails]] = await db.execute(
-      'SELECT username FROM users WHERE id = ?',
+      `SELECT ${getFullNameSQLWithFallback()} AS full_name FROM users WHERE id = ?`,
       [id]
     );
 
@@ -637,8 +622,8 @@ const adminResetPassword = async (req, res) => {
     // ✅ تسجيل اللوق بعد نجاح إعادة تعيين كلمة المرور
     try {
       const logDescription = {
-        ar: `تم إعادة تعيين كلمة المرور للمستخدم: ${userDetails.username}`,
-        en: `Reset password for user: ${userDetails.username}`
+        ar: `تم إعادة تعيين كلمة المرور للمستخدم: ${userDetails.full_name}`,
+        en: `Reset password for user: ${userDetails.full_name}`
       };
       
       await logAction(adminUserId, 'reset_user_password', JSON.stringify(logDescription), 'user', id);
@@ -682,7 +667,7 @@ const getLogs = async (req, res) => {
       params.push(action);
     }
     if (user) {
-      conditions.push('u.username = ?');
+      conditions.push(`${getFullNameSQLWithAliasAndFallback('u')} = ?`);
       params.push(user);
     }
     if (search) {
@@ -695,7 +680,7 @@ const getLogs = async (req, res) => {
     const sql = `
       SELECT
         al.id,
-        u.username AS user,
+        ${getFullNameSQLWithAliasAndFallback('u')} AS user,
         al.action,
         al.description,
         al.reference_type,
@@ -823,7 +808,7 @@ const getNotifications = async (req, res) => {
         SELECT 
           n.id,
           n.user_id,
-          u.username AS user_name,
+          ${getFullNameSQLWithAliasAndFallback('u')} AS user_name,
           n.title,
           n.message,
           n.message_data,         -- أضف هذا السطر
@@ -838,7 +823,7 @@ const getNotifications = async (req, res) => {
         SELECT 
           n.id,
           n.user_id,
-          u.username AS user_name,
+          ${getFullNameSQLWithAliasAndFallback('u')} AS user_name,
           n.title,
           n.message,
           n.message_data,         -- أضف هذا السطر
@@ -1402,7 +1387,7 @@ const exportLogsToExcel = async (req, res) => {
     const [logs] = await db.execute(`
       SELECT 
         l.id,
-        u.username as user_name,
+        ${getFullNameSQLWithAliasAndFallback('u')} as user_name,
         l.description,
         l.action,
         l.reference_type,

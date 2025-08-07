@@ -2047,6 +2047,17 @@ async function openDelegationConfirmationsModal() {
     console.log('Opening delegation confirmations modal...');
     console.log('Current authToken:', authToken ? 'exists' : 'missing');
     
+    // إظهار دور المستخدم الحالي للـ debugging
+    if (authToken) {
+      try {
+        const payload = JSON.parse(atob(authToken.split('.')[1] || '{}'));
+        console.log('Current user role:', payload.role);
+        console.log('Current user ID:', payload.id);
+      } catch (e) {
+        console.error('Error parsing JWT payload:', e);
+      }
+    }
+    
     // إظهار loading
     const modal = document.getElementById('delegationConfirmationsModal');
     const listContainer = document.getElementById('delegationConfirmationsList');
@@ -2069,12 +2080,17 @@ async function openDelegationConfirmationsModal() {
     // جلب اقرارات التفويض
     const confirmations = await fetchDelegationConfirmations();
     
+
+
     if (confirmations.length === 0) {
       listContainer.innerHTML = `
         <div class="delegation-confirmations-empty">
           <i class="fas fa-clipboard-list"></i>
           <h3>لا توجد اقرارات تفويض</h3>
-          <p>لم يتم العثور على أي اقرارات تفويض حتى الآن</p>
+          <p>لم يتم العثور على أي اقرارات تفويض في النظام حتى الآن</p>
+          <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
+            اقرارات التفويض تظهر هنا عندما يقوم المستخدمون بتفويض صلاحياتهم للآخرين
+          </p>
         </div>
       `;
     } else {
@@ -2145,23 +2161,23 @@ async function fetchDelegationConfirmations() {
   }
 }
 
+// دالة استرجاع التوقيع من البيانات المرجعة من الخادم
+function getSignatureFromData(confirmation) {
+  // إعطاء الأولوية للتوقيع الإلكتروني إذا كان متوفراً
+  if (confirmation.electronic_signature && confirmation.electronic_signature.trim() !== '') {
+    return confirmation.electronic_signature;
+  }
+  // ثم التوقيع اليدوي
+  if (confirmation.signature && confirmation.signature.trim() !== '') {
+    return confirmation.signature;
+  }
+  return null;
+}
+
 // دالة عرض اقرارات التفويض
 function renderDelegationConfirmations(confirmations) {
-  console.log('Rendering delegation confirmations:', confirmations);
-  
-  // Debug signature data
-  confirmations.forEach((confirmation, index) => {
-    console.log(`Confirmation ${index + 1}:`, {
-      hasSignature: !!confirmation.signature,
-      hasElectronicSignature: !!confirmation.electronic_signature,
-      signatureLength: confirmation.signature ? confirmation.signature.length : 0,
-      electronicSignatureLength: confirmation.electronic_signature ? confirmation.electronic_signature.length : 0,
-      signaturePreview: confirmation.signature ? confirmation.signature.substring(0, 50) + '...' : 'none',
-      electronicSignaturePreview: confirmation.electronic_signature ? confirmation.electronic_signature.substring(0, 50) + '...' : 'none',
-      signatureIsValid: confirmation.signature ? confirmation.signature.startsWith('data:image') : false,
-      electronicSignatureIsValid: confirmation.electronic_signature ? confirmation.electronic_signature.startsWith('data:image') : false
-    });
-  });
+  // الحصول على معرف المستخدم الحالي
+  const currentUserId = getCurrentUserId();
   
   const listContainer = document.getElementById('delegationConfirmationsList');
   
@@ -2176,6 +2192,19 @@ function renderDelegationConfirmations(confirmations) {
 
     const delegationTypeText = confirmation.is_bulk ? 'تفويض شامل' : 'تفويض فردي';
     const contentTypeText = confirmation.content_type === 'committee' ? 'لجنة' : 'قسم';
+
+    // تحديد نوع التفويض للمديرين - عرض جميع التفويضات
+    let delegationTypeBadge = '';
+    let delegationTypeClass = '';
+    
+    // عرض اقرار منفصل حسب نوع التفويض
+    if (confirmation.delegation_type === 'sender') {
+      delegationTypeBadge = `<span class="delegation-type-badge sender">اقرار المرسل: ${confirmation.delegator.fullName}</span>`;
+      delegationTypeClass = 'delegation-sender';
+    } else if (confirmation.delegation_type === 'receiver') {
+      delegationTypeBadge = `<span class="delegation-type-badge receiver">اقرار المستقبل: ${confirmation.delegate.fullName}</span>`;
+      delegationTypeClass = 'delegation-receiver';
+    }
 
     let filesHTML = '';
     if (confirmation.is_bulk) {
@@ -2204,9 +2233,12 @@ function renderDelegationConfirmations(confirmations) {
     }
 
     return `
-      <div class="delegation-confirmation-item">
+      <div class="delegation-confirmation-item ${delegationTypeClass}">
         <div class="delegation-confirmation-header">
-          <h3 class="delegation-confirmation-title">اقرار تفويض</h3>
+          <div class="delegation-confirmation-title-section">
+            <h3 class="delegation-confirmation-title">اقرار تفويض</h3>
+            ${delegationTypeBadge}
+          </div>
           <span class="delegation-confirmation-date">${confirmationDate}</span>
         </div>
         
@@ -2239,47 +2271,95 @@ function renderDelegationConfirmations(confirmations) {
         </div>
         
         <div class="delegation-confirmation-statement">
-          أقر الموظف <strong>${confirmation.delegator.fullName}</strong> 
-          ذو رقم الهوية <strong>${confirmation.delegator.idNumber}</strong> 
-          بأنه يفوض الموظف <strong>${confirmation.delegate.fullName}</strong> 
-          ذو رقم الهوية <strong>${confirmation.delegate.idNumber}</strong> 
-          بالتوقيع بالنيابة عنه على ${confirmation.is_bulk ? 'جميع الملفات المعلقة' : 'الملفات المحددة'}.
+          ${confirmation.delegation_type === 'sender' 
+            ? `أقر الموظف <strong>${confirmation.delegator.fullName}</strong> 
+               ذو رقم الهوية <strong>${confirmation.delegator.idNumber}</strong> 
+               بأنه يفوض الموظف <strong>${confirmation.delegate.fullName}</strong> 
+               ذو رقم الهوية <strong>${confirmation.delegate.idNumber}</strong> 
+               بالتوقيع بالنيابة عنه على ${confirmation.is_bulk ? 'جميع الملفات المعلقة' : 'الملفات المحددة'}.`
+            : `أقر الموظف <strong>${confirmation.delegate.fullName}</strong> 
+               ذو رقم الهوية <strong>${confirmation.delegate.idNumber}</strong> 
+               بقبول التفويض من الموظف <strong>${confirmation.delegator.fullName}</strong> 
+               ذو رقم الهوية <strong>${confirmation.delegator.idNumber}</strong> 
+               للتوقيع بالنيابة عنه على ${confirmation.is_bulk ? 'جميع الملفات المعلقة' : 'الملفات المحددة'}.`
+          }
         </div>
         
         ${filesHTML}
         
-        ${(confirmation.signature && confirmation.signature.startsWith('data:image')) || (confirmation.electronic_signature && confirmation.electronic_signature.startsWith('data:image')) ? `
-          <div class="delegation-confirmation-signature">
-            <h4>التوقيع الشخصي</h4>
-            <div class="delegation-confirmation-signature-container">
-              ${confirmation.signature && confirmation.signature.startsWith('data:image') ? `
-                <div class="delegation-confirmation-signature-item">
-                  <span class="delegation-confirmation-signature-label">التوقيع اليدوي:</span>
-                  <img src="${confirmation.signature}" alt="التوقيع اليدوي" class="delegation-confirmation-signature-image" onerror="this.style.display='none'; console.log('Manual signature failed to load')" onload="console.log('Manual signature loaded successfully')" />
+        ${(() => {
+          const signature = getSignatureFromData(confirmation);
+          if (signature && signature.trim() !== '') {
+            // التحقق من أن التوقيع يحتوي على بيانات صحيحة
+            const isValidSignature = signature.startsWith('data:image') || signature.startsWith('http');
+            
+            if (isValidSignature) {
+              return `
+                <div class="delegation-confirmation-signature">
+                  <h4>التوقيع الشخصي</h4>
+                  <div class="delegation-confirmation-signature-container">
+                    <div class="delegation-confirmation-signature-item">
+                      <span class="delegation-confirmation-signature-label">التوقيع:</span>
+                      <img src="${signature}" alt="التوقيع" class="delegation-confirmation-signature-image" 
+                           onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" 
+                           onload="console.log('Signature loaded successfully')" />
+                      <span class="delegation-confirmation-signature-error" style="display: none; color: #dc3545; font-style: italic;">
+                        فشل في تحميل التوقيع
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              ` : ''}
-              ${confirmation.electronic_signature && confirmation.electronic_signature.startsWith('data:image') ? `
-                <div class="delegation-confirmation-signature-item">
-                  <span class="delegation-confirmation-signature-label">التوقيع الإلكتروني:</span>
-                  <img src="${confirmation.electronic_signature}" alt="التوقيع الإلكتروني" class="delegation-confirmation-signature-image" onerror="this.style.display='none'; console.log('Electronic signature failed to load')" onload="console.log('Electronic signature loaded successfully')" />
+              `;
+            }
+          } else {
+            // عرض رسالة عندما لا يوجد توقيع
+            if (confirmation.delegation_type === 'sender') {
+              return `
+                <div class="delegation-confirmation-signature">
+                  <h4>التوقيع الشخصي</h4>
+                  <div class="delegation-confirmation-signature-container">
+                    <div class="delegation-confirmation-signature-item">
+                      <span class="delegation-confirmation-signature-label">التوقيع:</span>
+                      <span class="delegation-confirmation-signature-missing" style="color: #888; font-style: italic;">
+                        لم يتم حفظ توقيع المرسل
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              ` : ''}
-            </div>
-          </div>
-        ` : (confirmation.signature || confirmation.electronic_signature) ? `
-          <div class="delegation-confirmation-signature">
-            <h4>التوقيع الشخصي</h4>
-            <div class="delegation-confirmation-signature-container">
-              <div class="delegation-confirmation-signature-item">
-                <span class="delegation-confirmation-signature-label">ملاحظة:</span>
-                <span class="delegation-confirmation-signature-value">تم التوقيع ولكن التوقيع غير متاح للعرض</span>
-              </div>
-            </div>
-          </div>
-        ` : ''}
+              `;
+            } else {
+              return `
+                <div class="delegation-confirmation-signature">
+                  <h4>التوقيع الشخصي</h4>
+                  <div class="delegation-confirmation-signature-container">
+                    <div class="delegation-confirmation-signature-item">
+                      <span class="delegation-confirmation-signature-label">التوقيع:</span>
+                      <span class="delegation-confirmation-signature-missing" style="color: #888; font-style: italic;">
+                        لم يتم التوقيع بعد
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }
+          }
+          return '';
+        })()}
       </div>
     `;
   }).join('');
 
   listContainer.innerHTML = confirmationsHTML;
+}
+
+// دالة مساعدة للحصول على معرف المستخدم الحالي
+function getCurrentUserId() {
+  if (!authToken) return null;
+  try {
+    const payload = JSON.parse(atob(authToken.split('.')[1] || '{}'));
+    return payload.id;
+  } catch (e) {
+    console.error('Error parsing JWT payload:', e);
+    return null;
+  }
 }

@@ -2,6 +2,7 @@
 const mysql = require('mysql2/promise');
 const nodemailer = require('nodemailer');
 const { promisify } = require('util');
+const { getFullNameSQLWithFallback } = require('./userUtils');
 
 const db = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
@@ -228,7 +229,7 @@ async function insertNotification(userId, title, message, type = 'ticket', messa
         }
       // جلب معلومات المستخدم
       const [userRows] = await db.execute(
-        'SELECT email, username FROM users WHERE id = ?',
+        `SELECT email, ${getFullNameSQLWithFallback()} AS full_name FROM users WHERE id = ?`,
         [userId]
       );
 
@@ -243,7 +244,7 @@ async function insertNotification(userId, title, message, type = 'ticket', messa
           message: emailMessage, // استخدام رسالة الإيميل المنفصلة
           type,
           created_at: new Date(),
-          userName: user.username // تمرير اسم المستخدم
+          userName: user.full_name // تمرير الاسم الكامل
         };
 
         // إرسال البريد الإلكتروني

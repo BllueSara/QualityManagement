@@ -50,6 +50,7 @@ const processArabicText = (text) => {
 };
 
 const { logAction } = require('../models/logger');
+const { getFullNameSQLWithAliasAndFallback } = require('../models/userUtils');
 
 // دالة تجهيز النص العربي مع تحسينات إضافية
 const prepareArabic = (text) => {
@@ -147,7 +148,12 @@ const getUserPendingApprovals = async (req, res) => {
           f.name AS folderName,
           COALESCE(d.name, '-') AS source_name,
           COALESCE(d.type, 'department') AS department_type,
-          GROUP_CONCAT(DISTINCT u2.username ORDER BY ca.sequence_number) AS assigned_approvers,
+          GROUP_CONCAT(DISTINCT CONCAT(
+            COALESCE(u2.first_name, ''),
+            CASE WHEN u2.second_name IS NOT NULL AND u2.second_name != '' THEN CONCAT(' ', u2.second_name) ELSE '' END,
+            CASE WHEN u2.third_name IS NOT NULL AND u2.third_name != '' THEN CONCAT(' ', u2.third_name) ELSE '' END,
+            CASE WHEN u2.last_name IS NOT NULL AND u2.last_name != '' THEN CONCAT(' ', u2.last_name) ELSE '' END
+          ) ORDER BY ca.sequence_number) AS assigned_approvers,
           'dual' AS signature_type,
           ca.sequence_number
         FROM contents c
@@ -200,7 +206,12 @@ const getUserPendingApprovals = async (req, res) => {
           f.name AS folderName,
           COALESCE(d.name, '-') AS source_name,
           COALESCE(d.type, 'department') AS department_type,
-          GROUP_CONCAT(DISTINCT u2.username ORDER BY ca.sequence_number) AS assigned_approvers,
+          GROUP_CONCAT(DISTINCT CONCAT(
+            COALESCE(u2.first_name, ''),
+            CASE WHEN u2.second_name IS NOT NULL AND u2.second_name != '' THEN CONCAT(' ', u2.second_name) ELSE '' END,
+            CASE WHEN u2.third_name IS NOT NULL AND u2.third_name != '' THEN CONCAT(' ', u2.third_name) ELSE '' END,
+            CASE WHEN u2.last_name IS NOT NULL AND u2.last_name != '' THEN CONCAT(' ', u2.last_name) ELSE '' END
+          ) ORDER BY ca.sequence_number) AS assigned_approvers,
           'normal' AS signature_type,
           ca.sequence_number
         FROM contents c
@@ -646,8 +657,16 @@ const handleApproval = async (req, res) => {
     // إذا لم يكتمل الاعتماد النهائي، أرسل إشعار اعتماد جزئي
     if (approved && remaining[0].count > 0) {
       // جلب اسم المعتمد
-      const [approverRows] = await db.execute('SELECT username FROM users WHERE id = ?', [approverId]);
-      const approverName = approverRows.length ? approverRows[0].username : '';
+      const [approverRows] = await db.execute(`
+        SELECT 
+          CONCAT(
+            COALESCE(first_name, ''),
+            CASE WHEN second_name IS NOT NULL AND second_name != '' THEN CONCAT(' ', second_name) ELSE '' END,
+            CASE WHEN third_name IS NOT NULL AND third_name != '' THEN CONCAT(' ', third_name) ELSE '' END,
+            CASE WHEN last_name IS NOT NULL AND last_name != '' THEN CONCAT(' ', last_name) ELSE '' END
+          ) AS full_name
+        FROM users WHERE id = ?`, [approverId]);
+      const approverName = approverRows.length ? approverRows[0].full_name : '';
       await sendPartialApprovalNotification(ownerId, fileTitle, approverName, false);
     }
     // إذا اكتمل الاعتماد النهائي، أرسل إشعار "تم اعتماد الملف من الإدارة"
@@ -726,8 +745,18 @@ async function generateFinalSignedPDF(contentId) {
   const [logs] = await db.execute(`
     SELECT
       al.signed_as_proxy,
-      u_actual.username   AS actual_signer,
-      u_original.username AS original_user,
+      CONCAT(
+        COALESCE(u_actual.first_name, ''),
+        CASE WHEN u_actual.second_name IS NOT NULL AND u_actual.second_name != '' THEN CONCAT(' ', u_actual.second_name) ELSE '' END,
+        CASE WHEN u_actual.third_name IS NOT NULL AND u_actual.third_name != '' THEN CONCAT(' ', u_actual.third_name) ELSE '' END,
+        CASE WHEN u_actual.last_name IS NOT NULL AND u_actual.last_name != '' THEN CONCAT(' ', u_actual.last_name) ELSE '' END
+      ) AS actual_signer,
+      CONCAT(
+        COALESCE(u_original.first_name, ''),
+        CASE WHEN u_original.second_name IS NOT NULL AND u_original.second_name != '' THEN CONCAT(' ', u_original.second_name) ELSE '' END,
+        CASE WHEN u_original.third_name IS NOT NULL AND u_original.third_name != '' THEN CONCAT(' ', u_original.third_name) ELSE '' END,
+        CASE WHEN u_original.last_name IS NOT NULL AND u_original.last_name != '' THEN CONCAT(' ', u_original.last_name) ELSE '' END
+      ) AS original_user,
       u_actual.first_name AS actual_first_name,
       u_actual.second_name AS actual_second_name,
       u_actual.third_name AS actual_third_name,
@@ -1054,8 +1083,18 @@ async function updatePDFAfterApproval(contentId) {
     const [logs] = await db.execute(`
       SELECT
         al.signed_as_proxy,
-        u_actual.username   AS actual_signer,
-        u_original.username AS original_user,
+        CONCAT(
+          COALESCE(u_actual.first_name, ''),
+          CASE WHEN u_actual.second_name IS NOT NULL AND u_actual.second_name != '' THEN CONCAT(' ', u_actual.second_name) ELSE '' END,
+          CASE WHEN u_actual.third_name IS NOT NULL AND u_actual.third_name != '' THEN CONCAT(' ', u_actual.third_name) ELSE '' END,
+          CASE WHEN u_actual.last_name IS NOT NULL AND u_actual.last_name != '' THEN CONCAT(' ', u_actual.last_name) ELSE '' END
+        ) AS actual_signer,
+        CONCAT(
+          COALESCE(u_original.first_name, ''),
+          CASE WHEN u_original.second_name IS NOT NULL AND u_original.second_name != '' THEN CONCAT(' ', u_original.second_name) ELSE '' END,
+          CASE WHEN u_original.third_name IS NOT NULL AND u_original.third_name != '' THEN CONCAT(' ', u_original.third_name) ELSE '' END,
+          CASE WHEN u_original.last_name IS NOT NULL AND u_original.last_name != '' THEN CONCAT(' ', u_original.last_name) ELSE '' END
+        ) AS original_user,
         u_actual.first_name AS actual_first_name,
         u_actual.second_name AS actual_second_name,
         u_actual.third_name AS actual_third_name,
@@ -1362,11 +1401,11 @@ const getAssignedApprovals = async (req, res) => {
           c.title,
           c.file_path,
           c.approval_status,
-          GROUP_CONCAT(DISTINCT u2.username ORDER BY ca.sequence_number) AS assigned_approvers,
+          GROUP_CONCAT(DISTINCT ${getFullNameSQLWithAliasAndFallback('u2')} ORDER BY ca.sequence_number) AS assigned_approvers,
           d.name AS source_name,
           COALESCE(d.type, 'department') AS department_type,
           f.name AS folder_name,
-          u.username AS created_by_username,
+          ${getFullNameSQLWithAliasAndFallback('u')} AS created_by_username,
           'department' AS type,
           CAST(c.approvers_required AS CHAR) AS approvers_required,
           c.created_at,
@@ -1395,17 +1434,17 @@ const getAssignedApprovals = async (req, res) => {
           cc.title,
           cc.file_path,
           cc.approval_status,
-          GROUP_CONCAT(DISTINCT u2.username ORDER BY cca.sequence_number) AS assigned_approvers,
+          GROUP_CONCAT(DISTINCT ${getFullNameSQLWithAliasAndFallback('u2')} ORDER BY cca.sequence_number) AS assigned_approvers,
           com.name AS source_name,
           cf.name AS folder_name,
-          u.username AS created_by_username,
+          ${getFullNameSQLWithAliasAndFallback('u')} AS created_by_username,
           'committee' AS type,
           CAST(cc.approvers_required AS CHAR) AS approvers_required,
           cc.created_at,
           cc.start_date,
           cc.end_date,
           cca.sequence_number
-        FROM ss cc
+        FROM committee_contents cc
         JOIN committee_folders cf      ON cc.folder_id = cf.id
         JOIN committees com            ON cf.committee_id = com.id
         JOIN users u                   ON cc.created_by = u.id
@@ -1818,6 +1857,7 @@ const acceptProxyDelegation = async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   const decoded = jwt.verify(token, process.env.JWT_SECRET);
   const userId = decoded.id;
+  const { signature } = req.body;
 
   try {
     // تحقق إذا كان المستخدم مفوض له من active_delegations
@@ -2252,7 +2292,7 @@ const processSingleDelegationUnified = async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const currentUserId = decoded.id;
     
-    const { delegationId, action, reason } = req.body;
+    const { delegationId, action, reason, signature } = req.body;
     if (!delegationId || !action) {
       return res.status(400).json({ status: 'error', message: 'يرجى تحديد التفويض والإجراء' });
     }
@@ -2273,12 +2313,12 @@ const processSingleDelegationUnified = async (req, res) => {
 
     if (action === 'accept') {
       // قبول التفويض الفردي
-      // تحديث حالة التفويض إلى مقبول
+      // تحديث حالة التفويض إلى مقبول مع حفظ التوقيع
       await db.execute(`
         UPDATE approval_logs 
-        SET status = 'accepted' 
+        SET status = 'accepted', signature = ?
         WHERE id = ?
-      `, [delegation.id]);
+      `, [signature || null, delegation.id]);
 
       // إضافة المفوض له إلى content_approvers
       await db.execute(
@@ -2418,7 +2458,14 @@ const delegateAllApprovalsUnified = async (req, res) => {
     if (!token) return res.status(401).json({ status: 'error', message: 'لا يوجد توكن' });
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const currentUserId = decoded.id;
-    const { delegateTo, notes } = req.body;
+    const { delegateTo, notes, signature } = req.body;
+    
+    console.log('🔍 delegateAllApprovalsUnified called with:', {
+      delegateTo,
+      notes,
+      signature: signature ? 'PRESENT' : 'MISSING'
+    });
+    
     if (!delegateTo) return res.status(400).json({ status: 'error', message: 'يرجى اختيار المستخدم المفوض له' });
     
 
@@ -2454,8 +2501,10 @@ const delegateAllApprovalsUnified = async (req, res) => {
     );
 
     if (!allFiles.length) {
+      console.log('🔍 Saving bulk delegation with signature:', signature ? 'PRESENT' : 'MISSING');
+      
       // إنشاء سجل تفويض معلق في approval_logs (للأقسام)
-      await db.execute(`
+      const bulkDeptResult = await db.execute(`
         INSERT IGNORE INTO approval_logs (
           content_id,
           approver_id,
@@ -2463,12 +2512,15 @@ const delegateAllApprovalsUnified = async (req, res) => {
           signed_as_proxy,
           status,
           comments,
+          signature,
           created_at
-        ) VALUES (NULL, ?, ?, 1, 'pending', ?, NOW())
-      `, [delegateTo, currentUserId, notes || null]);
+        ) VALUES (NULL, ?, ?, 1, 'pending', ?, ?, NOW())
+      `, [delegateTo, currentUserId, notes || null, signature || null]);
+      
+      console.log('🔍 Bulk department delegation result:', bulkDeptResult);
 
       // إنشاء سجل تفويض معلق في committee_approval_logs (للجان)
-      await db.execute(`
+      const bulkCommResult = await db.execute(`
         INSERT IGNORE INTO committee_approval_logs (
           content_id,
           approver_id,
@@ -2476,9 +2528,12 @@ const delegateAllApprovalsUnified = async (req, res) => {
           signed_as_proxy,
           status,
           comments,
+          signature,
           created_at
-        ) VALUES (NULL, ?, ?, 1, 'pending', ?, NOW())
-      `, [delegateTo, currentUserId, notes || null]);
+        ) VALUES (NULL, ?, ?, 1, 'pending', ?, ?, NOW())
+      `, [delegateTo, currentUserId, notes || null, signature || null]);
+      
+      console.log('🔍 Bulk committee delegation result:', bulkCommResult);
       
       // أرسل إشعار جماعي حتى لو لم توجد ملفات
       try {
@@ -2511,9 +2566,11 @@ const delegateAllApprovalsUnified = async (req, res) => {
       });
     }
 
+    console.log('🔍 Saving individual file delegations with signature:', signature ? 'PRESENT' : 'MISSING');
+    
     // إنشاء سجلات تفويض معلقة لكل ملف قسم
     for (const row of departmentRows) {
-      await db.execute(`
+      const deptFileResult = await db.execute(`
         INSERT IGNORE INTO approval_logs (
           content_id,
           approver_id,
@@ -2521,14 +2578,17 @@ const delegateAllApprovalsUnified = async (req, res) => {
           signed_as_proxy,
           status,
           comments,
+          signature,
           created_at
-        ) VALUES (?, ?, ?, 1, 'pending', ?, NOW())
-      `, [row.id, delegateTo, currentUserId, notes || null]);
+        ) VALUES (?, ?, ?, 1, 'pending', ?, ?, NOW())
+      `, [row.id, delegateTo, currentUserId, notes || null, signature || null]);
+      
+      console.log('🔍 Department file delegation result for file', row.id, ':', deptFileResult);
     }
 
     // إنشاء سجلات تفويض معلقة لكل ملف لجنة
     for (const row of committeeRows) {
-      await db.execute(`
+      const commFileResult = await db.execute(`
         INSERT IGNORE INTO committee_approval_logs (
           content_id,
           approver_id,
@@ -2536,9 +2596,12 @@ const delegateAllApprovalsUnified = async (req, res) => {
           signed_as_proxy,
           status,
           comments,
+          signature,
           created_at
-        ) VALUES (?, ?, ?, 1, 'pending', ?, NOW())
-      `, [row.id, delegateTo, currentUserId, notes || null]);
+        ) VALUES (?, ?, ?, 1, 'pending', ?, ?, NOW())
+      `, [row.id, delegateTo, currentUserId, notes || null, signature || null]);
+      
+      console.log('🔍 Committee file delegation result for file', row.id, ':', commFileResult);
     }
     
     // إرسال إشعار جماعي موحد للمفوض له
@@ -2591,6 +2654,7 @@ const acceptAllProxyDelegationsUnified = async (req, res) => {
     if (!token) return res.status(401).json({ status: 'error', message: 'لا يوجد توكن' });
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const userId = decoded.id;
+    const { signature } = req.body;
 
     // جلب جميع التفويضات المعلقة للأقسام
     const [departmentDelegations] = await db.execute(`
@@ -2651,18 +2715,18 @@ const acceptAllProxyDelegationsUnified = async (req, res) => {
       }
     }
 
-    // تحديث حالة جميع التفويضات إلى 'accepted'
+    // تحديث حالة جميع التفويضات إلى 'accepted' مع حفظ التوقيع
     await db.execute(`
       UPDATE approval_logs 
-      SET status = 'accepted' 
+      SET status = 'accepted', signature = ?
       WHERE approver_id = ? AND signed_as_proxy = 1 AND status = 'pending'
-    `, [userId]);
+    `, [signature || null, userId]);
 
     await db.execute(`
       UPDATE committee_approval_logs 
-      SET status = 'accepted' 
+      SET status = 'accepted', signature = ?
       WHERE approver_id = ? AND signed_as_proxy = 1 AND status = 'pending'
-    `, [userId]);
+    `, [signature || null, userId]);
 
     // تسجيل الإجراء
     await logAction(userId, 'accept_all_proxy_delegations_unified', `تم قبول ${processedDepartmentFiles} ملف قسم و ${processedCommitteeFiles} ملف لجنة`);
@@ -2833,7 +2897,7 @@ const processBulkDelegationUnified = async (req, res) => {
     if (!token) return res.status(401).json({ status: 'error', message: 'لا يوجد توكن' });
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const userId = decoded.id;
-    const { delegationId, action } = req.body;
+    const { delegationId, action, signature } = req.body;
     
     if (!delegationId || !['accept','reject'].includes(action)) {
       return res.status(400).json({ status: 'error', message: 'بيانات غير صالحة' });
@@ -2897,8 +2961,8 @@ const processBulkDelegationUnified = async (req, res) => {
         }
         
         await db.execute(
-          'UPDATE committee_approval_logs SET status = "accepted" WHERE id = ?',
-          [delegationId]
+          'UPDATE committee_approval_logs SET status = "accepted", signature = ? WHERE id = ?',
+          [signature || null, delegationId]
         );
       } else {
         // معالجة تفويض الأقسام الشامل
@@ -2925,8 +2989,8 @@ const processBulkDelegationUnified = async (req, res) => {
         }
         
         await db.execute(
-          'UPDATE approval_logs SET status = "accepted" WHERE id = ?',
-          [delegationId]
+          'UPDATE approval_logs SET status = "accepted", signature = ? WHERE id = ?',
+          [signature || null, delegationId]
         );
       }
 
@@ -2955,7 +3019,16 @@ const delegateSingleApproval = async (req, res) => {
     if (!token) return res.status(401).json({ status: 'error', message: 'لا يوجد توكن' });
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const currentUserId = decoded.id;
-    const { delegateTo, notes, contentId, contentType } = req.body;
+    const { delegateTo, notes, contentId, contentType, showConfirmation, signature } = req.body;
+    
+    console.log('🔍 delegateSingleApproval called with:', {
+      delegateTo,
+      notes,
+      contentId,
+      contentType,
+      showConfirmation,
+      signature: signature ? 'PRESENT' : 'MISSING'
+    });
     
     if (!delegateTo || !contentId || !contentType) {
       return res.status(400).json({ status: 'error', message: 'بيانات مفقودة أو غير صحيحة للتفويض' });
@@ -3063,8 +3136,10 @@ const delegateSingleApproval = async (req, res) => {
     const delegatorName = delegatorRows.length ? delegatorRows[0].username : '';
 
     if (isCommittee) {
+      console.log('🔍 Saving delegation for committee with signature:', signature ? 'PRESENT' : 'MISSING');
+      
       // إنشاء سجل تفويض بالنيابة للجان (بدون نقل المسؤولية بعد)
-      await db.execute(`
+      const committeeDelegationResult = await db.execute(`
         INSERT IGNORE INTO committee_approval_logs (
           content_id,
           approver_id,
@@ -3072,12 +3147,33 @@ const delegateSingleApproval = async (req, res) => {
           signed_as_proxy,
           status,
           comments,
+          signature,
           created_at
-        ) VALUES (?, ?, ?, 1, 'pending', ?, NOW())
-      `, [cleanContentId, delegateTo, currentUserId, notes || null]);
+        ) VALUES (?, ?, ?, 1, 'pending', ?, ?, NOW())
+      `, [cleanContentId, delegateTo, currentUserId, notes || null, signature || null]);
+      
+      console.log('🔍 Committee delegation result:', committeeDelegationResult);
+      
+      // إنشاء سجل منفصل لتوقيع المرسل للجان
+      const committeeSenderSignatureResult = await db.execute(`
+        INSERT IGNORE INTO committee_approval_logs (
+          content_id,
+          approver_id,
+          delegated_by,
+          signed_as_proxy,
+          status,
+          comments,
+          signature,
+          created_at
+        ) VALUES (?, ?, ?, 0, 'sender_signature', ?, ?, NOW())
+      `, [cleanContentId, currentUserId, currentUserId, 'توقيع المرسل على اقرار التفويض', signature || null]);
+      
+      console.log('🔍 Committee sender signature result:', committeeSenderSignatureResult);
     } else {
+      console.log('🔍 Saving delegation for department with signature:', signature ? 'PRESENT' : 'MISSING');
+      
       // إنشاء سجل تفويض بالنيابة للأقسام (بدون نقل المسؤولية بعد)
-      await db.execute(`
+      const delegationResult = await db.execute(`
         INSERT IGNORE INTO approval_logs (
           content_id,
           approver_id,
@@ -3085,9 +3181,28 @@ const delegateSingleApproval = async (req, res) => {
           signed_as_proxy,
           status,
           comments,
+          signature,
           created_at
-        ) VALUES (?, ?, ?, 1, 'pending', ?, NOW())
-      `, [cleanContentId, delegateTo, currentUserId, notes || null]);
+        ) VALUES (?, ?, ?, 1, 'pending', ?, ?, NOW())
+      `, [cleanContentId, delegateTo, currentUserId, notes || null, signature || null]);
+      
+      console.log('🔍 Delegation result:', delegationResult);
+      
+      // إنشاء سجل منفصل لتوقيع المرسل للأقسام
+      const senderSignatureResult = await db.execute(`
+        INSERT IGNORE INTO approval_logs (
+          content_id,
+          approver_id,
+          delegated_by,
+          signed_as_proxy,
+          status,
+          comments,
+          signature,
+          created_at
+        ) VALUES (?, ?, ?, 0, 'sender_signature', ?, ?, NOW())
+      `, [cleanContentId, currentUserId, currentUserId, 'توقيع المرسل على اقرار التفويض', signature || null]);
+      
+      console.log('🔍 Sender signature result:', senderSignatureResult);
     }
 
     // إرسال إشعار للمفوض له
@@ -3461,7 +3576,10 @@ const getDelegationConfirmations = async (req, res) => {
       return res.status(403).json({ status: 'error', message: 'ليس لديك صلاحية للوصول لهذه البيانات' });
     }
 
-    // جلب اقرارات التفويض من approval_logs
+    
+
+    
+    // جلب اقرارات التفويض من approval_logs - جميع التفويضات المقبولة (للمديرين)
     const [approvalLogs] = await db.execute(`
       SELECT 
         al.id,
@@ -3474,7 +3592,8 @@ const getDelegationConfirmations = async (req, res) => {
         al.signature,
         al.electronic_signature,
         c.title as content_title,
-        'department' as content_type
+        'department' as content_type,
+        'all' as delegation_type
       FROM approval_logs al
       LEFT JOIN contents c ON al.content_id = c.id
       WHERE al.signed_as_proxy = 1 
@@ -3482,8 +3601,8 @@ const getDelegationConfirmations = async (req, res) => {
       ORDER BY al.created_at DESC
       LIMIT 100
     `);
-
-    // جلب اقرارات التفويض من committee_approval_logs
+    
+    // جلب اقرارات التفويض من committee_approval_logs - جميع التفويضات المقبولة (للمديرين)
     const [committeeLogs] = await db.execute(`
       SELECT 
         cal.id,
@@ -3496,7 +3615,8 @@ const getDelegationConfirmations = async (req, res) => {
         cal.signature,
         cal.electronic_signature,
         cc.title as content_title,
-        'committee' as content_type
+        'committee' as content_type,
+        'all' as delegation_type
       FROM committee_approval_logs cal
       LEFT JOIN committee_contents cc ON cal.content_id = cc.id
       WHERE cal.signed_as_proxy = 1 
@@ -3510,70 +3630,138 @@ const getDelegationConfirmations = async (req, res) => {
       new Date(b.created_at) - new Date(a.created_at)
     );
 
-    // تجميع النتائج حسب التفويض
-    const confirmationsMap = new Map();
+    // إنشاء اقرارين منفصلين لكل تفويض - واحد للمرسل وآخر للمستقبل
+    const confirmations = [];
 
     for (const log of allLogs) {
-      const key = `${log.delegated_by}-${log.approver_id}-${log.content_id || 'bulk'}`;
-      
-      if (!confirmationsMap.has(key)) {
-        // جلب معلومات المفوض
-        const [delegatorRows] = await db.execute(`
-          SELECT id, username, first_name, second_name, third_name, last_name, national_id
-          FROM users WHERE id = ?
-        `, [log.delegated_by]);
+      // جلب معلومات المفوض
+      const [delegatorRows] = await db.execute(`
+        SELECT id, username, first_name, second_name, third_name, last_name, national_id
+        FROM users WHERE id = ?
+      `, [log.delegated_by]);
 
-        // جلب معلومات المفوض له
-        const [delegateRows] = await db.execute(`
-          SELECT id, username, first_name, second_name, third_name, last_name, national_id
-          FROM users WHERE id = ?
-        `, [log.approver_id]);
+      // جلب معلومات المفوض له
+      const [delegateRows] = await db.execute(`
+        SELECT id, username, first_name, second_name, third_name, last_name, national_id
+        FROM users WHERE id = ?
+      `, [log.approver_id]);
 
-        if (delegatorRows.length && delegateRows.length) {
-          const delegator = delegatorRows[0];
-          const delegate = delegateRows[0];
+      if (delegatorRows.length && delegateRows.length) {
+        const delegator = delegatorRows[0];
+        const delegate = delegateRows[0];
 
-          const buildFullName = (user) => {
-            const names = [user.first_name, user.second_name, user.third_name, user.last_name].filter(Boolean);
-            return names.join(' ');
-          };
+        const buildFullName = (user) => {
+          const names = [user.first_name, user.second_name, user.third_name, user.last_name].filter(Boolean);
+          return names.join(' ');
+        };
 
-          confirmationsMap.set(key, {
-            id: log.id,
-            delegator: {
-              id: delegator.id,
-              fullName: buildFullName(delegator),
-              idNumber: delegator.national_id || 'غير محدد'
-            },
-            delegate: {
-              id: delegate.id,
-              fullName: buildFullName(delegate),
-              idNumber: delegate.national_id || 'غير محدد'
-            },
-            is_bulk: !log.content_id,
-            content_type: log.content_type || 'department',
-            created_at: log.created_at,
-            signature: log.signature || null,
-            electronic_signature: log.electronic_signature || null,
-            files: []
-          });
+        // جلب توقيع المرسل من السجل المنفصل
+        let senderSignature = null;
+        let senderElectronicSignature = null;
+        
+        // تنظيف content_id للجان (إزالة البادئة comm-)
+        let cleanContentId = log.content_id;
+        if (log.content_type === 'committee' && typeof log.content_id === 'string' && log.content_id.startsWith('comm-')) {
+          cleanContentId = log.content_id.replace('comm-', '');
         }
-      }
-
-      // إضافة الملف إذا كان تفويض فردي
-      if (log.content_id && log.content_title) {
-        const confirmation = confirmationsMap.get(key);
-        if (confirmation) {
-          confirmation.files.push({
+        
+        console.log('🔍 Looking for sender signature with:', {
+          content_id: cleanContentId,
+          delegated_by: log.delegated_by,
+          content_type: log.content_type
+        });
+        
+        if (log.content_type === 'committee') {
+          const [senderLogs] = await db.execute(`
+            SELECT signature, electronic_signature
+            FROM committee_approval_logs
+            WHERE content_id = ? AND approver_id = ? AND status = 'sender_signature'
+            ORDER BY created_at DESC
+            LIMIT 1
+          `, [cleanContentId, log.delegated_by]);
+          
+          console.log('🔍 Committee sender logs found:', senderLogs.length);
+          
+          if (senderLogs.length > 0) {
+            senderSignature = senderLogs[0].signature;
+            senderElectronicSignature = senderLogs[0].electronic_signature;
+            console.log('🔍 Committee sender signature found:', senderSignature ? 'YES' : 'NO');
+          }
+        } else {
+          const [senderLogs] = await db.execute(`
+            SELECT signature, electronic_signature
+            FROM approval_logs
+            WHERE content_id = ? AND approver_id = ? AND status = 'sender_signature'
+            ORDER BY created_at DESC
+            LIMIT 1
+          `, [cleanContentId, log.delegated_by]);
+          
+          console.log('🔍 Department sender logs found:', senderLogs.length);
+          
+          if (senderLogs.length > 0) {
+            senderSignature = senderLogs[0].signature;
+            senderElectronicSignature = senderLogs[0].electronic_signature;
+            console.log('🔍 Department sender signature found:', senderSignature ? 'YES' : 'NO');
+          }
+        }
+        
+        // اقرار المرسل - مع التوقيع (لأنه وقع عند إرسال التفويض)
+        confirmations.push({
+          id: `${log.id}-sender`,
+          original_id: log.id,
+          delegator: {
+            id: delegator.id,
+            fullName: buildFullName(delegator),
+            idNumber: delegator.national_id || 'غير محدد'
+          },
+          delegate: {
+            id: delegate.id,
+            fullName: buildFullName(delegate),
+            idNumber: delegate.national_id || 'غير محدد'
+          },
+          is_bulk: !log.content_id,
+          content_type: log.content_type || 'department',
+          created_at: log.created_at,
+          signature: senderSignature, // توقيع المرسل من السجل المنفصل
+          electronic_signature: senderElectronicSignature,
+          delegation_type: 'sender',
+          files: log.content_id && log.content_title ? [{
             id: log.content_id,
             title: log.content_title,
             type: log.content_type || 'department'
-          });
-        }
+          }] : []
+        });
+
+        // اقرار المستقبل - مع التوقيع (لأنه وافق ووقع)
+        confirmations.push({
+          id: `${log.id}-receiver`,
+          original_id: log.id,
+          delegator: {
+            id: delegator.id,
+            fullName: buildFullName(delegator),
+            idNumber: delegator.national_id || 'غير محدد'
+          },
+          delegate: {
+            id: delegate.id,
+            fullName: buildFullName(delegate),
+            idNumber: delegate.national_id || 'غير محدد'
+          },
+          is_bulk: !log.content_id,
+          content_type: log.content_type || 'department',
+          created_at: log.created_at,
+          signature: log.signature || null,
+          electronic_signature: log.electronic_signature || null,
+          delegation_type: 'receiver',
+          files: log.content_id && log.content_title ? [{
+            id: log.content_id,
+            title: log.content_title,
+            type: log.content_type || 'department'
+          }] : []
+        });
       }
     }
 
-    const confirmations = Array.from(confirmationsMap.values());
+
 
     return res.status(200).json({
       status: 'success',
@@ -3583,6 +3771,168 @@ const getDelegationConfirmations = async (req, res) => {
   } catch (error) {
     console.error('getDelegationConfirmations error:', error);
     return res.status(500).json({ status: 'error', message: 'حدث خطأ في جلب اقرارات التفويض' });
+  }
+};
+
+// دالة جلب بيانات اقرار التفويض الجديد (قبل المعالجة)
+const getNewDelegationConfirmationData = async (req, res) => {
+  try {
+    console.log('🔍 getNewDelegationConfirmationData - Request body:', req.body);
+    
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ status: 'error', message: 'لا يوجد توكن' });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const currentUserId = decoded.id;
+    const { delegateTo, contentId, contentType, notes, isBulk } = req.body;
+    
+    console.log('🔍 Parsed data:', { delegateTo, contentId, contentType, notes, isBulk, currentUserId });
+    
+    if (!delegateTo) {
+      return res.status(400).json({ status: 'error', message: 'يرجى اختيار المستخدم المفوض له' });
+    }
+
+    // جلب معلومات المفوض (المستخدم الحالي)
+    const [delegatorRows] = await db.execute(`
+      SELECT u.id, u.username, u.first_name, u.second_name, u.third_name, u.last_name, u.national_id
+      FROM users u WHERE u.id = ?
+    `, [currentUserId]);
+    
+    // جلب معلومات المفوض له
+    const [delegateRows] = await db.execute(`
+      SELECT u.id, u.username, u.first_name, u.second_name, u.third_name, u.last_name, u.national_id
+      FROM users u WHERE u.id = ?
+    `, [delegateTo]);
+    
+    if (!delegatorRows.length || !delegateRows.length) {
+      return res.status(404).json({ status: 'error', message: 'معلومات المستخدم غير موجودة' });
+    }
+    
+    const delegator = delegatorRows[0];
+    const delegate = delegateRows[0];
+    
+    // بناء الاسم الكامل
+    const buildFullName = (user) => {
+      const names = [user.first_name, user.second_name, user.third_name, user.last_name].filter(Boolean);
+      return names.join(' ');
+    };
+
+    if (isBulk) {
+      // للتفويض الشامل - جلب جميع الملفات المعلقة
+      const [departmentRows] = await db.execute(`
+        SELECT c.id, c.title, 'department' as type
+        FROM contents c
+        JOIN content_approvers ca ON ca.content_id = c.id
+        WHERE c.is_approved = 0 AND ca.user_id = ?
+      `, [currentUserId]);
+
+      const [committeeRows] = await db.execute(`
+        SELECT cc.id, cc.title, 'committee' as type
+        FROM committee_contents cc
+        JOIN committee_content_approvers cca ON cca.content_id = cc.id
+        WHERE cc.approval_status = 'pending' AND cca.user_id = ?
+      `, [currentUserId]);
+
+      const allFiles = [...departmentRows, ...committeeRows];
+      
+      return res.status(200).json({
+        status: 'success',
+        confirmationData: {
+          delegator: {
+            id: delegator.id,
+            fullName: buildFullName(delegator),
+            idNumber: delegator.national_id || 'غير محدد'
+          },
+          delegate: {
+            id: delegate.id,
+            fullName: buildFullName(delegate),
+            idNumber: delegate.national_id || 'غير محدد'
+          },
+          files: allFiles,
+          isBulk: true,
+          notes: notes || ''
+        }
+      });
+    } else {
+      // للتفويض الفردي - جلب معلومات الملف المحدد
+      if (!contentId || !contentType) {
+        return res.status(400).json({ status: 'error', message: 'بيانات الملف مفقودة' });
+      }
+
+      let fileInfo = null;
+      
+      console.log('🔍 Searching for file with contentId:', contentId, 'contentType:', contentType);
+      
+      // Parse contentId to extract numeric part if it has a prefix
+      let parsedContentId = contentId;
+      if (contentType === 'committee' && contentId.startsWith('comm-')) {
+        parsedContentId = contentId.replace('comm-', '');
+        console.log('🔍 Parsed committee contentId from', contentId, 'to', parsedContentId);
+      } else if (contentType === 'department' && contentId.startsWith('dept-')) {
+        parsedContentId = contentId.replace('dept-', '');
+        console.log('🔍 Parsed department contentId from', contentId, 'to', parsedContentId);
+      }
+      
+      if (contentType === 'department') {
+        const [contentRows] = await db.execute(`
+          SELECT id, title FROM contents WHERE id = ?
+        `, [parsedContentId]);
+        
+        console.log('🔍 Department content rows found:', contentRows.length);
+        
+        if (contentRows.length) {
+          fileInfo = {
+            id: contentRows[0].id,
+            title: contentRows[0].title,
+            type: 'department'
+          };
+          console.log('🔍 File info set:', fileInfo);
+        }
+      } else if (contentType === 'committee') {
+        const [contentRows] = await db.execute(`
+          SELECT id, title FROM committee_contents WHERE id = ?
+        `, [parsedContentId]);
+        
+        console.log('🔍 Committee content rows found:', contentRows.length);
+        
+        if (contentRows.length) {
+          fileInfo = {
+            id: contentRows[0].id,
+            title: contentRows[0].title,
+            type: 'committee'
+          };
+          console.log('🔍 File info set:', fileInfo);
+        }
+      } else {
+        console.log('🔍 Unknown contentType:', contentType);
+      }
+
+      if (!fileInfo) {
+        console.log('🔍 File not found - returning 404');
+        return res.status(404).json({ status: 'error', message: 'الملف غير موجود' });
+      }
+      
+      return res.status(200).json({
+        status: 'success',
+        confirmationData: {
+          delegator: {
+            id: delegator.id,
+            fullName: buildFullName(delegator),
+            idNumber: delegator.national_id || 'غير محدد'
+          },
+          delegate: {
+            id: delegate.id,
+            fullName: buildFullName(delegate),
+            idNumber: delegate.national_id || 'غير محدد'
+          },
+          files: [fileInfo],
+          isBulk: false,
+          notes: notes || ''
+        }
+      });
+    }
+  } catch (error) {
+    console.error('getNewDelegationConfirmationData error:', error);
+    return res.status(500).json({ status: 'error', message: 'حدث خطأ في جلب بيانات التأكيد' });
   }
 };
 
@@ -3614,7 +3964,8 @@ module.exports = {
   debugDelegations,
   checkActiveDelegationType,
   getDelegationConfirmationData,
-  getDelegationConfirmations
+  getDelegationConfirmations,
+  getNewDelegationConfirmationData
 };
 
 

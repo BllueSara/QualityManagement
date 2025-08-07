@@ -13,6 +13,7 @@ const pool = mysql.createPool({
   queueLimit: 0
 });
 const { logAction } = require('../models/logger');
+const { getFullNameSQLWithAliasAndFallback } = require('../models/userUtils');
 
 // دالة مساعدة لاستخراج اسم القسم باللغة المناسبة
 function getDepartmentNameByLanguage(departmentNameData, userLanguage = 'ar') {
@@ -120,7 +121,7 @@ const getFolders = async (req, res) => {
 
     // جلب المجلدات
     const [folders] = await conn.execute(
-      `SELECT f.id, f.name, f.type, f.created_at, u.username AS created_by
+              `SELECT f.id, f.name, f.type, f.created_at, ${getFullNameSQLWithAliasAndFallback('u')} AS created_by
        FROM folders f
        LEFT JOIN users u ON u.id = f.created_by
        WHERE f.department_id = ?
@@ -335,7 +336,7 @@ const getFolderById = async (req, res) => {
     const [rows] = await conn.execute(
       `SELECT 
          f.id, f.name AS title, f.department_id, f.type, f.created_at, f.updated_at,
-         u.username AS created_by_username,
+                   ${getFullNameSQLWithAliasAndFallback('u')} AS created_by_username,
          d.name AS department_name
        FROM folders f
        LEFT JOIN users u ON f.created_by = u.id

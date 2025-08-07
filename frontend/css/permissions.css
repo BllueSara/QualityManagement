@@ -1916,6 +1916,13 @@ body[lang="en"] .toast-container,
   font-size: 0.9em;
 }
 
+.delegation-confirmation-signature-error {
+  color: #dc3545;
+  font-style: italic;
+  font-size: 0.85em;
+  margin-top: 5px;
+}
+
 /* تحسينات للشاشات الصغيرة */
 @media (max-width: 768px) {
   .delegation-confirmation-signature {

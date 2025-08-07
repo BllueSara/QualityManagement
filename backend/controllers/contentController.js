@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
 const { logAction } = require('../models/logger');
+const { getFullNameSQLWithAliasAndFallback } = require('../models/userUtils');
 const { insertNotification } = require('../models/notfications-utils');
 
 const db = mysql.createPool({
@@ -240,7 +241,7 @@ const getContentsByFolderId = async (req, res) => {
                 f.department_id,
                 d.name as department_name,
                 f.created_by,
-                u.username as created_by_username
+                ${getFullNameSQLWithAliasAndFallback('u')} as created_by_username
             FROM folders f 
             JOIN departments d ON f.department_id = d.id
             LEFT JOIN users u ON f.created_by = u.id
@@ -273,8 +274,8 @@ const getContentsByFolderId = async (req, res) => {
                 c.start_date,
                 c.end_date,
                 c.is_old_content,
-                u.username as created_by_username,
-                a.username as approved_by_username
+                ${getFullNameSQLWithAliasAndFallback('u')} as created_by_username,
+                ${getFullNameSQLWithAliasAndFallback('a')} as approved_by_username
             FROM contents c
             LEFT JOIN users u ON c.created_by = u.id
             LEFT JOIN users a ON c.approved_by = a.id
@@ -775,8 +776,8 @@ const getContentById = async (req, res) => {
         const [content] = await connection.execute(
             `SELECT 
                 c.*,
-                u.username as created_by_username,
-                a.username as approved_by_username
+                ${getFullNameSQLWithAliasAndFallback('u')} as created_by_username,
+                ${getFullNameSQLWithAliasAndFallback('a')} as approved_by_username
             FROM contents c
             LEFT JOIN users u ON c.created_by = u.id
             LEFT JOIN users a ON c.approved_by = a.id

@@ -60,6 +60,9 @@ router.get('/check-delegation-type/:delegateId/:delegatorId', require('../contro
 // جلب بيانات تأكيد التفويض للمفوض له
 router.post('/delegation-confirmation-data', require('../controllers/approvalController').getDelegationConfirmationData);
 
+// جلب بيانات تأكيد التفويض الجديد (قبل المعالجة)
+router.post('/new-delegation-confirmation-data', require('../controllers/approvalController').getNewDelegationConfirmationData);
+
 // جلب اقرارات التفويض للمدير
 router.get('/delegation-confirmations', require('../controllers/approvalController').getDelegationConfirmations);
 
