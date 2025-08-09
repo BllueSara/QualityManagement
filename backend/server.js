@@ -36,6 +36,8 @@ const ticketReportRoutes = require('./routes/ticketReportRoutes');
 const logsRoutes = require('./routes/logsRoutes');
 const jobTitlesRoutes = require('./routes/jobTitles');
 const deadlineRoutes = require('./routes/deadlineRoutes');
+const protocolRoutes = require('./routes/protocolRoutes');
+const protocolModel = require('./models/protocolModel');
 
  
 
@@ -89,6 +91,7 @@ app.use('/api/tickets/report', ticketReportRoutes);
 app.use('/api/logs', logsRoutes);
 app.use('/api/job-titles', jobTitlesRoutes);
 app.use('/api/deadlines', deadlineRoutes);
+app.use('/api/protocols', protocolRoutes);
 
 // Ensure all committee routes are correctly loaded
 
@@ -261,6 +264,18 @@ const initializeDeadlines = async () => {
   }
 };
 
+// إنشاء جداول المحاضر عند بدء التطبيق
+const initializeProtocols = async () => {
+  try {
+    await protocolModel.initializeTables();
+    console.log('تم تهيئة جداول المحاضر بنجاح');
+  } catch (error) {
+    console.error('خطأ في إنشاء جداول المحاضر:', error);
+    // لا نريد إيقاف الخادم بسبب خطأ في إنشاء الجدول
+    console.log('سيستمر الخادم في العمل رغم خطأ إنشاء الجدول');
+  }
+};
+
 const PORT = process.env.PORT || 3006;
 app.listen(PORT, async () => {
   console.log(`Server running on http://localhost:${PORT}`);
@@ -275,6 +290,12 @@ app.listen(PORT, async () => {
     await initializeDeadlines();
   } catch (error) {
     console.error('خطأ في تهيئة المواعيد النهائية:', error);
+  }
+  
+  try {
+    await initializeProtocols();
+  } catch (error) {
+    console.error('خطأ في تهيئة جداول المحاضر:', error);
   }
   
   try {

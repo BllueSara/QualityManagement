@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { logAction } = require('../models/logger');
-const { insertNotification, sendProxyNotification, sendOwnerApprovalNotification, sendPartialApprovalNotification } = require('../models/notfications-utils');
+const { insertNotification, sendProxyNotification, sendOwnerApprovalNotification, sendPartialApprovalNotification, sendRejectionNotification } = require('../models/notfications-utils');
 const { getFullNameSQLWithAliasAndFallback } = require('../models/userUtils');
 require('dotenv').config();
 
@@ -588,9 +588,9 @@ async function handleCommitteeApproval(req, res) {
     if (singleDelegationRows && singleDelegationRows.length > 0) {
       await db.execute(`
         UPDATE committee_approval_logs 
-        SET status = 'approved' 
+        SET status = ? 
         WHERE content_id = ? AND approver_id = ? AND signed_as_proxy = 1 AND status = 'accepted'
-      `, [contentId, currentUserId]);
+      `, [approved ? 'approved' : 'rejected', contentId, currentUserId]);
     }
 
     // منطق جديد للاعتماد النهائي مع دعم الأدمن
@@ -657,10 +657,61 @@ async function handleCommitteeApproval(req, res) {
       const approverName = approverRows.length ? approverRows[0].full_name : '';
       await sendPartialApprovalNotification(ownerId, fileTitle, approverName, true);
     }
+    // تحديث حالة الملف عند الرفض أو عند اعتماد غير نهائي
+    if (!approved) {
+      await db.execute(`
+        UPDATE committee_contents
+        SET is_approved = 0,
+            approval_status = 'rejected',
+            approved_by = NULL,
+            updated_at = NOW()
+        WHERE id = ?
+      `, [contentId]);
+    } else if (approved && remainingCount > 0) {
+      await db.execute(`
+        UPDATE committee_contents
+        SET is_approved = 0,
+            approval_status = 'pending',
+            approved_by = NULL,
+            updated_at = NOW()
+        WHERE id = ?
+      `, [contentId]);
+    }
     // إذا اكتمل الاعتماد النهائي، أرسل إشعار "تم اعتماد الملف من الإدارة"
     if (remainingCount === 0) {
       await sendOwnerApprovalNotification(ownerId, fileTitle, approved, true);
     }
+
+      // في حالة الرفض: أرسل إشعار رفض للمعتمد السابق أو لصاحب الملف
+      if (!approved) {
+        // جلب اسم الرافض
+        const [rejUserRows] = await db.execute(`
+          SELECT CONCAT(
+            COALESCE(u.first_name, ''),
+            CASE WHEN u.second_name IS NOT NULL AND u.second_name != '' THEN CONCAT(' ', u.second_name) ELSE '' END,
+            CASE WHEN u.third_name IS NOT NULL AND u.third_name != '' THEN CONCAT(' ', u.third_name) ELSE '' END,
+            CASE WHEN u.last_name IS NOT NULL AND u.last_name != '' THEN CONCAT(' ', u.last_name) ELSE '' END
+          ) AS full_name
+          FROM users u WHERE u.id = ?
+        `, [approverId]);
+        const rejectedByName = rejUserRows.length ? rejUserRows[0].full_name : '';
+
+        // جلب المعتمد السابق في التسلسل
+        let prevUserId = null;
+        const [prevRows] = await db.execute(`
+          SELECT cca2.user_id
+          FROM committee_content_approvers cca
+          JOIN committee_content_approvers cca2 ON cca2.content_id = cca.content_id AND cca2.sequence_number = cca.sequence_number - 1
+          WHERE cca.content_id = ? AND cca.user_id = ?
+          LIMIT 1
+        `, [contentId, approverId]);
+        if (prevRows.length) prevUserId = prevRows[0].user_id;
+
+        const targetUserId = prevUserId || data.created_by;
+        try {
+          await sendRejectionNotification(targetUserId, title, rejectedByName, notes || '', true, false);
+        } catch (_) {}
+      }
 
       // تحقق من اكتمال الاعتماد بناءً على remainingCount
       shouldApproveFile = remainingCount === 0;
@@ -687,8 +738,8 @@ async function handleCommitteeApproval(req, res) {
       });
     }
 
-    // الاعتماد النهائي للملف
-    if (shouldApproveFile) {
+    // الاعتماد النهائي للملف - التحقق من أن جميع التوقيعات كانت موافقة
+    if (shouldApproveFile && approved) {
       // تشغيل توليد PDF النهائي في الخلفية بدون انتظار مع تحسين الأداء
       setImmediate(() => {
         generateFinalSignedCommitteePDF(contentId).catch(err => {
@@ -849,16 +900,21 @@ async function getAssignedCommitteeApprovals(req, res) {
       allRows = rows;
     }
 
-    // فلترة النتائج حسب التسلسل
-    const filteredRows = [];
-    const processedContentIds = new Set();
+    // في حالة الأدمن: تجاوز التسلسل واعرض الكل
+    let resultRows = [];
+  if (canViewAll) {
+      resultRows = allRows;
+    } else {
+      // فلترة النتائج حسب التسلسل
+      const filteredRows = [];
+      const processedContentIds = new Set();
 
-    for (const row of allRows) {
-      const contentId = row.id;
-      const sequenceNumber = row.sequence_number;
+      for (const row of allRows) {
+        const contentId = row.id;
+        const sequenceNumber = row.sequence_number;
 
-      // إذا كان هذا أول معتمد في التسلسل
-      if (sequenceNumber === 1) {
+      // إذا كانت حالة الملف مرفوضة، اعرضه بدون شرط التسلسل
+      if (row.approval_status === 'rejected') {
         if (!processedContentIds.has(contentId)) {
           filteredRows.push(row);
           processedContentIds.add(contentId);
@@ -866,17 +922,28 @@ async function getAssignedCommitteeApprovals(req, res) {
         continue;
       }
 
-      // التحقق من أن جميع المعتمدين السابقين قد وقعوا
-      const isReadyForApproval = await checkPreviousCommitteeApproversSigned(contentId, sequenceNumber);
-      
-      if (isReadyForApproval && !processedContentIds.has(contentId)) {
-        filteredRows.push(row);
-        processedContentIds.add(contentId);
+        // إذا كان هذا أول معتمد في التسلسل
+        if (sequenceNumber === 1) {
+          if (!processedContentIds.has(contentId)) {
+            filteredRows.push(row);
+            processedContentIds.add(contentId);
+          }
+          continue;
+        }
+
+        // التحقق من أن جميع المعتمدين السابقين قد وقعوا
+        const isReadyForApproval = await checkPreviousCommitteeApproversSigned(contentId, sequenceNumber);
+        
+        if (isReadyForApproval && !processedContentIds.has(contentId)) {
+          filteredRows.push(row);
+          processedContentIds.add(contentId);
+        }
       }
+      resultRows = filteredRows;
     }
 
     // تحويل الحقل من نص JSON إلى مصفوفة
-    filteredRows.forEach(row => {
+    resultRows.forEach(row => {
       try {
         row.approvers_required = JSON.parse(row.approvers_required);
       } catch {
@@ -884,7 +951,7 @@ async function getAssignedCommitteeApprovals(req, res) {
       }
     });
 
-    return res.json({ status: 'success', data: filteredRows });
+    return res.json({ status: 'success', data: resultRows });
   } catch (err) {
     console.error('Error in getAssignedCommitteeApprovals:', err);
     return res.status(500).json({ status: 'error', message: 'Internal Server Error' });
@@ -2479,7 +2546,7 @@ const delegateAllCommitteeApprovalsUnified = async (req, res) => {
     if (!token) return res.status(401).json({ status: 'error', message: 'لا يوجد توكن' });
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const currentUserId = decoded.id;
-    const { delegateTo, notes } = req.body;
+    const { delegateTo, notes, signature } = req.body;
     if (!delegateTo) return res.status(400).json({ status: 'error', message: 'يرجى اختيار المستخدم المفوض له' });
     
 
@@ -2525,6 +2592,17 @@ const delegateAllCommitteeApprovalsUnified = async (req, res) => {
           created_at
         ) VALUES (NULL, ?, ?, 1, 'pending', ?, NOW())
       `, [delegateTo, currentUserId, notes || null]);
+
+      // إنشاء سجل منفصل لتوقيع المرسل (حالة عامة بدون ملف محدد)
+      if (signature) {
+        try {
+          await db.execute(`
+            INSERT IGNORE INTO committee_approval_logs (
+              content_id, approver_id, delegated_by, signed_as_proxy, status, comments, signature, created_at
+            ) VALUES (NULL, ?, ?, 0, 'sender_signature', ?, ?, NOW())
+          `, [currentUserId, currentUserId, 'توقيع المرسل على اقرار التفويض الشامل', signature]);
+        } catch (_) {}
+      }
       
       // أرسل إشعار جماعي حتى لو لم توجد ملفات
       try {
@@ -2568,6 +2646,17 @@ const delegateAllCommitteeApprovalsUnified = async (req, res) => {
           created_at
         ) VALUES (?, ?, ?, 1, 'pending', ?, NOW())
       `, [row.id, delegateTo, currentUserId, notes || null]);
+
+      // إضافة سجل sender_signature لكل ملف لجنة إذا توفّر توقيع المرسل
+      if (signature) {
+        try {
+          await db.execute(`
+            INSERT IGNORE INTO committee_approval_logs (
+              content_id, approver_id, delegated_by, signed_as_proxy, status, comments, signature, created_at
+            ) VALUES (?, ?, ?, 0, 'sender_signature', ?, ?, NOW())
+          `, [row.id, currentUserId, currentUserId, 'توقيع المرسل على اقرار التفويض', signature]);
+        } catch (_) {}
+      }
     }
     
     // إرسال إشعار جماعي موحد للمفوض له

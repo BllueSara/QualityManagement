@@ -410,6 +410,18 @@ async function sendPartialApprovalNotification(userId, fileTitle, approverName, 
   );
 }
 
+// إشعار رفض مع سبب للمعتمد السابق أو لصاحب الملف
+async function sendRejectionNotification(userId, fileTitle, rejectedByName, reason, isCommittee = false, isProtocol = false) {
+  const prefix = isCommittee ? 'ملف اللجنة' : (isProtocol ? 'المحضر' : 'الملف');
+  const message = `${prefix} "${fileTitle}" تم رفضه من قبل ${rejectedByName}${reason ? `، السبب: ${reason}` : ''}`;
+  return await insertNotification(
+    userId,
+    'تم رفض الاعتماد',
+    message,
+    'rejected'
+  );
+}
+
 async function sendBulkProxyNotification(userId, delegatorName, isCommittee = false) {
   return await insertNotification(
     userId,
@@ -431,6 +443,7 @@ module.exports = {
   sendProxyNotification,
   sendOwnerApprovalNotification,
   sendPartialApprovalNotification,
+  sendRejectionNotification,
   sendBulkProxyNotification,
   sendContentExpirySoonMonthNotification,
   sendContentExpirySoonDayNotification,

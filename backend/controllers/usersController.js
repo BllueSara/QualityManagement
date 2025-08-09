@@ -1129,6 +1129,18 @@ const getUserApprovalSequenceFiles = async (req, res) => {
       WHERE cca.user_id = ?
     `, [userId]);
 
+    // المحاضر
+    const [protRows] = await db.execute(`
+      SELECT 
+        p.id, p.title,
+        NULL as departmentName, NULL as folderName, NULL as departmentId, NULL as folderId,
+        NULL as committeeName, NULL as committeeId,
+        'protocol' as fileType
+      FROM protocols p
+      JOIN protocol_approvers pa ON pa.protocol_id = p.id
+      WHERE pa.user_id = ?
+    `, [userId]);
+
     // توحيد النتائج مع فلترة اللغة
     const deptFiles = deptRows.map(row => ({
       id: row.id,
@@ -1152,7 +1164,18 @@ const getUserApprovalSequenceFiles = async (req, res) => {
       committeeId: row.committeeId,
       folderId: row.folderId
     }));
-    const allFiles = [...deptFiles, ...commFiles];
+    const protFiles = protRows.map(row => ({
+      id: row.id,
+      title: getLocalizedName(row.title, userLang),
+      type: 'protocol',
+      departmentName: null,
+      committeeName: null,
+      folderName: null,
+      departmentId: null,
+      committeeId: null,
+      folderId: null
+    }));
+    const allFiles = [...deptFiles, ...commFiles, ...protFiles];
     res.json({ status: 'success', data: allFiles });
   } catch (err) {
     res.status(500).json({ status: 'error', message: 'خطأ في جلب الملفات' });
@@ -1180,48 +1203,142 @@ const revokeUserFromFiles = async (req, res) => {
   
   try {
     for (const fileId of fileIds) {
-      // حذف من content_approvers (ملفات القسم) مع إعادة ترتيب التسلسل
+      // ===== الأقسام =====
+      // اجلب التسلسل الحالي للمستخدم قبل الحذف
       const [deptApprovers] = await db.execute(
         'SELECT user_id, sequence_number FROM content_approvers WHERE content_id = ? ORDER BY sequence_number',
         [fileId]
       );
-      
-      // حذف المستخدم من ملفات القسم
+      const currentDeptSeqRow = deptApprovers.find(a => a.user_id === userId);
+      const currentDeptSeq = currentDeptSeqRow ? Number(currentDeptSeqRow.sequence_number) : null;
+
+      // تحقق إن كان هذا المستخدم مفوض له في هذا الملف لإرجاع المفوض الأصلي لمكانه
+      let deptDelegatorId = null;
+      const [deptDelegationRow] = await db.execute(
+        `SELECT delegated_by FROM approval_logs WHERE content_id = ? AND approver_id = ? AND signed_as_proxy = 1 ORDER BY created_at DESC LIMIT 1`,
+        [fileId, userId]
+      );
+      if (deptDelegationRow.length) {
+        deptDelegatorId = deptDelegationRow[0].delegated_by || null;
+      }
+
+      // احذف المستخدم من التسلسل
       await db.execute(
         'DELETE FROM content_approvers WHERE content_id = ? AND user_id = ?',
         [fileId, userId]
       );
-      
-      // إعادة ترتيب التسلسل للمعتمدين المتبقين في ملفات القسم
+
+      // إعادة بناء التسلسل وإدراج المفوِّض الأصلي مكانه إن وُجد
       if (deptApprovers.length > 0) {
-        const remainingApprovers = deptApprovers.filter(approver => approver.user_id !== userId);
+        const remainingApprovers = deptApprovers.filter(approver => approver.user_id !== userId).map(r => r.user_id);
+        if (deptDelegatorId && currentDeptSeq != null) {
+          // تأكد من عدم وجود المفوِّض أصلاً في التسلسل
+          const [exists] = await db.execute(
+            'SELECT 1 FROM content_approvers WHERE content_id = ? AND user_id = ? LIMIT 1',
+            [fileId, deptDelegatorId]
+          );
+          if (!exists.length) {
+            const insertIndex = Math.max(0, currentDeptSeq - 1);
+            remainingApprovers.splice(Math.min(insertIndex, remainingApprovers.length), 0, deptDelegatorId);
+          }
+        }
+
+        // طبّق الترتيب الجديد
         for (let i = 0; i < remainingApprovers.length; i++) {
           await db.execute(
             'UPDATE content_approvers SET sequence_number = ? WHERE content_id = ? AND user_id = ?',
-            [i + 1, fileId, remainingApprovers[i].user_id]
+            [i + 1, fileId, remainingApprovers[i]]
+          );
+          // إذا لم يكن موجوداً سابقاً (في حالة المفوِّض)، قم بالإدراج
+          await db.execute(
+            'INSERT IGNORE INTO content_approvers (content_id, user_id, sequence_number) VALUES (?, ?, ?)',
+            [fileId, remainingApprovers[i], i + 1]
           );
         }
       }
       
-      // حذف من committee_content_approvers (ملفات اللجان) مع إعادة ترتيب التسلسل
+      // ===== اللجان =====
       const [commApprovers] = await db.execute(
         'SELECT user_id, sequence_number FROM committee_content_approvers WHERE content_id = ? ORDER BY sequence_number',
         [fileId]
       );
-      
-      // حذف المستخدم من ملفات اللجان
+      const currentCommSeqRow = commApprovers.find(a => a.user_id === userId);
+      const currentCommSeq = currentCommSeqRow ? Number(currentCommSeqRow.sequence_number) : null;
+      let commDelegatorId = null;
+      const [commDelegationRow] = await db.execute(
+        `SELECT delegated_by FROM committee_approval_logs WHERE content_id = ? AND approver_id = ? AND signed_as_proxy = 1 ORDER BY created_at DESC LIMIT 1`,
+        [fileId, userId]
+      );
+      if (commDelegationRow.length) {
+        commDelegatorId = commDelegationRow[0].delegated_by || null;
+      }
       await db.execute(
         'DELETE FROM committee_content_approvers WHERE content_id = ? AND user_id = ?',
         [fileId, userId]
       );
-      
-      // إعادة ترتيب التسلسل للمعتمدين المتبقين في ملفات اللجان
       if (commApprovers.length > 0) {
-        const remainingCommApprovers = commApprovers.filter(approver => approver.user_id !== userId);
-        for (let i = 0; i < remainingCommApprovers.length; i++) {
+        const remaining = commApprovers.filter(approver => approver.user_id !== userId).map(r => r.user_id);
+        if (commDelegatorId && currentCommSeq != null) {
+          const [exists] = await db.execute(
+            'SELECT 1 FROM committee_content_approvers WHERE content_id = ? AND user_id = ? LIMIT 1',
+            [fileId, commDelegatorId]
+          );
+          if (!exists.length) {
+            const insertIndex = Math.max(0, currentCommSeq - 1);
+            remaining.splice(Math.min(insertIndex, remaining.length), 0, commDelegatorId);
+          }
+        }
+        for (let i = 0; i < remaining.length; i++) {
           await db.execute(
             'UPDATE committee_content_approvers SET sequence_number = ? WHERE content_id = ? AND user_id = ?',
-            [i + 1, fileId, remainingCommApprovers[i].user_id]
+            [i + 1, fileId, remaining[i]]
+          );
+          await db.execute(
+            'INSERT IGNORE INTO committee_content_approvers (content_id, user_id, sequence_number) VALUES (?, ?, ?)',
+            [fileId, remaining[i], i + 1]
+          );
+        }
+      }
+
+      // ===== المحاضر =====
+      const [protApprovers] = await db.execute(
+        'SELECT user_id, sequence_number FROM protocol_approvers WHERE protocol_id = ? ORDER BY sequence_number',
+        [fileId]
+      );
+      const currentProtSeqRow = protApprovers.find(a => a.user_id === userId);
+      const currentProtSeq = currentProtSeqRow ? Number(currentProtSeqRow.sequence_number) : null;
+      let protDelegatorId = null;
+      const [protDelegationRow] = await db.execute(
+        `SELECT delegated_by FROM protocol_approval_logs WHERE protocol_id = ? AND approver_id = ? AND signed_as_proxy = 1 ORDER BY created_at DESC LIMIT 1`,
+        [fileId, userId]
+      );
+      if (protDelegationRow.length) {
+        protDelegatorId = protDelegationRow[0].delegated_by || null;
+      }
+      await db.execute(
+        'DELETE FROM protocol_approvers WHERE protocol_id = ? AND user_id = ?',
+        [fileId, userId]
+      );
+      if (protApprovers.length > 0) {
+        const remaining = protApprovers.filter(approver => approver.user_id !== userId).map(r => r.user_id);
+        if (protDelegatorId && currentProtSeq != null) {
+          const [exists] = await db.execute(
+            'SELECT 1 FROM protocol_approvers WHERE protocol_id = ? AND user_id = ? LIMIT 1',
+            [fileId, protDelegatorId]
+          );
+          if (!exists.length) {
+            const insertIndex = Math.max(0, currentProtSeq - 1);
+            remaining.splice(Math.min(insertIndex, remaining.length), 0, protDelegatorId);
+          }
+        }
+        for (let i = 0; i < remaining.length; i++) {
+          await db.execute(
+            'UPDATE protocol_approvers SET sequence_number = ? WHERE protocol_id = ? AND user_id = ?',
+            [i + 1, fileId, remaining[i]]
+          );
+          await db.execute(
+            'INSERT IGNORE INTO protocol_approvers (protocol_id, user_id, sequence_number) VALUES (?, ?, ?)',
+            [fileId, remaining[i], i + 1]
           );
         }
       }
@@ -1233,6 +1350,8 @@ const revokeUserFromFiles = async (req, res) => {
           en: `User with ID ${userId} was revoked from file ID ${fileId} and sequence was reordered`
         };
         await logAction(performedBy, 'revoke_user_from_file', JSON.stringify(logDescription), 'content', fileId);
+        // سجل إضافي للمحاضر إن كان الملف محضراً
+        await logAction(performedBy, 'revoke_user_from_protocol', JSON.stringify({ ar: `تم سحب المستخدم ذو المعرف ${userId} من المحضر رقم ${fileId} وإعادة ترتيب التسلسل` }), 'protocol', fileId);
       }
     }
     res.json({ status: 'success', message: 'تم سحب المستخدم من الملفات المحددة وإعادة ترتيب التسلسل' });

@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const currentLang= localStorage.getItem('language') || 'ar';
 
   // 1) اقتطاع البادئة dept- أو comm- لو موجودة
-  const contentId = rawId.replace(/^(dept|comm)-/, "");
+  const contentId = rawId.replace(/^(dept|comm|prot)-/, "");
   if (!contentId) {
     alert(getTranslation('request-id-missing'));
     return;
@@ -13,9 +13,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   try {
     // 2) بناء مسار الـAPI حسب النوع
-    const endpoint = contentType === 'committee'
-      ? 'committees/contents/track'
-      : 'contents/track';
+    let endpoint;
+    if (contentType === 'committee') {
+      endpoint = 'committees/contents/track';
+    } else if (contentType === 'protocol') {
+      endpoint = 'protocols/track';
+    } else {
+      endpoint = 'contents/track';
+    }
     const url = `http://localhost:3006/api/${endpoint}/${contentId}`;
 
     // 3) أرسل هيدر التفويض
@@ -26,7 +31,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
 
-    const { status, content, timeline, pending } = await res.json();
+    const data = await res.json();
+    const status = data.status;
+    // unified shape for display
+    const content = data.content || data.protocol || {};
+    const timeline = data.timeline || [];
+    const pending = data.pending || [];
     if (status !== 'success') {
       alert(getTranslation('failed-to-load-request'));
       return;

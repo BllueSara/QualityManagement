@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-translate="committees-dashboard-title">نظام إدارة الجودة والسلامة - لوحة اللجان</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/shared.css">
+    <link rel="stylesheet" href="../css/tickets-types.css">
+    <style>
+        /* إخفاء المحتوى حتى يتم تحميل اللغة */
+        .content-hidden {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .content-visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* أنماط خاصة بصفحة اللجان */
+        .committees-dashboard {
+            padding: 20px 0;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .page-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1f2937;
+            margin: 0 0 8px 0;
+        }
+
+        .page-subtitle {
+            font-size: 16px;
+            color: #6b7280;
+            margin: 0;
+        }
+
+        .cards-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .committee-card {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            text-decoration: none;
+            color: inherit;
+            cursor: pointer;
+        }
+
+        .committee-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border-color: #1D4ED8;
+        }
+
+        .card-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 32px;
+            color: white;
+        }
+
+        .card-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 12px;
+        }
+
+        .card-desc {
+            font-size: 16px;
+            color: #6b7280;
+            margin-bottom: 0;
+            line-height: 1.5;
+        }
+
+        .bg {
+  background-color: #eef2ff; 
+        }
+
+        .bg-orange {
+            background-color: #fd7e14;
+        }
+
+
+
+        @media (max-width: 768px) {
+            .cards-container {
+                grid-template-columns: 1fr;
+                padding: 0 16px;
+            }
+
+            .page-title {
+                font-size: 28px;
+            }
+
+            .committee-card {
+                padding: 24px;
+            }
+
+            .card-icon {
+                width: 60px;
+                height: 60px;
+                font-size: 24px;
+            }
+
+            .card-title {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="content-hidden">
+        <div class="container">
+            <div class="hospital-logo">
+                <img src="/frontend/images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز">
+            </div>
+            <div class="system-title">
+                <img src="/frontend/images/system-title.png" alt="نظام إدارة الجودة والسلامة">
+            </div>
+        </div>
+    </header>
+    
+    <div class="header-actions content-hidden">
+        <button class="back-btn" onclick="history.back()">
+            <i class="fas fa-arrow-right" id="backIcon"></i>
+            <span data-translate="back">رجوع</span>
+        </button>
+        <button class="home-btn" onclick="window.location.href='index.html'">
+            <i class="fas fa-home"></i>
+            <span data-translate="home">الرئيسية</span>
+        </button>
+    </div>
+    
+    <main class="content-wrapper content-hidden">
+        <div class="page-header">
+            <h1 class="page-title" data-translate="committees-dashboard">لوحة اللجان</h1>
+            <p class="page-subtitle" data-translate="committees-dashboard-subtitle">إدارة اللجان والمحاضر الخاصة بك</p>
+        </div>
+        
+        <div class="cards-container">
+            <a href="/frontend/html/committees.html" class="committee-card">
+                <div class="card-icon bg-blue">
+                    <i class="fas fa-users-cog"></i>
+                </div>
+                <h2 class="card-title" data-translate="comittees">اللجان</h2>
+                <p class="card-desc" data-translate="manage-committees">إدارة اللجان والمحتوى والملفات</p>
+            </a>
+            
+            <a href="protocol-list.html" class="committee-card">
+                <div class="card-icon bg-green">
+                    <i class="fas fa-file-contract"></i>
+                </div>
+                <h2 class="card-title" data-translate="protocols">المحاضر</h2>
+                <p class="card-desc" data-translate="manage-protocols">إدارة المحاضر والمواضيع والجداول الزمنية</p>
+            </a>
+            
+
+        </div>
+    </main>
+
+    <div id="toast-container" class="toast-container"></div>
+
+</body>
+
+<script src="../js/language.js"></script>
+<script src="/frontend/js/check-status.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        // إظهار المحتوى بعد تحميل اللغة
+        setTimeout(() => {
+            const elements = document.querySelectorAll('.content-hidden');
+            elements.forEach(element => {
+                element.classList.remove('content-hidden');
+                element.classList.add('content-visible');
+            });
+        }, 100);
+    });
+</script>
+
+</html>

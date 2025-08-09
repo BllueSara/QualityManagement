@@ -15,6 +15,7 @@ let currentGroupIndex = 0;
 
 // متغيرات إضافية مطلوبة
 let selectedContentId = null;
+let selectedContentType = null;
 let currentSignature = null;
 // إزالة المتغيرات القديمة للكانفاس واستبدالها بمتغيرات موحدة
 // let canvas = null;
@@ -932,6 +933,105 @@ async function showSingleCommitteeDelegationConfirmation(delegateTo, contentId, 
   }
 }
 
+async function showBulkProtocolDelegationConfirmation(delegateTo, notes = '') {
+  try {
+    const response = await fetch('http://localhost:3006/api/protocols/new-delegation-confirmation-data', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders()
+      },
+      body: JSON.stringify({
+        delegateTo,
+        notes,
+        isBulk: true
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (result.status === 'success' && result.confirmationData) {
+      const { delegator, delegate, files, isBulk } = result.confirmationData;
+      
+      // تخزين بيانات التفويض
+      pendingDelegationData = {
+        delegateTo,
+        notes,
+        isBulk: true,
+        isProtocol: true
+      };
+      
+      // عرض البوب أب
+      showDelegationConfirmationPopup(delegator, delegate, files, true);
+    } else {
+      showToast(result.message || 'فشل في جلب بيانات التفويض الشامل للمحاضر', 'error');
+    }
+  } catch (error) {
+    console.error('Error showing bulk protocol delegation confirmation:', error);
+    showToast('خطأ في عرض اقرار التفويض الشامل للمحاضر', 'error');
+  }
+}
+
+async function showSingleProtocolDelegationConfirmation(delegateTo, contentId, contentType, notes = '') {
+  try {
+    // التحقق من صحة البيانات قبل الإرسال
+    if (!delegateTo) {
+      showToast('خطأ: المستخدم المفوض له غير محدد', 'error');
+      return;
+    }
+    
+    if (!contentId) {
+      showToast('خطأ: معرف المحضر غير محدد', 'error');
+      return;
+    }
+    
+    if (!contentType) {
+      showToast('خطأ: نوع المحتوى غير محدد', 'error');
+      return;
+    }
+    
+    const requestBody = {
+      delegateTo,
+      notes,
+      contentId,
+      contentType,
+      isBulk: false
+    };
+    
+    const response = await fetch('http://localhost:3006/api/protocols/new-delegation-confirmation-data', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders()
+      },
+      body: JSON.stringify(requestBody)
+    });
+    
+    const result = await response.json();
+    
+    if (result.status === 'success' && result.confirmationData) {
+      const { delegator, delegate, files, isBulk } = result.confirmationData;
+      
+      // تخزين بيانات التفويض
+      pendingDelegationData = {
+        delegateTo,
+        notes,
+        contentId,
+        contentType,
+        isBulk: false,
+        isProtocol: true
+      };
+    
+      showDelegationConfirmationPopup(delegator, delegate, files, false);
+    } else {
+      showToast(result.message || 'فشل في جلب بيانات التفويض', 'error');
+    }
+  } catch (error) {
+    console.error('Error showing single protocol delegation confirmation:', error);
+    showToast('خطأ في عرض اقرار التفويض', 'error');
+  }
+}
+
 async function showBulkCommitteeDelegationConfirmation(delegateTo, notes = '') {
   try {
     const response = await fetch('http://localhost:3006/api/approvals/new-delegation-confirmation-data', {
@@ -1128,9 +1228,49 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     const deptResp      = await fetchJSON(`${apiBase}/approvals/assigned-to-me`);
     const commResp      = await fetchJSON(`${apiBase}/committee-approvals/assigned-to-me`);
-    const combined      = [...(deptResp.data||[]), ...(commResp.data||[])];
-    const uniqueMap     = new Map();
-    combined.forEach(item => uniqueMap.set(item.id, item));
+    const protocolResp  = await fetchJSON(`${apiBase}/protocols/pending/approvals`);
+    
+    // Combine all types of approvals
+    const deptItems = (deptResp.data || []).map(item => ({
+      ...item,
+      type: 'department',
+      // normalize keys just in case
+      approval_status: item.approval_status || item.approvalStatus || item.status || 'pending',
+      file_path: item.file_path || item.filePath || ''
+    }));
+    const commItems = (commResp.data || []).map(item => ({
+      ...item,
+      type: 'committee',
+      approval_status: item.approval_status || item.approvalStatus || item.status || 'pending',
+      file_path: item.file_path || item.filePath || ''
+    }));
+    const protocolItems = (protocolResp.data || []).map(item => ({
+      ...item,
+      type: 'protocol',
+      // normalize naming differences from protocols API
+      approval_status: item.approval_status || item.approvalStatus || item.status || 'pending',
+      file_path: item.file_path || item.filePath || '',
+      protocol_date: item.protocol_date || item.protocolDate || item.createdAt || '',
+      topics_count: item.topics_count || item.topicsCount || 0,
+      created_at: item.created_at || item.createdAt || '',
+      updated_at: item.updated_at || item.updatedAt || ''
+    }));
+
+    const combined = [...deptItems, ...commItems, ...protocolItems];
+    const uniqueMap = new Map();
+    // Deduplicate by id with priority: protocol > committee > department
+    const typePriority = { protocol: 3, committee: 2, department: 1 };
+    combined.forEach(item => {
+      const key = item.id;
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, item);
+      } else {
+        const existing = uniqueMap.get(key);
+        const existingPriority = typePriority[existing.type] || 0;
+        const incomingPriority = typePriority[item.type] || 0;
+        if (incomingPriority > existingPriority) uniqueMap.set(key, item);
+      }
+    });
     allItems = Array.from(uniqueMap.values());
     filteredItems = allItems;
 
@@ -1164,7 +1304,18 @@ document.getElementById("nextPage").addEventListener("click", () => {
       const reason = document.getElementById('rejectReason').value.trim();
       if (!reason) return showToast(getTranslation('please-enter-reason'), 'warning');
       const type     = document.querySelector(`tr[data-id="${selectedContentId}"]`).dataset.type;
-      const endpoint = type === 'committee' ? 'committee-approvals' : 'approvals';
+      let endpoint;
+      switch (type) {
+        case 'committee':
+          endpoint = 'committee-approvals';
+          break;
+        case 'protocol':
+          endpoint = 'protocols';
+          break;
+        default:
+          endpoint = 'approvals';
+          break;
+      }
       try {
         await fetchJSON(`${apiBase}/${endpoint}/${selectedContentId}/approve`, {
           method: 'POST',
@@ -1212,8 +1363,8 @@ function applyFilters() {
 
   // خزّن النتيجة في filteredItems
   filteredItems = allItems.filter(i => {
-    const localizedTitle = getLocalizedName(i.title).toLowerCase();
-    const localizedSource = getLocalizedName(i.source_name).toLowerCase();
+    const localizedTitle = (getLocalizedName(i.title) || '').toLowerCase();
+    const localizedSource = (getLocalizedName(i.source_name) || '').toLowerCase();
     const okDept   = dept === 'all' || i.source_name === dept;
     const okStatus = status === 'all' || i.approval_status === status;
     const okSearch = localizedTitle.includes(searchText) || localizedSource.includes(searchText);
@@ -1250,24 +1401,35 @@ function renderApprovals(items) {
   pageItems.forEach(item => {
     const tr = document.createElement("tr");
     tr.dataset.id     = item.id;
+    tr.dataset.key    = `${item.type}:${item.id}`;
     tr.dataset.status = item.approval_status;
     tr.dataset.source = item.source_name;
     tr.dataset.type   = item.type;
 
     let actions = "";
-    if (item.approval_status === 'pending') {
+    if (item.approval_status === 'pending' || item.approval_status === 'rejected') {
       actions += `<button class="btn-sign"><i class="fas fa-user-check"></i> ${getTranslation('sign')}</button>`;
       actions += `<button class="btn-delegate"><i class="fas fa-user-friends"></i> ${getTranslation('delegate')}</button>`;
       actions += `<button class="btn-qr"><i class="fas fa-qrcode"></i> ${getTranslation('electronic')}</button>`;
       actions += `<button class="btn-reject"><i class="fas fa-times"></i> ${getTranslation('reject')}</button>`;
       actions += `<button class="btn-preview"><i class="fas fa-eye"></i> ${getTranslation('preview')}</button>`;
     }
+
     // إضافة زر تتبع الطلب لجميع الحالات
     actions += `<button class="btn-track" data-id="${item.id}" data-type="${item.type}">${getTranslation('track')}</button>`;
 
-    const contentType = item.type === 'committee'
-      ? getTranslation('committee-file')
-      : getTranslation('department-report');
+    let contentType;
+    switch (item.type) {
+      case 'committee':
+        contentType = getTranslation('committee-file');
+        break;
+      case 'protocol':
+        contentType = getTranslation('protocol-file') || 'محضر';
+        break;
+      default:
+        contentType = getTranslation('department-report');
+        break;
+    }
 
     // Debug: طباعة البيانات للتحقق
     console.log('Item data:', item);
@@ -1294,11 +1456,28 @@ function renderApprovals(items) {
     const createdDate = formatDate(item.created_at);
     const updatedDate = formatDate(item.updated_at);
     
-    // عرض تواريخ الملف ونوع القسم فقط لملفات الأقسام
+    // عرض تواريخ الملف ونوع القسم حسب نوع المحتوى
     let dateRange = '-';
     let departmentDisplay = '-';
+    let sequenceDisplay = '';
     
-    if (item.type !== 'committee') {
+    if (item.type === 'protocol') {
+      // للمحاضر - عرض تاريخ المحضر وعدد المواضيع
+      if (item.protocol_date) {
+        dateRange = `${getTranslation('protocol-date') || 'تاريخ المحضر'}: ${formatDate(item.protocol_date)}`;
+      } else if (item.created_at) {
+        dateRange = `${getTranslation('created')}: ${createdDate}`;
+      }
+      
+      // عرض عدد المواضيع للمحاضر
+      if (item.topics_count) {
+        departmentDisplay = `${item.topics_count} ${getTranslation('topics') || 'موضوع'}`;
+      } else {
+        departmentDisplay = getTranslation('no-topics') || 'لا توجد مواضيع';
+      }
+
+
+    } else if (item.type !== 'committee') {
       // تواريخ الملف - فقط لملفات الأقسام
       if (item.start_date && item.end_date && item.start_date !== item.end_date) {
         dateRange = `${startDate} - ${endDate}`;
@@ -1399,7 +1578,9 @@ function initActions() {
       // زر التوقيع
       if (target.closest('.btn-sign')) {
         console.log('🔍 Sign button clicked!');
-        const id = target.closest('tr').dataset.id;
+        const row = target.closest('tr');
+        const id = row.dataset.id;
+        selectedContentType = row.dataset.type;
         console.log('🔍 Opening signature modal for id:', id);
         openSignatureModal(id);
         return;
@@ -1425,14 +1606,18 @@ function initActions() {
       
       // زر التوقيع الإلكتروني
       if (target.closest('.btn-qr')) {
-        selectedContentId = target.closest('tr').dataset.id;
+        const row = target.closest('tr');
+        selectedContentId = row.dataset.id;
+        selectedContentType = row.dataset.type;
         openModal('qrModal');
         return;
       }
       
       // زر الرفض
       if (target.closest('.btn-reject')) {
-        selectedContentId = target.closest('tr').dataset.id;
+        const row = target.closest('tr');
+        selectedContentId = row.dataset.id;
+        selectedContentType = row.dataset.type;
         openModal('rejectModal');
         return;
       }
@@ -1461,7 +1646,10 @@ function initActions() {
 async function handlePreviewClick(target) {
   const tr = target.closest('tr');
   const itemId = tr.dataset.id;
-  const item = allItems.find(i => i.id == itemId);
+  const itemType = tr.dataset.type;
+  const item = allItems.find(i => `${i.type}:${i.id}` === `${itemType}:${itemId}` || i.id == itemId);
+
+
 
   if (!item || !item.file_path) {
     showToast(getTranslation('no-content'), 'error');
@@ -1517,6 +1705,24 @@ async function handlePreviewClick(target) {
     // شيل البادئة
     filePath = filePath.replace(/^uploads\//, '');
   }
+  // حالة ملفات المحاضر
+  else if (item.type === 'protocol') {
+    // بروتوكولاتنا تُحفظ كمسار نسبي مثل "protocols/filename.pdf"
+    // أو قد تأتي كاملة ببادئة uploads/
+    if (filePath.startsWith('backend/uploads/protocols/')) {
+      fileBaseUrl = `${baseApiUrl}/backend/uploads/protocols`;
+      filePath = filePath.replace(/^backend\/uploads\/protocols\//, '');
+    } else if (filePath.startsWith('uploads/protocols/')) {
+      fileBaseUrl = `${baseApiUrl}/uploads/protocols`;
+      filePath = filePath.replace(/^uploads\/protocols\//, '');
+    } else if (filePath.startsWith('protocols/')) {
+      fileBaseUrl = `${baseApiUrl}/uploads`;
+      // نبقي "protocols/.." كما هي تحت /uploads
+    } else {
+      // fallback العام
+      fileBaseUrl = `${baseApiUrl}/uploads`;
+    }
+  }
   // أي حالة ثانية نفترض نفس مجلد uploads
   else {
     fileBaseUrl = `${baseApiUrl}/uploads`;
@@ -1533,9 +1739,17 @@ async function fetchApprovalLog(contentId, type) {
   if (typeof cleanId === 'string' && (cleanId.startsWith('dept-') || cleanId.startsWith('comm-'))) {
     cleanId = cleanId.split('-')[1];
   }
+  
   if (type === 'committee') {
     // لجلب سجل اعتماد اللجنة
     const res = await fetch(`${apiBase}/committee-approvals/${cleanId}/approvals`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } else if (type === 'protocol') {
+    // لجلب سجل اعتماد المحضر
+    const res = await fetch(`${apiBase}/protocols/${cleanId}/approvals`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     if (!res.ok) return null;
@@ -1562,7 +1776,18 @@ if (btnElectronicApprove) {
   btnElectronicApprove.addEventListener('click', async () => {
     if (!selectedContentId) return showToast(getTranslation('please-select-user'), 'warning');
     const contentType = document.querySelector(`tr[data-id="${selectedContentId}"]`).dataset.type;
-    const endpoint = contentType === 'committee' ? 'committee-approvals' : 'approvals';
+    let endpoint;
+    switch (contentType) {
+      case 'committee':
+        endpoint = 'committee-approvals';
+        break;
+      case 'protocol':
+        endpoint = 'protocols';
+        break;
+      default:
+        endpoint = 'approvals';
+        break;
+    }
     let approvalLog = await fetchApprovalLog(selectedContentId, contentType);
     const payload = {
       approved: true,
@@ -1684,7 +1909,18 @@ function setupSignatureModal() {
     }
     
     const contentType = document.querySelector(`tr[data-id="${selectedContentId}"]`).dataset.type;
-    const endpoint = contentType === 'committee' ? 'committee-approvals' : 'approvals';
+    let endpoint;
+    switch (contentType) {
+      case 'committee':
+        endpoint = 'committee-approvals';
+        break;
+      case 'protocol':
+        endpoint = 'protocols';
+        break;
+      default:
+        endpoint = 'approvals';
+        break;
+    }
     let approvalLog = await fetchApprovalLog(selectedContentId, contentType);
     const payload = {
       approved: true,
@@ -1962,6 +2198,10 @@ function setupDelegationEventListener() {
             // تفويض لجنة فردي
             console.log('🔍 Showing single committee delegation confirmation');
             await showSingleCommitteeDelegationConfirmation(userId, selectedContentId, contentType, notes);
+          } else if (contentType === 'protocol') {
+            // تفويض محضر فردي
+            console.log('🔍 Showing single protocol delegation confirmation');
+            await showSingleProtocolDelegationConfirmation(userId, selectedContentId, contentType, notes);
           } else {
             // تفويض قسم فردي
             console.log('🔍 Showing single department delegation confirmation');
@@ -2125,9 +2365,28 @@ async function refreshApprovalsData() {
     
     const deptResp = await fetchJSON(`${apiBase}/approvals/assigned-to-me`);
     const commResp = await fetchJSON(`${apiBase}/committee-approvals/assigned-to-me`);
-    const combined = [...(deptResp.data||[]), ...(commResp.data||[])];
+    const protocolResp = await fetchJSON(`${apiBase}/protocols/pending/approvals`);
+    
+    // Combine all types of approvals
+    const deptItems = (deptResp.data || []).map(item => ({ ...item, type: 'department' }));
+    const commItems = (commResp.data || []).map(item => ({ ...item, type: 'committee' }));
+    const protocolItems = (protocolResp.data || []).map(item => ({ ...item, type: 'protocol' }));
+    
+    const combined = [...deptItems, ...commItems, ...protocolItems];
     const uniqueMap = new Map();
-    combined.forEach(item => uniqueMap.set(item.id, item));
+    // Deduplicate by id with priority: protocol > committee > department
+    const typePriority = { protocol: 3, committee: 2, department: 1 };
+    combined.forEach(item => {
+      const key = item.id;
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, item);
+      } else {
+        const existing = uniqueMap.get(key);
+        const existingPriority = typePriority[existing.type] || 0;
+        const incomingPriority = typePriority[item.type] || 0;
+        if (incomingPriority > existingPriority) uniqueMap.set(key, item);
+      }
+    });
     allItems = Array.from(uniqueMap.values());
     filteredItems = allItems;
 
@@ -2241,7 +2500,14 @@ async function processSingleDelegation(data) {
   console.log('🔍 senderSignature in data:', data.senderSignature ? 'PRESENT' : 'MISSING');
   
   try {
-    const endpoint = data.isCommittee ? 'http://localhost:3006/api/committee-approvals/committee-delegations/single' : 'http://localhost:3006/api/approvals/delegate-single';
+    let endpoint;
+    if (data.isCommittee) {
+      endpoint = 'http://localhost:3006/api/committee-approvals/committee-delegations/single';
+    } else if (data.isProtocol) {
+      endpoint = 'http://localhost:3006/api/protocols/delegate-single';
+    } else {
+      endpoint = 'http://localhost:3006/api/approvals/delegate-single';
+    }
     console.log('🔍 Using endpoint:', endpoint);
     
     const requestBody = {
@@ -2268,7 +2534,13 @@ async function processSingleDelegation(data) {
     console.log('🔍 Response from server:', result);
     
     if (result.status === 'success') {
-      showToast('تم إرسال طلب التفويض بنجاح', 'success');
+      let message;
+      if (data.isProtocol) {
+        message = 'تم إرسال طلب التفويض للمحضر بنجاح';
+      } else {
+        message = 'تم إرسال طلب التفويض بنجاح';
+      }
+      showToast(message, 'success');
       // تحديث الصفحة أو إعادة تحميل البيانات
       setTimeout(() => {
         if (typeof refreshApprovalsData === 'function') {
@@ -2292,7 +2564,14 @@ async function processBulkDelegation(data) {
   console.log('🔍 senderSignature in data:', data.senderSignature ? 'PRESENT' : 'MISSING');
   
   try {
-    const endpoint = data.isCommittee ? 'http://localhost:3006/api/committee-approvals/committee-delegations/bulk' : 'http://localhost:3006/api/approvals/delegate-all-unified';
+    let endpoint;
+    if (data.isCommittee) {
+      endpoint = 'http://localhost:3006/api/committee-approvals/committee-delegations/bulk';
+    } else if (data.isProtocol) {
+      endpoint = 'http://localhost:3006/api/protocols/delegate-all-unified';
+    } else {
+      endpoint = 'http://localhost:3006/api/approvals/delegate-all-unified';
+    }
     console.log('🔍 Using endpoint:', endpoint);
     
     const requestBody = {
@@ -2317,7 +2596,14 @@ async function processBulkDelegation(data) {
     console.log('🔍 Response from server:', result);
     
     if (result.status === 'success') {
-      const message = data.isCommittee ? 'تم إرسال طلب التفويض الشامل للجان بنجاح' : 'تم إرسال طلب التفويض الشامل بنجاح';
+      let message;
+      if (data.isCommittee) {
+        message = 'تم إرسال طلب التفويض الشامل للجان بنجاح';
+      } else if (data.isProtocol) {
+        message = 'تم إرسال طلب التفويض الشامل للمحاضر بنجاح';
+      } else {
+        message = 'تم إرسال طلب التفويض الشامل بنجاح';
+      }
       showToast(message, 'success');
       // تحديث الصفحة أو إعادة تحميل البيانات
       setTimeout(() => {

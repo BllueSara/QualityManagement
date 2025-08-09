@@ -1,0 +1,605 @@
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:lang(ar) body, 
+:lang(ar) input, 
+:lang(ar) select, 
+:lang(ar) button, 
+:lang(ar) textarea, 
+:lang(ar) .header-title, 
+:lang(ar) .page-title {
+  font-family: 'Tajawal', sans-serif;
+}
+
+:lang(en) body, 
+:lang(en) input, 
+:lang(en) select, 
+:lang(en) button, 
+:lang(en) textarea, 
+:lang(en) .header-title, 
+:lang(en) .page-title {
+  font-family: Arial, sans-serif;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background-color: #ffffff;
+  color: #2d2d2d;
+  direction: rtl;
+  line-height: 1.6;
+}
+
+.hospital-logo img,
+.system-title img {
+  max-height: 40px;
+  vertical-align: middle;
+}
+
+.header-actions {
+  position: relative;
+  height: 50px;
+  margin-bottom: 16px;
+  width: 100%;
+  top: 10px;
+}
+
+/* زرّ الرجوع على أقصى يسار بلا حواف خارجية */
+.back-btn {
+  position: absolute;
+  left: 50px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #1D4ED8;
+  cursor: pointer;
+  padding: 0 12px;
+  font-family: inherit;
+}
+
+/* زرّ الرئيسية في المنتصف */
+.home-btn {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #1D4ED8;
+  cursor: pointer;
+  padding: 0 12px;
+  font-family: inherit;
+}
+
+/* تأثير عند المرور بالفأرة */
+.back-btn:hover,
+.home-btn:hover {
+  opacity: 0.7;
+}
+
+.main-header {
+  background-color: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 15px 30px;
+  position: static;
+}
+
+.header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.content-wrapper {
+  max-width: 1400px;
+  margin: 30px auto;
+  padding: 0 20px;
+}
+
+/* ===== رأس الصفحة ===== */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.page-title {
+  font-size: 1.7rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.add-protocol-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.add-protocol-btn:hover {
+  background-color: #2563eb;
+  transform: translateY(-1px);
+}
+
+/* ===== قسم الفلاتر ===== */
+.filters-section {
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 30px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.filter-group {
+  flex: 1;
+  min-width: 200px;
+}
+
+.filter-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #374151;
+  font-size: 14px;
+}
+
+.filter-group input,
+.filter-group select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  background-color: #fff;
+}
+
+.filter-group input:focus,
+.filter-group select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.filter-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: flex-end;
+}
+
+.btn-primary,
+.btn-secondary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #2563eb;
+}
+
+.btn-secondary {
+  background-color: #6b7280;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background-color: #4b5563;
+}
+
+/* ===== جدول المحاضر ===== */
+.table-container {
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  position: relative;
+  min-height: 400px;
+}
+
+.protocol-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.protocol-table th {
+  background-color: #f8fafc;
+  padding: 15px 12px;
+  text-align: right;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 14px;
+}
+
+.protocol-table td {
+  padding: 15px 12px;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 14px;
+  color: #374151;
+}
+
+.protocol-table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.protocol-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ===== حالات المحاضر ===== */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.status-active {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+}
+
+.status-completed {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+.status-overdue {
+  background-color: #fef2f2;
+  color: #dc2626;
+}
+
+.status-approved {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.status-pending {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.status-rejected {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* ===== أزرار الإجراءات ===== */
+.actions-cell {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  padding: 6px 8px;
+  margin: 0 2px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+}
+
+.btn-view {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.btn-view:hover {
+  background-color: #138496;
+}
+
+.btn-edit {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.btn-edit:hover {
+  background-color: #e0a800;
+}
+
+.btn-download {
+  background-color: #28a745;
+  color: white;
+}
+
+.btn-download:hover {
+  background-color: #218838;
+}
+
+.btn-delete {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn-delete:hover {
+  background-color: #c82333;
+}
+
+/* ===== رسائل الحالة ===== */
+.no-data-message,
+.loading-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  color: #6b7280;
+}
+
+.no-data-message i,
+.loading-message i {
+  font-size: 48px;
+  margin-bottom: 16px;
+  color: #d1d5db;
+}
+
+.no-data-message p,
+.loading-message p {
+  font-size: 16px;
+  margin: 0;
+}
+
+/* ===== ترقيم الصفحات ===== */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  margin-top: 30px;
+  padding: 20px;
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.pagination-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid #d1d5db;
+  background-color: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #374151;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-info {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+/* ===== Toast Container ===== */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  max-width: 400px;
+}
+
+:lang(ar) .toast-container,
+:lang(ar) .toast {
+  right: 20px;
+  left: auto;
+}
+
+:lang(en) .toast-container,
+:lang(en) .toast {
+  left: 20px;
+  right: auto;
+}
+
+.toast-container,
+:lang(ar) .toast-container {
+  right: 20px;
+  left: auto;
+}
+
+.toast {
+  background: white;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-left: 4px solid #3b82f6;
+  animation: slideIn 0.3s ease-out;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toast.success {
+  border-left-color: #10b981;
+}
+
+.toast.error {
+  border-left-color: #ef4444;
+}
+
+.toast.info {
+  border-left-color: #3b82f6;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.toast-container {
+  position: fixed;
+  top: 20px;
+  z-index: 1000;
+}
+
+.toast-container .toast {
+  max-width: 400px;
+  margin-bottom: 10px;
+}
+
+.toast-container,
+:lang(ar) .toast-container {
+  right: 20px;
+  left: auto;
+}
+
+html[lang="en"] .toast-container,
+:lang(en) .toast-container {
+  left: 20px;
+  right: auto;
+}
+
+/* ===== التجاوب مع الشاشات الصغيرة ===== */
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .add-protocol-btn {
+    justify-content: center;
+  }
+
+  .filters-row {
+    flex-direction: column;
+  }
+
+  .filter-actions {
+    justify-content: center;
+  }
+
+  .protocol-table {
+    font-size: 12px;
+  }
+
+  .protocol-table th,
+  .protocol-table td {
+    padding: 10px 8px;
+  }
+
+  .actions-cell {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .action-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+
+  .pagination {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .content-wrapper {
+    padding: 0 15px;
+  }
+}
+

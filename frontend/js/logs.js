@@ -440,8 +440,18 @@ document.addEventListener('DOMContentLoaded', () => {
         'add_content_name': 'اضافة اسم محتوى',
         'update_content_name': 'تعديل اسم محتوى',
         'delete_content_name': 'حذف اسم محتوى',
+        'create_protocol': 'انشاء محضر',
+        'update_protocol': 'تعديل محضر',
+        'delete_protocol': 'حذف محضر',
+        'approve_protocol': 'اعتماد محضر',
+        'reject_protocol': 'رفض محضر',
       },
       en: {
+        'create_protocol': 'Create Protocol',
+        'approve_protocol': 'Approve Protocol',
+        'reject_protocol': 'Reject Protocol',
+        'update_protocol': 'Update Protocol',
+        'delete_protocol': 'Delete Protocol',
         'create_folder': 'Create Folder',
         'add_committee': 'Add Committee',
         'update_committee': 'Update Committee',
@@ -507,6 +517,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const actionTypeTranslations = {
       ar: {
         'all-actions': 'جميع الإجراءات',
+        'create_protocol	': 'إنشاء محضر',
         'create_folder': 'إنشاء مجلد',
         'update_folder': 'تعديل مجلد',
         'delete_folder': 'حذف مجلد',
@@ -536,6 +547,7 @@ document.addEventListener('DOMContentLoaded', () => {
       },
       en: {
         'all-actions': 'All Actions',
+        'create_protocol	': 'Create Protocol',
         'create_folder': 'Create Folder',
         'update_folder': 'Update Folder',
         'delete_folder': 'Delete Folder',

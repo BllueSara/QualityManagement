@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-translate="protocol-form-page-title">نظام إدارة الجودة والسلامة - فورم المحضر</title>
+
+  <!-- استيراد خط "Tajawal" من Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="../css/shared.css"/>
+
+  <!-- ربط ملف التنسيقات -->
+  <link rel="stylesheet" href="/frontend/css/protocol-form.css" />
+  <style>
+    /* إخفاء المحتوى حتى يتم تحميل اللغة */
+    .content-hidden {
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease-in-out;
+    }
+
+    .content-visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    /* أنماط إضافية للمواضيع الديناميكية */
+    .topics-section {
+      margin-top: 20px;
+    }
+
+    .topic-item {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 15px;
+      position: relative;
+    }
+
+    .topic-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #dee2e6;
+    }
+
+    .topic-number {
+      font-weight: 600;
+      color: #495057;
+      font-size: 16px;
+    }
+
+    .remove-topic-btn {
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 5px 10px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background-color 0.3s;
+    }
+
+    .remove-topic-btn:hover {
+      background: #c82333;
+    }
+
+    .add-topic-btn {
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 20px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-top: 10px;
+      transition: background-color 0.3s;
+    }
+
+    .add-topic-btn:hover {
+      background: #218838;
+    }
+
+    .topics-count-section {
+      background: #e3f2fd;
+      border: 1px solid #bbdefb;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .topics-count-input {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-top: 10px;
+    }
+
+    .topics-count-input input {
+      width: 80px;
+      text-align: center;
+    }
+
+    .generate-topics-btn {
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.3s;
+    }
+
+    .generate-topics-btn:hover {
+      background: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <!-- الهيدر العلوي -->
+  <header class="main-header content-hidden">
+    <div class="header-container">
+      <div class="system-title">
+        <img src="/frontend/images/system-title.png" alt="نظام إدارة الجودة والسلامة">
+      </div>
+      <div class="hospital-logo">
+        <img src="/frontend/images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز">
+      </div>
+    </div>
+  </header>
+  <div class="header-actions content-hidden">
+    <button class="back-btn" onclick="history.back()">
+     <i class="fas fa-arrow-right" id="backIcon"></i>      <span data-translate="back">رجوع</span>
+    </button>
+    <button class="home-btn" onclick="window.location.href='index.html'">
+      <i class="fas fa-home"></i>
+      <span data-translate="home">الرئيسية</span>
+    </button>
+  </div>
+  <!-- المحتوى الرئيسي -->
+  <main class="content-wrapper content-hidden">
+    <h1 class="page-title" data-translate="protocol-form">فورم المحضر</h1>
+
+    <form id="protocolForm" class="protocol-form" autocomplete="off">
+
+      <!-- ===== قسم: معلومات المحضر الأساسية ===== -->
+      <section class="form-section">
+        <h2 class="section-title" data-translate="basic-protocol-info">المعلومات الأساسية للمحضر</h2>
+        <div class="section-content">
+          <div class="form-group full-width required">
+            <label for="protocolTitle" data-translate="protocol-title">عنوان المحضر</label>
+            <input type="text" id="protocolTitle" name="protocolTitle" placeholder="أدخل عنوان المحضر هنا" data-translate-placeholder="placeholder-protocol-title" required />
+          </div>
+
+          <div class="form-group required">
+            <label for="protocolDate" data-translate="protocol-date">تاريخ المحضر</label>
+            <input type="date" id="protocolDate" name="protocolDate" placeholder="yyyy/mm/dd" data-translate-placeholder="placeholder-date" required />
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== قسم: تحديد عدد المواضيع ===== -->
+      <section class="form-section">
+        <h2 class="section-title" data-translate="topics-section">مواضيع المحضر</h2>
+        <div class="section-content">
+          <div class="topics-count-section">
+            <label for="topicsCount" data-translate="how-many-topics">كم موضوع تريد إضافته؟</label>
+            <div class="topics-count-input">
+              <input type="number" id="topicsCount" name="topicsCount" min="1" max="20" value="1" />
+              <button type="button" class="generate-topics-btn" onclick="generateTopics()" data-translate="generate-topics">
+                <i class="fas fa-plus"></i>
+                إنشاء المواضيع
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== قسم: المواضيع الديناميكية ===== -->
+      <section class="form-section topics-section" id="topicsSection" style="display: none;">
+        <h2 class="section-title" data-translate="protocol-topics">مواضيع المحضر</h2>
+        <div class="section-content" id="topicsContainer">
+          <!-- المواضيع ستتم إضافتها هنا ديناميكياً -->
+        </div>
+        <button type="button" class="add-topic-btn" onclick="addTopic()" data-translate="add-topic">
+          <i class="fas fa-plus"></i>
+          إضافة موضوع جديد
+        </button>
+      </section>
+
+      <!-- ===== أزرار الإجراءات ===== -->
+      <div class="form-actions">
+        <button type="submit" class="btn-primary" data-translate="save-protocol">
+          <i class="fas fa-save"></i>
+          حفظ المحضر
+        </button>
+        <button type="button" class="btn-secondary" onclick="resetForm()" data-translate="reset-form">
+          <i class="fas fa-undo"></i>
+          إعادة تعيين
+        </button>
+      </div>
+    </form>
+  </main>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Scripts -->
+  <script src="../js/language.js"></script>
+  <script src="../js/protocol-form.js"></script>
+</body>
+</html>
+

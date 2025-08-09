@@ -83,6 +83,7 @@ main h1 {
 .bg-red { background-color: #ffebee; }
 .bg-lightblue { background-color: #e3f2fd; }
 .bg-green { background-color: #e8f5e9; }
+.bg-teal { background-color: #e0f2f1; }
 
 @media (max-width: 480px) {
   .card {

@@ -95,9 +95,10 @@ window.addEventListener('storage', function(e) {
 });
 
 async function loadPendingApprovals() {
-  const [departmentApprovals, committeeApprovals] = await Promise.all([
+  const [departmentApprovals, committeeApprovals, protocolApprovals] = await Promise.all([
     fetchJSON(`${apiBase}/pending-approvals`),
-    fetchJSON(`${apiBase}/pending-committee-approvals`)
+    fetchJSON(`${apiBase}/pending-committee-approvals`),
+    fetchJSON(`${apiBase}/protocols/pending/approvals`)
   ]);
 
   // DEBUG: Log raw data from backend
@@ -113,6 +114,18 @@ async function loadPendingApprovals() {
   // إضافة محتويات اللجان (ستحل محل أي تكرارات بنفس الـ ID)
   (committeeApprovals || []).forEach(item => {
     uniqueApprovalsMap.set(item.id, { ...item, type: 'committee' });
+  });
+
+  // إضافة المحاضر (ستحل محل أي تكرارات بنفس الـ ID)
+  (protocolApprovals || []).forEach(item => {
+    // تأكد أن approvers_required مصفوفة
+    let approversReq = item.approvers_required;
+    try {
+      if (typeof approversReq === 'string') {
+        approversReq = JSON.parse(approversReq || '[]');
+      }
+    } catch { approversReq = []; }
+    uniqueApprovalsMap.set(item.id, { ...item, type: 'protocol', approvers_required: approversReq });
   });
 
   const rawApprovals = Array.from(uniqueApprovalsMap.values());
@@ -143,8 +156,9 @@ async function loadPendingApprovals() {
 
   approvals.forEach(item => {
     // 1) افصل الأسماء المرسَلة سابقًا
-    const assignedApproverNames = item.assigned_approvers
-      ? item.assigned_approvers.split(',').map(a => a.trim())
+    const assignedNamesRaw = item.assigned_approvers || item.assignedApprovers || '';
+    const assignedApproverNames = assignedNamesRaw
+      ? assignedNamesRaw.split(',').map(a => a.trim()).filter(Boolean)
       : [];
     const hasApprovers = assignedApproverNames.length > 0;
 
@@ -161,6 +175,8 @@ async function loadPendingApprovals() {
 
     const contentType = item.type === 'committee'
       ? getTranslation('committee-file')
+      : item.type === 'protocol'
+      ? getTranslation('protocol-file') || 'محضر'
       : getTranslation('department-report');
 
     // 3) أنشئ العنصر <tr> وخزن الأسماء في data-assigned-names
@@ -379,6 +395,7 @@ async function initDropdowns() {
     })();
 
     async function rebuildUsersList() {
+      // تغذية المستخدمين حسب الأقسام للمحاضر أيضًا
       const uBtn  = userDrop.querySelector('.dropdown-btn');
       const uList = userDrop.querySelector('.dropdown-content');
       uList.innerHTML = `<input type="text" class="dropdown-search" placeholder="${getTranslation('search-person')}">`;
@@ -599,15 +616,31 @@ async function initDropdowns() {
 
       // 4) أرسل الـ API
       const contentId = row.dataset.id;
+      const isProtocol = row.dataset.type === 'protocol';
       const endpoint  = row.dataset.type === 'committee'
         ? 'pending-committee-approvals/send'
         : 'pending-approvals/send';
 
       try {
-        const resp = await fetchJSON(`${apiBase}/${endpoint}`, {
-          method: 'POST',
-          body: JSON.stringify({ contentId, approvers: allIds })
-        });
+        let resp;
+        if (isProtocol) {
+          // إرسال المعتمدين للمحضر عبر إضافة كل معتمد بتسلسله
+          const baseSequence = existingIds.length;
+          await Promise.all(
+            sortedNewUsers.map((u, index) =>
+              fetchJSON(`${apiBase}/protocols/${contentId}/approvers`, {
+                method: 'POST',
+                body: JSON.stringify({ userId: u.id, sequenceNumber: baseSequence + index + 1 })
+              })
+            )
+          );
+          resp = { status: 'success' };
+        } else {
+          resp = await fetchJSON(`${apiBase}/${endpoint}`, {
+            method: 'POST',
+            body: JSON.stringify({ contentId, approvers: allIds })
+          });
+        }
         if (resp.status === 'success') {
           // 5) حدّث الواجهة
           const selCell = row.querySelector('.selected-cell');

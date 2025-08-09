@@ -211,7 +211,13 @@ if (btnRevokeFiles) {
           tr.innerHTML = `
             <td style="padding:10px 8px;text-align:center;"><input type='checkbox' id='file-chk-${f.id}' value='${f.id}' style='accent-color:#e53e3e;width:18px;height:18px;cursor:pointer;'></td>
             <td style="padding:10px 8px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><label for='file-chk-${f.id}' style='cursor:pointer;font-weight:500;'>${f.title}</label></td>
-            <td style="padding:10px 8px;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${f.type === 'department' ? (f.departmentName || '—') : (f.committeeName || '—')}</td>
+            <td style="padding:10px 8px;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${
+              f.type === 'department' 
+                ? (f.departmentName || '—') 
+                : (f.type === 'committee' 
+                    ? (f.committeeName || '—') 
+                    : 'محضر')
+            }</td>
             <td style="padding:10px 8px;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${f.folderName || '—'}</td>
           `;
           tbody.appendChild(tr);
@@ -1462,9 +1468,17 @@ window.__revokeAllToUser = async function(delegatorId, delegateeId, isCommittee,
   btn.disabled = true;
   btn.textContent = '...';
   try {
-    const url = isCommittee
-      ? `${apiBase}/committee-approvals/delegations/by-user/${delegatorId}?to=${delegateeId}`
-      : `${apiBase}/approvals/delegations/by-user/${delegatorId}?to=${delegateeId}`;
+    let url;
+    if (isCommittee === 2) {
+      // محاضر
+      url = `${apiBase}/protocols/delegations/by-user/${delegatorId}?to=${delegateeId}`;
+    } else if (isCommittee === 1) {
+      // لجان
+      url = `${apiBase}/committee-approvals/delegations/by-user/${delegatorId}?to=${delegateeId}`;
+    } else {
+      // ملفات
+      url = `${apiBase}/approvals/delegations/by-user/${delegatorId}?to=${delegateeId}`;
+    }
     const res = await fetch(url, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${authToken}` }
@@ -1970,9 +1984,10 @@ function getSectionName(section) {
 // دالة فتح popup إلغاء التفويضات
 async function openRevokeDelegationsPopup() {
   if (!selectedUserId) return showToast(getTranslation('please-select-user'), 'warning');
-  // جلب ملخص الأشخاص المفوض لهم (ملفات + لجان)
+  // جلب ملخص الأشخاص المفوض لهم (ملفات + لجان + محاضر)
   let fileDelegates = [];
   let committeeDelegates = [];
+  let protocolDelegates = [];
   try {
     // جلب ملخص الملفات
     const res = await fetch(`${apiBase}/approvals/delegation-summary/${selectedUserId}`, {
@@ -1990,6 +2005,14 @@ async function openRevokeDelegationsPopup() {
     if (jsonComm.status === 'success' && Array.isArray(jsonComm.data)) {
       committeeDelegates = jsonComm.data;
     }
+    // جلب ملخص المحاضر
+    const resProt = await fetch(`${apiBase}/protocols/delegation-summary/${selectedUserId}`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    const jsonProt = await resProt.json();
+    if (jsonProt.status === 'success' && Array.isArray(jsonProt.data)) {
+      protocolDelegates = jsonProt.data;
+    }
   } catch (err) {
     showToast(getTranslation('error-occurred'), 'error');
     return;
@@ -2000,7 +2023,7 @@ async function openRevokeDelegationsPopup() {
   const box = document.createElement('div');
   box.style = 'background:#fff;padding:32px 24px;border-radius:12px;max-width:600px;min-width:340px;text-align:center;box-shadow:0 2px 16px #0002;max-height:80vh;overflow:auto;';
   box.innerHTML = `<div style='font-size:1.2rem;margin-bottom:18px;'>${getTranslation('revoke-delegations')} (${getTranslation('by-person')})</div>`;
-  if (fileDelegates.length === 0 && committeeDelegates.length === 0) {
+  if (fileDelegates.length === 0 && committeeDelegates.length === 0 && protocolDelegates.length === 0) {
     box.innerHTML += `<div style='margin:24px 0;'>${getTranslation('no-active-delegations')}</div>`;
   } else {
     if (fileDelegates.length > 0) {
@@ -2008,16 +2031,25 @@ async function openRevokeDelegationsPopup() {
       fileDelegates.forEach(d => {
         box.innerHTML += `<div style='margin:8px 0;padding:8px 0;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:space-between;'>
           <span style='flex:1;text-align:right;'>${d.approver_name || d.email || getTranslation('user') + ' ' + d.approver_id} <span style='color:#888;font-size:0.95em;'>(${getTranslation('files-count')}: ${d.files_count})</span></span>
-          <button style='background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:4px 16px;cursor:pointer;margin-right:12px;' onclick='window.__revokeAllToUser(${selectedUserId},${d.approver_id},false,this)'>${getTranslation('revoke-delegations')}</button>
+          <button style='background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:4px 16px;cursor:pointer;margin-right:12px;' onclick='window.__revokeAllToUser(${d.approver_id},${selectedUserId},false,this)'>${getTranslation('revoke-delegations')}</button>
         </div>`;
       });
     }
     if (committeeDelegates.length > 0) {
       box.innerHTML += `<div style='font-weight:bold;margin:18px 0 6px;'>${getTranslation('committee-delegations')}:</div>`;
       committeeDelegates.forEach(d => {
+        box.innerHTML += `<div style='margin:8px 0;padding:8px 0;border-bottom:1px solid #eee;display:flex:align-items:center;justify-content:space-between;'>
+          <span style='flex:1;text-align:right;'>${d.approver_name || d.email || getTranslation('user') + ' ' + d.approver_id} <span style='color:#888;font-size:0.95em;'>(${getTranslation('files-count')}: ${d.files_count})</span></span>
+          <button style='background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:4px 16px;cursor:pointer;margin-right:12px;' onclick='window.__revokeAllToUser(${d.approver_id},${selectedUserId},true,this)'>${getTranslation('revoke-delegations')}</button>
+        </div>`;
+      });
+    }
+    if (protocolDelegates.length > 0) {
+      box.innerHTML += `<div style='font-weight:bold;margin:18px 0 6px;'>${getTranslation('protocol-delegations') || 'تفويضات المحاضر'}:</div>`;
+      protocolDelegates.forEach(d => {
         box.innerHTML += `<div style='margin:8px 0;padding:8px 0;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:space-between;'>
           <span style='flex:1;text-align:right;'>${d.approver_name || d.email || getTranslation('user') + ' ' + d.approver_id} <span style='color:#888;font-size:0.95em;'>(${getTranslation('files-count')}: ${d.files_count})</span></span>
-          <button style='background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:4px 16px;cursor:pointer;margin-right:12px;' onclick='window.__revokeAllToUser(${selectedUserId},${d.approver_id},true,this)'>${getTranslation('revoke-delegations')}</button>
+          <button style='background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:4px 16px;cursor:pointer;margin-right:12px;' onclick='window.__revokeAllToUser(${d.approver_id},${selectedUserId},2,this)'>${getTranslation('revoke-delegations')}</button>
         </div>`;
       });
     }
@@ -2089,7 +2121,7 @@ async function openDelegationConfirmationsModal() {
           <h3>لا توجد اقرارات تفويض</h3>
           <p>لم يتم العثور على أي اقرارات تفويض في النظام حتى الآن</p>
           <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
-            اقرارات التفويض تظهر هنا عندما يقوم المستخدمون بتفويض صلاحياتهم للآخرين
+            اقرارات التفويض تظهر هنا عندما يقوم المستخدمون بتفويض صلاحياتهم للآخرين (الأقسام واللجان والمحاضر)
           </p>
         </div>
       `;
@@ -2191,7 +2223,7 @@ function renderDelegationConfirmations(confirmations) {
     });
 
     const delegationTypeText = confirmation.is_bulk ? 'تفويض شامل' : 'تفويض فردي';
-    const contentTypeText = confirmation.content_type === 'committee' ? 'لجنة' : 'قسم';
+    const contentTypeText = confirmation.content_type === 'committee' ? 'لجنة' : (confirmation.content_type === 'protocol' ? 'محضر' : 'قسم');
 
     // تحديد نوع التفويض للمديرين - عرض جميع التفويضات
     let delegationTypeBadge = '';
@@ -2219,7 +2251,7 @@ function renderDelegationConfirmations(confirmations) {
       const filesList = confirmation.files.map(file => `
         <div class="delegation-confirmation-file-item">
           <span class="delegation-confirmation-file-name">${file.title || file.name}</span>
-          <span class="delegation-confirmation-file-type">${file.type === 'committee' ? 'لجنة' : 'قسم'}</span>
+          <span class="delegation-confirmation-file-type">${file.type === 'committee' ? 'لجنة' : (file.type === 'protocol' ? 'محضر' : 'قسم')}</span>
         </div>
       `).join('');
       

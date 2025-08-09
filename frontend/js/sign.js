@@ -38,8 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // إعادة تعيين المتغير عند تحميل الصفحة
   hasShownDelegationPopup = false;
   
-  // مسح قائمة التفويضات المعالجة عند تحميل الصفحة لضمان التحديث
-  localStorage.removeItem('processedDelegations');
+  // ترك قائمة التفويضات المعالجة كما هي حتى لا تتكرر البوب أب بعد القبول/الرفض
   localStorage.removeItem('lastDelegationCheck');
   
   // Test backend connectivity first
@@ -112,7 +111,7 @@ async function checkSingleDelegations() {
   try {
     console.log('🔍 Checking single delegations for userId:', currentUserId);
     
-    // فحص التفويضات الفردية للأقسام
+  // فحص التفويضات الفردية للأقسام
     const deptSingleDelegationsUrl = `http://localhost:3006/api/approvals/single-delegations/${currentUserId}`;
     const deptSingleRes = await fetch(deptSingleDelegationsUrl, { headers: authHeaders() });
     
@@ -126,8 +125,20 @@ async function checkSingleDelegations() {
       }
     }
     
-    // فحص التفويضات الفردية للجان
+  // فحص التفويضات الفردية للجان
     const commSingleDelegationsUrl = `http://localhost:3006/api/committee-approvals/single-delegations/${currentUserId}`;
+    // فحص التفويضات الفردية للمحاضر
+    const protSingleDelegationsUrl = `http://localhost:3006/api/protocols/single-delegations/${currentUserId}`;
+    const protSingleRes = await fetch(protSingleDelegationsUrl, { headers: authHeaders() });
+    if (protSingleRes.ok) {
+      const protSingleJson = await protSingleRes.json();
+      console.log('Protocol single delegations:', protSingleJson);
+      if (protSingleJson.status === 'success' && protSingleJson.data && protSingleJson.data.length > 0) {
+        console.log('✅ Found single protocol delegations:', protSingleJson.data.length);
+        return true;
+      }
+    }
+    
     const commSingleRes = await fetch(commSingleDelegationsUrl, { headers: authHeaders() });
     
     if (commSingleRes.ok) {
@@ -591,13 +602,13 @@ async function showDirectDelegationPopup(delegatorId) {
     const userRes = await fetch(`http://localhost:3006/api/users/${delegatorId}`, { headers: authHeaders() });
     const userJson = await userRes.json();
     const delegatorName = userJson.data?.name || userJson.data?.username || 'المفوض';
-    const delegatorIdNumber = userJson.data?.id_number || 'غير محدد';
+    const delegatorIdNumber = userJson.data?.national_id || userJson.data?.id_number || 'غير محدد';
     
     // جلب بيانات المفوض له
     const currentUserRes = await fetch(`http://localhost:3006/api/users/${currentUserId}`, { headers: authHeaders() });
     const currentUserJson = await currentUserRes.json();
     const delegateName = currentUserJson.data?.name || currentUserJson.data?.username || 'المفوض له';
-    const delegateIdNumber = currentUserJson.data?.id_number || 'غير محدد';
+    const delegateIdNumber = currentUserJson.data?.national_id || currentUserJson.data?.id_number || 'غير محدد';
     
     console.log('🔍 Delegator name:', delegatorName);
     
@@ -654,13 +665,13 @@ async function showBulkDelegationPopup(delegationId, delegatorName) {
         // جلب بيانات المفوض
         const delegatorRes = await fetch(`http://localhost:3006/api/users/${delegation.delegated_by}`, { headers: authHeaders() });
         const delegatorJson = await delegatorRes.json();
-        const delegatorIdNumber = delegatorJson.data?.id_number || 'غير محدد';
+        const delegatorIdNumber = delegatorJson.data?.national_id || delegatorJson.data?.id_number || 'غير محدد';
         
         // جلب بيانات المفوض له
         const currentUserRes = await fetch(`http://localhost:3006/api/users/${currentUserId}`, { headers: authHeaders() });
         const currentUserJson = await currentUserRes.json();
         const delegateName = currentUserJson.data?.name || currentUserJson.data?.username || 'المفوض له';
-        const delegateIdNumber = currentUserJson.data?.id_number || 'غير محدد';
+        const delegateIdNumber = currentUserJson.data?.national_id || currentUserJson.data?.id_number || 'غير محدد';
         
         // إنشاء بيانات التفويض
         const delegatorInfo = {
@@ -681,7 +692,8 @@ async function showBulkDelegationPopup(delegationId, delegatorName) {
           true, // isBulk = true للتفويض الشامل
           {
             delegationId: delegationId,
-            delegationType: 'bulk'
+            delegationType: 'bulk',
+            delegatorId: delegation.delegated_by
           }
         );
       } else {
@@ -823,9 +835,10 @@ async function loadDelegations() {
 
          // جلب التفويضات الفردية أيضاً
      try {
-       const [deptSingleRes, commSingleRes] = await Promise.all([
+    const [deptSingleRes, commSingleRes, protSingleRes] = await Promise.all([
          fetch(`http://localhost:3006/api/approvals/single-delegations/${currentUserId}`, { headers: authHeaders() }),
-         fetch(`http://localhost:3006/api/committee-approvals/single-delegations/${currentUserId}`, { headers: authHeaders() })
+      fetch(`http://localhost:3006/api/committee-approvals/single-delegations/${currentUserId}`, { headers: authHeaders() }),
+      fetch(`http://localhost:3006/api/protocols/single-delegations/${currentUserId}`, { headers: authHeaders() })
        ]);
        
        console.log('🔍 Department single delegations response:', deptSingleRes.status);
@@ -846,7 +859,7 @@ async function loadDelegations() {
        }
        
        console.log('🔍 Committee single delegations response:', commSingleRes.status);
-       if (commSingleRes.ok) {
+        if (commSingleRes.ok) {
          const commSingleJson = await commSingleRes.json();
          console.log('🔍 Committee single delegations data:', commSingleJson);
          if (commSingleJson.status === 'success' && commSingleJson.data && commSingleJson.data.length > 0) {
@@ -916,7 +929,10 @@ async function loadDelegations() {
           try {
             if (delegationType === 'single') {
               // معالجة التفويض الفردي
-              const endpointRoot = (contentType === 'committee') ? 'committee-approvals' : 'approvals';
+              let endpointRoot;
+              if (contentType === 'committee') endpointRoot = 'committee-approvals';
+              else if (contentType === 'protocol') endpointRoot = 'protocols';
+              else endpointRoot = 'approvals';
               const res = await fetch(`http://localhost:3006/api/${endpointRoot}/single-delegation-unified/process`, {
                 method: 'POST',
                 headers: authHeaders(),
@@ -1020,9 +1036,11 @@ async function submitReject() {
       }
     } else {
       // معالجة رفض التفويض الجماعي (كالمعتاد)
-      const endpointRoot = (selectedContentType === 'dept')
-        ? 'approvals'
-        : 'committee-approvals';
+      let endpointRoot;
+      if (selectedContentType === 'dept' || selectedContentType === 'department') endpointRoot = 'approvals';
+      else if (selectedContentType === 'committee') endpointRoot = 'committee-approvals';
+      else if (selectedContentType === 'protocol') endpointRoot = 'protocols';
+      else endpointRoot = 'approvals';
 
       const res = await fetch(`http://localhost:3006/api/${endpointRoot}/${selectedContentId}/approve`, {
         method: 'POST',
@@ -1484,6 +1502,19 @@ async function processBulkDelegationRejection(delegationId) {
     const result = await response.json();
     if (result.status === 'success') {
       showToast('تم رفض التفويض الشامل بنجاح', 'success');
+
+      // تأشير هذه التفويضات كمعالجة حتى لا يظهر البوب أب مرة أخرى
+      try {
+        const processedDelegations = JSON.parse(localStorage.getItem('processedDelegations') || '[]');
+        const delegatorIdForMarker = (currentDelegationData && currentDelegationData.delegatorId) || result.data?.delegatorId;
+        if (delegatorIdForMarker) {
+          const delegationKey = `${delegatorIdForMarker}-bulk`;
+          if (!processedDelegations.includes(delegationKey)) {
+            processedDelegations.push(delegationKey);
+            localStorage.setItem('processedDelegations', JSON.stringify(processedDelegations));
+          }
+        }
+      } catch (_) {}
       // إعادة تعيين المتغير بعد المعالجة الناجحة
       hasShownDelegationPopup = false;
       // إغلاق البوب أب
@@ -1641,6 +1672,8 @@ async function showSingleCommitteeDelegationConfirmation(delegateTo, contentId, 
           console.error('🔍 Popup NOT found in DOM after creation');
           alert('Popup creation test: Popup should be visible now');
         }
+        
+        // Note: avoid await usage inside setTimeout callback
       }, 100);
     } else {
       console.log('🔍 API call failed or no confirmation data:', result);

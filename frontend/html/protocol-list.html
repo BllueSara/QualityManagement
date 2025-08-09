@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-translate="protocol-list-page-title">نظام إدارة الجودة والسلامة - قائمة المحاضر</title>
+
+  <!-- استيراد خط "Tajawal" من Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="../css/shared.css"/>
+
+  <!-- ربط ملف التنسيقات -->
+  <link rel="stylesheet" href="/frontend/css/protocol-list.css" />
+  <style>
+    /* إخفاء المحتوى حتى يتم تحميل اللغة */
+    .content-hidden {
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease-in-out;
+    }
+
+    .content-visible {
+      opacity: 1;
+      visibility: visible;
+    }
+  </style>
+</head>
+<body>
+  <!-- الهيدر العلوي -->
+  <header class="main-header content-hidden">
+    <div class="header-container">
+      <div class="system-title">
+        <img src="/frontend/images/system-title.png" alt="نظام إدارة الجودة والسلامة">
+      </div>
+      <div class="hospital-logo">
+        <img src="/frontend/images/hospital-logo.png" alt="شعار مستشفى الملك عبد العزيز">
+      </div>
+    </div>
+  </header>
+  <div class="header-actions content-hidden">
+    <button class="back-btn" onclick="history.back()">
+     <i class="fas fa-arrow-right" id="backIcon"></i>      <span data-translate="back">رجوع</span>
+    </button>
+    <button class="home-btn" onclick="window.location.href='index.html'">
+      <i class="fas fa-home"></i>
+      <span data-translate="home">الرئيسية</span>
+    </button>
+  </div>
+  <!-- المحتوى الرئيسي -->
+  <main class="content-wrapper content-hidden">
+    <div class="page-header">
+      <h1 class="page-title" data-translate="protocol-list">قائمة المحاضر</h1>
+      <button class="btn-primary add-protocol-btn" onclick="window.location.href='protocol-form.html'">
+        <i class="fas fa-plus"></i>
+        <span data-translate="add-new-protocol">إضافة محضر جديد</span>
+      </button>
+    </div>
+
+    <!-- فلاتر البحث -->
+    <div class="filters-section">
+      <div class="filters-row">
+        <div class="filter-group">
+          <label for="searchInput" data-translate="search">بحث</label>
+          <input type="text" id="searchInput" placeholder="ابحث في المحاضر..." data-translate-placeholder="search-protocols">
+        </div>
+
+        <div class="filter-group">
+          <label for="statusFilter" data-translate="status">الحالة</label>
+          <select id="statusFilter">
+            <option value="" data-translate="all-statuses">جميع الحالات</option>
+            <option value="active" data-translate="active">نشط</option>
+            <option value="completed" data-translate="completed">مكتمل</option>
+            <option value="overdue" data-translate="overdue">متأخر</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="dateFilter" data-translate="date-range">نطاق التاريخ</label>
+          <input type="date" id="dateFilter">
+        </div>
+      </div>
+      <div class="filter-actions">
+        <button class="btn-secondary" onclick="clearFilters()" data-translate="clear-filters">
+          <i class="fas fa-times"></i>
+          مسح الفلاتر
+        </button>
+        <button class="btn-primary" onclick="applyFilters()" data-translate="apply-filters">
+          <i class="fas fa-filter"></i>
+          تطبيق الفلاتر
+        </button>
+      </div>
+    </div>
+
+    <!-- جدول المحاضر -->
+    <div class="table-container">
+      <table class="protocol-table">
+        <thead>
+          <tr>
+            <th data-translate="protocol-title">عنوان المحضر</th>
+            <th data-translate="topics-count">عدد المواضيع</th>
+            <th data-translate="protocol-date">تاريخ المحضر</th>
+            <th data-translate="latest-end-date">آخر تاريخ انتهاء</th>
+            <th data-translate="status">الحالة</th>
+            <th data-translate="actions">الإجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="protocolTableBody">
+          <!-- سيتم ملء البيانات ديناميكياً -->
+        </tbody>
+      </table>
+      
+      <!-- رسالة عدم وجود بيانات -->
+      <div id="noDataMessage" class="no-data-message" style="display: none;">
+        <i class="fas fa-inbox"></i>
+        <p data-translate="no-protocols-found">لا توجد محاضر</p>
+      </div>
+      
+      <!-- رسالة التحميل -->
+      <div id="loadingMessage" class="loading-message">
+        <i class="fas fa-spinner fa-spin"></i>
+        <p data-translate="loading">جاري التحميل...</p>
+      </div>
+    </div>
+
+    <!-- ترقيم الصفحات -->
+    <div class="pagination" id="pagination">
+      <button class="pagination-btn" id="prevBtn" onclick="previousPage()">
+        <i class="fas fa-chevron-right"></i>
+      </button>
+      <span class="page-info">
+        <span data-translate="page">صفحة</span>
+        <span id="currentPage">1</span>
+        <span data-translate="of">من</span>
+        <span id="totalPages">1</span>
+      </span>
+      <button class="pagination-btn" id="nextBtn" onclick="nextPage()">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+    </div>
+  </main>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Scripts -->
+  <script src="../js/language.js"></script>
+  <script src="../js/protocol-list.js"></script>
+</body>
+</html>
+
