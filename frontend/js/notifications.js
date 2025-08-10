@@ -418,6 +418,31 @@ function getNotificationTranslation(text) {
   if (text === 'طلب تفويض بالنيابة للجان') {
     return 'Committee proxy delegation request';
   }
+  
+  // إشعارات قبول/رفض التفويض الفردي
+  if (text === 'رفض تفويض الملف الفردي') {
+    return 'Single file delegation rejected';
+  }
+  if (text === 'قبول تفويض الملف الفردي') {
+    return 'Single file delegation accepted';
+  }
+  if (text === 'single_committee_delegation_accepted') {
+    return 'Single committee file delegation accepted';
+  }
+  
+  // إشعارات التفويض الموحد
+  if (text === 'proxy_bulk_unified') {
+    return 'Unified bulk proxy delegation';
+  }
+  if (text === 'proxy_bulk_committee') {
+    return 'Committee bulk proxy delegation';
+  }
+  
+  // إشعارات الرفض مع سبب
+  if (text === 'تم رفض الاعتماد') {
+    return 'Approval rejected';
+  }
+  
   // ترجمة إشعار طلب تفويض بالنيابة لكل الملفات
   const proxyBulkMatch = text.match(/^تم طلب تفويضك للتوقيع بالنيابة عن مستخدم آخر على جميع الملفات \((\d+) ملف\)\.$/);
   if (proxyBulkMatch) {
@@ -451,5 +476,64 @@ function getNotificationTranslation(text) {
   if (proxyBulkCommitteeNameMatch) {
     return `You have been requested to sign on behalf of ${proxyBulkCommitteeNameMatch[1]} for all committee files (${proxyBulkCommitteeNameMatch[2]} files).`;
   }
+  
+  // ترجمة إشعارات التفويض الموحد (أقسام ولجان ومحاضر)
+  const unifiedProxyMatch = text.match(/^تم طلب تفويضك للتوقيع بالنيابة عن (.+?) على جميع الملفات \(أقسام ولجان ومحاضر\)\.$/);
+  if (unifiedProxyMatch) {
+    let [, delegatorName] = unifiedProxyMatch;
+    if (delegatorName === 'مستخدم آخر') delegatorName = 'another user';
+    return `You have been requested to sign on behalf of ${delegatorName} on all files (departments, committees, and protocols).`;
+  }
+  
+  // ترجمة إشعارات التفويض للجان فقط
+  const committeeProxyMatch = text.match(/^تم طلب تفويضك للتوقيع بالنيابة عن (.+?) على جميع ملفات اللجان\.$/);
+  if (committeeProxyMatch) {
+    let [, delegatorName] = committeeProxyMatch;
+    if (delegatorName === 'مستخدم آخر') delegatorName = 'another user';
+    return `You have been requested to sign on behalf of ${delegatorName} on all committee files.`;
+  }
+  
+  // ترجمة إشعارات التفويض للملفات العادية
+  const filesProxyMatch = text.match(/^تم طلب تفويضك للتوقيع بالنيابة عن (.+?) على جميع الملفات\.$/);
+  if (filesProxyMatch) {
+    let [, delegatorName] = filesProxyMatch;
+    if (delegatorName === 'مستخدم آخر') delegatorName = 'another user';
+    return `You have been requested to sign on behalf of ${delegatorName} on all files.`;
+  }
+  
+  // ترجمة إشعارات الرفض مع سبب للملفات
+  const rejectionWithReasonMatch = text.match(/^(ملف اللجنة|المحضر|الملف)\s*"(.+?)"\s*تم رفضه من قبل (.+?)(?:، السبب: (.+?))?$/);
+  if (rejectionWithReasonMatch) {
+    let [, fileType, title, rejectedBy, reason] = rejectionWithReasonMatch;
+    let typeText;
+    switch (fileType) {
+      case 'ملف اللجنة':
+        typeText = 'committee file';
+        break;
+      case 'المحضر':
+        typeText = 'protocol';
+        break;
+      default:
+        typeText = 'file';
+    }
+    const reasonText = reason ? `, reason: ${reason}` : '';
+    return `The ${typeText} "${title}" was rejected by ${rejectedBy}${reasonText}`;
+  }
+  
+  // ترجمة إشعارات التفويض الفردي مع اسم المستخدم
+  const singleDelegationAcceptedMatch = text.match(/^تم قبول تفويض (الملف|ملف اللجنة) الفردي من قبل (.+?)\.$/);
+  if (singleDelegationAcceptedMatch) {
+    let [, fileType, acceptedBy] = singleDelegationAcceptedMatch;
+    let typeText = fileType === 'ملف اللجنة' ? 'committee file' : 'file';
+    return `Single ${typeText} delegation was accepted by ${acceptedBy}`;
+  }
+  
+  const singleDelegationRejectedMatch = text.match(/^تم رفض تفويض (الملف|ملف اللجنة) الفردي من قبل (.+?)\.$/);
+  if (singleDelegationRejectedMatch) {
+    let [, fileType, rejectedBy] = singleDelegationRejectedMatch;
+    let typeText = fileType === 'ملف اللجنة' ? 'committee file' : 'file';
+    return `Single ${typeText} delegation was rejected by ${rejectedBy}`;
+  }
+  
   return text;
 }

@@ -169,16 +169,31 @@
                     </div>
                 </div>
 
+                <div class="form-group" id="jobNameGroup">
+                    <label for="reg-job-name" data-translate="job-name">المسمى</label>
+                    <div class="input-icon-wrapper">
+                        <select
+                            id="reg-job-name"
+                            name="job_name"
+                            required
+                        >
+                            <option value="" data-translate="select-job-name">اختر المسمى</option>
+                            <option value="__ADD_NEW_JOB_NAME__" data-translate="add-new-job-name">إضافة مسمى جديد</option>
+                        </select>
+                        <img src="../images/arrwo.png" alt="أيقونة سهم" class="icon select-arrow-icon">
+                    </div>
+                </div>
+
                 <div class="form-group" id="jobTitleGroup">
-                    <label for="reg-job-title" data-translate="job-title">المسمى الوظيفي</label>
+                    <label for="reg-job-title" data-translate="job-title">المنصب الإداري</label>
                     <div class="input-icon-wrapper">
                         <select
                             id="reg-job-title"
                             name="job_title"
                             required
                         >
-                            <option value="" data-translate="select-job-title">اختر المسمى الوظيفي</option>
-                            <option value="__ADD_NEW_JOB_TITLE__" data-translate="add-new-job-title">إضافة مسمى وظيفي جديد</option>
+                            <option value="" data-translate="select-job-title">اختر المنصب الإداري</option>
+                            <option value="__ADD_NEW_JOB_TITLE__" data-translate="add-new-job-title">إضافة منصب إداري جديد</option>
                         </select>
                         <img src="../images/arrwo.png" alt="أيقونة سهم" class="icon select-arrow-icon">
                     </div>
@@ -247,6 +262,24 @@
         </div>
     </div>
 
+    <!-- Add New Job Name Modal -->
+    <div id="addJobNameModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 data-translate="add-job-name">إضافة مسمى</h3>
+            <hr>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="jobNameName" data-translate="job-name-name">المسمى</label>
+                    <input type="text" id="jobNameName" placeholder="أدخل المسمى (مثل: Dr, Eng, Mr, Mrs)">
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-primary" id="saveAddJobName" data-translate="save">حفظ</button>
+                <button class="btn-secondary" id="cancelAddJobName" data-translate="cancel">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Add New Job Title Modal -->
     <div id="addJobTitleModal" class="modal-overlay">
         <div class="modal-content">
@@ -266,6 +299,7 @@
     </div>
 
     <script src="../js/language.js"></script>
+    <script src="../js/jobNames.js"></script>
     <script src="../js/register.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", () => {

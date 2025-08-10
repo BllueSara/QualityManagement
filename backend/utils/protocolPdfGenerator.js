@@ -498,16 +498,22 @@ async function updateProtocolPDFAfterApproval(protocolId, db) {
                 pal.comments,
                 pal.created_at,
                 jt_actual.title AS signer_job_title,
-                jt_original.title AS original_job_title
+                jt_original.title AS original_job_title,
+                jn_actual.name AS signer_job_name,
+                jn_original.name AS original_job_name
             FROM protocol_approval_logs pal
             JOIN users u_actual
                 ON pal.approver_id = u_actual.id
             LEFT JOIN job_titles jt_actual
                 ON u_actual.job_title_id = jt_actual.id
+            LEFT JOIN job_names jn_actual
+                ON u_actual.job_name_id = jn_actual.id
             LEFT JOIN users u_original
                 ON pal.delegated_by = u_original.id
             LEFT JOIN job_titles jt_original
                 ON u_original.job_title_id = jt_original.id
+            LEFT JOIN job_names jn_original
+                ON u_original.job_name_id = jn_original.id
             WHERE pal.protocol_id = ? AND pal.status = 'approved'
             ORDER BY pal.created_at
         `, [protocolId]);
@@ -589,9 +595,13 @@ async function updateProtocolPDFAfterApproval(protocolId, db) {
                 log.actual_last_name
             ) || log.actual_signer || 'N/A';
 
+            // إضافة المسمى الوظيفي قبل الاسم إذا كان متوفراً
+            const actualSignerFullNameWithJobName = log.signer_job_name && log.signer_job_name.trim() ? 
+                `${log.signer_job_name} ${actualSignerFullName}` : actualSignerFullName;
+
             approvalTableBody.push([
                 { text: approvalType, style: 'tableCell' },
-                { text: fixArabicOrder(actualSignerFullName), style: 'tableCell' },
+                { text: fixArabicOrder(actualSignerFullNameWithJobName), style: 'tableCell' },
                 { text: fixArabicOrder(log.signer_job_title || 'Not Specified'), style: 'tableCell' },
                 { text: approvalMethod, style: 'tableCell' },
                 getSignatureCell(log),
@@ -606,9 +616,13 @@ async function updateProtocolPDFAfterApproval(protocolId, db) {
                     log.original_last_name
                 ) || log.original_user || 'N/A';
 
+                // إضافة المسمى الوظيفي قبل الاسم إذا كان متوفراً
+                const originalUserFullNameWithJobName = log.original_job_name && log.original_job_name.trim() ? 
+                    `${log.original_job_name} ${originalUserFullName}` : originalUserFullName;
+
                 approvalTableBody.push([
                     { text: '(Proxy for)', style: 'proxyCell' },
-                    { text: fixArabicOrder(originalUserFullName), style: 'proxyCell' },
+                    { text: fixArabicOrder(originalUserFullNameWithJobName), style: 'proxyCell' },
                     { text: fixArabicOrder(log.original_job_title || 'Not Specified'), style: 'proxyCell' },
                     { text: 'Delegated', style: 'proxyCell' },
                     { text: '-', style: 'proxyCell' },

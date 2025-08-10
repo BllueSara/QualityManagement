@@ -5,6 +5,7 @@ const { logAction } = require('../models/logger');
 const { insertNotification, sendOwnerApprovalNotification, sendPartialApprovalNotification, sendProxyNotification } = require('../models/notfications-utils');
 const fs = require('fs');
 const path = require('path');
+const jwt = require('jsonwebtoken');
 
 // متغير عام لتخزين التفويضات النشطة (نفس طريقة approvalController.js)
 const globalProxies = {};
@@ -700,7 +701,7 @@ class ProtocolController {
             }
             const protocol = protocolRows[0];
 
-            // 2) سجل الاعتمادات (الجدول الزمني)
+            // 2) سجل الاعتمادات (الجدول الزمني) - استثناء sender_signature
             const [timelineRows] = await protocolModel.pool.execute(`
                 SELECT 
                     pal.status,
@@ -711,7 +712,7 @@ class ProtocolController {
                 FROM protocol_approval_logs pal
                 JOIN users u ON pal.approver_id = u.id
                 LEFT JOIN job_titles jt ON u.job_title_id = jt.id
-                WHERE pal.protocol_id = ?
+                WHERE pal.protocol_id = ? AND pal.status != 'sender_signature'
                 ORDER BY pal.created_at ASC
             `, [id]);
 
@@ -785,7 +786,6 @@ class ProtocolController {
             const token = req.headers.authorization?.split(' ')[1];
             if (!token) return res.status(401).json({ status: 'error', message: 'لا يوجد توكن' });
 
-            const jwt = require('jsonwebtoken');
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             let currentUserId = decoded.id;
             
@@ -971,29 +971,9 @@ class ProtocolController {
             const protocolApproversTable = 'protocol_approvers';
             const protocolsTable = 'protocols';
 
-            // منطق الاعتماد المزدوج للمستخدم المفوض له - محسن للأداء
+            // منطق الاعتماد - محسن للأداء
             if (isDelegated) {
-                // التوقيع الأول: شخصي
-                await protocolModel.pool.execute(`
-                    INSERT INTO ${approvalLogsTable} (
-                        protocol_id, approver_id, delegated_by, signed_as_proxy, status, signature, electronic_signature, comments, created_at
-                    ) VALUES (?, ?, NULL, 0, ?, ?, ?, ?, NOW())
-                    ON DUPLICATE KEY UPDATE 
-                        status = VALUES(status),
-                        signature = VALUES(signature),
-                        electronic_signature = VALUES(electronic_signature),
-                        comments = VALUES(comments),
-                        created_at = NOW()
-                `, [
-                    protocolId,
-                    approverId,
-                    approved ? 'approved' : 'rejected',
-                    signature || null,
-                    electronic_signature || null,
-                    notes || ''
-                ]);
-                
-                // التوقيع الثاني: بالنيابة
+                // المستخدم مفوض له تفويض جماعي - اعتماد واحد فقط بالنيابة
                 await protocolModel.pool.execute(`
                     INSERT INTO ${approvalLogsTable} (
                         protocol_id,
@@ -1022,9 +1002,6 @@ class ProtocolController {
                     electronic_signature || null,
                     notes || ''
                 ]);
-
-                // إرسال إشعار تفويض للمفوض له
-                try { await sendProxyNotification(approverId, protocolId, false); } catch (_) {}
             } else {
                 // المستخدم عادي - اعتماد واحد فقط
                 await protocolModel.pool.execute(`
@@ -1059,12 +1036,8 @@ class ProtocolController {
             }
 
             // إضافة المستخدم المفوض له إلى protocol_approvers إذا لم يكن موجوداً
-            if ((isProxy && approved) || (isDelegated && approved)) {
-                await protocolModel.pool.execute(
-                    `INSERT IGNORE INTO ${protocolApproversTable} (protocol_id, user_id) VALUES (?, ?)`,
-                    [protocolId, approverId]
-                );
-            }
+            // للمستخدمين المفوض لهم، نضيفهم في كلا الحالتين (شخصي وبالنيابة)
+
 
             // تحديث حالة التفويض الفردي إلى 'approved' قبل حساب المعتمدين المتبقين
             if (singleDelegationRows && singleDelegationRows.length > 0) {
@@ -1167,7 +1140,7 @@ class ProtocolController {
                 await sendOwnerApprovalNotification(ownerId, fileTitle, approved, false);
             }
 
-            // في حالة الرفض: أرسل إشعار بالرفض للمعتمد السابق، وإن لم يوجد فلصاحب المحضر
+            // في حالة الرفض: أرسل إشعار بالرفض لصاحب المحضر مباشرة
             if (!approved) {
                 // جلب اسم الرافض
                 const [rejUserRows] = await protocolModel.pool.execute(`
@@ -1181,21 +1154,10 @@ class ProtocolController {
                 `, [approverId]);
                 const rejectedByName = rejUserRows.length ? rejUserRows[0].full_name : '';
 
-                // جلب المعتمد السابق في التسلسل
-                let prevUserId = null;
-                const [prevRows] = await protocolModel.pool.execute(`
-                    SELECT pa2.user_id
-                    FROM protocol_approvers pa
-                    JOIN protocol_approvers pa2 ON pa2.protocol_id = pa.protocol_id AND pa2.sequence_number = pa.sequence_number - 1
-                    WHERE pa.protocol_id = ? AND pa.user_id = ?
-                    LIMIT 1
-                `, [protocolId, approverId]);
-                if (prevRows.length) prevUserId = prevRows[0].user_id;
-
-                const targetUserId = prevUserId || ownerId;
+                // إرسال إشعار الرفض لصاحب المحضر مباشرة
                 try {
                     const { sendRejectionNotification } = require('../models/notfications-utils');
-                    await sendRejectionNotification(targetUserId, fileTitle, rejectedByName, notes || '', false, true);
+                    await sendRejectionNotification(ownerId, fileTitle, rejectedByName, notes || '', false, true);
                 } catch (_) {}
             }
 
@@ -1351,6 +1313,26 @@ class ProtocolController {
     async getSingleDelegations(req, res) {
         try {
             const { userId } = req.params;
+            console.log('🔍 Fetching protocol single delegations for userId:', userId);
+            
+            // First, let's see what's actually in the database for this user
+            const [debugRows] = await protocolModel.pool.execute(`
+                SELECT 
+                    pal.id,
+                    pal.protocol_id,
+                    pal.approver_id,
+                    pal.delegated_by,
+                    pal.signed_as_proxy,
+                    pal.status,
+                    pal.created_at
+                FROM protocol_approval_logs pal
+                WHERE pal.approver_id = ?
+                ORDER BY pal.created_at DESC
+            `, [userId]);
+            
+            console.log('🔍 All protocol approval logs for user:', debugRows);
+            
+            // Now get the actual single delegations with more flexible status
             const [rows] = await protocolModel.pool.execute(`
                 SELECT 
                     pal.id AS delegation_id,
@@ -1365,9 +1347,11 @@ class ProtocolController {
                 JOIN users u ON pal.delegated_by = u.id
                 WHERE pal.approver_id = ?
                   AND pal.signed_as_proxy = 1
-                  AND pal.status = 'accepted'
+                  AND pal.status IN ('pending')
                 ORDER BY pal.created_at DESC
             `, [userId]);
+            
+            console.log('🔍 Protocol single delegations found:', rows);
             res.json({ status: 'success', data: rows });
         } catch (err) {
             console.error('Error fetching protocol single delegations:', err);
@@ -1378,57 +1362,153 @@ class ProtocolController {
     // معالجة التفويض الفردي (قبول/رفض) للمحاضر
     async processSingleProtocolDelegationUnified(req, res) {
         try {
-            const { delegationId, contentId, action } = req.body;
-            const approverId = req.user.id;
-            if (!action || !['accept', 'reject'].includes(action)) {
-                return res.status(400).json({ status: 'error', message: 'Invalid action' });
+            console.log('🔍 processSingleProtocolDelegationUnified called with body:', req.body);
+ 
+            // التحقق من التوكن مثل باقي الدوال
+            const token = req.headers.authorization?.split(' ')[1];
+            if (!token) return res.status(401).json({ status: 'error', message: 'لا يوجد توكن' });
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const currentUserId = decoded.id;
+            
+            const { delegationId, action, reason } = req.body;
+            if (!delegationId || !action) {
+                return res.status(400).json({ status: 'error', message: 'يرجى تحديد التفويض والإجراء' });
             }
 
-            if (!delegationId && !contentId) {
-                return res.status(400).json({ status: 'error', message: 'Missing identifiers' });
+            // جلب معلومات التفويض من protocol_approval_logs - البحث عن status = 'pending'
+            const [delegationRows] = await protocolModel.pool.execute(`
+                SELECT 
+                    pal.id,
+                    pal.protocol_id,
+                    pal.approver_id,
+                    pal.delegated_by,
+                    pal.status,
+                    pal.comments
+                FROM protocol_approval_logs pal
+                WHERE pal.id = ? 
+                AND pal.approver_id = ? 
+                AND pal.signed_as_proxy = 1 
+                AND pal.status = 'pending'  -- التفويض يجب أن يكون في حالة pending
+                AND pal.protocol_id IS NOT NULL
+            `, [delegationId, currentUserId]);
+
+            if (!delegationRows.length) {
+                return res.status(404).json({ status: 'error', message: 'لم يتم العثور على تفويض' });
             }
 
-            if (delegationId) {
+            const delegation = delegationRows[0];
+            const { protocol_id: protocolId, delegated_by: delegatorId } = delegation;
+
+            if (action === 'accept') {
+                // قبول التفويض
+                // 1) تحديث حالة التفويض إلى 'accepted' (إذا لم تكن بالفعل)
                 await protocolModel.pool.execute(`
-                    UPDATE protocol_approval_logs
-                    SET status = ?
-                    WHERE id = ? AND approver_id = ? AND signed_as_proxy = 1
-                `, [action === 'accept' ? 'accepted' : 'rejected', delegationId, approverId]);
+                    UPDATE protocol_approval_logs 
+                    SET status = 'accepted', comments = CONCAT(COALESCE(comments, ''), ' - تم قبول التفويض')
+                    WHERE id = ?
+                `, [delegationId]);
+
+                // 2) إضافة المفوض له إلى protocol_approvers
+                await protocolModel.pool.execute(`
+                    INSERT IGNORE INTO protocol_approvers (protocol_id, user_id) 
+                    VALUES (?, ?)
+                `, [protocolId, currentUserId]);
+
+                // 3) حذف المفوض الأصلي من protocol_approvers
+                await protocolModel.pool.execute(`
+                    DELETE FROM protocol_approvers 
+                    WHERE protocol_id = ? AND user_id = ?
+                `, [protocolId, delegatorId]);
+
+                // 4) إرسال إشعار للمفوض الأصلي
+                try {
+                    await insertNotification(
+                        delegatorId,
+                        'تم قبول التفويض',
+                        `تم قبول تفويضك للتوقيع بالنيابة على المحضر رقم ${protocolId}`,
+                        'delegation_accepted',
+                        JSON.stringify({ 
+                            protocolId, 
+                            delegateId: currentUserId,
+                            action: 'accepted'
+                        })
+                    );
+                } catch (_) {}
+
+                console.log(`✅ Protocol delegation accepted: ${delegationId} by user ${currentUserId}`);
+                res.json({ 
+                    status: 'success', 
+                    message: 'تم قبول التفويض بنجاح' 
+                });
+
+            } else if (action === 'reject') {
+                // رفض التفويض
+                await protocolModel.pool.execute(`
+                    UPDATE protocol_approval_logs 
+                    SET status = 'rejected', comments = CONCAT(COALESCE(comments, ''), ' - تم رفض التفويض: ', ?)
+                    WHERE id = ?
+                `, [reason || 'لا يوجد سبب محدد', delegationId]);
+
+                // إرسال إشعار للمفوض الأصلي
+                try {
+                    await insertNotification(
+                        delegatorId,
+                        'تم رفض التفويض',
+                        `تم رفض تفويضك للتوقيع بالنيابة على المحضر رقم ${protocolId}${reason ? ` - السبب: ${reason}` : ''}`,
+                        'delegation_rejected',
+                        JSON.stringify({ 
+                            protocolId, 
+                            delegateId: currentUserId,
+                            action: 'rejected',
+                            reason: reason || ''
+                        })
+                    );
+                } catch (_) {}
+
+                console.log(`❌ Protocol delegation rejected: ${delegationId} by user ${currentUserId}`);
+                res.json({ 
+                    status: 'success', 
+                    message: 'تم رفض التفويض بنجاح' 
+                });
+
             } else {
-                await protocolModel.pool.execute(`
-                    UPDATE protocol_approval_logs
-                    SET status = ?
-                    WHERE protocol_id = ? AND approver_id = ? AND signed_as_proxy = 1 AND status = 'accepted'
-                `, [action === 'accept' ? 'accepted' : 'rejected', contentId, approverId]);
+                return res.status(400).json({ status: 'error', message: 'إجراء غير صحيح' });
             }
 
-            res.json({ status: 'success', message: 'تمت معالجة التفويض الفردي للمحاضر' });
-        } catch (err) {
-            console.error('Error processing single protocol delegation:', err);
-            res.status(500).json({ status: 'error', message: 'Failed to process single protocol delegation' });
+        } catch (error) {
+            console.error('❌ Error in processSingleProtocolDelegationUnified:', error);
+            res.status(500).json({ 
+                status: 'error', 
+                message: 'حدث خطأ أثناء معالجة التفويض' 
+            });
         }
     }
 
     // معالجة التفويض الشامل الموحد (قبول/رفض) للمحاضر
     async processBulkProtocolDelegationUnified(req, res) {
         try {
+            // التحقق من التوكن مثل باقي الدوال
+            const token = req.headers.authorization?.split(' ')[1];
+            if (!token) return res.status(401).json({ status: 'error', message: 'لا يوجد توكن' });
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const currentUserId = decoded.id;
+            
             const { action } = req.body;
-            const approverId = req.user.id;
             if (!action || !['accept', 'reject'].includes(action)) {
-                return res.status(400).json({ status: 'error', message: 'Invalid action' });
+                return res.status(400).json({ status: 'error', message: 'إجراء غير صحيح' });
             }
 
             const targetStatus = action === 'accept' ? 'accepted' : 'rejected';
             const [result] = await protocolModel.pool.execute(`
                 UPDATE protocol_approval_logs
                 SET status = ?
-                WHERE approver_id = ? AND signed_as_proxy = 1 AND status = 'accepted'
-            `, [targetStatus, approverId]);
+                WHERE approver_id = ? AND signed_as_proxy = 1 AND status = 'pending'
+            `, [targetStatus, currentUserId]);
 
             res.json({ status: 'success', message: 'تمت معالجة التفويض الشامل للمحاضر', affected: result.affectedRows || 0 });
         } catch (err) {
             console.error('Error processing bulk protocol delegation:', err);
-            res.status(500).json({ status: 'error', message: 'Failed to process bulk protocol delegation' });
+            res.status(500).json({ status: 'error', message: 'فشل معالجة التفويض الشامل للمحاضر' });
         }
     }
 
@@ -1436,7 +1516,12 @@ class ProtocolController {
     async downloadPDF(req, res) {
         try {
             const { id } = req.params;
-            const userId = req.user.id;
+            
+            // التحقق من التوكن مثل باقي الدوال
+            const token = req.headers.authorization?.split(' ')[1];
+            if (!token) return res.status(401).json({ status: 'error', message: 'لا يوجد توكن' });
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const userId = decoded.id;
 
             const protocol = await protocolModel.getProtocolById(id, userId);
 
@@ -1483,7 +1568,7 @@ class ProtocolController {
             const [protocolRows] = await protocolModel.pool.execute(`
                 SELECT 
                     p.*,
-                    ${require('../models/userUtils').getFullNameSQLWithAliasAndFallback('u')} AS created_by_name
+                    ${getFullNameSQLWithAliasAndFallback('u')} AS created_by_name
                 FROM protocols p
                 LEFT JOIN users u ON p.created_by = u.id
                 WHERE p.id = ?
@@ -1494,25 +1579,25 @@ class ProtocolController {
             }
             const protocol = protocolRows[0];
 
-            // 2) سجل الاعتمادات (الجدول الزمني)
+            // 2) سجل الاعتمادات (الجدول الزمني) - استثناء sender_signature
             const [timelineRows] = await protocolModel.pool.execute(`
                 SELECT 
                     pal.status,
                     pal.comments,
                     pal.created_at,
-                    ${require('../models/userUtils').getFullNameSQLWithAliasAndFallback('u')} AS approver,
+                    ${getFullNameSQLWithAliasAndFallback('u')} AS approver,
                     jt.title AS job_title
                 FROM protocol_approval_logs pal
                 JOIN users u ON pal.approver_id = u.id
                 LEFT JOIN job_titles jt ON u.job_title_id = jt.id
-                WHERE pal.protocol_id = ?
+                WHERE pal.protocol_id = ? AND pal.status != 'sender_signature'
                 ORDER BY pal.created_at ASC
             `, [id]);
 
             // 3) المعتمدون الذين لم يوقعوا بعد
             const [pendingApproversRows] = await protocolModel.pool.execute(`
                 SELECT 
-                    ${require('../models/userUtils').getFullNameSQLWithAliasAndFallback('u')} AS approver,
+                    ${getFullNameSQLWithAliasAndFallback('u')} AS approver,
                     jt.title AS job_title
                 FROM protocol_approvers pa
                 JOIN users u ON pa.user_id = u.id
@@ -1557,8 +1642,24 @@ class ProtocolController {
             await protocolModel.pool.execute(`
                 INSERT INTO protocol_approval_logs (
                     protocol_id, approver_id, delegated_by, signed_as_proxy, status, signature, comments, created_at
-                ) VALUES (?, ?, ?, 1, 'accepted', ?, ?, NOW())
+                ) VALUES (?, ?, ?, 1, 'pending', ?, ?, NOW())
             `, [contentId, delegateTo, delegatorId, signature || null, notes || '']);
+
+            // إنشاء سجل منفصل لتوقيع المرسل للمحاضر
+            const protocolSenderSignatureResult = await protocolModel.pool.execute(`
+                INSERT IGNORE INTO protocol_approval_logs (
+                    protocol_id,
+                    approver_id,
+                    delegated_by,
+                    signed_as_proxy,
+                    status,
+                    comments,
+                    signature,
+                    created_at
+                ) VALUES (?, ?, ?, 0, 'sender_signature', ?, ?, NOW())
+            `, [contentId, delegatorId, delegatorId, 'توقيع المرسل على اقرار التفويض', signature || null]);
+
+            console.log('🔍 Protocol sender signature result:', protocolSenderSignatureResult);
 
             console.log(`Protocol delegation created by user ${delegatorId}`, {
                 protocolId: contentId,
@@ -1632,7 +1733,7 @@ class ProtocolController {
                 await protocolModel.pool.execute(`
                     INSERT INTO protocol_approval_logs (
                         protocol_id, approver_id, delegated_by, signed_as_proxy, status, signature, comments, created_at
-                    ) VALUES (?, ?, ?, 1, 'accepted', ?, ?, NOW())
+                    ) VALUES (?, ?, ?, 1, 'pending', ?, ?, NOW())
                 `, [protocol.id, delegateTo, delegatorId, signature || null, notes || '']);
 
                 // سجل sender_signature لكل محضر إذا توفّر توقيع المرسل
@@ -1697,25 +1798,29 @@ class ProtocolController {
             // جلب بيانات المفوض والمفوض له
             const [delegatorRows] = await protocolModel.pool.execute(`
                 SELECT 
+                    id,
                     CONCAT(
                         COALESCE(first_name, ''),
                         CASE WHEN second_name IS NOT NULL AND second_name != '' THEN CONCAT(' ', second_name) ELSE '' END,
                         CASE WHEN third_name IS NOT NULL AND third_name != '' THEN CONCAT(' ', third_name) ELSE '' END,
                         CASE WHEN last_name IS NOT NULL AND last_name != '' THEN CONCAT(' ', last_name) ELSE '' END
                     ) AS full_name,
-                    job_title
+                    job_title,
+                    national_id
                 FROM users WHERE id = ?
             `, [delegatorId]);
 
             const [delegateRows] = await protocolModel.pool.execute(`
                 SELECT 
+                    id,
                     CONCAT(
                         COALESCE(first_name, ''),
                         CASE WHEN second_name IS NOT NULL AND second_name != '' THEN CONCAT(' ', second_name) ELSE '' END,
                         CASE WHEN third_name IS NOT NULL AND third_name != '' THEN CONCAT(' ', third_name) ELSE '' END,
                         CASE WHEN last_name IS NOT NULL AND last_name != '' THEN CONCAT(' ', last_name) ELSE '' END
                     ) AS full_name,
-                    job_title
+                    job_title,
+                    national_id
                 FROM users WHERE id = ?
             `, [delegateTo]);
 
@@ -1767,15 +1872,18 @@ class ProtocolController {
                 status: 'success',
                 confirmationData: {
                     delegator: {
-                        name: delegator.full_name,
-                        jobTitle: delegator.job_title
+                        id: delegator.id,
+                        fullName: delegator.full_name,
+                        idNumber: delegator.national_id || 'غير محدد'
                     },
                     delegate: {
-                        name: delegate.full_name,
-                        jobTitle: delegate.job_title
+                        id: delegate.id,
+                        fullName: delegate.full_name,
+                        idNumber: delegate.national_id || 'غير محدد'
                     },
                     files: files,
-                    isBulk: isBulk
+                    isBulk: isBulk,
+                    notes: notes || ''
                 }
             });
 
@@ -1788,7 +1896,7 @@ class ProtocolController {
         }
     }
 
-    // جلب ملخص التفويضات للمحاضر (مثل الملفات واللجان)
+    // جلب ملخص التفويضات للمحاضر
     async getProtocolDelegationSummaryByUser(req, res) {
         try {
             const { userId } = req.params;
@@ -1930,6 +2038,171 @@ class ProtocolController {
             res.status(500).json({
                 status: 'error',
                 message: 'حدث خطأ أثناء إلغاء التفويضات'
+            });
+        }
+    }
+
+    // جلب بيانات تأكيد التفويض الموجود (للمفوض له)
+    async getExistingDelegationConfirmationData(req, res) {
+        try {
+            const { delegationId, delegationType, contentType } = req.body;
+            const currentUserId = req.user.id;
+
+            if (!delegationId || !delegationType) {
+                return res.status(400).json({
+                    status: 'error',
+                    message: 'بيانات التفويض مفقودة'
+                });
+            }
+
+            let delegatorId, delegateId, fileInfo = null;
+
+            // جلب معلومات التفويض حسب النوع
+            if (delegationType === 'single') {
+                if (contentType === 'protocol') {
+                    // جلب معلومات تفويض المحضر الفردي
+                    const [delegationRows] = await protocolModel.pool.execute(`
+                        SELECT pal.protocol_id AS content_id, pal.approver_id, pal.delegated_by
+                        FROM protocol_approval_logs pal
+                        WHERE pal.id = ? AND pal.approver_id = ? AND pal.signed_as_proxy = 1 AND pal.status = 'pending'
+                    `, [delegationId, currentUserId]);
+
+                    if (!delegationRows.length) {
+                        return res.status(404).json({
+                            status: 'error',
+                            message: 'التفويض غير موجود أو تم معالجته مسبقاً'
+                        });
+                    }
+
+                    const delegation = delegationRows[0];
+                    delegatorId = delegation.delegated_by;
+                    delegateId = delegation.approver_id;
+
+                    // جلب معلومات المحضر
+                    const [contentRows] = await protocolModel.pool.execute(`
+                        SELECT id, title FROM protocols WHERE id = ?
+                    `, [delegation.content_id]);
+
+                    if (contentRows.length) {
+                        fileInfo = {
+                            id: contentRows[0].id,
+                            title: contentRows[0].title,
+                            type: 'protocol'
+                        };
+                    }
+                }
+            } else if (delegationType === 'bulk') {
+                // جلب معلومات التفويض الشامل من protocol_approval_logs
+                const [delegationRows] = await protocolModel.pool.execute(`
+                    SELECT pal.delegated_by, pal.approver_id
+                    FROM protocol_approval_logs pal
+                    WHERE pal.id = ? AND pal.approver_id = ? AND pal.signed_as_proxy = 1 AND pal.status = 'pending' AND pal.protocol_id IS NULL
+                `, [delegationId, currentUserId]);
+
+                if (!delegationRows.length) {
+                    return res.status(404).json({
+                        status: 'error',
+                        message: 'التفويض غير موجود أو تم معالجته مسبقاً'
+                    });
+                }
+
+                const delegation = delegationRows[0];
+                delegatorId = delegation.delegated_by;
+                delegateId = delegation.approver_id;
+            }
+
+            if (!delegatorId || !delegateId) {
+                return res.status(404).json({
+                    status: 'error',
+                    message: 'بيانات التفويض غير مكتملة'
+                });
+            }
+
+            // جلب بيانات المفوض والمفوض له
+            const [delegatorRows] = await protocolModel.pool.execute(`
+                SELECT 
+                    id,
+                    CONCAT(
+                        COALESCE(first_name, ''),
+                        CASE WHEN second_name IS NOT NULL AND second_name != '' THEN CONCAT(' ', second_name) ELSE '' END,
+                        CASE WHEN third_name IS NOT NULL AND third_name != '' THEN CONCAT(' ', third_name) ELSE '' END,
+                        CASE WHEN last_name IS NOT NULL AND last_name != '' THEN CONCAT(' ', last_name) ELSE '' END
+                    ) AS full_name,
+                    job_title,
+                    national_id
+                FROM users WHERE id = ?
+            `, [delegatorId]);
+
+            const [delegateRows] = await protocolModel.pool.execute(`
+                SELECT 
+                    id,
+                    CONCAT(
+                        COALESCE(first_name, ''),
+                        CASE WHEN second_name IS NOT NULL AND second_name != '' THEN CONCAT(' ', second_name) ELSE '' END,
+                        CASE WHEN third_name IS NOT NULL AND third_name != '' THEN CONCAT(' ', third_name) ELSE '' END,
+                        CASE WHEN last_name IS NOT NULL AND last_name != '' THEN CONCAT(' ', last_name) ELSE '' END
+                    ) AS full_name,
+                    job_title,
+                    national_id
+                FROM users WHERE id = ?
+            `, [delegateId]);
+
+            if (!delegatorRows.length || !delegateRows.length) {
+                return res.status(404).json({
+                    status: 'error',
+                    message: 'بيانات المستخدمين غير موجودة'
+                });
+            }
+
+            const delegator = delegatorRows[0];
+            const delegate = delegateRows[0];
+
+            let files = [];
+            if (delegationType === 'bulk') {
+                // جلب جميع المحاضر المعلقة للمفوض
+                const [protocolRows] = await protocolModel.pool.execute(`
+                    SELECT DISTINCT p.id, p.title
+                    FROM protocols p
+                    JOIN protocol_approvers pa ON p.id = pa.protocol_id
+                    WHERE pa.user_id = ? AND p.is_approved = 0
+                    AND NOT EXISTS (
+                        SELECT 1 FROM protocol_approval_logs pal
+                        WHERE pal.protocol_id = p.id AND pal.approver_id = pa.user_id
+                    )
+                `, [delegatorId]);
+
+                files = protocolRows.map(row => ({
+                    id: row.id,
+                    title: row.title,
+                    type: 'protocol'
+                }));
+            } else if (fileInfo) {
+                files = [fileInfo];
+            }
+
+            res.json({
+                status: 'success',
+                confirmationData: {
+                    delegator: {
+                        id: delegator.id,
+                        fullName: delegator.full_name,
+                        idNumber: delegator.national_id || 'غير محدد'
+                    },
+                    delegate: {
+                        id: delegate.id,
+                        fullName: delegate.full_name,
+                        idNumber: delegate.national_id || 'غير محدد'
+                    },
+                    files: files,
+                    isBulk: delegationType === 'bulk'
+                }
+            });
+
+        } catch (error) {
+            console.error('Error getting existing delegation confirmation data:', error);
+            res.status(500).json({
+                status: 'error',
+                message: 'حدث خطأ أثناء جلب بيانات التأكيد'
             });
         }
     }

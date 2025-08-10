@@ -582,8 +582,8 @@ const handleApproval = async (req, res) => {
     }
 
     // إضافة المستخدم المفوض له إلى content_approvers إذا لم يكن موجوداً
-    // للمستخدمين المفوض لهم، نضيفهم في كلا الحالتين (شخصي وبالنيابة)
-    if ((isProxy && approved) || (isDelegated && approved)) {
+    // فقط للمستخدمين المفوض لهم تفويض جماعي (ليس للتفويضات الفردية)
+    if (isDelegated && approved) {
       await db.execute(
         `INSERT IGNORE INTO ${contentApproversTable} (content_id, user_id) VALUES (?, ?)`,
         [contentId, approverId]
@@ -690,7 +690,7 @@ const handleApproval = async (req, res) => {
         WHERE id = ?
       `, [contentId]);
     }
-    // في حالة الرفض: أرسل إشعار بالرفض للمعتمد السابق، وإن لم يوجد فلصاحب الملف
+    // في حالة الرفض: أرسل إشعار بالرفض لصاحب الملف مباشرة
     if (!approved) {
       // جلب اسم الرافض
       const [rejUserRows] = await db.execute(`
@@ -704,21 +704,10 @@ const handleApproval = async (req, res) => {
       `, [approverId]);
       const rejectedByName = rejUserRows.length ? rejUserRows[0].full_name : '';
 
-      // جلب المعتمد السابق في التسلسل
-      let prevUserId = null;
-      const [prevRows] = await db.execute(`
-        SELECT ca2.user_id
-        FROM content_approvers ca
-        JOIN content_approvers ca2 ON ca2.content_id = ca.content_id AND ca2.sequence_number = ca.sequence_number - 1
-        WHERE ca.content_id = ? AND ca.user_id = ?
-        LIMIT 1
-      `, [contentId, approverId]);
-      if (prevRows.length) prevUserId = prevRows[0].user_id;
-
-      const targetUserId = prevUserId || ownerId;
+      // إرسال إشعار الرفض لصاحب الملف مباشرة
       try {
         const { sendRejectionNotification } = require('../models/notfications-utils');
-        await sendRejectionNotification(targetUserId, fileTitle, rejectedByName, notes || '', false, false);
+        await sendRejectionNotification(ownerId, fileTitle, rejectedByName, notes || '', false, false);
       } catch (_) {}
     }
     // إذا اكتمل الاعتماد النهائي، أرسل إشعار "تم اعتماد الملف من الإدارة"
@@ -823,16 +812,22 @@ async function generateFinalSignedPDF(contentId) {
       al.comments,
       al.created_at,
       jt_actual.title AS signer_job_title,
-      jt_original.title AS original_job_title
+      jt_original.title AS original_job_title,
+      jn_actual.name AS signer_job_name,
+      jn_original.name AS original_job_name
     FROM approval_logs al
     JOIN users u_actual
       ON al.approver_id = u_actual.id
     LEFT JOIN job_titles jt_actual
       ON u_actual.job_title_id = jt_actual.id
+    LEFT JOIN job_names jn_actual
+      ON u_actual.job_name_id = jn_actual.id
     LEFT JOIN users u_original
       ON al.delegated_by = u_original.id
     LEFT JOIN job_titles jt_original
       ON u_original.job_title_id = jt_original.id
+    LEFT JOIN job_names jn_original
+      ON u_original.job_name_id = jn_original.id
     WHERE al.content_id = ? AND al.status = 'approved'
     ORDER BY al.created_at
   `, [contentId]);
@@ -931,18 +926,23 @@ async function generateFinalSignedPDF(contentId) {
       day: '2-digit'
     });
 
-    // بناء الاسم الكامل للموقع الفعلي
+    // بناء الاسم الكامل للموقع الفعلي مع job_name
     const actualSignerFullName = buildFullName(
       log.actual_first_name,
       log.actual_second_name,
       log.actual_third_name,
       log.actual_last_name
     ) || log.actual_signer || 'N/A';
+    
+    // إضافة job_name كبادئة للاسم إذا كان موجوداً
+    const actualSignerFullNameWithJobName = log.signer_job_name && log.signer_job_name.trim() 
+      ? `${log.signer_job_name} ${actualSignerFullName}` 
+      : actualSignerFullName;
 
     // إضافة صف الاعتماد مع معالجة النصوص العربية
     approvalTableBody.push([
       { text: approvalType, style: 'tableCell' },
-      { text: fixArabicOrder(actualSignerFullName), style: 'tableCell' },
+      { text: fixArabicOrder(actualSignerFullNameWithJobName), style: 'tableCell' },
       { text: fixArabicOrder(log.signer_job_title || 'Not Specified'), style: 'tableCell' },
       { text: approvalMethod, style: 'tableCell' },
       getSignatureCell(log),
@@ -951,17 +951,22 @@ async function generateFinalSignedPDF(contentId) {
 
     // إذا كان تفويض، أضف صف إضافي للمفوض الأصلي
     if (log.signed_as_proxy && log.original_user) {
-      // بناء الاسم الكامل للمفوض الأصلي
+      // بناء الاسم الكامل للمفوض الأصلي مع job_name
       const originalUserFullName = buildFullName(
         log.original_first_name,
         log.original_second_name,
         log.original_third_name,
         log.original_last_name
       ) || log.original_user || 'N/A';
+      
+      // إضافة job_name كبادئة للاسم إذا كان موجوداً
+      const originalUserFullNameWithJobName = log.original_job_name && log.original_job_name.trim() 
+        ? `${log.original_job_name} ${originalUserFullName}` 
+        : originalUserFullName;
 
       approvalTableBody.push([
         { text: '(Proxy for)', style: 'proxyCell' },
-        { text: fixArabicOrder(originalUserFullName), style: 'proxyCell' },
+        { text: fixArabicOrder(originalUserFullNameWithJobName), style: 'proxyCell' },
         { text: fixArabicOrder(log.original_job_title || 'Not Specified'), style: 'proxyCell' },
         { text: 'Delegated', style: 'proxyCell' },
         { text: '-', style: 'proxyCell' },
@@ -1161,16 +1166,22 @@ async function updatePDFAfterApproval(contentId) {
         al.comments,
         al.created_at,
         jt_actual.title AS signer_job_title,
-        jt_original.title AS original_job_title
+        jt_original.title AS original_job_title,
+        jn_actual.name AS signer_job_name,
+        jn_original.name AS original_job_name
       FROM approval_logs al
       JOIN users u_actual
         ON al.approver_id = u_actual.id
       LEFT JOIN job_titles jt_actual
         ON u_actual.job_title_id = jt_actual.id
+      LEFT JOIN job_names jn_actual
+        ON u_actual.job_name_id = jn_actual.id
       LEFT JOIN users u_original
         ON al.delegated_by = u_original.id
       LEFT JOIN job_titles jt_original
         ON u_original.job_title_id = jt_original.id
+      LEFT JOIN job_names jn_original
+        ON u_original.job_name_id = jn_original.id
       WHERE al.content_id = ? AND al.status = 'approved'
       ORDER BY al.created_at
     `, [contentId]);
@@ -1266,10 +1277,15 @@ async function updatePDFAfterApproval(contentId) {
         log.actual_third_name,
         log.actual_last_name
       ) || log.actual_signer || 'N/A';
+      
+      // إضافة job_name كبادئة للاسم إذا كان موجوداً
+      const actualSignerFullNameWithJobName = log.signer_job_name && log.signer_job_name.trim() 
+        ? `${log.signer_job_name} ${actualSignerFullName}` 
+        : actualSignerFullName;
 
       approvalTableBody.push([
         { text: approvalType, style: 'tableCell' },
-        { text: fixArabicOrder(actualSignerFullName), style: 'tableCell' },
+        { text: fixArabicOrder(actualSignerFullNameWithJobName), style: 'tableCell' },
         { text: fixArabicOrder(log.signer_job_title || 'Not Specified'), style: 'tableCell' },
         { text: approvalMethod, style: 'tableCell' },
         getSignatureCell(log),
@@ -1283,10 +1299,15 @@ async function updatePDFAfterApproval(contentId) {
           log.original_third_name,
           log.original_last_name
         ) || log.original_user || 'N/A';
+        
+        // إضافة job_name كبادئة للاسم إذا كان موجوداً
+        const originalUserFullNameWithJobName = log.original_job_name && log.original_job_name.trim() 
+          ? `${log.original_job_name} ${originalUserFullName}` 
+          : originalUserFullName;
 
         approvalTableBody.push([
           { text: '(Proxy for)', style: 'proxyCell' },
-          { text: fixArabicOrder(originalUserFullName), style: 'proxyCell' },
+          { text: fixArabicOrder(originalUserFullNameWithJobName), style: 'proxyCell' },
           { text: fixArabicOrder(log.original_job_title || 'Not Specified'), style: 'proxyCell' },
           { text: 'Delegated', style: 'proxyCell' },
           { text: '-', style: 'proxyCell' },

@@ -30,7 +30,7 @@ const transporter = nodemailer.createTransport({
 // 1) تسجيل مستخدم جديد
 const register = async (req, res) => {
   try {
-    const { first_name, second_name, third_name, last_name, username, email, password, department_id, role, employee_number, job_title_id, national_id } = req.body;
+    const { first_name, second_name, third_name, last_name, username, email, password, department_id, role, employee_number, job_title_id, job_name_id, national_id } = req.body;
 
     // 1) الحقول الأساسية
     if (!username || !email || !password ) {
@@ -134,6 +134,14 @@ const register = async (req, res) => {
       });
     }
 
+    // 8) تحقق من وجود المسمى للمستخدمين غير admin
+    if (username.toLowerCase() !== 'admin' && !job_name_id) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'المسمى مطلوب'
+      });
+    }
+
     // 7) تشفير كلمة المرور
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -146,13 +154,14 @@ const register = async (req, res) => {
         // 9) إدخال المستخدم
     const [result] = await db.execute(
       `INSERT INTO users 
-         (username, email, employee_number, job_title_id, password, department_id, role, first_name, second_name, third_name, last_name, national_id, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+         (username, email, employee_number, job_title_id, job_name_id, password, department_id, role, first_name, second_name, third_name, last_name, national_id, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
       [
         username, 
         email, 
         employee_number || null, 
         job_title_id || null, 
+        job_name_id || null,
         hashedPassword, 
         department_id || null, 
         userRole, 
@@ -173,6 +182,7 @@ const register = async (req, res) => {
         email, 
         employee_number: employee_number || null, 
         job_title_id: job_title_id || null, 
+        job_name_id: job_name_id || null,
         department_id: department_id || null, 
         national_id: national_id || null,
         role: userRole 

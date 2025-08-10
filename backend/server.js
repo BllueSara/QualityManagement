@@ -35,6 +35,7 @@ const reportsRoutes = require('./routes/reportsRoutes');
 const ticketReportRoutes = require('./routes/ticketReportRoutes');
 const logsRoutes = require('./routes/logsRoutes');
 const jobTitlesRoutes = require('./routes/jobTitles');
+const jobNamesRoutes = require('./routes/jobNames');
 const deadlineRoutes = require('./routes/deadlineRoutes');
 const protocolRoutes = require('./routes/protocolRoutes');
 const protocolModel = require('./models/protocolModel');
@@ -90,6 +91,7 @@ app.use('/api/reports', reportsRoutes);
 app.use('/api/tickets/report', ticketReportRoutes);
 app.use('/api/logs', logsRoutes);
 app.use('/api/job-titles', jobTitlesRoutes);
+app.use('/api/job-names', jobNamesRoutes);
 app.use('/api/deadlines', deadlineRoutes);
 app.use('/api/protocols', protocolRoutes);
 
@@ -276,6 +278,36 @@ const initializeProtocols = async () => {
   }
 };
 
+// تهيئة جدول job_names عند بدء التطبيق
+const initializeJobNames = async () => {
+  try {
+    const { initJobNamesTable } = require('./controllers/jobNamesController');
+    
+    // إنشاء request و response وهمية لاستدعاء الدالة
+    const mockReq = {};
+    const mockRes = {
+      json: (data) => {
+        if (data.success) {
+          console.log('✅ تم تهيئة جدول job_names بنجاح:', data.message);
+        } else {
+          console.log('⚠️ لم يتم تهيئة جدول job_names:', data.message);
+        }
+      },
+      status: (code) => ({
+        json: (data) => {
+          console.log('❌ خطأ في تهيئة جدول job_names:', data.message);
+        }
+      })
+    };
+    
+    await initJobNamesTable(mockReq, mockRes);
+  } catch (error) {
+    console.error('خطأ في تهيئة جدول job_names:', error);
+    // لا نريد إيقاف الخادم بسبب خطأ في إنشاء الجدول
+    console.log('سيستمر الخادم في العمل رغم خطأ إنشاء الجدول');
+  }
+};
+
 const PORT = process.env.PORT || 3006;
 app.listen(PORT, async () => {
   console.log(`Server running on http://localhost:${PORT}`);
@@ -296,6 +328,12 @@ app.listen(PORT, async () => {
     await initializeProtocols();
   } catch (error) {
     console.error('خطأ في تهيئة جداول المحاضر:', error);
+  }
+  
+  try {
+    await initializeJobNames();
+  } catch (error) {
+    console.error('خطأ في تهيئة جدول job_names:', error);
   }
   
   try {

@@ -29,7 +29,9 @@ router.post('/bulk-delegation-unified/process', protocolController.processBulkPr
 // Delegation operations
 router.post('/delegate-single', protocolController.delegateSingleProtocolApproval);
 router.post('/delegate-all-unified', protocolController.delegateAllProtocolApprovals);
+router.post('/delegation-confirmation-data', protocolController.getDelegationConfirmationData);
 router.post('/new-delegation-confirmation-data', protocolController.getDelegationConfirmationData);
+router.post('/existing-delegation-confirmation-data', protocolController.getExistingDelegationConfirmationData);
 
 // Delegation management (like departments/committees)
 router.get('/delegation-summary/:userId', protocolController.getProtocolDelegationSummaryByUser);

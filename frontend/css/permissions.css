@@ -1939,4 +1939,90 @@ body[lang="en"] .toast-container,
   }
 }
 
+/* Job Names Management Styles */
+.job-names-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 15px 0;
+  border-bottom: 1px solid #e0e0e0;
+}
 
+.job-names-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.job-name-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 15px;
+  margin-bottom: 8px;
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.job-name-item:hover {
+  background-color: #e9ecef;
+  border-color: #dee2e6;
+}
+
+.job-name-name {
+  font-size: 16px;
+  color: #495057;
+  font-weight: 500;
+}
+
+.job-name-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.job-name-actions button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.job-name-actions .btn-edit {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.job-name-actions .btn-edit:hover {
+  background-color: #138496;
+}
+
+.job-name-actions .btn-delete {
+  background-color: #dc3545;
+  color: white;
+}
+
+.job-name-actions .btn-delete:hover {
+  background-color: #c82333;
+}
+
+.job-name-actions .btn-delete:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .job-name-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .job-name-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}

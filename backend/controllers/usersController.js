@@ -108,6 +108,8 @@ const getUserById = async (req, res) => {
          u.national_id,
          u.job_title_id,
          jt.title AS job_title,
+         u.job_name_id,
+         jn.name AS job_name,
          u.first_name,
          u.second_name,
          u.third_name,
@@ -118,6 +120,7 @@ const getUserById = async (req, res) => {
        FROM users u
        LEFT JOIN departments d ON u.department_id = d.id
        LEFT JOIN job_titles jt ON u.job_title_id = jt.id
+       LEFT JOIN job_names jn ON u.job_name_id = jn.id
        WHERE u.id = ?`,
       [id]
     );
@@ -155,7 +158,7 @@ const addUser = async (req, res) => {
   const adminUserId = payload.id;
   const userLang = getUserLang(req);
 
-  const { first_name, second_name, third_name, last_name, name, email, departmentId, password, role, employeeNumber, job_title_id } = req.body;
+  const { first_name, second_name, third_name, last_name, name, email, departmentId, password, role, employeeNumber, job_title_id, job_name_id } = req.body;
   console.log('🪵 بيانات قادمة:', req.body);
 
   if (!name || !first_name || !last_name || !email || !password || !role) {
@@ -203,14 +206,15 @@ const addUser = async (req, res) => {
     role,
     employee_number,
     job_title_id,
+    job_name_id,
     first_name,
     second_name,
     third_name,
     last_name,
     created_at,
     updated_at
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-  [name, email, cleanDeptId, hashed, role, employeeNumber, job_title_id, first_name, second_name || null, third_name || null, last_name]
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+  [name, email, cleanDeptId, hashed, role, employeeNumber, job_title_id, job_name_id, first_name, second_name || null, third_name || null, last_name]
 );
 
     // Add to logs
@@ -250,7 +254,7 @@ const updateUser = async (req, res) => {
   const userLang = getUserLang(req);
 
   const id = req.params.id;
-  const { first_name, second_name, third_name, last_name, name, email, departmentId, role, employee_number, job_title_id, national_id } = req.body;
+  const { first_name, second_name, third_name, last_name, name, email, departmentId, role, employee_number, job_title_id, job_name_id, national_id } = req.body;
 
   // للادمن: فقط الاسم الأول واسم العائلة واسم المستخدم والدور مطلوبة
   // للمستخدمين الآخرين: جميع الحقول مطلوبة
@@ -267,10 +271,11 @@ const updateUser = async (req, res) => {
   try {
     // Fetch old user details for logging
     const [[oldUser]] = await db.execute(
-      `SELECT u.username, u.email, u.role, u.department_id, u.employee_number, u.job_title_id, jt.title AS job_title, u.first_name, u.second_name, u.third_name, u.last_name, d.name as department_name
+      `SELECT u.username, u.email, u.role, u.department_id, u.employee_number, u.job_title_id, jt.title AS job_title, u.job_name_id, jn.name AS job_name, u.first_name, u.second_name, u.third_name, u.last_name, d.name as department_name
        FROM users u
        LEFT JOIN departments d ON u.department_id = d.id
        LEFT JOIN job_titles jt ON u.job_title_id = jt.id
+       LEFT JOIN job_names jn ON u.job_name_id = jn.id
        WHERE u.id = ?`,
       [id]
     );
@@ -338,6 +343,7 @@ const updateUser = async (req, res) => {
            role = ?,
            employee_number = ?,
            job_title_id = ?,
+           job_name_id = ?,
            national_id = ?,
            first_name = ?,
            second_name = ?,
@@ -345,7 +351,7 @@ const updateUser = async (req, res) => {
            last_name = ?,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,
-      [name, email, departmentId || null, role, employee_number, job_title_id, national_id || null, first_name, second_name || null, third_name || null, last_name, id]
+      [name, email, departmentId || null, role, employee_number, job_title_id, job_name_id, national_id || null, first_name, second_name || null, third_name || null, last_name, id]
     );
 
     if (!result.affectedRows) {
@@ -386,6 +392,10 @@ const updateUser = async (req, res) => {
     if (req.body.job_title_id !== undefined && req.body.job_title_id !== oldUser.job_title_id) {
       changesAr.push(`المسمى الوظيفي: '${oldUser.job_title || ''}' ← '${req.body.job_title_id || ''}'`);
       changesEn.push(`Job Title: '${oldUser.job_title || ''}' → '${req.body.job_title_id || ''}'`);
+    }
+    if (req.body.job_name_id !== undefined && req.body.job_name_id !== oldUser.job_name_id) {
+      changesAr.push(`المسمى: '${oldUser.job_name || ''}' ← '${req.body.job_name_id || ''}'`);
+      changesEn.push(`Job Name: '${oldUser.job_name || ''}' → '${req.body.job_name_id || ''}'`);
     }
     if (req.body.national_id !== undefined && req.body.national_id !== oldUser.national_id) {
       changesAr.push(`رقم الهوية: '${oldUser.national_id || ''}' ← '${req.body.national_id || ''}'`);

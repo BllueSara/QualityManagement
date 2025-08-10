@@ -682,7 +682,7 @@ async function handleCommitteeApproval(req, res) {
       await sendOwnerApprovalNotification(ownerId, fileTitle, approved, true);
     }
 
-      // في حالة الرفض: أرسل إشعار رفض للمعتمد السابق أو لصاحب الملف
+            // في حالة الرفض: أرسل إشعار رفض لصاحب الملف مباشرة
       if (!approved) {
         // جلب اسم الرافض
         const [rejUserRows] = await db.execute(`
@@ -692,24 +692,13 @@ async function handleCommitteeApproval(req, res) {
             CASE WHEN u.third_name IS NOT NULL AND u.third_name != '' THEN CONCAT(' ', u.third_name) ELSE '' END,
             CASE WHEN u.last_name IS NOT NULL AND u.last_name != '' THEN CONCAT(' ', u.last_name) ELSE '' END
           ) AS full_name
-          FROM users u WHERE u.id = ?
+        FROM users u WHERE u.id = ?
         `, [approverId]);
         const rejectedByName = rejUserRows.length ? rejUserRows[0].full_name : '';
 
-        // جلب المعتمد السابق في التسلسل
-        let prevUserId = null;
-        const [prevRows] = await db.execute(`
-          SELECT cca2.user_id
-          FROM committee_content_approvers cca
-          JOIN committee_content_approvers cca2 ON cca2.content_id = cca.content_id AND cca2.sequence_number = cca.sequence_number - 1
-          WHERE cca.content_id = ? AND cca.user_id = ?
-          LIMIT 1
-        `, [contentId, approverId]);
-        if (prevRows.length) prevUserId = prevRows[0].user_id;
-
-        const targetUserId = prevUserId || data.created_by;
+        // إرسال إشعار الرفض لصاحب الملف مباشرة
         try {
-          await sendRejectionNotification(targetUserId, title, rejectedByName, notes || '', true, false);
+          await sendRejectionNotification(data.created_by, title, rejectedByName, notes || '', true, false);
         } catch (_) {}
       }
 
@@ -868,9 +857,11 @@ async function getAssignedCommitteeApprovals(req, res) {
         JOIN committee_folders cf       ON cc.folder_id = cf.id
         JOIN committees com             ON cf.committee_id = com.id
         JOIN users u                    ON cc.created_by = u.id
-        JOIN committee_content_approvers cca 
-          ON cca.content_id = cc.id 
-         AND cca.user_id = ?
+        JOIN committee_content_approvers cca ON cca.content_id = cc.id AND (
+          cca.user_id = ? OR cca.user_id IN (
+            SELECT ad.user_id FROM active_delegations ad WHERE ad.delegate_id = ?
+          )
+        )
         LEFT JOIN users u2 
           ON u2.id = cca.user_id
         WHERE NOT EXISTS (
@@ -895,7 +886,7 @@ async function getAssignedCommitteeApprovals(req, res) {
         )
         GROUP BY cc.id, cca.sequence_number
         ORDER BY cc.created_at DESC, cca.sequence_number
-      `, [userId, userId, userId, userId]);
+      `, [userId, userId, userId, userId, userId]);
 
       allRows = rows;
     }
@@ -1242,16 +1233,22 @@ async function generateFinalSignedCommitteePDF(contentId) {
       al.comments,
       al.created_at,
       jt_actual.title AS signer_job_title,
-      jt_original.title AS original_job_title
+      jt_original.title AS original_job_title,
+      jn_actual.name AS signer_job_name,
+      jn_original.name AS original_job_name
     FROM committee_approval_logs al
     JOIN users u_actual
       ON al.approver_id = u_actual.id
     LEFT JOIN job_titles jt_actual
       ON u_actual.job_title_id = jt_actual.id
+    LEFT JOIN job_names jn_actual
+      ON u_actual.job_name_id = jn_actual.id
     LEFT JOIN users u_original
       ON al.delegated_by = u_original.id
     LEFT JOIN job_titles jt_original
       ON u_original.job_title_id = jt_original.id
+    LEFT JOIN job_names jn_original
+      ON u_original.job_name_id = jn_original.id
     WHERE al.content_id = ? AND al.status = 'approved'
     ORDER BY al.created_at
   `, [contentId]);
@@ -1350,18 +1347,23 @@ async function generateFinalSignedCommitteePDF(contentId) {
       day: '2-digit'
     });
 
-    // بناء الاسم الكامل للموقع الفعلي
+    // بناء الاسم الكامل للموقع الفعلي مع job_name
     const actualSignerFullName = buildFullName(
       log.actual_first_name,
       log.actual_second_name,
       log.actual_third_name,
       log.actual_last_name
     ) || log.actual_signer || 'N/A';
+    
+    // إضافة job_name كبادئة للاسم إذا كان موجوداً
+    const actualSignerFullNameWithJobName = log.signer_job_name && log.signer_job_name.trim() 
+      ? `${log.signer_job_name} ${actualSignerFullName}` 
+      : actualSignerFullName;
 
     // إضافة صف الاعتماد مع معالجة النصوص العربية والتواقيع
     approvalTableBody.push([
       { text: approvalType, style: 'tableCell' },
-      { text: fixArabicOrder(actualSignerFullName), style: 'tableCell' },
+      { text: fixArabicOrder(actualSignerFullNameWithJobName), style: 'tableCell' },
       { text: fixArabicOrder(log.signer_job_title || 'Not Specified'), style: 'tableCell' },
       { text: approvalMethod, style: 'tableCell' },
       getSignatureCell(log),

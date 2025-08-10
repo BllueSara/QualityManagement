@@ -390,6 +390,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       editCommitteeNameArInput.value = nameData || '';
       editCommitteeNameEnInput.value = '';
     }
+
+    // حفظ الصورة الحالية في dataset
+    const currentImage = el.closest('.card').querySelector('.card-icon img');
+    if (currentImage && currentImage.src) {
+      editModal.dataset.currentImage = currentImage.src;
+    } else {
+      editModal.dataset.currentImage = '';
+    }
+
     showModal(editModal);
   }
 
@@ -524,7 +533,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const updatedCommittee = result.committee || {
         id: id,
         name: JSON.stringify({ ar: nameAr, en: nameEn }),
-        image: file ? `backend/uploads/images/${file.name}` : ''
+        image: file ? `backend/uploads/images/${file.name}` : editModal.dataset.currentImage || ''
       };
       
       // التأكد من أن لدينا بيانات صحيحة

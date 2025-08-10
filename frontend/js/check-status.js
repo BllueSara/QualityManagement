@@ -55,7 +55,8 @@ function checkUserProfileCompletion() {
                                user.departmentId && 
                                user.employee_number && 
                                user.job_title_id && 
-                               user.national_id;
+                               user.national_id &&
+                               user.job_name_id;
       
       // إذا كانت البيانات غير مكتملة وليس في صفحة البروفايل، توجيه لصفحة البروفايل فوراً
       if (!isProfileComplete && !window.location.pathname.includes('profile.html')) {

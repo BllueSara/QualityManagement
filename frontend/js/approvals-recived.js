@@ -89,7 +89,7 @@ function showDelegationConfirmationPopup(delegatorInfo, delegateInfo, files, isB
     files.forEach(file => {
       filesList += `<div class="file-item">
         <span class="file-name">${file.title || file.name}</span>
-        <span class="file-type">${file.type === 'department' ? 'قسم' : 'لجنة'}</span>
+        <span class="file-type">${file.type === 'department' ? 'قسم' : file.type === 'committee' ? 'لجنة' : file.type === 'protocol' ? 'محضر' : 'ملف'}</span>
       </div>`;
     });
     filesList += '</div>';
@@ -1673,16 +1673,29 @@ async function handlePreviewClick(target) {
       console.warn('Invalid content ID:', itemId);
       return;
     }
-    await fetchJSON(`${apiBase}/contents/log-view`, {
-      method: 'POST',
-      body: JSON.stringify({
-        contentId: numericItemId,
-        contentType: item.type || 'department',
-        contentTitle: item.title,
-        sourceName: item.source_name,
-        folderName: item.folder_name || item.folderName || ''
-      })
-    });
+    
+    // استخدام API مختلف حسب نوع المحتوى
+    let logViewEndpoint;
+    if (item.type === 'committee') {
+      // لا يوجد API لتسجيل عرض اللجان حالياً - تخطي تسجيل اللوق
+      console.log('Skipping log view for committee content:', numericItemId);
+    } else if (item.type === 'protocol') {
+      // لا يوجد API لتسجيل عرض المحاضر حالياً - تخطي تسجيل اللوق
+      console.log('Skipping log view for protocol content:', numericItemId);
+    } else {
+      // تسجيل عرض محتوى الأقسام
+      logViewEndpoint = `${apiBase}/contents/log-view`;
+      await fetchJSON(logViewEndpoint, {
+        method: 'POST',
+        body: JSON.stringify({
+          contentId: numericItemId,
+          contentType: item.type || 'department',
+          contentTitle: item.title,
+          sourceName: item.source_name,
+          folderName: item.folder_name || item.folderName || ''
+        })
+      });
+    }
   } catch (err) {
     console.error('Failed to log content view:', err);
     // لا نوقف العملية إذا فشل تسجيل اللوق
@@ -1741,8 +1754,8 @@ async function fetchApprovalLog(contentId, type) {
   }
   
   if (type === 'committee') {
-    // لجلب سجل اعتماد اللجنة
-    const res = await fetch(`${apiBase}/committee-approvals/${cleanId}/approvals`, {
+    // لجلب سجل اعتماد اللجنة - استخدام ID الأصلي مع البادئة
+    const res = await fetch(`${apiBase}/committee-approvals/${contentId}/approvals`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     if (!res.ok) return null;
@@ -2363,8 +2376,9 @@ function closeSignatureModal() {
 async function refreshApprovalsData() {
   try {
     
-    const deptResp = await fetchJSON(`${apiBase}/approvals/assigned-to-me`);
+    // جلب ملفات اللجان من endpoint واحد فقط لتجنب التكرار
     const commResp = await fetchJSON(`${apiBase}/committee-approvals/assigned-to-me`);
+    const deptResp = await fetchJSON(`${apiBase}/approvals/assigned-to-me`);
     const protocolResp = await fetchJSON(`${apiBase}/protocols/pending/approvals`);
     
     // Combine all types of approvals
@@ -2373,20 +2387,17 @@ async function refreshApprovalsData() {
     const protocolItems = (protocolResp.data || []).map(item => ({ ...item, type: 'protocol' }));
     
     const combined = [...deptItems, ...commItems, ...protocolItems];
+    
+    // إزالة التكرار بناءً على ID والنوع معاً لمنع تضارب عرض نوع الملف
     const uniqueMap = new Map();
-    // Deduplicate by id with priority: protocol > committee > department
-    const typePriority = { protocol: 3, committee: 2, department: 1 };
     combined.forEach(item => {
-      const key = item.id;
+      // استخدام مفتاح فريد يجمع بين ID والنوع
+      const key = `${item.type}:${item.id}`;
       if (!uniqueMap.has(key)) {
         uniqueMap.set(key, item);
-      } else {
-        const existing = uniqueMap.get(key);
-        const existingPriority = typePriority[existing.type] || 0;
-        const incomingPriority = typePriority[item.type] || 0;
-        if (incomingPriority > existingPriority) uniqueMap.set(key, item);
       }
     });
+    
     allItems = Array.from(uniqueMap.values());
     filteredItems = allItems;
 
@@ -2504,7 +2515,7 @@ async function processSingleDelegation(data) {
     if (data.isCommittee) {
       endpoint = 'http://localhost:3006/api/committee-approvals/committee-delegations/single';
     } else if (data.isProtocol) {
-      endpoint = 'http://localhost:3006/api/protocols/delegate-single';
+      endpoint = 'http://localhost:3006/api/approvals/delegate-single';
     } else {
       endpoint = 'http://localhost:3006/api/approvals/delegate-single';
     }
