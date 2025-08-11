@@ -70,32 +70,64 @@ function updateJobNamesSelect(selectElement, jobNames, selectedValue = '') {
     }
 }
 
+// منع التهيئة المتكررة على مستوى الملف
+if (window.jobNamesScriptLoaded) {
+    console.log('Job names script already loaded, exiting...');
+    throw new Error('Script already loaded');
+}
+window.jobNamesScriptLoaded = true;
+
+// متغير لتتبع حالة التهيئة
+let jobNamesInitialized = false;
+
 // دالة تهيئة إدارة المسميات
 function initializeJobNamesManagement() {
+    // تجنب التهيئة المتكررة
+    if (jobNamesInitialized || window.jobNamesGlobalInitialized || window.jobNamesInitializing) {
+        console.log('Job names already initialized, skipping...');
+        return;
+    }
+    jobNamesInitialized = true;
+    window.jobNamesGlobalInitialized = true;
+    window.jobNamesInitializing = true;
+    
     // البحث عن جميع عناصر select للمسميات
     const jobNameSelects = document.querySelectorAll('select[name="job_name"], #reg-job-name');
     
     jobNameSelects.forEach(select => {
-        // تحميل المسميات عند تحميل الصفحة
-        loadJobNames().then(jobNames => {
-            updateJobNamesSelect(select, jobNames);
-        });
+        // تحميل المسميات عند تحميل الصفحة - مرة واحدة فقط
+        if (!select.hasAttribute('data-job-names-loaded') && !select.hasAttribute('data-job-names-loading') && !select.hasAttribute('data-job-names-requested')) {
+            select.setAttribute('data-job-names-requested', 'true');
+            select.setAttribute('data-job-names-loading', 'true');
+            loadJobNames().then(jobNames => {
+                updateJobNamesSelect(select, jobNames);
+                select.setAttribute('data-job-names-loaded', 'true');
+                select.removeAttribute('data-job-names-loading');
+            }).catch(() => {
+                select.removeAttribute('data-job-names-loading');
+            });
+        }
         
-        // مراقبة التغييرات
-        select.addEventListener('change', async function() {
-            if (this.value === '__ADD_NEW_JOB_NAME__') {
-                // إظهار modal إضافة مسمى جديد
-                const modal = document.getElementById('addJobNameModal');
-                if (modal) {
-                    modal.style.display = 'flex';
-                }
-            }
-        });
+        // مراقبة التغييرات - إزالة event listeners السابقة لتجنب التكرار
+        if (typeof jobNameSelectChangeHandler !== 'undefined') {
+            select.removeEventListener('change', jobNameSelectChangeHandler);
+        }
+        select.addEventListener('change', jobNameSelectChangeHandler);
     });
+    
+    function jobNameSelectChangeHandler() {
+        if (this.value === '__ADD_NEW_JOB_NAME__') {
+            // إظهار modal إضافة مسمى جديد
+            const modal = document.getElementById('addJobNameModal');
+            if (modal) {
+                modal.style.display = 'flex';
+            }
+        }
+    }
     
     // إعداد modal إضافة مسمى جديد
     const addJobNameModal = document.getElementById('addJobNameModal');
-    if (addJobNameModal) {
+    if (addJobNameModal && !addJobNameModal.hasAttribute('data-events-added')) {
         const saveBtn = addJobNameModal.querySelector('#saveAddJobName');
         const cancelBtn = addJobNameModal.querySelector('#cancelAddJobName');
         const nameInput = addJobNameModal.querySelector('#jobNameName');
@@ -115,17 +147,23 @@ function initializeJobNamesManagement() {
                 addJobNameModal.style.display = 'none';
                 nameInput.value = '';
                 
-                // تحديث جميع قوائم المسميات
-                const allJobNames = await loadJobNames();
+                // إضافة المسمى الجديد للقوائم بدون إعادة تحميل كاملة
                 jobNameSelects.forEach(select => {
-                    updateJobNamesSelect(select, allJobNames, newJobName.id);
-                });
-                
-                // تحديد المسمى الجديد
-                jobNameSelects.forEach(select => {
-                    if (select.name === 'job_name' || select.id === 'reg-job-name') {
-                        select.value = newJobName.id;
+                    // إضافة الخيار الجديد
+                    const newOption = document.createElement('option');
+                    newOption.value = newJobName.id;
+                    newOption.textContent = newJobName.name;
+                    
+                    // إضافة الخيار قبل خيار "إضافة جديد"
+                    const addNewOption = select.querySelector('option[value="__ADD_NEW_JOB_NAME__"]');
+                    if (addNewOption) {
+                        select.insertBefore(newOption, addNewOption);
+                    } else {
+                        select.appendChild(newOption);
                     }
+                    
+                    // تحديد المسمى الجديد
+                    select.value = newJobName.id;
                 });
                 
                 showToast('تم إضافة المسمى بنجاح', 'success');
@@ -147,7 +185,13 @@ function initializeJobNamesManagement() {
                 nameInput.value = '';
             }
         });
+        
+        // علامة أن الأحداث تم إضافتها
+        addJobNameModal.setAttribute('data-events-added', 'true');
     }
+    
+    // إعادة تعيين flag التهيئة
+    window.jobNamesInitializing = false;
 }
 
 // دالة عرض رسالة toast
@@ -169,16 +213,13 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
-// تهيئة عند تحميل الصفحة
-document.addEventListener('DOMContentLoaded', () => {
-    initializeJobNamesManagement();
-});
-
-// تصدير الدوال للاستخدام في ملفات أخرى
-window.jobNamesManager = {
-    loadJobNames,
-    addJobName,
-    updateJobNamesSelect,
-    initializeJobNamesManagement
-};
+// تصدير الدوال للاستخدام في ملفات أخرى - مرة واحدة فقط
+if (!window.jobNamesManager) {
+    window.jobNamesManager = {
+        loadJobNames,
+        addJobName,
+        updateJobNamesSelect,
+        initializeJobNamesManagement
+    };
+}
 

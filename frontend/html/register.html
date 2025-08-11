@@ -302,16 +302,14 @@
     <script src="../js/jobNames.js"></script>
     <script src="../js/register.js"></script>
     <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            // إظهار المحتوى بعد تحميل اللغة
-            setTimeout(() => {
-                const elements = document.querySelectorAll('.content-hidden');
-                elements.forEach(element => {
-                    element.classList.remove('content-hidden');
-                    element.classList.add('content-visible');
-                });
-            }, 100);
-        });
+        // إظهار المحتوى بعد تحميل الصفحة
+        setTimeout(() => {
+            const elements = document.querySelectorAll('.content-hidden');
+            elements.forEach(element => {
+                element.classList.remove('content-hidden');
+                element.classList.add('content-visible');
+            });
+        }, 100);
     </script>
               <div id="toast-container" class="toast-container"></div>
 

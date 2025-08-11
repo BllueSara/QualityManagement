@@ -99,6 +99,8 @@ main {
     height: 20px;
 }
 
+
+
 /* Adjust padding for select to accommodate the right arrow */
 .input-icon-wrapper select {
     padding: 10px 35px 10px 10px; /* Adjust padding for select with arrow on the right */

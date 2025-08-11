@@ -1,4 +1,6 @@
-// دالة إظهار التوست - خارج DOMContentLoaded لتكون متاحة في كل مكان
+// ======================
+// دالة إظهار التوست
+// ======================
 function showToast(message, type = 'info', duration = 3000) {
     let toastContainer = document.getElementById('toast-container');
     if (!toastContainer) {
@@ -13,587 +15,461 @@ function showToast(message, type = 'info', duration = 3000) {
 
     toastContainer.appendChild(toast);
 
-    // Force reflow to ensure animation plays from start
-    toast.offsetWidth; 
+    // Force reflow
+    toast.offsetWidth;
 
-    // تفعيل التوست
-    setTimeout(() => {
-        toast.classList.add('show');
-    }, 10);
+    setTimeout(() => toast.classList.add('show'), 10);
 
-    // Set a timeout to remove the toast
     setTimeout(() => {
         toast.classList.remove('show');
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.remove();
-            }
-        }, 500);
+        setTimeout(() => toast.remove(), 500);
     }, duration);
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('register.js script loaded and DOMContentLoaded event fired.');
-    const registerForm = document.getElementById('registerForm');
-    const departmentSelect = document.getElementById('reg-department');
-    const firstNameInput = document.getElementById('reg-first-name');
-    const secondNameInput = document.getElementById('reg-second-name');
-    const thirdNameInput = document.getElementById('reg-third-name');
-    const lastNameInput = document.getElementById('reg-last-name');
-    const usernameInput = document.getElementById('reg-username');
-    const departmentGroup = document.getElementById('departmentGroup');
-    const employeeInput   = document.getElementById('reg-employee');
-    const employeeGroup   = document.getElementById('employeeGroup');
-    const jobTitleGroup = document.getElementById('jobTitleGroup');
-    const firstNameGroup = document.getElementById('firstNameGroup');
-    const secondNameGroup = document.getElementById('secondNameGroup');
-    const thirdNameGroup = document.getElementById('thirdNameGroup');
-    const lastNameGroup = document.getElementById('lastNameGroup');
-    const nationalIdGroup = document.getElementById('nationalIdGroup');
-    const nationalIdInput = document.getElementById('reg-national-id');
+// ======================
+// حماية من التهيئة المكررة
+// ======================
+if (window.registerScriptInitialized) {
+    console.warn("register.js already initialized. Skipping...");
+} else {
+    window.registerScriptInitialized = true;
 
-    // عناصر النموذج المنبثق لإضافة قسم
-    const addDepartmentModal = document.getElementById('addDepartmentModal');
-    const saveAddDepartmentBtn = document.getElementById('saveAddDepartment');
-    const cancelAddDepartmentBtn = document.getElementById('cancelAddDepartment');
-    const departmentNameInput = document.getElementById('departmentName');
-    const departmentImageInput = document.getElementById('departmentImage');
-    const departmentNameArInput = document.getElementById('departmentNameAr');
-    const departmentNameEnInput = document.getElementById('departmentNameEn');
+            // متغيرات حماية للـ API
+        window.departmentsLoaded = false;
+        window.jobTitlesLoaded = false;
+        window.jobNamesLoaded = false;
 
-    // عناصر النموذج المنبثق لإضافة مسمى وظيفي
-    const addJobTitleModal = document.getElementById('addJobTitleModal');
-    const saveAddJobTitleBtn = document.getElementById('saveAddJobTitle');
-    const cancelAddJobTitleBtn = document.getElementById('cancelAddJobTitle');
-    const jobTitleNameInput = document.getElementById('jobTitleName');
-    const jobTitleSelect = document.getElementById('reg-job-title');
-
-    // عناصر النموذج المنبثق لإضافة مسمى
-    const addJobNameModal = document.getElementById('addJobNameModal');
-    const saveAddJobNameBtn = document.getElementById('saveAddJobName');
-    const cancelAddJobNameBtn = document.getElementById('cancelAddJobName');
-    const jobNameNameInput = document.getElementById('jobNameName');
-    const jobNameSelect = document.getElementById('reg-job-name');
-
-
-    // دالة لفتح المودال
-    function openModal(modal) {
-        modal.style.display = 'flex';
+    // تهيئة اللغة لمرة واحدة
+    if (!window.languageInitialized) {
+        if (typeof initializeLanguage === 'function') initializeLanguage();
+        if (typeof initializeLanguageSwitcher === 'function') initializeLanguageSwitcher();
+        if (typeof initializeLanguageUI === 'function') initializeLanguageUI();
+        window.languageInitialized = true;
     }
 
-    // دالة لإغلاق المودال
-function closeModal(modal) {
-    modal.style.display = 'none';
-    
-    // إعادة ضبط حقول مودال القسم
-    if (modal === addDepartmentModal) {
-        departmentNameArInput.value = '';
-        departmentNameEnInput.value = '';
-        departmentImageInput.value = '';
-    }
-    
-    // إعادة ضبط حقول مودال المنصب الإداري
-    if (modal === addJobTitleModal) {
-        jobTitleNameInput.value = '';
-    }
-}
+    document.addEventListener('DOMContentLoaded', function () {
+        console.log('register.js script loaded (first init)');
+
+        const registerForm = document.getElementById('registerForm');
+        const departmentSelect = document.getElementById('reg-department');
+        const firstNameInput = document.getElementById('reg-first-name');
+        const secondNameInput = document.getElementById('reg-second-name');
+        const thirdNameInput = document.getElementById('reg-third-name');
+        const lastNameInput = document.getElementById('reg-last-name');
+        const usernameInput = document.getElementById('reg-username');
+        const departmentGroup = document.getElementById('departmentGroup');
+        const employeeInput = document.getElementById('reg-employee');
+        const employeeGroup = document.getElementById('employeeGroup');
+        const jobTitleGroup = document.getElementById('jobTitleGroup');
+        const firstNameGroup = document.getElementById('firstNameGroup');
+        const secondNameGroup = document.getElementById('secondNameGroup');
+        const thirdNameGroup = document.getElementById('thirdNameGroup');
+        const lastNameGroup = document.getElementById('lastNameGroup');
+        const nationalIdGroup = document.getElementById('nationalIdGroup');
+        const nationalIdInput = document.getElementById('reg-national-id');
+
+        const jobTitleSelect = document.getElementById('reg-job-title');
+        const jobNameSelect = document.getElementById('reg-job-name');
 
 
 
-
-    // دالة للتحقق من اسم المستخدم وإخفاء/إظهار الحقول المناسبة
-    function checkUsernameAndToggleFields() {
-        const username = usernameInput.value.trim().toLowerCase();
-        
-        if (username === 'admin') {
-            // إخفاء الحقول غير المطلوبة للمدير
-            firstNameGroup.style.display = 'none';
-            secondNameGroup.style.display = 'none';
-            thirdNameGroup.style.display = 'none';
-            lastNameGroup.style.display = 'none';
-            departmentGroup.style.display = 'none';
-            employeeGroup.style.display = 'none';
-            jobTitleGroup.style.display = 'none';
-            nationalIdGroup.style.display = 'none';
+        function checkUsernameAndToggleFields() {
+            const username = usernameInput.value.trim().toLowerCase();
+            const jobNameGroup = document.getElementById('jobNameGroup');
+            const jobNameSelect = document.getElementById('reg-job-name');
             
-            // إزالة required من الحقول المخفية
-            firstNameInput.removeAttribute('required');
-            lastNameInput.removeAttribute('required');
-            departmentSelect.removeAttribute('required');
-            employeeInput.removeAttribute('required');
-            document.getElementById('reg-job-title').removeAttribute('required');
-            nationalIdInput.removeAttribute('required');
-            
-            // مسح قيم الحقول المخفية
-            firstNameInput.value = '';
-            secondNameInput.value = '';
-            thirdNameInput.value = '';
-            lastNameInput.value = '';
-            departmentSelect.value = '';
-            employeeInput.value = '';
-            document.getElementById('reg-job-title').value = '';
-            nationalIdInput.value = '';
-            
-        } else {
-            // إظهار جميع الحقول للمستخدمين العاديين
-            firstNameGroup.style.display = 'block';
-            secondNameGroup.style.display = 'block';
-            thirdNameGroup.style.display = 'block';
-            lastNameGroup.style.display = 'block';
-            departmentGroup.style.display = 'block';
-            employeeGroup.style.display = 'block';
-            jobTitleGroup.style.display = 'block';
-            nationalIdGroup.style.display = 'block';
-            
-            // إعادة required للحقول المطلوبة
-            firstNameInput.setAttribute('required', 'required');
-            lastNameInput.setAttribute('required', 'required');
-            departmentSelect.setAttribute('required', 'required');
-            employeeInput.setAttribute('required', 'required');
-            document.getElementById('reg-job-title').setAttribute('required', 'required');
-            nationalIdInput.setAttribute('required', 'required');
+            if (username === 'admin') {
+                [
+                    firstNameGroup,
+                    secondNameGroup,
+                    thirdNameGroup,
+                    lastNameGroup,
+                    departmentGroup,
+                    employeeGroup,
+                    jobTitleGroup,
+                    jobNameGroup,
+                    nationalIdGroup
+                ].forEach(el => {
+                    if (el) el.style.display = 'none';
+                });
+
+                [
+                    firstNameInput,
+                    lastNameInput,
+                    departmentSelect,
+                    employeeInput,
+                    document.getElementById('reg-job-title'),
+                    jobNameSelect,
+                    nationalIdInput
+                ].forEach(el => {
+                    if (el) el.removeAttribute('required');
+                });
+
+                [
+                    firstNameInput,
+                    secondNameInput,
+                    thirdNameInput,
+                    lastNameInput,
+                    departmentSelect,
+                    employeeInput,
+                    document.getElementById('reg-job-title'),
+                    jobNameSelect,
+                    nationalIdInput
+                ].forEach(el => {
+                    if (el) el.value = '';
+                });
+
+            } else {
+                [
+                    firstNameGroup,
+                    secondNameGroup,
+                    thirdNameGroup,
+                    lastNameGroup,
+                    departmentGroup,
+                    employeeGroup,
+                    jobTitleGroup,
+                    jobNameGroup,
+                    nationalIdGroup
+                ].forEach(el => {
+                    if (el) el.style.display = 'block';
+                });
+
+                [
+                    firstNameInput,
+                    lastNameInput,
+                    departmentSelect,
+                    employeeInput,
+                    document.getElementById('reg-job-title'),
+                    jobNameSelect,
+                    nationalIdInput
+                ].forEach(el => {
+                    if (el) el.setAttribute('required', 'required');
+                });
+            }
         }
-    }
 
-    // مراقبة تغييرات اسم المستخدم
-    usernameInput.addEventListener('input', checkUsernameAndToggleFields);
-    usernameInput.addEventListener('blur', checkUsernameAndToggleFields);
-
-    // تشغيل الدالة عند تحميل الصفحة
-    checkUsernameAndToggleFields();
-
-    // دالة للتحقق من صحة رقم الهوية الوطنية أو الإقامة
-    function validateNationalId(nationalId) {
-        // التحقق من أن الرقم مكون من 10 أرقام
-        if (!/^\d{10}$/.test(nationalId)) {
-            return false;
+        function validateNationalId(nationalId) {
+            return /^\d{10}$/.test(nationalId) && !nationalId.startsWith('0');
         }
+
+        // ======================
+        // تحميل الأقسام
+        // ======================
+        async function fetchDepartments() {
+            if (window.departmentsLoaded) return;
+            try {
+                console.log('🔍 Fetching departments...');
+                const response = await fetch('http://localhost:3006/api/departments/all');
+                if (!response.ok) throw new Error(`فشل جلب الأقسام: ${response.status}`);
+                const result = await response.json();
+                console.log('🔍 Departments response:', result);
+                
+                const departments = Array.isArray(result) ? result : (result.data || []);
+                console.log('🔍 Departments array:', departments);
+                
+                if (!departmentSelect) {
+                    console.error('❌ departmentSelect element not found');
+                    return;
+                }
+                
+                const lang = localStorage.getItem('language') || 'ar';
+                departmentSelect.innerHTML = `<option value="">${lang === 'ar' ? 'اختر القسم' : 'Select Department'}</option>`;
+                
+                departments.forEach(dept => {
+                    let parsed;
+                    try { parsed = JSON.parse(dept.name); }
+                    catch { parsed = { ar: dept.name, en: dept.name }; }
+                    const label = parsed[lang] ?? parsed.ar ?? parsed.en;
+                    const opt = document.createElement('option');
+                    opt.value = dept.id;
+                    opt.textContent = label;
+                    departmentSelect.appendChild(opt);
+                });
+                
+                console.log('✅ Departments loaded successfully:', departments.length, 'items');
+                window.departmentsLoaded = true;
+            } catch (err) {
+                console.error('❌ Error fetching departments:', err);
+                showToast(err.message, 'error');
+            }
+        }
+
+        // ======================
+        // تحميل المسميات الإدارية
+        // ======================
+        async function fetchJobTitles() {
+            if (window.jobTitlesLoaded) return;
+            try {
+                console.log('🔍 Fetching job titles...');
+                const response = await fetch('http://localhost:3006/api/job-titles');
+                if (!response.ok) throw new Error(`فشل جلب المناصب الإدارية: ${response.status}`);
+                const result = await response.json();
+                console.log('🔍 Job titles response:', result);
+                
+                const jobTitles = Array.isArray(result) ? result : (result.data || []);
+                console.log('🔍 Job titles array:', jobTitles);
+                
+                if (!jobTitleSelect) {
+                    console.error('❌ jobTitleSelect element not found');
+                    return;
+                }
+                
+                const lang = localStorage.getItem('language') || 'ar';
+                jobTitleSelect.innerHTML = `<option value="">${lang === 'ar' ? 'اختر المنصب الإداري' : 'Select Administrative Position'}</option>`;
+                
+                jobTitles.forEach(jobTitle => {
+                    const opt = document.createElement('option');
+                    opt.value = jobTitle.id;
+                    opt.textContent = jobTitle.title;
+                    jobTitleSelect.appendChild(opt);
+                });
+                
+                console.log('✅ Job titles loaded successfully:', jobTitles.length, 'items');
+                window.jobTitlesLoaded = true;
+            } catch (err) {
+                console.error('❌ Error fetching job titles:', err);
+                showToast(err.message, 'error');
+            }
+        }
+
+        // ======================
+        // تحميل المسميات الوظيفية (Job Names)
+        // ======================
+        async function fetchJobNames() {
+            if (window.jobNamesLoaded) return;
+            try {
+                console.log('🔍 Fetching job names...');
+                const response = await fetch('http://localhost:3006/api/job-names');
+                if (!response.ok) throw new Error(`فشل جلب المسميات الوظيفية: ${response.status}`);
+                const result = await response.json();
+                console.log('🔍 Job names response:', result);
+                
+                const jobNames = Array.isArray(result) ? result : (result.data || []);
+                console.log('🔍 Job names array:', jobNames);
+                
+                if (!jobNameSelect) {
+                    console.error('❌ jobNameSelect element not found');
+                    return;
+                }
+                
+                const lang = localStorage.getItem('language') || 'ar';
+                jobNameSelect.innerHTML = `<option value="">${lang === 'ar' ? 'اختر المسمى الوظيفي' : 'Select Job Name'}</option>`;
+                
+                jobNames.forEach(jobName => {
+                    const opt = document.createElement('option');
+                    opt.value = jobName.id;
+                    opt.textContent = jobName.name;
+                    jobNameSelect.appendChild(opt);
+                });
+                
+                console.log('✅ Job names loaded successfully:', jobNames.length, 'items');
+                window.jobNamesLoaded = true;
+            } catch (err) {
+                console.error('❌ Error fetching job names:', err);
+                showToast(err.message, 'error');
+            }
+        }
+
+        // ======================
+        // الاستدعاء مرة واحدة فقط
+        // ======================
+        console.log('🔍 Starting to fetch data...');
+        console.log('🔍 departmentSelect exists:', !!departmentSelect);
+        console.log('🔍 jobTitleSelect exists:', !!jobTitleSelect);
+        console.log('🔍 jobNameSelect exists:', !!jobNameSelect);
         
-        // التحقق من أن الرقم لا يبدأ بصفر
-        if (nationalId.startsWith('0')) {
-            return false;
-        }
-        
-        return true;
-    }
-
-    // مراقبة تغييرات رقم الهوية للتحقق من صحته
-    nationalIdInput.addEventListener('input', function() {
-        const value = this.value;
-        // السماح فقط بالأرقام
-        this.value = value.replace(/[^0-9]/g, '');
-        
-        // التحقق من الطول
-        if (value.length > 10) {
-            this.value = value.slice(0, 10);
-        }
-    });
-
-    nationalIdInput.addEventListener('blur', function() {
-        const value = this.value.trim();
-        if (value && !validateNationalId(value)) {
-            showToast('رقم الهوية الوطنية أو الإقامة غير صحيح. يجب أن يكون 10 أرقام ولا يبدأ بصفر.', 'warning');
-        }
-    });
-
-    // دالة لجلب الأقسام من الباك اند وتعبئة قائمة الاختيار
-async function fetchDepartments() {
-  try {
-    const response = await fetch('http://localhost:3006/api/departments/all', {
-      method: 'GET',
-      headers: { 
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('API Error:', errorText);
-      throw new Error(`فشل جلب الأقسام: ${response.status} ${response.statusText}`);
-    }
-
-    const result = await response.json();
-    
-    // Handle both array and object with data property
-    const departments = Array.isArray(result) ? result : (result.data || []);
-
-    if (!Array.isArray(departments)) {
-      throw new Error('الرد ليس مصفوفة أقسام');
-    }
-
-    // حدّد اللغة الحالية:
-    const lang = localStorage.getItem('language') || 'ar';
-    // نص الخيار الافتراضي:
-    const defaultText = lang === 'ar' ? 'اختر القسم' : 'Select Department';
-    departmentSelect.innerHTML = `<option value="">${defaultText}</option>`;
-
-    departments.forEach(dept => {
-      let parsed;
-      try {
-        // تأكد من تحويل الاسم من string JSON إلى كائن دائماً
-        parsed = JSON.parse(dept.name);
-      } catch {
-        // لو فشل الـ parse خذ الاسم كنص وحضّره لكائن
-        parsed = { ar: dept.name, en: dept.name };
-      }
-      // اختر التسمية بناءً على اللغة، أو احتياطياً العربي ثم الإنجليزي
-      const label = parsed[lang] ?? parsed.ar ?? parsed.en;
-
-      const opt = document.createElement('option');
-      opt.value       = dept.id;
-      opt.textContent = label;
-      departmentSelect.appendChild(opt);
-    });
-
-    console.log('تم تحميل الأقسام بنجاح:', departments.length);
-
-    // خيار "إضافة جديد"
-
-
-  } catch (err) {
-    console.error('خطأ في جلب الأقسام:', err);
-    showToast(err.message || 'حدث خطأ أثناء جلب الأقسام', 'error');
-  }
-}
-
-
-
-    // استدعاء الدالة عند تحميل الصفحة
-    fetchDepartments();
-
-    // إعادة تعبئة القائمة عند تغيير اللغة
-    window.addEventListener('storage', function(e) {
-        if (e.key === 'language') {
+        if (departmentSelect) {
             fetchDepartments();
+        } else {
+            console.error('❌ departmentSelect not found, skipping departments fetch');
         }
-    });
-
-    // معالجة حدث التغيير على القائمة المنسدلة للقسم
-    departmentSelect.addEventListener('change', function() {
-        console.log('Department select changed. New value:', this.value);
-        if (this.value === '__ADD_NEW_DEPARTMENT__') {
-            console.log('__ADD_NEW_DEPARTMENT__ selected. Attempting to open modal...');
-            openModal(addDepartmentModal);
-            // إعادة ضبط القائمة المنسدلة إلى "اختر القسم" بعد فتح المودال
-            this.value = '';
-            console.log('Modal should be open and dropdown reset.');
+        
+        if (jobTitleSelect) {
+            fetchJobTitles();
+        } else {
+            console.error('❌ jobTitleSelect not found, skipping job titles fetch');
         }
-    });
-
-    // معالجة حفظ القسم الجديد من المودال
-saveAddDepartmentBtn.addEventListener('click', async function () {
-  const nameAr = departmentNameArInput.value.trim();
-  const nameEn = departmentNameEnInput.value.trim();
-  const imageFile = departmentImageInput.files[0];
-
-  if (!nameAr || !nameEn || !imageFile) {
-    showToast('جميع الحقول مطلوبة (الاسمين + الصورة)', 'warning');
-    return;
-  }
-
-const formData = new FormData();
-formData.append('name', JSON.stringify({ ar: nameAr, en: nameEn }));
-formData.append('image', imageFile);
-
-
-  try {
-    const response = await fetch('http://localhost:3006/api/departments/all', {
-      method: 'POST',
-      body: formData
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      showToast(data.message);
-      closeModal(addDepartmentModal);
-      await fetchDepartments();
-
-      const lang = localStorage.getItem('language') || 'ar';
-      const options = departmentSelect.options;
-      for (let i = 0; i < options.length; i++) {
-        const opt = options[i];
-        const isMatch = opt.textContent.trim() === (lang === 'ar' ? nameAr : nameEn);
-        if (isMatch) {
-          departmentSelect.selectedIndex = i;
-          break;
+        
+        if (jobNameSelect) {
+            fetchJobNames();
+        } else {
+            console.error('❌ jobNameSelect not found, skipping job names fetch');
         }
-      }
-    } else {
-      showToast(data.message || 'حدث خطأ عند إضافة القسم.', 'error');
-    }
-  } catch (error) {
-    console.error('خطأ في إضافة القسم:', error);
-    showToast('حدث خطأ في الاتصال.', 'error');
-  }
-});
 
-
-    // معالجة إلغاء إضافة قسم من المودال
-    cancelAddDepartmentBtn.addEventListener('click', () => {
-        closeModal(addDepartmentModal);
-        departmentSelect.value = ''; // إعادة ضبط القائمة المنسدلة
-    });
-
-    // إغلاق المودال عند النقر خارج المحتوى
-    addDepartmentModal.addEventListener('click', function(event) {
-        if (event.target === this) {
-            closeModal(addDepartmentModal);
-            departmentSelect.value = ''; // إعادة ضبط القائمة المنسدلة
-        }
-    });
-
-    // تأكد من أن أيقونة السهم الأصلية (إن وجدت) مرئية ولا تتعارض مع الأنماط
-    // هذه الأيقونة أزيلت من `input-icon-wrapper` في HTML، لذا هذا السطر قد لا يكون ضرورياً
-    const selectArrowIcon = document.querySelector('.input-icon-wrapper .select-arrow-icon');
-    if (selectArrowIcon) {
-        selectArrowIcon.style.display = 'block'; // أو أي نمط مناسب لجعله مرئياً
-    }
-
-    // دالة لجلب المناصب الإدارية من الباك اند وتعبئة قائمة الاختيار
-    async function fetchJobTitles() {
-        try {
-            const response = await fetch('http://localhost:3006/api/job-titles', {
-                method: 'GET',
-                headers: { 
-                    'Content-Type': 'application/json'
+        // ======================
+        // منع تكرار storage event من نفس الصفحة
+        // ======================
+        if (!window.registerStorageListener) {
+            window.addEventListener('storage', function (e) {
+                if (e.key === 'language' && e.oldValue !== e.newValue) {
+                    window.departmentsLoaded = false;
+                    window.jobTitlesLoaded = false;
+                    window.jobNamesLoaded = false;
+                    fetchDepartments();
+                    fetchJobTitles();
+                    fetchJobNames();
                 }
             });
+            window.registerStorageListener = true;
+        }
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('API Error:', errorText);
-                throw new Error(`فشل جلب المناصب الإدارية: ${response.status} ${response.statusText}`);
+        // ======================
+        // إعداد الأحداث
+        // ======================
+        
+        // مراقبة تغييرات اسم المستخدم
+        usernameInput.addEventListener('input', checkUsernameAndToggleFields);
+        usernameInput.addEventListener('blur', checkUsernameAndToggleFields);
+        checkUsernameAndToggleFields();
+
+        // مراقبة تغييرات رقم الهوية
+        nationalIdInput.addEventListener('input', function() {
+            const value = this.value;
+            this.value = value.replace(/[^0-9]/g, '');
+            if (value.length > 10) {
+                this.value = value.slice(0, 10);
             }
+        });
 
-            const result = await response.json();
-            
-            // Handle both array and object with data property
-            const jobTitles = Array.isArray(result) ? result : (result.data || []);
-
-            if (!Array.isArray(jobTitles)) {
-                throw new Error('الرد ليس مصفوفة مناصب إدارية');
+        nationalIdInput.addEventListener('blur', function() {
+            const value = this.value.trim();
+            if (value && !validateNationalId(value)) {
+                showToast('رقم الهوية يجب أن يكون 10 أرقام ولا يبدأ بصفر', 'error');
+                this.focus();
             }
+        });
 
-            // حدّد اللغة الحالية:
-            const lang = localStorage.getItem('language') || 'ar';
-            // نص الخيار الافتراضي:
-            const defaultText = lang === 'ar' ? 'اختر المنصب الإداري' : 'Select Administrative Position';
-            jobTitleSelect.innerHTML = `<option value="">${defaultText}</option>`;
 
-            jobTitles.forEach(jobTitle => {
-                const opt = document.createElement('option');
-                opt.value = jobTitle.id;
-                opt.textContent = jobTitle.title;
-                jobTitleSelect.appendChild(opt);
-            });
 
-            // خيار "إضافة جديد"
-            const addNewOption = document.createElement('option');
-            addNewOption.value = '__ADD_NEW_JOB_TITLE__';
-            addNewOption.textContent = lang === 'ar' ? 'إضافة منصب إداري جديد' : 'Add New Administrative Position';
-            jobTitleSelect.appendChild(addNewOption);
-
-            console.log('تم تحميل المناصب الإدارية بنجاح:', jobTitles.length);
-
-        } catch (err) {
-            console.error('خطأ في جلب المناصب الإدارية:', err);
-            showToast(err.message || 'حدث خطأ أثناء جلب المناصب الإدارية', 'error');
-        }
-    }
-
-    // استدعاء الدالة عند تحميل الصفحة
-    fetchJobTitles();
-
-    // إعادة تعبئة القائمة عند تغيير اللغة
-    window.addEventListener('storage', function(e) {
-        if (e.key === 'language') {
-            fetchJobTitles();
-        }
-    });
-
-    // معالجة حدث التغيير على القائمة المنسدلة للمسمى الوظيفي
-    jobTitleSelect.addEventListener('change', function() {
-        console.log('Job title select changed. New value:', this.value);
-        if (this.value === '__ADD_NEW_JOB_TITLE__') {
-            console.log('__ADD_NEW_JOB_TITLE__ selected. Attempting to open modal...');
-            openModal(addJobTitleModal);
-            // إعادة ضبط القائمة المنسدلة إلى "اختر المنصب الإداري" بعد فتح المودال
-            this.value = '';
-            console.log('Modal should be open and dropdown reset.');
-        }
-    });
-
-    // معالجة حفظ المنصب الإداري الجديد من المودال
-    saveAddJobTitleBtn.addEventListener('click', async function () {
-        const jobTitleName = jobTitleNameInput.value.trim();
-
-        if (!jobTitleName) {
-            showToast('الرجاء إدخال المنصب الإداري', 'warning');
-            return;
-        }
-
-        try {
-            const response = await fetch('http://localhost:3006/api/job-titles', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title: jobTitleName })
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                showToast(data.message);
-                closeModal(addJobTitleModal);
-                await fetchJobTitles();
-
-                // تحديد المنصب الإداري الجديد
-                const options = jobTitleSelect.options;
-                for (let i = 0; i < options.length; i++) {
-                    const opt = options[i];
-                    if (opt.textContent.trim() === jobTitleName) {
-                        jobTitleSelect.selectedIndex = i;
-                        break;
+        // ======================
+        // معالجة النموذج
+        // ======================
+        if (registerForm) {
+            registerForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const username = usernameInput.value.trim();
+                const isAdmin = username.toLowerCase() === 'admin';
+                
+                // التحقق من البيانات المطلوبة
+                if (!username) {
+                    showToast('اسم المستخدم مطلوب', 'error');
+                    return;
+                }
+                
+                const email = document.getElementById('reg-email')?.value.trim();
+                if (!email) {
+                    showToast('البريد الإلكتروني مطلوب', 'error');
+                    return;
+                }
+                
+                const password = document.getElementById('reg-password')?.value;
+                const confirmPassword = document.getElementById('reg-confirm-password')?.value;
+                
+                if (password !== confirmPassword) {
+                    showToast('كلمتا المرور غير متطابقتين', 'error');
+                    return;
+                }
+                
+                // التحقق من البيانات الإضافية للمستخدمين العاديين
+                if (!isAdmin) {
+                    if (!firstNameInput.value.trim() || !lastNameInput.value.trim()) {
+                        showToast('الاسم الأول واسم العائلة مطلوبان', 'error');
+                        return;
+                    }
+                    
+                    if (!departmentSelect.value) {
+                        showToast('يرجى اختيار القسم', 'error');
+                        return;
+                    }
+                    
+                    if (!employeeInput.value.trim()) {
+                        showToast('الرقم الوظيفي مطلوب', 'error');
+                        return;
+                    }
+                    
+                    if (!document.getElementById('reg-job-title')?.value) {
+                        showToast('يرجى اختيار المنصب الإداري', 'error');
+                        return;
+                    }
+                    
+                    if (!document.getElementById('reg-job-name')?.value) {
+                        showToast('يرجى اختيار المسمى الوظيفي', 'error');
+                        return;
+                    }
+                    
+                    if (!nationalIdInput.value.trim()) {
+                        showToast('رقم الهوية مطلوب', 'error');
+                        return;
+                    }
+                    
+                    if (!validateNationalId(nationalIdInput.value.trim())) {
+                        showToast('رقم الهوية غير صحيح', 'error');
+                        return;
                     }
                 }
-            } else {
-                showToast(data.message || 'حدث خطأ عند إضافة المنصب الإداري.', 'error');
-            }
-        } catch (error) {
-            console.error('خطأ في إضافة المنصب الإداري:', error);
-            showToast('حدث خطأ في الاتصال.', 'error');
-        }
-    });
-
-    // معالجة إلغاء إضافة منصب إداري من المودال
-    cancelAddJobTitleBtn.addEventListener('click', () => {
-        closeModal(addJobTitleModal);
-        jobTitleSelect.value = ''; // إعادة ضبط القائمة المنسدلة
-    });
-
-    // إغلاق المودال عند النقر خارج المحتوى
-    addJobTitleModal.addEventListener('click', function(event) {
-        if (event.target === this) {
-            closeModal(addJobTitleModal);
-            jobTitleSelect.value = ''; // إعادة ضبط القائمة المنسدلة
-        }
-    });
-
-registerForm.addEventListener('submit', async function(e) {
-  e.preventDefault();
-  
-  // جمع البيانات من النموذج
-  const username = usernameInput.value.trim();
-  const isAdmin = username.toLowerCase() === 'admin';
-  
-  const formData = {
-    username: username,
-    email: document.getElementById('reg-email').value.trim(),
-    password: document.getElementById('reg-password').value,
-    first_name: '',
-    second_name: '',
-    third_name: '',
-    last_name: '',
-    department_id: '',
-    employee_number: '',
-    job_title_id: '',
-    job_name_id: '',
-    national_id: ''
-  };
-
-  // إذا لم يكن admin، أضف البيانات الإضافية
-  if (!isAdmin) {
-    formData.first_name = firstNameInput.value.trim();
-    formData.second_name = secondNameInput.value.trim();
-    formData.third_name = thirdNameInput.value.trim();
-    formData.last_name = lastNameInput.value.trim();
-    formData.department_id = departmentSelect.value;
-    formData.employee_number = document.getElementById('reg-employee').value.trim();
-    formData.job_title_id = document.getElementById('reg-job-title').value.trim();
-    formData.job_name_id = document.getElementById('reg-job-name').value.trim();
-    formData.national_id = nationalIdInput.value.trim();
-  }
-
-  // تحقق من البيانات المطلوبة
-  if (!username) {
-    showToast('اسم المستخدم مطلوب.', 'warning');
-    return;
-  }
-
-  if (!formData.email) {
-    showToast('البريد الإلكتروني مطلوب.', 'warning');
-    return;
-  }
-
-  // تحقق من البيانات المطلوبة للمستخدمين العاديين
-  if (!isAdmin) {
-    if (!formData.first_name || !formData.last_name) {
-      showToast('الاسم الأول واسم العائلة مطلوبان.', 'warning');
-      return;
-    }
-
-    if (!formData.department_id || formData.department_id === '__ADD_NEW_DEPARTMENT__') {
-      showToast('الرجاء اختيار قسم أو إضافة قسم جديد.', 'warning');
-      return;
-    }
-
-    if (!formData.employee_number) {
-      showToast('الرجاء إدخال الرقم الوظيفي.', 'warning');
-      return;
-    }
-
-            if (!formData.job_title_id) {
-            showToast('الرجاء اختيار المنصب الإداري.', 'warning');
-            return;
+                
+                const formData = {
+                    username: username,
+                    email: email,
+                    password: password,
+                    first_name: isAdmin ? '' : firstNameInput.value.trim(),
+                    second_name: isAdmin ? '' : secondNameInput.value.trim(),
+                    third_name: isAdmin ? '' : thirdNameInput.value.trim(),
+                    last_name: isAdmin ? '' : lastNameInput.value.trim(),
+                    department_id: isAdmin ? '' : departmentSelect.value,
+                    employee_number: isAdmin ? '' : employeeInput.value.trim(),
+                    job_title_id: isAdmin ? '' : document.getElementById('reg-job-title').value,
+                    job_name_id: isAdmin ? '' : document.getElementById('reg-job-name').value,
+                    national_id: isAdmin ? '' : nationalIdInput.value.trim()
+                };
+                
+                const submitBtn = this.querySelector('button[type="submit"]');
+                const originalText = submitBtn.textContent;
+                
+                try {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'جاري التسجيل...';
+                    
+                    const response = await fetch('http://localhost:3006/api/auth/register', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(formData)
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        showToast('تم التسجيل بنجاح! جاري توجيهك للصفحة الرئيسية...', 'success');
+                        
+                        // حفظ التوكن في localStorage
+                        if (result.token) {
+                            localStorage.setItem('token', result.token);
+                        }
+                        
+                        // التوجيه للصفحة الرئيسية مباشرة
+                        setTimeout(() => {
+                            window.location.href = '/frontend/html/index.html';
+                        }, 1500);
+                    } else {
+                        showToast(result.message || 'فشل في التسجيل', 'error');
+                    }
+                } catch (error) {
+                    console.error('خطأ في التسجيل:', error);
+                    showToast('حدث خطأ أثناء التسجيل', 'error');
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                }
+            });
         }
 
-        if (!formData.job_name_id || formData.job_name_id === '__ADD_NEW_JOB_NAME__') {
-            showToast('الرجاء اختيار المسمى الوظيفي أو إضافة مسمى جديد.', 'warning');
-            return;
-        }
 
-    if (!formData.national_id) {
-      showToast('الرجاء إدخال رقم الهوية الوطنية أو الإقامة.', 'warning');
-      return;
-    }
 
-    if (!validateNationalId(formData.national_id)) {
-      showToast('رقم الهوية الوطنية أو الإقامة غير صحيح. يجب أن يكون 10 أرقام ولا يبدأ بصفر.', 'warning');
-      return;
-    }
-  }
 
-  // تحقق من تطابق كلمتي المرور
-  const confirmPassword = document.getElementById('reg-confirm-password').value;
-  if (formData.password !== confirmPassword) {
-    showToast('كلمتا المرور غير متطابقتين', 'warning');
-    return;
-  }
 
-  try {
-    const response = await fetch('http://localhost:3006/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData)
+
     });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      if (isAdmin) {
-        showToast('تم إنشاء حساب المدير بنجاح!', 'success');
-      } else {
-        showToast(data.message || 'تم إنشاء الحساب بنجاح!', 'success');
-      }
-      localStorage.setItem('token', data.token);
-      window.location.href = 'index.html';
-    } else {
-      showToast(data.message, 'error');
-    }
-  } catch (error) {
-    console.error('خطأ في التسجيل:', error);
-    showToast('حدث خطأ أثناء التسجيل. يرجى المحاولة مرة أخرى.', 'error');
-  }
-});
-
-});  
+}  

@@ -2796,7 +2796,7 @@ const translations = {
 window.translations = translations;
 
 // Language switching functionality
-document.addEventListener('DOMContentLoaded', () => {
+function initializeLanguageSwitcher() {
     // Support both .language-switcher (login/register) and .language (index)
     const languageButton = document.querySelector('.language-switcher > a, .language > a');
     const languageDropdown = document.querySelector('.language-switcher .dropdown, .language .dropdown');
@@ -2835,7 +2835,7 @@ document.addEventListener('DOMContentLoaded', () => {
             languageDropdown.classList.remove('show');
         }
     });
-});
+}
 
 function setLanguage(lang) {
     const htmlElement = document.documentElement;
@@ -2981,10 +2981,10 @@ function setLanguage(lang) {
 }
 
 // Initialize language on page load
-document.addEventListener('DOMContentLoaded', () => {
+function initializeLanguage() {
     const savedLang = localStorage.getItem('language') || 'ar';
     setLanguage(savedLang);
-});
+}
 
 // --- Language/translation helpers moved from HTML ---
 function updateMainBackBtn(lang) {
@@ -3152,7 +3152,7 @@ function applyLanguageUI(lang) {
   updateTicketDetailsPage(lang);
   updateTrackRequestPage(lang);
 }
-document.addEventListener('DOMContentLoaded', function() {
+function initializeLanguageUI() {
   const lang = localStorage.getItem('language') || 'ar';
   applyLanguageUI(lang);
   window.addEventListener('storage', function(e) {
@@ -3168,8 +3168,7 @@ document.addEventListener('DOMContentLoaded', function() {
       applyLanguageUI(lang);
     };
   }
-  
-});
+}
 
 function getTranslation(key) {
   const lang = localStorage.getItem('language') || 'ar';

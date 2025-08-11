@@ -86,7 +86,6 @@ app.use('/api/pending-committee-approvals', pendingCommitteeApprovalRoutes);
 app.use('/api/committee-approvals', committeeApprovalRoutes);
 
 app.use('/api/dashboard', dashboardRouter);
-app.use('/api', globalContentRouter); // 👈 هذا يعطيك: /api/content-names
 app.use('/api/reports', reportsRoutes);
 app.use('/api/tickets/report', ticketReportRoutes);
 app.use('/api/logs', logsRoutes);
@@ -94,6 +93,7 @@ app.use('/api/job-titles', jobTitlesRoutes);
 app.use('/api/job-names', jobNamesRoutes);
 app.use('/api/deadlines', deadlineRoutes);
 app.use('/api/protocols', protocolRoutes);
+app.use('/api', globalContentRouter); // 👈 هذا يعطيك: /api/content-names
 
 // Ensure all committee routes are correctly loaded
 

@@ -3,12 +3,30 @@ const apiBase = 'http://localhost:3006/api';
 // في أعلى home.js
 document.addEventListener('DOMContentLoaded', async () => {
   const token = localStorage.getItem('token');
-  if (!token) return;
+  if (!token) {
+    // إذا لم يكن هناك توكن، توجيه لصفحة تسجيل الدخول
+    window.location.href = '/frontend/html/login.html';
+    return;
+  }
 
   const payload = JSON.parse(atob(token.split('.')[1] || '{}'));
   const userId  = payload.id;
   const role    = payload.role;
   const isAdmin = role === 'admin';
+  
+  // التحقق من صحة التوكن
+  if (!userId || !role) {
+    localStorage.removeItem('token');
+    window.location.href = '/frontend/html/login.html';
+    return;
+  }
+  
+  // التحقق من انتهاء صلاحية التوكن
+  if (payload.exp && payload.exp * 1000 < Date.now()) {
+    localStorage.removeItem('token');
+    window.location.href = '/frontend/html/login.html';
+    return;
+  }
 
   // 1) جلب الصلاحيات
   let permissionsKeys = [];
