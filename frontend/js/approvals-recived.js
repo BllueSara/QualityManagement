@@ -1433,6 +1433,8 @@ function renderApprovals(items) {
 
     // Debug: طباعة البيانات للتحقق
     console.log('Item data:', item);
+    console.log('Item type:', item.type);
+    console.log('Content type:', contentType);
     console.log('Start date:', item.start_date);
     console.log('End date:', item.end_date);
     console.log('Created at:', item.created_at);
@@ -2381,25 +2383,128 @@ async function refreshApprovalsData() {
     const deptResp = await fetchJSON(`${apiBase}/approvals/assigned-to-me`);
     const protocolResp = await fetchJSON(`${apiBase}/protocols/pending/approvals`);
     
-    // Combine all types of approvals
-    const deptItems = (deptResp.data || []).map(item => ({ ...item, type: 'department' }));
-    const commItems = (commResp.data || []).map(item => ({ ...item, type: 'committee' }));
-    const protocolItems = (protocolResp.data || []).map(item => ({ ...item, type: 'protocol' }));
+    // دالة مساعدة لتحديد نوع الملف بدقة
+    const determineFileType = (item, sourceType) => {
+      console.log(`🔍 Determining file type for item ${item.id}:`, {
+        content_type: item.content_type,
+        type: item.type,
+        id: item.id,
+        sourceType: sourceType,
+        title: item.title
+      });
+      
+      // إذا كان الملف يحتوي على content_type، استخدمه
+      if (item.content_type) {
+        console.log(`🔍 Using content_type: ${item.content_type}`);
+        return item.content_type;
+      }
+      
+      // إذا كان الملف يحتوي على type، استخدمه
+      if (item.type && item.type !== sourceType) {
+        console.log(`🔍 Using item.type: ${item.type}`);
+        return item.type;
+      }
+      
+      // إذا كان معرف الملف يبدأ بـ 'comm-'، فهو ملف لجنة
+      if (item.id && item.id.toString().startsWith('comm-')) {
+        console.log(`🔍 Using ID prefix 'comm-': committee`);
+        return 'committee';
+      }
+      
+      // إذا كان معرف الملف يبدأ بـ 'prot-'، فهو محضر
+      if (item.id && item.id.toString().startsWith('prot-')) {
+        console.log(`🔍 Using ID prefix 'prot-': protocol`);
+        return 'protocol';
+      }
+      
+      // إذا كان الملف يحتوي على source_name يبدأ بـ 'لجنة' أو 'committee'، فهو ملف لجنة
+      if (item.source_name && (
+        item.source_name.toLowerCase().includes('committee') || 
+        item.source_name.includes('لجنة') ||
+        item.source_name.includes('لجنة')
+      )) {
+        console.log(`🔍 Using source_name pattern: committee`);
+        return 'committee';
+      }
+      
+      // استخدم النوع المحدد من المصدر
+      console.log(`🔍 Using source type: ${sourceType}`);
+      return sourceType;
+    };
     
-    const combined = [...deptItems, ...commItems, ...protocolItems];
+    // Combine all types of approvals with improved type detection
+    const deptItems = (deptResp.data || []).map(item => ({ 
+      ...item, 
+      type: determineFileType(item, 'department') 
+    }));
+    const commItems = (commResp.data || []).map(item => ({ 
+      ...item, 
+      type: determineFileType(item, 'committee') 
+    }));
+    const protocolItems = (protocolResp.data || []).map(item => ({ 
+      ...item, 
+      type: determineFileType(item, 'protocol') 
+    }));
     
-    // إزالة التكرار بناءً على ID والنوع معاً لمنع تضارب عرض نوع الملف
+    // Log للتحقق من البيانات
+    console.log('🔍 Committee items count:', commItems.length);
+    console.log('🔍 Department items count:', deptItems.length);
+    console.log('🔍 Protocol items count:', protocolItems.length);
+    
+    // تحسين منطق إزالة التكرار - إعطاء الأولوية للنوع الصحيح
     const uniqueMap = new Map();
-    combined.forEach(item => {
-      // استخدام مفتاح فريد يجمع بين ID والنوع
+    const processedIds = new Set();
+    
+    // أولاً: معالجة ملفات اللجان (أعلى أولوية)
+    commItems.forEach(item => {
       const key = `${item.type}:${item.id}`;
-      if (!uniqueMap.has(key)) {
-        uniqueMap.set(key, item);
+      uniqueMap.set(key, item);
+      processedIds.add(item.id);
+      console.log(`🔍 Added committee item: ${item.id} (${item.type})`);
+    });
+    
+    // ثانياً: معالجة المحاضر
+    protocolItems.forEach(item => {
+      const key = `${item.type}:${item.id}`;
+      uniqueMap.set(key, item);
+      processedIds.add(item.id);
+      console.log(`🔍 Added protocol item: ${item.id} (${item.type})`);
+    });
+    
+    // ثالثاً: معالجة ملفات الأقسام (أقل أولوية)
+    deptItems.forEach(item => {
+      // تحقق من نوع الملف أولاً
+      const actualType = determineFileType(item, 'department');
+      console.log(`🔍 Processing dept item ${item.id}: original type=${item.type}, actual type=${actualType}`);
+      
+      // إذا كان الملف لم يتم معالجته من قبل (ليس ملف لجنة أو محضر)
+      if (!processedIds.has(item.id)) {
+        const key = `${actualType}:${item.id}`;
+        uniqueMap.set(key, { ...item, type: actualType });
+        console.log(`🔍 Added department item: ${item.id} (${actualType})`);
+      } else {
+        // تحقق من نوع الملف الحالي في uniqueMap
+        const existingItem = uniqueMap.get(`committee:${item.id}`) || uniqueMap.get(`protocol:${item.id}`);
+        if (existingItem) {
+          console.log(`🔍 Skipped department item: ${item.id} - already processed as ${existingItem.type}`);
+        } else {
+          // إذا لم يكن موجود، أضفه كملف قسم
+          const key = `${actualType}:${item.id}`;
+          uniqueMap.set(key, { ...item, type: actualType });
+          console.log(`🔍 Added department item: ${item.id} (${actualType}) - no conflict found`);
+        }
       }
     });
     
     allItems = Array.from(uniqueMap.values());
     filteredItems = allItems;
+    
+    console.log('🔍 Final items count:', allItems.length);
+    console.log('🔍 Final items by type:', {
+      committee: allItems.filter(item => item.type === 'committee').length,
+      department: allItems.filter(item => item.type === 'department').length,
+      protocol: allItems.filter(item => item.type === 'protocol').length
+    });
 
     await setupFilters(allItems);
     renderApprovals(filteredItems);

@@ -41,6 +41,13 @@ hasShownDelegationPopup = false;
 // ترك قائمة التفويضات المعالجة كما هي حتى لا تتكرر البوب أب بعد القبول/الرفض
 localStorage.removeItem('lastDelegationCheck');
 
+// التأكد من أن currentUserId تم تعيينه
+if (!currentUserId) {
+  console.error('❌ currentUserId is not set');
+  showToast('خطأ في تحديد هوية المستخدم', 'error');
+  return;
+}
+
 // Test backend connectivity first
 try {
   const healthRes = await fetch('http://localhost:3006/health');
@@ -54,6 +61,9 @@ try {
   showToast('الخادم غير متاح', 'error');
   return;
 }
+
+// طباعة currentUserId للتشخيص
+console.log('🔍 Current user ID:', currentUserId);
 
 // فحص تشخيصي للتفويضات
 try {
@@ -69,6 +79,7 @@ try {
 }
 
 await checkDelegationStatus();
+await checkPendingDelegationConfirmations(); // فحص التفويضات المعلقة لعرض النوافذ المنبثقة
 loadDelegations();
 });
 
@@ -328,15 +339,20 @@ try {
 async function checkPendingDelegationConfirmations() {
 try {
   console.log('🔍 Checking for pending delegation confirmations...');
+  console.log('🔍 Current user ID for confirmations:', currentUserId);
   
   // فحص سريع إذا كان المستخدم قد عالج أي تفويضات في الجلسة الحالية
   const processedDelegations = JSON.parse(localStorage.getItem('processedDelegations') || '[]');
-  if (processedDelegations.length > 0) {
-    console.log('🔍 Found processed delegations in current session, skipping popup check');
-    return;
-  }
+  console.log('🔍 Processed delegations in current session:', processedDelegations);
+  
+  // لا نتخطى الفحص - قد يكون لديه تفويضات جديدة معلقة
+  // if (processedDelegations.length > 0) {
+  //   console.log('🔍 Found processed delegations in current session, skipping popup check');
+  //   return;
+  // }
   
   // فحص التفويضات الفردية المعلقة للأقسام
+  console.log('🔍 Checking department single delegations...');
   const singleDeptResponse = await fetch(`http://localhost:3006/api/approvals/single-delegations/${currentUserId}`, {
     headers: authHeaders()
   });
@@ -384,6 +400,7 @@ try {
   }
   
   // فحص التفويضات الفردية المعلقة للجان
+  console.log('🔍 Checking committee single delegations...');
   const singleCommResponse = await fetch(`http://localhost:3006/api/committee-approvals/single-delegations/${currentUserId}`, {
     headers: authHeaders()
   });
@@ -550,6 +567,7 @@ try {
   }
   
   console.log('🔍 No pending delegation confirmations found');
+  console.log('🔍 Finished checking pending delegation confirmations');
 } catch (error) {
   console.error('Error checking pending delegation confirmations:', error);
 }
@@ -991,28 +1009,48 @@ try {
   );
 
   console.log('🔍 After removing duplicates:', uniqueData.length);
+  
+  // إضافة تشخيص مفصل للبيانات
+  console.log('🔍 Sample data structure:', uniqueData[0]);
+  console.log('🔍 All unique data:', uniqueData);
 
   if (uniqueData.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:20px;">${getTranslation('no-documents')}</td></tr>`;
+    console.log('🔍 No unique data found, showing no-documents message');
+    const noDocumentsMessage = getTranslation('no-documents') || 'لا توجد مستندات';
+    console.log('🔍 No documents message:', noDocumentsMessage);
+    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:20px;">${noDocumentsMessage}</td></tr>`;
     return;
   }
 
-  allData.forEach(d => {
+  uniqueData.forEach((d, index) => {
+    console.log(`🔍 Processing item ${index}:`, d);
+    
     // استخدم proxy_status إذا وجدت، وإلا status
     const status = d.proxy_status || d.status;
     const delegationTypeText = d.delegationType === 'single' ? ' (تفويض فردي)' : ' (تفويض شامل)';
+    
+    // التأكد من وجود العنوان
+    const title = d.title || d.content_title || d.name || 'بدون عنوان';
+    console.log(`🔍 Title for item ${index}:`, title);
+    
     const tr = document.createElement('tr');
+    // الحصول على ترجمات الأزرار
+    const acceptText = getTranslation('accept') || 'قبول';
+    const rejectText = getTranslation('reject') || 'رفض';
+    console.log(`🔍 Button texts for item ${index}:`, { accept: acceptText, reject: rejectText });
+    
     tr.innerHTML = `
-      <td>${escapeHtml(getLocalizedName(d.title))}${delegationTypeText}</td>
+      <td>${escapeHtml(getLocalizedName(title))}${delegationTypeText}</td>
       <td class="col-signer">
         ${escapeHtml(d.delegated_by_name || d.delegated_by || '—')}
       </td>
       <td class="col-action">
-        <button class="btn-accept" data-id="${d.id}" data-type="${d.type}" data-delegation-type="${d.delegationType}" data-delegatedby="${d.delegated_by}">${getTranslation('accept')}</button>
-        <button class="btn-reject" data-id="${d.id}" data-type="${d.type}" data-delegation-type="${d.delegationType}">${getTranslation('reject')}</button>
+        <button class="btn-accept" data-id="${d.id}" data-type="${d.type}" data-delegation-type="${d.delegationType}" data-delegatedby="${d.delegated_by}">${acceptText}</button>
+        <button class="btn-reject" data-id="${d.id}" data-type="${d.type}" data-delegation-type="${d.delegationType}">${rejectText}</button>
       </td>
     `;
     tbody.appendChild(tr);
+    console.log(`🔍 Added row for item ${index}`);
   });
 
   // زر القبول
