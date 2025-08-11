@@ -1978,36 +1978,98 @@ class ProtocolController {
                     message: 'معرف المستخدم المفوض إليه مطلوب'
                 });
             }
+
+            // جلب التسلسل الحالي للمفوض له
+            const [delegateeSequence] = await protocolModel.pool.execute(
+                'SELECT sequence_number FROM protocol_approvers WHERE protocol_id = ? AND user_id = ?',
+                [delegatorId, delegateeId]
+            );
+
+            // حذف سجل التفويض
+            await protocolModel.pool.execute(
+                `DELETE FROM protocol_approval_logs WHERE protocol_id = ? AND approver_id = ? AND signed_as_proxy = 1 AND status = 'pending'`,
+                [delegatorId, delegateeId]
+            );
+
+            // إعادة المفوض الأصلي إلى جدول protocol_approvers إذا لم يكن موجوداً
+            const [delegationRow] = await protocolModel.pool.execute(
+                `SELECT delegated_by FROM protocol_approval_logs WHERE protocol_id = ? AND approver_id = ?`,
+                [delegatorId, delegateeId]
+            );
             
-            // التحقق من وجود تفويضات نشطة
-            const [delegationRows] = await protocolModel.pool.execute(`
-                SELECT protocol_id, approver_id, delegated_by
-                FROM protocol_approval_logs
-                WHERE approver_id = ? 
-                  AND delegated_by = ? 
-                  AND signed_as_proxy = 1 
-                  AND status = 'pending'
-                  AND protocol_id IS NOT NULL
-            `, [delegateeId, delegatorId]);
-
-            if (delegationRows.length === 0) {
-                return res.status(404).json({
-                    status: 'error',
-                    message: 'لا توجد تفويضات نشطة لإلغائها'
-                });
+            if (delegationRow.length && delegationRow[0].delegated_by) {
+                const originalDelegatorId = delegationRow[0].delegated_by;
+                
+                // تحقق إذا كان المفوض الأصلي كان معتمدًا قبل التفويض
+                const [wasApprover] = await protocolModel.pool.execute(
+                    `SELECT * FROM protocol_approval_logs WHERE protocol_id = ? AND approver_id = ? AND signed_as_proxy = 0`,
+                    [delegatorId, originalDelegatorId]
+                );
+                
+                if (wasApprover.length) {
+                    // إعادة المفوض الأصلي إلى مكانه في التسلسل
+                    if (delegateeSequence.length > 0) {
+                        const originalSequence = delegateeSequence[0].sequence_number;
+                        
+                        // إدراج المفوض الأصلي في نفس المكان في التسلسل
+                        await protocolModel.pool.execute(
+                            `INSERT INTO protocol_approvers (protocol_id, user_id, sequence_number) VALUES (?, ?, ?)`,
+                            [delegatorId, originalDelegatorId, originalSequence]
+                        );
+                        
+                        // إعادة ترتيب التسلسل للمعتمدين المتبقين
+                        const [remainingApprovers] = await protocolModel.pool.execute(
+                            'SELECT user_id, sequence_number FROM protocol_approvers WHERE protocol_id = ? AND user_id != ? ORDER BY sequence_number',
+                            [delegatorId, originalDelegatorId]
+                        );
+                        
+                        for (let i = 0; i < remainingApprovers.length; i++) {
+                            let newSequence = i + 1;
+                            if (newSequence >= originalSequence) {
+                                newSequence = i + 2; // تخطي المكان الذي أخذته المفوض الأصلي
+                            }
+                            await protocolModel.pool.execute(
+                                'UPDATE protocol_approvers SET sequence_number = ? WHERE protocol_id = ? AND user_id = ?',
+                                [newSequence, delegatorId, remainingApprovers[i].user_id]
+                            );
+                        }
+                    } else {
+                        // إذا لم يكن هناك تسلسل محدد، أضفه في النهاية
+                        await protocolModel.pool.execute(
+                            `INSERT IGNORE INTO protocol_approvers (protocol_id, user_id) VALUES (?, ?)`,
+                            [delegatorId, originalDelegatorId]
+                        );
+                    }
+                }
+                
+                // تحقق إذا كان المفوض له ليس له توقيع شخصي (أي وجوده فقط بسبب التفويض)
+                const [hasPersonalLog] = await protocolModel.pool.execute(
+                    `SELECT * FROM protocol_approval_logs WHERE protocol_id = ? AND approver_id = ? AND signed_as_proxy = 0`,
+                    [delegatorId, delegateeId]
+                );
+                
+                if (!hasPersonalLog.length) {
+                    // احذفه من protocol_approvers
+                    await protocolModel.pool.execute(
+                        `DELETE FROM protocol_approvers WHERE protocol_id = ? AND user_id = ?`,
+                        [delegatorId, delegateeId]
+                    );
+                    
+                    // إعادة ترتيب التسلسل بعد الحذف
+                    const [remainingApprovers] = await protocolModel.pool.execute(
+                        'SELECT user_id, sequence_number FROM protocol_approvers WHERE protocol_id = ? ORDER BY sequence_number',
+                        [delegatorId]
+                    );
+                    
+                    for (let i = 0; i < remainingApprovers.length; i++) {
+                        await protocolModel.pool.execute(
+                            'UPDATE protocol_approvers SET sequence_number = ? WHERE protocol_id = ? AND user_id = ?',
+                            [i + 1, delegatorId, remainingApprovers[i].user_id]
+                        );
+                    }
+                }
             }
-
-            // إلغاء جميع التفويضات
-            await protocolModel.pool.execute(`
-                UPDATE protocol_approval_logs 
-                SET status = 'revoked', updated_at = NOW()
-                WHERE approver_id = ? 
-                  AND delegated_by = ? 
-                  AND signed_as_proxy = 1 
-                  AND status = 'pending'
-                  AND protocol_id IS NOT NULL
-            `, [delegateeId, delegatorId]);
-
+            
             // حذف من جدول active_delegations
             await protocolModel.pool.execute(`
                 DELETE FROM active_delegations 
@@ -2020,8 +2082,8 @@ class ProtocolController {
                     delegatorId,
                     'revoke_protocol_delegations',
                     JSON.stringify({
-                        ar: `تم إلغاء تفويضات المحاضر للمستخدم ${delegateeId}`,
-                        en: `Revoked protocol delegations for user ${delegateeId}`
+                        ar: `تم إلغاء تفويضات المحاضر للمستخدم ${delegateeId} وإعادة ترتيب التسلسل`,
+                        en: `Revoked protocol delegations for user ${delegateeId} and reordered sequence`
                     }),
                     'approval'
                 );
@@ -2029,8 +2091,8 @@ class ProtocolController {
 
             res.json({
                 status: 'success',
-                message: 'تم إلغاء التفويضات بنجاح',
-                revokedCount: delegationRows.length
+                message: 'تم إلغاء التفويضات بنجاح وإعادة ترتيب التسلسل',
+                revokedCount: 1
             });
 
         } catch (error) {
