@@ -17,7 +17,7 @@ const months = [
   { ar: 'ديسمبر', en: 'December' }
 ];
 
-const apiBase = 'http://localhost:3006/api';
+const apiBase = 'http://10.99.28.23:3006/api';
 
 // صلاحيات المستخدم
 const permissions = {

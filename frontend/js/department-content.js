@@ -1,9 +1,24 @@
-const apiBase      = 'http://localhost:3006/api';
+const apiBase      = 'http://10.99.28.23:3006/api';
 let currentDepartmentId = null;
 let currentFolderId     = null;
 let currentFolderName   = null;
 let currentDepartmentName = null;
 let isOldContentMode = false;
+
+// دالة لتنسيق التاريخ
+function formatDate(dateString) {
+    if (!dateString) return '';
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
+    
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    
+    // تنسيق عربي: يوم/شهر/سنة
+    return `${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/${year}`;
+}
 
 // دالة لتسجيل عرض المحتوى في اللوقز
 async function logContentView(contentId, contentTitle, folderName, departmentName) {
@@ -666,13 +681,35 @@ async function fetchFolders(departmentId) {
         const userRole = getUserRoleFromToken();
 
         try {
-            const response = await fetch(`http://localhost:3006/api/folders/${folderId}/contents`, {
+            // جلب المحتويات العادية
+            const response = await fetch(`http://10.99.28.23:3006/api/folders/${folderId}/contents`, {
                 headers: {
                     'Authorization': `Bearer ${getToken()}`
                 }
             });
             const data = await response.json();
             window._lastFilesData = data.data;
+            
+            // جلب المحاضر المرتبطة بالمجلد
+            let protocols = [];
+            try {
+                const protocolsResponse = await fetch(`http://10.99.28.23:3006/api/protocols/folder/${folderId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${getToken()}`
+                    }
+                });
+                
+                if (protocolsResponse.ok) {
+                    const protocolsData = await protocolsResponse.json();
+                    protocols = protocolsData.success ? protocolsData.data : [];
+                } else {
+                    console.log('لا توجد محاضر مرتبطة بهذا المجلد أو خطأ في جلب المحاضر');
+                }
+            } catch (error) {
+                console.log('خطأ في جلب المحاضر:', error);
+                protocols = [];
+            }
+            
             if (response.ok) {
                 const filesList = document.querySelector('.files-list');
                 filesList.innerHTML = '';
@@ -789,7 +826,7 @@ icons += '</div>';
                                     // تسجيل عرض المحتوى في اللوقز
                                     logContentView(content.id, displayTitle, currentFolderName, currentDepartmentName);
                                     
-                                    const fullFileUrl = `http://localhost:3006/uploads/${content.fileUrl}`;
+                                    const fullFileUrl = `http://10.99.28.23:3006/uploads/${content.fileUrl}`;
                                     window.open(fullFileUrl, '_blank');
                                 } else {
                                     showToast(getTranslation('pdf-only'), 'error'); 
@@ -799,6 +836,67 @@ icons += '</div>';
                     });
                 } else {
                     filesList.innerHTML = `<div class="no-content" data-translate="no-contents">${getTranslation('no-contents')}</div>`;
+                }
+                
+                // عرض المحاضر المرتبطة بالمجلد
+                if (protocols && protocols.length > 0) {
+                    // إضافة عنوان قسم المحاضر
+                    const protocolsHeader = document.createElement('div');
+                    protocolsHeader.className = 'protocols-header';
+                    protocolsHeader.innerHTML = `
+                        <h3 style="margin: 20px 0 10px 0; color: #1e40af; border-bottom: 2px solid #3b82f6; padding-bottom: 5px;">
+                            <i class="fas fa-file-alt"></i>
+                            المحاضر المرتبطة بهذا المجلد
+                        </h3>
+                    `;
+                    filesList.appendChild(protocolsHeader);
+                    
+                    protocols.forEach(protocol => {
+                        const protocolItem = document.createElement('div');
+                        protocolItem.className = 'file-item protocol-item';
+                        
+                        const approvalClass = protocol.is_approved ? 'approved' : 'pending';
+                        const approvalStatus = protocol.is_approved ? 'معتمد' : 'في انتظار الاعتماد';
+                        
+                        // تنسيق التاريخ
+                        const formattedDate = formatDate(protocol.protocol_date);
+                        
+                        protocolItem.innerHTML = `
+                            <div class="item-icons">
+                                <a href="#" class="view-protocol-icon" data-id="${protocol.id}">
+                                    <i class="fas fa-eye" style="color: #3b82f6;"></i>
+                                </a>
+                            </div>
+                            <img src="../images/pdf.svg" alt="محضر PDF">
+                            <div class="file-info">
+                                <div class="file-name">${protocol.title}</div>
+                                <div class="approval-status ${approvalClass}">${approvalStatus}</div>
+                                <div class="file-date">${formattedDate}</div>
+                                <div class="file-date">عدد المواضيع: ${protocol.topics_count}</div>
+                            </div>
+                        `;
+                        
+                        filesList.appendChild(protocolItem);
+                        
+                        // إضافة مستمع النقر لعرض المحضر
+                        const viewBtn = protocolItem.querySelector('.view-protocol-icon');
+                        viewBtn.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            window.open(`/frontend/html/protocol-list.html?view=${protocol.id}`, '_blank');
+                        });
+                        
+                        // إضافة مستمع النقر على المحضر نفسه لفتح PDF
+                        protocolItem.addEventListener('click', function(e) {
+                            if (!e.target.closest('.view-protocol-icon')) {
+                                if (protocol.file_path) {
+                                    window.open(`http://10.99.28.23:3006/uploads/${protocol.file_path}`, '_blank');
+                                } else {
+                                    showToast('ملف PDF غير متوفر', 'error');
+                                }
+                            }
+                        });
+                    });
                 }
             } else {
                 showToast(data.message || 'فشل جلب محتويات المجلد.', 'error');
@@ -813,7 +911,7 @@ icons += '</div>';
     async function handleApproveContent(contentId) {
         console.log('Attempting to approve content with ID:', contentId);
         try {
-            const response = await fetch(`http://localhost:3006/api/contents/${contentId}/approve`, {
+            const response = await fetch(`http://10.99.28.23:3006/api/contents/${contentId}/approve`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${getToken()}`,
@@ -867,7 +965,7 @@ function closeAddFolderModal() {
         }
 
         try {
-            const response = await fetch(`http://localhost:3006/api/departments/${currentDepartmentId}/folders`, {
+            const response = await fetch(`http://10.99.28.23:3006/api/departments/${currentDepartmentId}/folders`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${getToken()}`,
@@ -1359,7 +1457,7 @@ document.getElementById('updateFolderBtn')
         }
 
         try {
-            const response = await fetch(`http://localhost:3006/api/folders/${folderId}`, {
+            const response = await fetch(`http://10.99.28.23:3006/api/folders/${folderId}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${getToken()}`
@@ -1388,7 +1486,7 @@ document.getElementById('updateFolderBtn')
      async function openEditContentModal(contentId) {
   if (editContentModal) {
     try {
-      const response = await fetch(`http://localhost:3006/api/contents/${contentId}`, {
+      const response = await fetch(`http://10.99.28.23:3006/api/contents/${contentId}`, {
         headers: { 'Authorization': `Bearer ${getToken()}` }
       });
       const data = await response.json();
@@ -1470,7 +1568,7 @@ function closeEditContentModal() {
         if (startDate) formData.append('start_date', startDate);
         if (endDate)   formData.append('end_date', endDate);
         try {
-          const response = await fetch(`http://localhost:3006/api/contents/${contentId}`, {
+          const response = await fetch(`http://10.99.28.23:3006/api/contents/${contentId}`, {
             method: 'PUT',
             headers: {
               'Authorization': `Bearer ${getToken()}`
@@ -1783,7 +1881,7 @@ if (departmentIdFromUrl && isInitialFetch) {
         }
     
         try {
-            const response = await fetch(`http://localhost:3006/api/contents/${contentId}`, {
+            const response = await fetch(`http://10.99.28.23:3006/api/contents/${contentId}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${getToken()}`
@@ -2023,7 +2121,7 @@ async function handleCreateContent() {
 
   try {
     const response = await fetch(
-      `http://localhost:3006/api/folders/${folderIdToUpload}/contents`,
+      `http://10.99.28.23:3006/api/folders/${folderIdToUpload}/contents`,
       {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${getToken()}` },
@@ -2211,7 +2309,7 @@ document.addEventListener('DOMContentLoaded', function() {
           fileItem.addEventListener('click', function(e) {
             if (!e.target.closest('.edit-icon') && !e.target.closest('.delete-icon')) {
               if (content.fileUrl) {
-                const fullFileUrl = `http://localhost:3006/uploads/${content.fileUrl}`;
+                const fullFileUrl = `http://10.99.28.23:3006/uploads/${content.fileUrl}`;
                 window.open(fullFileUrl, '_blank');
               } else {
                 showToast(getTranslation('pdf-only'), 'error');

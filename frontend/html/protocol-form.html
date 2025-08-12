@@ -164,6 +164,62 @@
         </div>
       </section>
 
+      <!-- ===== قسم: اختيار القسم والمجلد واللجنة ===== -->
+      <section class="form-section">
+        <h2 class="section-title" data-translate="protocol-assignment">تخصيص المحضر</h2>
+        <div class="section-content">
+          <!-- خيارات الاختيار -->
+          <div class="assignment-options">
+            <div class="option-group">
+              <input type="radio" id="optionDepartment" name="assignmentType" value="department" checked onchange="toggleAssignmentType()">
+              <label for="optionDepartment" data-translate="assign-by-department">تخصيص حسب القسم</label>
+            </div>
+            <div class="option-group">
+              <input type="radio" id="optionCommittee" name="assignmentType" value="committee" onchange="toggleAssignmentType()">
+              <label for="optionCommittee" data-translate="assign-by-committee">تخصيص حسب اللجنة</label>
+            </div>
+            <div class="option-group">
+              <input type="radio" id="optionBoth" name="assignmentType" value="both" onchange="toggleAssignmentType()">
+              <label for="optionBoth" data-translate="assign-by-both">تخصيص حسب القسم واللجنة</label>
+            </div>
+          </div>
+
+          <!-- قسم تخصيص القسم -->
+          <div id="departmentAssignment" class="assignment-section">
+            <div class="form-group">
+              <label for="protocolDepartment" data-translate="select-department">اختر القسم</label>
+              <select id="protocolDepartment" name="protocolDepartment" onchange="loadFoldersForDepartment()">
+                <option value="" data-translate="select-department">اختر القسم</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="protocolFolder" data-translate="select-folder">اختر المجلد</label>
+              <select id="protocolFolder" name="protocolFolder" disabled>
+                <option value="" data-translate="select-folder-first">اختر القسم أولاً</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- قسم تخصيص اللجنة -->
+          <div id="committeeAssignment" class="assignment-section" style="display: none;">
+            <div class="form-group">
+              <label for="protocolCommittee" data-translate="select-committee">اختر اللجنة</label>
+              <select id="protocolCommittee" name="protocolCommittee" onchange="loadFoldersForCommittee()">
+                <option value="" data-translate="select-committee">اختر اللجنة</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="committeeFolder" data-translate="select-committee-folder">اختر مجلد اللجنة</label>
+              <select id="committeeFolder" name="committeeFolder" disabled>
+                <option value="" data-translate="select-committee-first">اختر اللجنة أولاً</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- ===== قسم: تحديد عدد المواضيع ===== -->
       <section class="form-section">
         <h2 class="section-title" data-translate="topics-section">مواضيع المحضر</h2>

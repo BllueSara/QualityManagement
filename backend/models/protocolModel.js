@@ -19,6 +19,9 @@ class ProtocolModel {
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     title VARCHAR(500) NOT NULL,
                     protocol_date DATE NOT NULL,
+                    department_id INT,
+                    folder_id INT,
+                    committee_id INT,
                     created_by INT NOT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -28,7 +31,10 @@ class ProtocolModel {
                     approved_by INT,
                     file_path VARCHAR(500),
                     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
-                    FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL
+                    FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL,
+                    FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL,
+                    FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE SET NULL,
+                    FOREIGN KEY (committee_id) REFERENCES committees(id) ON DELETE SET NULL
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             `);
 
@@ -96,8 +102,15 @@ class ProtocolModel {
 
             // إدراج المحضر الرئيسي
             const [protocolResult] = await connection.execute(
-                'INSERT INTO protocols (title, protocol_date, created_by) VALUES (?, ?, ?)',
-                [protocolData.protocolTitle, protocolData.protocolDate, userId]
+                'INSERT INTO protocols (title, protocol_date, department_id, folder_id, committee_id, created_by) VALUES (?, ?, ?, ?, ?, ?)',
+                [
+                    protocolData.protocolTitle, 
+                    protocolData.protocolDate, 
+                    (protocolData.assignmentType === 'department' || protocolData.assignmentType === 'both') ? (protocolData.departmentId || null) : null,
+                    protocolData.folderId || null,
+                    (protocolData.assignmentType === 'committee' || protocolData.assignmentType === 'both') ? (protocolData.committeeId || null) : null,
+                    userId
+                ]
             );
 
             const protocolId = protocolResult.insertId;
@@ -135,6 +148,18 @@ class ProtocolModel {
     // جلب جميع المحاضر
     async getAllProtocols(userId, filters = {}) {
         try {
+            // جلب معلومات المستخدم وصلاحياته
+            const [userInfo] = await this.pool.execute(`
+                SELECT role, department_id FROM users WHERE id = ?
+            `, [userId]);
+
+            if (userInfo.length === 0) {
+                throw new Error('المستخدم غير موجود');
+            }
+
+            const userRole = userInfo[0].role;
+            const userDepartmentId = userInfo[0].department_id;
+
             let query = `
                 SELECT 
                     p.id,
@@ -144,6 +169,12 @@ class ProtocolModel {
                     p.status,
                     p.approval_status,
                     p.is_approved,
+                    p.department_id,
+                    p.folder_id,
+                    p.committee_id,
+                    d.name as department_name,
+                    f.name as folder_name,
+                    c.name as committee_name,
                     CONCAT(
                         COALESCE(u.first_name, ''),
                         CASE WHEN u.second_name IS NOT NULL AND u.second_name != '' THEN CONCAT(' ', u.second_name) ELSE '' END,
@@ -154,11 +185,26 @@ class ProtocolModel {
                     MAX(pt.end_date) as latest_end_date
                 FROM protocols p
                 LEFT JOIN users u ON p.created_by = u.id
+                LEFT JOIN departments d ON p.department_id = d.id
+                LEFT JOIN folders f ON p.folder_id = f.id
+                LEFT JOIN committees c ON p.committee_id = c.id
                 LEFT JOIN protocol_topics pt ON p.id = pt.protocol_id
                 WHERE p.status != 'deleted'
             `;
 
             const params = [];
+
+            // إذا لم يكن المستخدم أدمن، يرى المحاضر التي رفعها أو هو معتمد عليها
+            if (userRole !== 'admin') {
+                query += ` AND (
+                    p.created_by = ? OR 
+                    EXISTS (
+                        SELECT 1 FROM protocol_approvers pa 
+                        WHERE pa.protocol_id = p.id AND pa.user_id = ?
+                    )
+                )`;
+                params.push(userId, userId);
+            }
 
             // إضافة فلتر المستخدم إذا لم يكن مدير
             if (filters.userOnly) {
@@ -186,10 +232,25 @@ class ProtocolModel {
     // جلب محضر واحد مع مواضيعه
     async getProtocolById(protocolId, userId) {
         try {
+            // جلب معلومات المستخدم وصلاحياته
+            const [userInfo] = await this.pool.execute(`
+                SELECT role, department_id FROM users WHERE id = ?
+            `, [userId]);
+
+            if (userInfo.length === 0) {
+                throw new Error('المستخدم غير موجود');
+            }
+
+            const userRole = userInfo[0].role;
+            const userDepartmentId = userInfo[0].department_id;
+
             // جلب بيانات المحضر
-            const [protocols] = await this.pool.execute(
-                `SELECT 
+            let query = `
+                SELECT 
                     p.*,
+                    d.name as department_name,
+                    f.name as folder_name,
+                    c.name as committee_name,
                     CONCAT(
                         COALESCE(u.first_name, ''),
                         CASE WHEN u.second_name IS NOT NULL AND u.second_name != '' THEN CONCAT(' ', u.second_name) ELSE '' END,
@@ -198,10 +259,27 @@ class ProtocolModel {
                     ) as created_by_name
                 FROM protocols p
                 LEFT JOIN users u ON p.created_by = u.id
+                LEFT JOIN departments d ON p.department_id = d.id
+                LEFT JOIN folders f ON p.folder_id = f.id
+                LEFT JOIN committees c ON p.committee_id = c.id
                 WHERE p.id = ? AND p.status != 'deleted'
-            `,
-                [protocolId]
-            );
+            `;
+
+            const params = [protocolId];
+
+            // إذا لم يكن المستخدم أدمن، يرى المحاضر التي رفعها أو هو معتمد عليها
+            if (userRole !== 'admin') {
+                query += ` AND (
+                    p.created_by = ? OR 
+                    EXISTS (
+                        SELECT 1 FROM protocol_approvers pa 
+                        WHERE pa.protocol_id = p.id AND pa.user_id = ?
+                    )
+                )`;
+                params.push(userId, userId);
+            }
+
+            const [protocols] = await this.pool.execute(query, params);
 
             if (protocols.length === 0) {
                 return null;
@@ -284,8 +362,15 @@ class ProtocolModel {
 
             // إعادة تعيين حالة المحضر ليعود لمرحلة الاعتماد من جديد
             await connection.execute(
-                'UPDATE protocols SET title = ?, protocol_date = ?, is_approved = 0, approval_status = "pending", updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-                [protocolData.protocolTitle, protocolData.protocolDate, protocolId]
+                'UPDATE protocols SET title = ?, protocol_date = ?, department_id = ?, folder_id = ?, committee_id = ?, is_approved = 0, approval_status = "pending", updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+                [
+                    protocolData.protocolTitle, 
+                    protocolData.protocolDate, 
+                    (protocolData.assignmentType === 'department' || protocolData.assignmentType === 'both') ? (protocolData.departmentId || null) : null,
+                    protocolData.folderId || null,
+                    (protocolData.assignmentType === 'committee' || protocolData.assignmentType === 'both') ? (protocolData.committeeId || null) : null,
+                    protocolId
+                ]
             );
 
             // مسح سجلات الاعتمادات السابقة للمحضر لإعادة دورة الاعتماد
@@ -561,7 +646,7 @@ class ProtocolModel {
                 LEFT JOIN users u ON pal.approver_id = u.id
                 LEFT JOIN departments d ON u.department_id = d.id
                 LEFT JOIN job_titles jt ON u.job_title_id = jt.id
-                WHERE pal.protocol_id = ?
+                WHERE pal.protocol_id = ? AND pal.status != 'sender_signature'
                 ORDER BY pal.created_at ASC
             `, [protocolId]);
 
@@ -582,6 +667,72 @@ class ProtocolModel {
             return { success: true, message: 'تم تحديث مسار الملف بنجاح' };
         } catch (error) {
             console.error('Error updating PDF path:', error);
+            throw error;
+        }
+    }
+
+    // جلب المحاضر المرتبطة بمجلد معين
+    async getProtocolsByFolder(folderId, userId) {
+        try {
+            // جلب معلومات المستخدم وصلاحياته
+            const [userInfo] = await this.pool.execute(`
+                SELECT role, department_id FROM users WHERE id = ?
+            `, [userId]);
+
+            if (userInfo.length === 0) {
+                throw new Error('المستخدم غير موجود');
+            }
+
+            const userRole = userInfo[0].role;
+            const userDepartmentId = userInfo[0].department_id;
+
+            let query = `
+                SELECT 
+                    p.id,
+                    p.title,
+                    p.protocol_date,
+                    p.created_at,
+                    p.status,
+                    p.approval_status,
+                    p.is_approved,
+                    p.file_path,
+                    p.department_id,
+                    p.committee_id,
+                    CONCAT(
+                        COALESCE(u.first_name, ''),
+                        CASE WHEN u.second_name IS NOT NULL AND u.second_name != '' THEN CONCAT(' ', u.second_name) ELSE '' END,
+                        CASE WHEN u.third_name IS NOT NULL AND u.third_name != '' THEN CONCAT(' ', u.third_name) ELSE '' END,
+                        CASE WHEN u.last_name IS NOT NULL AND u.last_name != '' THEN CONCAT(' ', u.last_name) ELSE '' END
+                    ) as created_by_name,
+                    COUNT(pt.id) as topics_count,
+                    MAX(pt.end_date) as latest_end_date
+                FROM protocols p
+                LEFT JOIN users u ON p.created_by = u.id
+                LEFT JOIN protocol_topics pt ON p.id = pt.protocol_id
+                WHERE p.folder_id = ? AND p.status != 'deleted'
+            `;
+
+            const params = [folderId];
+
+            // إذا لم يكن المستخدم أدمن، يرى المحاضر التي رفعها أو هو معتمد عليها
+            if (userRole !== 'admin') {
+                query += ` AND (
+                    p.created_by = ? OR 
+                    EXISTS (
+                        SELECT 1 FROM protocol_approvers pa 
+                        WHERE pa.protocol_id = p.id AND pa.user_id = ?
+                    )
+                )`;
+                params.push(userId, userId);
+            }
+
+            query += ` GROUP BY p.id ORDER BY p.created_at DESC`;
+
+            const [protocols] = await this.pool.execute(query, params);
+
+            return protocols;
+        } catch (error) {
+            console.error('Error getting protocols by folder:', error);
             throw error;
         }
     }

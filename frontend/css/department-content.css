@@ -993,3 +993,45 @@ body[lang="en"] .toast-container,
         font-size: 0.8em;
     }
 }
+
+/* تنسيقات المحاضر في المجلدات */
+.protocol-item {
+    border-left: 4px solid #3b82f6 !important;
+    background-color: #f8fafc;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.protocol-item:hover {
+    background-color: #e0f2fe;
+}
+
+.protocols-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 20px 0 10px 0;
+    color: #1e40af;
+    border-bottom: 2px solid #3b82f6;
+    padding-bottom: 5px;
+}
+
+.protocols-header h3 i {
+    margin-left: 8px;
+}
+
+.view-protocol-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    background-color: #3b82f6;
+    color: white;
+    text-decoration: none;
+    transition: background-color 0.3s;
+}
+
+.view-protocol-icon:hover {
+    background-color: #2563eb;
+}

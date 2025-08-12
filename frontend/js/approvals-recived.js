@@ -1,7 +1,7 @@
 // approvals-recived.js
 let filteredItems = [];
 
-const apiBase = 'http://localhost:3006/api';
+const apiBase = 'http://10.99.28.23:3006/api';
 const token = localStorage.getItem('token');
 let permissionsKeys = [];
 // تم إزالة التصريحات المكررة للمتغيرات العامة لأنها موجودة في sign.js
@@ -574,7 +574,7 @@ function rejectDelegation() {
 // دوال معالجة التفويضات المختلفة
 async function processSingleDepartmentDelegationAcceptance(delegationId) {
   try {
-    const response = await fetch('http://localhost:3006/api/approvals/single-delegation-unified/process', {
+    const response = await fetch('http://10.99.28.23:3006/api/approvals/single-delegation-unified/process', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -604,7 +604,7 @@ async function processSingleDepartmentDelegationAcceptance(delegationId) {
 
 async function processSingleCommitteeDelegationAcceptance(delegationId) {
   try {
-    const response = await fetch('http://localhost:3006/api/committee-approvals/single-delegation-unified/process', {
+    const response = await fetch('http://10.99.28.23:3006/api/committee-approvals/single-delegation-unified/process', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -634,7 +634,7 @@ async function processSingleCommitteeDelegationAcceptance(delegationId) {
 
 async function processBulkDelegationAcceptance(delegationId) {
   try {
-    const response = await fetch('http://localhost:3006/api/approvals/bulk-delegation-unified/process', {
+    const response = await fetch('http://10.99.28.23:3006/api/approvals/bulk-delegation-unified/process', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -664,7 +664,7 @@ async function processBulkDelegationAcceptance(delegationId) {
 
 async function processSingleDepartmentDelegationRejection(delegationId) {
   try {
-    const response = await fetch('http://localhost:3006/api/approvals/single-delegation-unified/process', {
+    const response = await fetch('http://10.99.28.23:3006/api/approvals/single-delegation-unified/process', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -694,7 +694,7 @@ async function processSingleDepartmentDelegationRejection(delegationId) {
 
 async function processSingleCommitteeDelegationRejection(delegationId) {
   try {
-    const response = await fetch('http://localhost:3006/api/committee-approvals/single-delegation-unified/process', {
+    const response = await fetch('http://10.99.28.23:3006/api/committee-approvals/single-delegation-unified/process', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -724,7 +724,7 @@ async function processSingleCommitteeDelegationRejection(delegationId) {
 
 async function processBulkDelegationRejection(delegationId) {
   try {
-    const response = await fetch('http://localhost:3006/api/approvals/bulk-delegation-unified/process', {
+    const response = await fetch('http://10.99.28.23:3006/api/approvals/bulk-delegation-unified/process', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -754,7 +754,7 @@ async function processBulkDelegationRejection(delegationId) {
 
 async function processDirectDelegationUnified(delegatorId, action) {
   try {
-    const res = await fetch('http://localhost:3006/api/approvals/direct-delegation-unified/process', {
+    const res = await fetch('http://10.99.28.23:3006/api/approvals/direct-delegation-unified/process', {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ delegatorId, action })
@@ -801,7 +801,7 @@ async function showSingleDelegationConfirmation(delegateTo, contentId, contentTy
       isBulk: false
     };
     
-    const response = await fetch('http://localhost:3006/api/approvals/new-delegation-confirmation-data', {
+    const response = await fetch('http://10.99.28.23:3006/api/approvals/new-delegation-confirmation-data', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -837,7 +837,7 @@ async function showSingleDelegationConfirmation(delegateTo, contentId, contentTy
 
 async function showBulkDelegationConfirmation(delegateTo, notes = '') {
   try {
-    const response = await fetch('http://localhost:3006/api/approvals/new-delegation-confirmation-data', {
+    const response = await fetch('http://10.99.28.23:3006/api/approvals/new-delegation-confirmation-data', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -899,7 +899,7 @@ async function showSingleCommitteeDelegationConfirmation(delegateTo, contentId, 
       isBulk: false
     };
     
-    const response = await fetch('http://localhost:3006/api/approvals/new-delegation-confirmation-data', {
+    const response = await fetch('http://10.99.28.23:3006/api/approvals/new-delegation-confirmation-data', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -935,7 +935,7 @@ async function showSingleCommitteeDelegationConfirmation(delegateTo, contentId, 
 
 async function showBulkProtocolDelegationConfirmation(delegateTo, notes = '') {
   try {
-    const response = await fetch('http://localhost:3006/api/protocols/new-delegation-confirmation-data', {
+    const response = await fetch('http://10.99.28.23:3006/api/protocols/new-delegation-confirmation-data', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -998,7 +998,7 @@ async function showSingleProtocolDelegationConfirmation(delegateTo, contentId, c
       isBulk: false
     };
     
-    const response = await fetch('http://localhost:3006/api/protocols/new-delegation-confirmation-data', {
+    const response = await fetch('http://10.99.28.23:3006/api/protocols/new-delegation-confirmation-data', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1034,7 +1034,7 @@ async function showSingleProtocolDelegationConfirmation(delegateTo, contentId, c
 
 async function showBulkCommitteeDelegationConfirmation(delegateTo, notes = '') {
   try {
-    const response = await fetch('http://localhost:3006/api/approvals/new-delegation-confirmation-data', {
+    const response = await fetch('http://10.99.28.23:3006/api/approvals/new-delegation-confirmation-data', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1838,6 +1838,8 @@ if (btnElectronicApprove) {
 
 // 3. تعديل زر التوقيع اليدوي (التوقيع بالرسم)
 function setupSignatureModal() {
+  console.log('🔍 setupSignatureModal called');
+  
   // تعيين الكانفاس النشط للمودال الرئيسي
   activeCanvas = document.getElementById('mainSignatureCanvas');
   if (!activeCanvas) {
@@ -1851,8 +1853,13 @@ function setupSignatureModal() {
     return;
   }
   
+  // تهيئة الكانفاس بشكل صحيح
+  initializeCanvas();
+  
   let drawing = false;
   
+  // إزالة event listener السابق لتغيير الحجم لتجنب التكرار
+  window.removeEventListener('resize', resizeCanvas);
   window.addEventListener('resize', resizeCanvas);
   
   // إعداد التبويبات
@@ -1865,58 +1872,112 @@ function setupSignatureModal() {
     const rect = activeCanvas.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    
+    // حساب النسبة المئوية للكانفاس
+    const scaleX = activeCanvas.width / rect.width;
+    const scaleY = activeCanvas.height / rect.height;
+    
     return {
-      x: clientX - rect.left,
-      y: clientY - rect.top
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY
     };
   }
   
-  activeCanvas.addEventListener('mousedown', e => {
-    drawing = true;
-    const pos = getPos(e);
-    activeCtx.beginPath();
-    activeCtx.moveTo(pos.x, pos.y);
-  });
-  activeCanvas.addEventListener('mousemove', e => {
-    if (!drawing) return;
-    const pos = getPos(e);
-    activeCtx.lineTo(pos.x, pos.y);
-    activeCtx.stroke();
-  });
-  activeCanvas.addEventListener('mouseup', () => {
-    drawing = false;
-    // تحديث التوقيع الحالي عند الانتهاء من الرسم
-    currentSignature = activeCanvas.toDataURL('image/png');
-  });
-  activeCanvas.addEventListener('mouseleave', () => drawing = false);
-  activeCanvas.addEventListener('touchstart', e => {
-    drawing = true;
-    const pos = getPos(e);
-    activeCtx.beginPath();
-    activeCtx.moveTo(pos.x, pos.y);
-  });
-  activeCanvas.addEventListener('touchmove', e => {
-    if (!drawing) return;
-    const pos = getPos(e);
-    activeCtx.lineTo(pos.x, pos.y);
-    activeCtx.stroke();
-  });
-  activeCanvas.addEventListener('touchend', () => {
-    drawing = false;
-    // تحديث التوقيع الحالي عند الانتهاء من الرسم
-    currentSignature = activeCanvas.toDataURL('image/png');
-  });
+  // إزالة event listeners السابقة لتجنب التكرار
+  activeCanvas.removeEventListener('mousedown', handleMouseDown);
+  activeCanvas.removeEventListener('mousemove', handleMouseMove);
+  activeCanvas.removeEventListener('mouseup', handleMouseUp);
+  activeCanvas.removeEventListener('mouseleave', handleMouseLeave);
+  activeCanvas.removeEventListener('touchstart', handleTouchStart);
+  activeCanvas.removeEventListener('touchmove', handleTouchMove);
+  activeCanvas.removeEventListener('touchend', handleTouchEnd);
   
-  document.getElementById('btnClear').addEventListener('click', () => {
+  function handleMouseDown(e) {
+    drawing = true;
+    const pos = getPos(e);
+    activeCtx.beginPath();
+    activeCtx.moveTo(pos.x, pos.y);
+  }
+  
+  function handleMouseMove(e) {
+    if (!drawing) return;
+    const pos = getPos(e);
+    activeCtx.lineTo(pos.x, pos.y);
+    activeCtx.stroke();
+  }
+  
+  function handleMouseUp() {
+    drawing = false;
+    // تحديث التوقيع الحالي عند الانتهاء من الرسم
+    currentSignature = activeCanvas.toDataURL('image/png');
+  }
+  
+  function handleMouseLeave() {
+    drawing = false;
+  }
+  
+  function handleTouchStart(e) {
+    e.preventDefault();
+    drawing = true;
+    const pos = getPos(e);
+    activeCtx.beginPath();
+    activeCtx.moveTo(pos.x, pos.y);
+  }
+  
+  function handleTouchMove(e) {
+    e.preventDefault();
+    if (!drawing) return;
+    const pos = getPos(e);
+    activeCtx.lineTo(pos.x, pos.y);
+    activeCtx.stroke();
+  }
+  
+  function handleTouchEnd(e) {
+    e.preventDefault();
+    drawing = false;
+    // تحديث التوقيع الحالي عند الانتهاء من الرسم
+    currentSignature = activeCanvas.toDataURL('image/png');
+  }
+  
+  // إضافة event listeners للتوقيع
+  activeCanvas.addEventListener('mousedown', handleMouseDown);
+  activeCanvas.addEventListener('mousemove', handleMouseMove);
+  activeCanvas.addEventListener('mouseup', handleMouseUp);
+  activeCanvas.addEventListener('mouseleave', handleMouseLeave);
+  activeCanvas.addEventListener('touchstart', handleTouchStart);
+  activeCanvas.addEventListener('touchmove', handleTouchMove);
+  activeCanvas.addEventListener('touchend', handleTouchEnd);
+  
+  // إزالة event listeners السابقة للأزرار
+  const btnClear = document.getElementById('btnClear');
+  const btnCancelSignature = document.getElementById('btnCancelSignature');
+  const btnConfirmSignature = document.getElementById('btnConfirmSignature');
+  
+  if (btnClear) {
+    btnClear.removeEventListener('click', handleClearClick);
+    btnClear.addEventListener('click', handleClearClick);
+  }
+  
+  if (btnCancelSignature) {
+    btnCancelSignature.removeEventListener('click', handleCancelClick);
+    btnCancelSignature.addEventListener('click', handleCancelClick);
+  }
+  
+  if (btnConfirmSignature) {
+    btnConfirmSignature.removeEventListener('click', handleConfirmClick);
+    btnConfirmSignature.addEventListener('click', handleConfirmClick);
+  }
+  
+  function handleClearClick() {
     clearCanvas();
     currentSignature = null;
-  });
+  }
   
-  document.getElementById('btnCancelSignature').addEventListener('click', () => {
+  function handleCancelClick() {
     closeSignatureModal();
-  });
+  }
   
-  document.getElementById('btnConfirmSignature').addEventListener('click', async () => {
+  async function handleConfirmClick() {
     // التحقق من وجود توقيع
     if (!currentSignature) {
       showToast(getTranslation('no-signature') || 'يرجى إضافة توقيع أولاً', 'error');
@@ -1965,80 +2026,204 @@ function setupSignatureModal() {
       console.error('Failed to send signature:', err);
       showToast(getTranslation('error-sending'), 'error');
     }
-  });
+  }
+  
+  console.log('🔍 Signature modal setup completed successfully');
+}
+
+// دالة تهيئة الكانفاس
+function initializeCanvas() {
+  if (!activeCanvas || !activeCtx) {
+    console.error('🔍 Canvas or context not available for initialization');
+    return;
+  }
+  
+  // الحصول على أبعاد الحاوية
+  const wrapper = activeCanvas.parentElement;
+  if (!wrapper) {
+    console.error('🔍 Canvas wrapper not found');
+    return;
+  }
+  
+  const rect = wrapper.getBoundingClientRect();
+  const canvasWidth = rect.width || 400;
+  const canvasHeight = rect.height || 200;
+  
+  console.log('🔍 Setting canvas dimensions:', { canvasWidth, canvasHeight });
+  
+  // تعيين الأبعاد مباشرة على العنصر
+  activeCanvas.width = canvasWidth;
+  activeCanvas.height = canvasHeight;
+  
+  // تعيين الأبعاد في CSS أيضاً للتأكد
+  activeCanvas.style.width = '100%';
+  activeCanvas.style.height = '100%';
+  
+  // إعادة الحصول على السياق بعد تغيير الأبعاد
+  activeCtx = activeCanvas.getContext('2d');
+  
+  if (activeCtx) {
+    // تعيين خصائص الرسم
+    activeCtx.strokeStyle = '#000';
+    activeCtx.lineWidth = 2;
+    activeCtx.lineCap = 'round';
+    activeCtx.lineJoin = 'round';
+    
+    // مسح الكانفاس
+    activeCtx.clearRect(0, 0, activeCanvas.width, activeCanvas.height);
+    
+    // تعيين خلفية بيضاء للكانفاس
+    activeCtx.fillStyle = '#ffffff';
+    activeCtx.fillRect(0, 0, activeCanvas.width, activeCanvas.height);
+    
+    // إعادة تعيين لون الرسم
+    activeCtx.strokeStyle = '#000';
+    
+    console.log('🔍 Canvas initialized successfully with dimensions:', {
+      width: activeCanvas.width,
+      height: activeCanvas.height,
+      styleWidth: activeCanvas.style.width,
+      styleHeight: activeCanvas.style.height
+    });
+  } else {
+    console.error('🔍 Failed to get canvas context after initialization!');
+  }
 }
 
 // إعداد التبويبات
 function setupSignatureTabs() {
+  console.log('🔍 setupSignatureTabs called');
+  
   const tabBtns = document.querySelectorAll('.tab-btn');
   const tabContents = document.querySelectorAll('.tab-content');
   
+  if (tabBtns.length === 0 || tabContents.length === 0) {
+    console.warn('🔍 No tab buttons or contents found');
+    return;
+  }
+  
+  // إزالة event listeners السابقة
   tabBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const targetTab = btn.dataset.tab;
-      
-      // إزالة الفئة النشطة من جميع التبويبات
-      tabBtns.forEach(b => b.classList.remove('active'));
-      tabContents.forEach(c => c.classList.remove('active'));
-      
-      // إضافة الفئة النشطة للتبويب المحدد
-      btn.classList.add('active');
-      document.getElementById(`${targetTab}-tab`).classList.add('active');
-      
-      // إعادة تعيين التوقيع الحالي
-      currentSignature = null;
-    });
+    btn.removeEventListener('click', handleTabClick);
+    btn.addEventListener('click', handleTabClick);
   });
+  
+  function handleTabClick(e) {
+    const targetTab = e.target.dataset.tab;
+    console.log('🔍 Tab clicked:', targetTab);
+    
+    if (!targetTab) {
+      console.warn('🔍 No tab data found');
+      return;
+    }
+    
+    // إزالة الفئة النشطة من جميع التبويبات
+    tabBtns.forEach(b => b.classList.remove('active'));
+    tabContents.forEach(c => c.classList.remove('active'));
+    
+    // إضافة الفئة النشطة للتبويب المحدد
+    e.target.classList.add('active');
+    const targetContent = document.getElementById(`${targetTab}-tab`);
+    
+    if (targetContent) {
+      targetContent.classList.add('active');
+      
+      // إذا كان التبويب المحدد هو التوقيع المباشر، أعد تهيئة الكانفاس
+      if (targetTab === 'draw') {
+        setTimeout(() => {
+          if (activeCanvas) {
+            initializeCanvas();
+            setupSignatureDrawing();
+          }
+        }, 50);
+      }
+    } else {
+      console.warn('🔍 Tab content not found:', `${targetTab}-tab`);
+    }
+    
+    // إعادة تعيين التوقيع الحالي
+    currentSignature = null;
+  }
+  
+  console.log('🔍 Signature tabs setup completed');
 }
 
 // إعداد رفع الصور
 function setupImageUpload() {
+  console.log('🔍 setupImageUpload called');
+  
   const uploadArea = document.getElementById('uploadArea');
   const fileInput = document.getElementById('signatureFile');
   const uploadPreview = document.getElementById('uploadPreview');
   const previewImage = document.getElementById('previewImage');
   const btnRemoveImage = document.getElementById('btnRemoveImage');
   
+  if (!uploadArea || !fileInput || !uploadPreview || !previewImage || !btnRemoveImage) {
+    console.warn('🔍 Some image upload elements not found');
+    return;
+  }
+  
+  // إزالة event listeners السابقة
+  uploadArea.removeEventListener('click', handleUploadAreaClick);
+  uploadArea.removeEventListener('dragover', handleDragOver);
+  uploadArea.removeEventListener('dragleave', handleDragLeave);
+  uploadArea.removeEventListener('drop', handleDrop);
+  fileInput.removeEventListener('change', handleFileChange);
+  btnRemoveImage.removeEventListener('click', handleRemoveImage);
+  
   // النقر على منطقة الرفع
-  uploadArea.addEventListener('click', () => {
-    fileInput.click();
-  });
+  uploadArea.addEventListener('click', handleUploadAreaClick);
   
   // سحب وإفلات الملفات
-  uploadArea.addEventListener('dragover', (e) => {
+  uploadArea.addEventListener('dragover', handleDragOver);
+  uploadArea.addEventListener('dragleave', handleDragLeave);
+  uploadArea.addEventListener('drop', handleDrop);
+  
+  // اختيار الملف من input
+  fileInput.addEventListener('change', handleFileChange);
+  
+  // إزالة الصورة
+  btnRemoveImage.addEventListener('click', handleRemoveImage);
+  
+  function handleUploadAreaClick() {
+    fileInput.click();
+  }
+  
+  function handleDragOver(e) {
     e.preventDefault();
     uploadArea.classList.add('dragover');
-  });
+  }
   
-  uploadArea.addEventListener('dragleave', () => {
+  function handleDragLeave() {
     uploadArea.classList.remove('dragover');
-  });
+  }
   
-  uploadArea.addEventListener('drop', (e) => {
+  function handleDrop(e) {
     e.preventDefault();
     uploadArea.classList.remove('dragover');
     const files = e.dataTransfer.files;
     if (files.length > 0) {
       handleFileSelect(files[0]);
     }
-  });
+  }
   
-  // اختيار الملف من input
-  fileInput.addEventListener('change', (e) => {
+  function handleFileChange(e) {
     if (e.target.files.length > 0) {
       handleFileSelect(e.target.files[0]);
     }
-  });
+  }
   
-  // إزالة الصورة
-  btnRemoveImage.addEventListener('click', () => {
+  function handleRemoveImage() {
     uploadPreview.style.display = 'none';
     uploadArea.style.display = 'block';
     fileInput.value = '';
     currentSignature = null;
-  });
+    console.log('🔍 Image removed');
+  }
   
   function handleFileSelect(file) {
+    console.log('🔍 File selected:', file.name, file.type);
+    
     if (!file.type.startsWith('image/')) {
       showToast(getTranslation('invalid-image') || 'يرجى اختيار ملف صورة صالح', 'error');
       return;
@@ -2057,13 +2242,17 @@ function setupImageUpload() {
         const maxHeight = 200;
         let { width, height } = img;
         
-        if (width > maxWidth) {
-          height = (height * maxWidth) / width;
-          width = maxWidth;
-        }
-        if (height > maxHeight) {
-          width = (width * maxHeight) / height;
-          height = maxHeight;
+        // حساب النسب المئوية للحفاظ على النسبة
+        if (width > height) {
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = (width * maxHeight) / height;
+            height = maxHeight;
+          }
         }
         
         canvas.width = width;
@@ -2073,17 +2262,24 @@ function setupImageUpload() {
         ctx.drawImage(img, 0, 0, width, height);
         
         // تحويل إلى base64
-        currentSignature = canvas.toDataURL('image/png');
+        const signatureData = canvas.toDataURL('image/png');
         
         // عرض المعاينة
-        previewImage.src = currentSignature;
+        previewImage.src = signatureData;
         uploadArea.style.display = 'none';
         uploadPreview.style.display = 'block';
+        
+        // حفظ التوقيع
+        currentSignature = signatureData;
+        
+        console.log('🔍 Image processed and signature saved');
       };
       img.src = e.target.result;
     };
     reader.readAsDataURL(file);
   }
+  
+  console.log('🔍 Image upload setup completed');
 }
 
 async function loadDepartments() {
@@ -2299,27 +2495,102 @@ function showApprovalsProxyPopup() {
 // دالة مسح التوقيع
 function clearCanvas() {
   if (activeCtx && activeCanvas) {
+    // مسح الكانفاس
     activeCtx.clearRect(0, 0, activeCanvas.width, activeCanvas.height);
+    
+    // إعادة تعيين خصائص الرسم
+    activeCtx.strokeStyle = '#000';
+    activeCtx.lineWidth = 2;
+    activeCtx.lineCap = 'round';
+    activeCtx.lineJoin = 'round';
+    
+    // تعيين خلفية بيضاء للكانفاس
+    activeCtx.fillStyle = '#ffffff';
+    activeCtx.fillRect(0, 0, activeCanvas.width, activeCanvas.height);
+    
+    // إعادة تعيين لون الرسم
+    activeCtx.strokeStyle = '#000';
+    
+    // إعادة تعيين التوقيع الحالي
+    currentSignature = null;
+    
+    console.log('🔍 Canvas cleared successfully');
+  } else {
+    console.warn('🔍 Canvas or context not available for clearing');
   }
 }
 
 // دالة تغيير حجم الكانفس
 function resizeCanvas() {
-  if (!activeCanvas) return;
+  if (!activeCanvas) {
+    console.warn('🔍 No active canvas for resizing');
+    return;
+  }
+  
   const wrapper = activeCanvas.parentElement;
-  if (!wrapper) return; // إضافة فحص إضافي لتجنب الخطأ
+  if (!wrapper) {
+    console.warn('🔍 No wrapper found for canvas resizing');
+    return;
+  }
+  
   const rect = wrapper.getBoundingClientRect();
-  activeCanvas.width = rect.width;
-  activeCanvas.height = rect.height;
-  activeCtx.lineWidth = 2;
-  activeCtx.lineCap = 'round';
-  activeCtx.strokeStyle = '#000';
+  const newWidth = rect.width || 400;
+  const newHeight = rect.height || 200;
+  
+  // حفظ البيانات الحالية إذا كان هناك توقيع
+  let imageData = null;
+  if (activeCtx) {
+    try {
+      imageData = activeCtx.getImageData(0, 0, activeCanvas.width, activeCanvas.height);
+    } catch (e) {
+      console.warn('🔍 Could not preserve canvas data during resize');
+    }
+  }
+  
+  // تعيين الأبعاد الجديدة
+  activeCanvas.width = newWidth;
+  activeCanvas.height = newHeight;
+  
+  // إعادة الحصول على السياق بعد تغيير الأبعاد
+  activeCtx = activeCanvas.getContext('2d');
+  
+  if (activeCtx) {
+    // إعادة تعيين خصائص الرسم
+    activeCtx.lineWidth = 2;
+    activeCtx.lineCap = 'round';
+    activeCtx.lineJoin = 'round';
+    activeCtx.strokeStyle = '#000';
+    
+    // تعيين خلفية بيضاء للكانفاس
+    activeCtx.fillStyle = '#ffffff';
+    activeCtx.fillRect(0, 0, activeCanvas.width, activeCanvas.height);
+    
+    // استعادة البيانات المحفوظة إذا كانت موجودة
+    if (imageData) {
+      try {
+        activeCtx.putImageData(imageData, 0, 0);
+      } catch (e) {
+        console.warn('🔍 Could not restore canvas data after resize');
+      }
+    }
+    
+    console.log('🔍 Canvas resized to:', { width: newWidth, height: newHeight });
+  } else {
+    console.error('🔍 Failed to get canvas context after resize');
+  }
 }
 
 // دالة فتح مودال التوقيع
 function openSignatureModal(contentId) {
+  console.log('🔍 openSignatureModal called for contentId:', contentId);
   selectedContentId = contentId;
   const modal = document.getElementById('signatureModal');
+  
+  if (!modal) {
+    console.error('🔍 Signature modal not found');
+    return;
+  }
+  
   modal.style.display = 'flex';
   
   // إعادة تعيين التوقيع الحالي
@@ -2332,8 +2603,13 @@ function openSignatureModal(contentId) {
   tabContents.forEach(c => c.classList.remove('active'));
   
   // تفعيل تبويب التوقيع المباشر افتراضياً
-  document.querySelector('[data-tab="draw"]').classList.add('active');
-  document.getElementById('draw-tab').classList.add('active');
+  const drawTabBtn = document.querySelector('[data-tab="draw"]');
+  const drawTabContent = document.getElementById('draw-tab');
+  
+  if (drawTabBtn && drawTabContent) {
+    drawTabBtn.classList.add('active');
+    drawTabContent.classList.add('active');
+  }
   
   // إعادة تعيين منطقة رفع الصور
   const uploadArea = document.getElementById('uploadArea');
@@ -2343,34 +2619,178 @@ function openSignatureModal(contentId) {
     uploadPreview.style.display = 'none';
   }
   
-  // تعيين الكانفاس النشط للمودال الرئيسي
+  // تعيين الكانفاس النشط للمودال الرئيسي مع تأخير لضمان تحميل DOM
   setTimeout(() => {
-    // التأكد من أن الكانفاس الرئيسي هو النشط
     const mainCanvas = document.getElementById('mainSignatureCanvas');
     if (mainCanvas) {
       activeCanvas = mainCanvas;
       activeCtx = activeCanvas.getContext('2d');
       console.log('🔍 Main signature modal opened, activeCanvas set to:', activeCanvas.id);
+      
+      // تهيئة الكانفاس
+      initializeCanvas();
+      
+      // إعادة إعداد event listeners للتوقيع
+      setupSignatureDrawing();
+      
+      // إعادة إعداد التبويبات
+      setupSignatureTabs();
+      
+      // إعادة إعداد رفع الصور
+      setupImageUpload();
+      
+      console.log('🔍 Signature modal fully initialized');
+    } else {
+      console.error('🔍 Main signature canvas not found in modal');
     }
-    resizeCanvas();
-    clearCanvas();
-  }, 50);
+  }, 100);
+}
+
+// دالة إعداد التوقيع على الكانفاس
+function setupSignatureDrawing() {
+  if (!activeCanvas || !activeCtx) {
+    console.error('🔍 Canvas or context not available for drawing setup');
+    return;
+  }
+  
+  let drawing = false;
+  
+  function getPos(e) {
+    const rect = activeCanvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    
+    // حساب النسبة المئوية للكانفاس
+    const scaleX = activeCanvas.width / rect.width;
+    const scaleY = activeCanvas.height / rect.height;
+    
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY
+    };
+  }
+  
+  // إزالة event listeners السابقة
+  activeCanvas.removeEventListener('mousedown', handleMouseDown);
+  activeCanvas.removeEventListener('mousemove', handleMouseMove);
+  activeCanvas.removeEventListener('mouseup', handleMouseUp);
+  activeCanvas.removeEventListener('mouseleave', handleMouseLeave);
+  activeCanvas.removeEventListener('touchstart', handleTouchStart);
+  activeCanvas.removeEventListener('touchmove', handleTouchMove);
+  activeCanvas.removeEventListener('touchend', handleTouchEnd);
+  
+  function handleMouseDown(e) {
+    drawing = true;
+    const pos = getPos(e);
+    activeCtx.beginPath();
+    activeCtx.moveTo(pos.x, pos.y);
+  }
+  
+  function handleMouseMove(e) {
+    if (!drawing) return;
+    const pos = getPos(e);
+    activeCtx.lineTo(pos.x, pos.y);
+    activeCtx.stroke();
+  }
+  
+  function handleMouseUp() {
+    drawing = false;
+    // تحديث التوقيع الحالي عند الانتهاء من الرسم
+    currentSignature = activeCanvas.toDataURL('image/png');
+  }
+  
+  function handleMouseLeave() {
+    drawing = false;
+  }
+  
+  function handleTouchStart(e) {
+    e.preventDefault();
+    drawing = true;
+    const pos = getPos(e);
+    activeCtx.beginPath();
+    activeCtx.moveTo(pos.x, pos.y);
+  }
+  
+  function handleTouchMove(e) {
+    e.preventDefault();
+    if (!drawing) return;
+    const pos = getPos(e);
+    activeCtx.lineTo(pos.x, pos.y);
+    activeCtx.stroke();
+  }
+  
+  function handleTouchEnd(e) {
+    e.preventDefault();
+    drawing = false;
+    // تحديث التوقيع الحالي عند الانتهاء من الرسم
+    currentSignature = activeCanvas.toDataURL('image/png');
+  }
+  
+  // إضافة event listeners للتوقيع
+  activeCanvas.addEventListener('mousedown', handleMouseDown);
+  activeCanvas.addEventListener('mousemove', handleMouseMove);
+  activeCanvas.addEventListener('mouseup', handleMouseUp);
+  activeCanvas.addEventListener('mouseleave', handleMouseLeave);
+  activeCanvas.addEventListener('touchstart', handleTouchStart);
+  activeCanvas.addEventListener('touchmove', handleTouchMove);
+  activeCanvas.addEventListener('touchend', handleTouchEnd);
+  
+  console.log('🔍 Signature drawing setup completed');
 }
 
 // دالة إغلاق مودال التوقيع
 function closeSignatureModal() {
+  console.log('🔍 closeSignatureModal called');
+  
   const modal = document.getElementById('signatureModal');
   if (modal) {
     // إغلاق فوري بدون تأخير
     modal.style.display = 'none';
     modal.style.opacity = '1';
     modal.style.transition = '';
+    
+    // مسح الكانفاس
     clearCanvas();
+    
+    // إزالة event listeners من الكانفاس
+    if (activeCanvas) {
+      activeCanvas.removeEventListener('mousedown', handleMouseDown);
+      activeCanvas.removeEventListener('mousemove', handleMouseMove);
+      activeCanvas.removeEventListener('mouseup', handleMouseUp);
+      activeCanvas.removeEventListener('mouseleave', handleMouseLeave);
+      activeCanvas.removeEventListener('touchstart', handleTouchStart);
+      activeCanvas.removeEventListener('touchmove', handleTouchMove);
+      activeCanvas.removeEventListener('touchend', handleTouchEnd);
+    }
+    
+    // إزالة event listener لتغيير الحجم
+    window.removeEventListener('resize', resizeCanvas);
+    
+    // إزالة event listeners من الأزرار
+    const btnClear = document.getElementById('btnClear');
+    const btnCancelSignature = document.getElementById('btnCancelSignature');
+    const btnConfirmSignature = document.getElementById('btnConfirmSignature');
+    
+    if (btnClear) {
+      btnClear.removeEventListener('click', handleClearClick);
+    }
+    
+    if (btnCancelSignature) {
+      btnCancelSignature.removeEventListener('click', handleCancelClick);
+    }
+    
+    if (btnConfirmSignature) {
+      btnConfirmSignature.removeEventListener('click', handleConfirmClick);
+    }
     
     // إعادة تعيين متغيرات الكانفاس النشط
     activeCanvas = null;
     activeCtx = null;
+    currentSignature = null;
+    
     console.log('🔍 Main signature modal closed, activeCanvas reset');
+  } else {
+    console.warn('🔍 Signature modal not found for closing');
   }
 }
 
@@ -2618,11 +3038,11 @@ async function processSingleDelegation(data) {
   try {
     let endpoint;
     if (data.isCommittee) {
-      endpoint = 'http://localhost:3006/api/committee-approvals/committee-delegations/single';
+      endpoint = 'http://10.99.28.23:3006/api/committee-approvals/committee-delegations/single';
     } else if (data.isProtocol) {
-      endpoint = 'http://localhost:3006/api/approvals/delegate-single';
+      endpoint = 'http://10.99.28.23:3006/api/approvals/delegate-single';
     } else {
-      endpoint = 'http://localhost:3006/api/approvals/delegate-single';
+      endpoint = 'http://10.99.28.23:3006/api/approvals/delegate-single';
     }
     console.log('🔍 Using endpoint:', endpoint);
     
@@ -2682,11 +3102,11 @@ async function processBulkDelegation(data) {
   try {
     let endpoint;
     if (data.isCommittee) {
-      endpoint = 'http://localhost:3006/api/committee-approvals/committee-delegations/bulk';
+      endpoint = 'http://10.99.28.23:3006/api/committee-approvals/committee-delegations/bulk';
     } else if (data.isProtocol) {
-      endpoint = 'http://localhost:3006/api/protocols/delegate-all-unified';
+      endpoint = 'http://10.99.28.23:3006/api/protocols/delegate-all-unified';
     } else {
-      endpoint = 'http://localhost:3006/api/approvals/delegate-all-unified';
+      endpoint = 'http://10.99.28.23:3006/api/approvals/delegate-all-unified';
     }
     console.log('🔍 Using endpoint:', endpoint);
     

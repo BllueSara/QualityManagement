@@ -411,17 +411,51 @@ body {
   padding: 16px 24px;
 }
 .canvas-wrapper {
-  width: 100%; height: 200px;
+  width: 100%; 
+  height: 200px;
   border: 2px solid #e5e7eb;
   border-radius: 8px;
-  background-color: #f9fafb;
+  background-color: #ffffff;
   box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+  position: relative;
+  overflow: hidden;
 }
+
 .canvas-wrapper canvas {
-  width: 100%; height: 100%;
+  width: 100%; 
+  height: 100%;
   display: block;
   cursor: crosshair;
   touch-action: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  background-color: #ffffff;
+}
+
+/* تحسينات للأجهزة المحمولة */
+@media (max-width: 768px) {
+  .canvas-wrapper {
+    height: 150px;
+  }
+  
+  .canvas-wrapper canvas {
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* تحسينات للشاشات الكبيرة */
+@media (min-width: 1200px) {
+  .canvas-wrapper {
+    height: 250px;
+  }
 }
 
 /* ===== خيارات التوقيع ===== */

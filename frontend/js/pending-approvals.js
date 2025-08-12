@@ -1,4 +1,4 @@
-const apiBase = 'http://localhost:3006/api';
+const apiBase = 'http://10.99.28.23:3006/api';
 const authToken = localStorage.getItem('token') || null;
 
 async function fetchJSON(url, opts = {}) {
@@ -560,6 +560,10 @@ async function initDropdowns() {
         showToast('حدث خطأ: لم يتم العثور على الصف.', 'error');
         return;
       }
+      
+      // تعطيل الزر فوراً لمنع النقرات المتعددة
+      sendBtn.disabled = true;
+      
       // 1) أقرأ الأسماء المخزّنة حالياً
       const existingAssignedNames = row.dataset.assignedNames
         ? JSON.parse(row.dataset.assignedNames)
@@ -575,6 +579,7 @@ async function initDropdowns() {
         .filter(u => !existingAssignedNames.includes(u.name));
 
       if (!newUsers.length) {
+        sendBtn.disabled = false;
         return alert(getTranslation('no-new-approvers'));
       }
 
@@ -713,10 +718,12 @@ async function initDropdowns() {
           await initDropdowns();
         } else {
           showToast(getTranslation('send-failed'), 'error');
+          sendBtn.disabled = false;
         }
       } catch (err) {
         console.error('فشل الإرسال:', err);
         showToast(getTranslation('send-failed'), 'error');
+        sendBtn.disabled = false;
       }
     });
   });
@@ -860,11 +867,20 @@ function closeDeadlineModal() {
 
 // حفظ المواعيد النهائية
 async function saveDeadlines() {
+  const saveButton = document.querySelector('.deadline-btn-save');
+  const originalText = saveButton.innerHTML;
+  
+  // تعطيل الزر فوراً
+  saveButton.disabled = true;
+  saveButton.innerHTML = `<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...`;
+  
   try {
     const { contentId, contentType } = currentDeadlineData;
     
     if (!contentId || !contentType) {
       showToast('بيانات غير صحيحة', 'error');
+      saveButton.disabled = false;
+      saveButton.innerHTML = originalText;
       return;
     }
 
@@ -907,6 +923,8 @@ async function saveDeadlines() {
 
     if (deadlines.length === 0) {
       showToast('يرجى تحديد وقت (أيام، ساعات، أو دقائق) لمعتمد واحد على الأقل', 'warning');
+      saveButton.disabled = false;
+      saveButton.innerHTML = originalText;
       return;
     }
 

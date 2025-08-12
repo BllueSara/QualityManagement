@@ -1,5 +1,5 @@
 // committee.js
-const apiBase = 'http://localhost:3006/api';
+const apiBase = 'http://10.99.28.23:3006/api';
 
 // متغيرات الصفحات
 let allCommittees = [];
@@ -330,20 +330,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       hasImage = true;
       if (committee.image.startsWith('backend/uploads/')) {
         // المسار الجديد: backend/uploads/images/filename.jpg
-        imgSrc = `http://localhost:3006/${committee.image}`;
+        imgSrc = `http://10.99.28.23:3006/${committee.image}`;
       } else if (committee.image.startsWith('uploads/')) {
         // المسار القديم: uploads/images/filename.jpg
-        imgSrc = `http://localhost:3006/${committee.image}`;
+        imgSrc = `http://10.99.28.23:3006/${committee.image}`;
       } else if (committee.image.startsWith('frontend/images/')) {
         // المسار القديم: frontend/images/filename.jpg
-        imgSrc = `http://localhost:3006/${committee.image}`;
+        imgSrc = `http://10.99.28.23:3006/${committee.image}`;
       } else if (committee.image.includes('\\') || committee.image.includes('/')) {
         // مسار كامل للنظام، استخرج اسم الملف فقط
         const fileName = committee.image.split(/[\\/]/).pop();
-        imgSrc = `http://localhost:3006/backend/uploads/images/${fileName}`;
+        imgSrc = `http://10.99.28.23:3006/backend/uploads/images/${fileName}`;
       } else {
         // اسم ملف فقط
-        imgSrc = `http://localhost:3006/backend/uploads/images/${committee.image}`;
+        imgSrc = `http://10.99.28.23:3006/backend/uploads/images/${committee.image}`;
       }
     } else {
       // لا توجد صورة

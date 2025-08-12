@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const reportingDeptSelect = document.getElementById('reportingDept');
     const respondingDeptSelect = document.getElementById('respondingDept');
     const otherDeptsSelect = document.getElementById('otherDepts');
-const apiBase = 'http://localhost:3006/api';
+const apiBase = 'http://10.99.28.23:3006/api';
 
     // Load departments from the database
 async function loadDepartments() {
@@ -128,7 +128,7 @@ try {
 async function loadClassifications() {
   const lang = localStorage.getItem('language') || 'ar';
   const token = localStorage.getItem('token');
-  const response = await fetch(`http://localhost:3006/api/tickets/classifications?lang=${lang}`, {
+  const response = await fetch(`http://10.99.28.23:3006/api/tickets/classifications?lang=${lang}`, {
     headers: { 'Authorization': `Bearer ${token}` }
   });
   const result = await response.json();
@@ -164,7 +164,7 @@ async function loadClassifications() {
 async function loadHarmLevels() {
   const lang = localStorage.getItem('language') || 'ar';
   const token = localStorage.getItem('token');
-  const response = await fetch(`http://localhost:3006/api/tickets/harm-levels?lang=${lang}`, {
+  const response = await fetch(`http://10.99.28.23:3006/api/tickets/harm-levels?lang=${lang}`, {
     headers: { 'Authorization': `Bearer ${token}` }
   });
   const result = await response.json();

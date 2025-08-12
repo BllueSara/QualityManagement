@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // if (!ticketId) return console.error('Missing ticket id');
 
   try {
-    const res = await fetch(`http://localhost:3006/api/tickets/${ticketId}/track`, {
+    const res = await fetch(`http://10.99.28.23:3006/api/tickets/${ticketId}/track`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     });
     if (!res.ok) throw new Error('Failed to fetch track data');

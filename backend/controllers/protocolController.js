@@ -40,7 +40,15 @@ class ProtocolController {
     // إنشاء محضر جديد
     async createProtocol(req, res) {
         try {
-            const { protocolTitle, protocolDate, topics } = req.body;
+            const { 
+                protocolTitle, 
+                protocolDate, 
+                topics, 
+                assignmentType, 
+                departmentId, 
+                folderId, 
+                committeeId 
+            } = req.body;
             const userId = req.user.id;
 
             // التحقق من البيانات المطلوبة
@@ -71,7 +79,11 @@ class ProtocolController {
             const protocolData = {
                 protocolTitle,
                 protocolDate,
-                topics
+                topics,
+                assignmentType,
+                departmentId,
+                folderId,
+                committeeId
             };
 
             const result = await protocolModel.createProtocol(protocolData, userId);
@@ -239,7 +251,15 @@ class ProtocolController {
     async updateProtocol(req, res) {
         try {
             const { id } = req.params;
-            const { protocolTitle, protocolDate, topics } = req.body;
+            const { 
+                protocolTitle, 
+                protocolDate, 
+                topics, 
+                assignmentType, 
+                departmentId, 
+                folderId, 
+                committeeId 
+            } = req.body;
             const userId = req.user.id;
 
             // التحقق من البيانات المطلوبة
@@ -270,7 +290,11 @@ class ProtocolController {
             const protocolData = {
                 protocolTitle,
                 protocolDate,
-                topics
+                topics,
+                assignmentType,
+                departmentId,
+                folderId,
+                committeeId
             };
 
             const result = await protocolModel.updateProtocol(id, protocolData, userId);
@@ -913,7 +937,8 @@ class ProtocolController {
                 }
             }
 
-            // ——— منطق التوقيع المزدوج للمفوض له ———
+            // ——— منطق التوقيع بالنيابة ———
+            // عند التوقيع بالنيابة، يتم إنشاء توقيع واحد فقط للمفوض له
             let delegatedBy = null;
             let isProxy = false;
             let singleDelegationRows = [];
@@ -971,69 +996,37 @@ class ProtocolController {
             const protocolApproversTable = 'protocol_approvers';
             const protocolsTable = 'protocols';
 
-            // منطق الاعتماد - محسن للأداء
-            if (isDelegated) {
-                // المستخدم مفوض له تفويض جماعي - اعتماد واحد فقط بالنيابة
-                await protocolModel.pool.execute(`
-                    INSERT INTO ${approvalLogsTable} (
-                        protocol_id,
-                        approver_id,
-                        delegated_by,
-                        signed_as_proxy,
-                        status,
-                        signature,
-                        electronic_signature,
-                        comments,
-                        created_at
-                    )
-                    VALUES (?, ?, ?, 1, ?, ?, ?, ?, NOW())
-                    ON DUPLICATE KEY UPDATE 
-                        status = VALUES(status),
-                        signature = VALUES(signature),
-                        electronic_signature = VALUES(electronic_signature),
-                        comments = VALUES(comments),
-                        created_at = NOW()
-                `, [
-                    protocolId,
-                    approverId,
-                    delegatorId,
-                    approved ? 'approved' : 'rejected',
-                    signature || null,
-                    electronic_signature || null,
-                    notes || ''
-                ]);
-            } else {
-                // المستخدم عادي - اعتماد واحد فقط
-                await protocolModel.pool.execute(`
-                    INSERT INTO ${approvalLogsTable} (
-                        protocol_id,
-                        approver_id,
-                        delegated_by,
-                        signed_as_proxy,
-                        status,
-                        signature,
-                        electronic_signature,
-                        comments,
-                        created_at
-                    )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
-                    ON DUPLICATE KEY UPDATE 
-                        status = VALUES(status),
-                        signature = VALUES(signature),
-                        electronic_signature = VALUES(electronic_signature),
-                        comments = VALUES(comments),
-                        created_at = NOW()
-                `, [
-                    protocolId,
-                    approverId,
-                    delegatedBy,
-                    isProxy ? 1 : 0,
-                    approved ? 'approved' : 'rejected',
-                    signature || null,
-                    electronic_signature || null,
-                    notes || ''
-                ]);
-            }
+            // منطق الاعتماد - توقيع واحد فقط
+            // حذف أي سجلات موجودة مسبقاً لنفس المستخدم على نفس المحضر
+            await protocolModel.pool.execute(`
+                DELETE FROM ${approvalLogsTable} 
+                WHERE protocol_id = ? AND approver_id = ?
+            `, [protocolId, approverId]);
+
+            // إنشاء توقيع واحد فقط
+            await protocolModel.pool.execute(`
+                INSERT INTO ${approvalLogsTable} (
+                    protocol_id,
+                    approver_id,
+                    delegated_by,
+                    signed_as_proxy,
+                    status,
+                    signature,
+                    electronic_signature,
+                    comments,
+                    created_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            `, [
+                protocolId,
+                approverId,
+                isDelegated ? delegatorId : delegatedBy,
+                isDelegated || isProxy ? 1 : 0,
+                approved ? 'approved' : 'rejected',
+                signature || null,
+                electronic_signature || null,
+                notes || ''
+            ]);
 
             // إضافة المستخدم المفوض له إلى protocol_approvers إذا لم يكن موجوداً
             // للمستخدمين المفوض لهم، نضيفهم في كلا الحالتين (شخصي وبالنيابة)
@@ -1645,21 +1638,8 @@ class ProtocolController {
                 ) VALUES (?, ?, ?, 1, 'pending', ?, ?, NOW())
             `, [contentId, delegateTo, delegatorId, signature || null, notes || '']);
 
-            // إنشاء سجل منفصل لتوقيع المرسل للمحاضر
-            const protocolSenderSignatureResult = await protocolModel.pool.execute(`
-                INSERT IGNORE INTO protocol_approval_logs (
-                    protocol_id,
-                    approver_id,
-                    delegated_by,
-                    signed_as_proxy,
-                    status,
-                    comments,
-                    signature,
-                    created_at
-                ) VALUES (?, ?, ?, 0, 'sender_signature', ?, ?, NOW())
-            `, [contentId, delegatorId, delegatorId, 'توقيع المرسل على اقرار التفويض', signature || null]);
-
-            console.log('🔍 Protocol sender signature result:', protocolSenderSignatureResult);
+            // لا نحتاج لإنشاء سجل منفصل لتوقيع المرسل للمحاضر
+            // سيتم التعامل مع التوقيع في وقت التوقيع الفعلي
 
             console.log(`Protocol delegation created by user ${delegatorId}`, {
                 protocolId: contentId,
@@ -1736,16 +1716,8 @@ class ProtocolController {
                     ) VALUES (?, ?, ?, 1, 'pending', ?, ?, NOW())
                 `, [protocol.id, delegateTo, delegatorId, signature || null, notes || '']);
 
-                // سجل sender_signature لكل محضر إذا توفّر توقيع المرسل
-                if (signature) {
-                    try {
-                        await protocolModel.pool.execute(`
-                            INSERT IGNORE INTO protocol_approval_logs (
-                                protocol_id, approver_id, delegated_by, signed_as_proxy, status, comments, signature, created_at
-                            ) VALUES (?, ?, ?, 0, 'sender_signature', ?, ?, NOW())
-                        `, [protocol.id, delegatorId, delegatorId, 'توقيع المرسل على اقرار التفويض', signature]);
-                    } catch (_) {}
-                }
+                // لا نحتاج لإنشاء سجل منفصل لتوقيع المرسل للمحاضر
+                // سيتم التعامل مع التوقيع في وقت التوقيع الفعلي
             }
 
             console.log(`Bulk protocol delegation created by user ${delegatorId}`, {
@@ -2265,6 +2237,35 @@ class ProtocolController {
             res.status(500).json({
                 status: 'error',
                 message: 'حدث خطأ أثناء جلب بيانات التأكيد'
+            });
+        }
+    }
+
+    // جلب المحاضر المرتبطة بمجلد معين
+    async getProtocolsByFolder(req, res) {
+        try {
+            const folderId = req.params.folderId;
+            const userId = req.user.id;
+
+            if (!folderId) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'معرف المجلد مطلوب'
+                });
+            }
+
+            const protocols = await protocolModel.getProtocolsByFolder(folderId, userId);
+
+            res.status(200).json({
+                success: true,
+                data: protocols,
+                message: 'تم جلب المحاضر بنجاح'
+            });
+        } catch (error) {
+            console.error('Error getting protocols by folder:', error);
+            res.status(500).json({
+                success: false,
+                message: 'خطأ في جلب المحاضر'
             });
         }
     }

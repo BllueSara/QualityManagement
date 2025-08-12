@@ -1,5 +1,5 @@
 // --- المتغيرات العامة ---
-const apiBase = 'http://localhost:3006';
+const apiBase = 'http://10.99.28.23:3006';
 let currentCommitteeId = null;
 let currentCommitteeName = null;
 let currentFolderId = null;
@@ -9,6 +9,21 @@ let allContents = [];
 let folderNameOptions = [];
 let selectedFolderNameId = null;
 let isForceApproved = false; // متغير عام
+
+// دالة لتنسيق التاريخ
+function formatDate(dateString) {
+    if (!dateString) return '';
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
+    
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    
+    // تنسيق عربي: يوم/شهر/سنة
+    return `${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/${year}`;
+}
 // دالة لتسجيل عرض المحتوى في اللوقز
 async function logContentView(contentId, contentTitle, folderName, committeeName) {
     try {
@@ -696,15 +711,38 @@ async function fetchFolderContents(folderId, folderName) {
       contents: filteredContents,
       folderName: displayFolderName
     };
-    renderContents(filteredContents);
+    
+    // جلب المحاضر المرتبطة بالمجلد
+    let protocols = [];
+    try {
+      const protocolsResponse = await fetch(`${apiBase}/api/protocols/folder/${folderId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (protocolsResponse.ok) {
+        const protocolsData = await protocolsResponse.json();
+        protocols = protocolsData.success ? protocolsData.data : [];
+      } else {
+        console.log('لا توجد محاضر مرتبطة بهذا المجلد أو خطأ في جلب المحاضر');
+      }
+    } catch (error) {
+      console.log('خطأ في جلب المحاضر:', error);
+      protocols = [];
+    }
+    
+    renderContents(filteredContents, protocols);
   } catch (err) {
     showToast(getTranslation('error-occurred'), 'error');
   }
 }
-function renderContents(contents) {
+function renderContents(contents, protocols = []) {
   const filesList = document.querySelector('.files-list');
   if (!filesList) return;
   filesList.innerHTML = '';
+  
+  // عرض المحتويات العادية
   if (contents.length > 0) {
     contents.forEach(content => {
       let icons = '<div class="item-icons">';
@@ -758,7 +796,71 @@ window.open(`${baseUrl}/${filePath}`, '_blank');
         });
       }
     });
-  } else {
+  }
+  
+  // عرض المحاضر المرتبطة بالمجلد
+  if (protocols && protocols.length > 0) {
+    // إضافة عنوان قسم المحاضر
+    const protocolsHeader = document.createElement('div');
+    protocolsHeader.className = 'protocols-header';
+    protocolsHeader.innerHTML = `
+        <h3 style="margin: 20px 0 10px 0; color: #1e40af; border-bottom: 2px solid #3b82f6; padding-bottom: 5px;">
+            <i class="fas fa-file-alt"></i>
+            المحاضر المرتبطة بهذا المجلد
+        </h3>
+    `;
+    filesList.appendChild(protocolsHeader);
+    
+    protocols.forEach(protocol => {
+      const protocolItem = document.createElement('div');
+      protocolItem.className = 'file-item protocol-item';
+      
+      // تنسيق التاريخ
+      const formattedDate = formatDate(protocol.protocol_date);
+      
+      const approvalClass = protocol.is_approved ? 'approved' : 'pending';
+      const approvalStatus = protocol.is_approved ? 'معتمد' : 'في انتظار الاعتماد';
+      
+      protocolItem.innerHTML = `
+          <div class="item-icons">
+              <a href="#" class="view-protocol-icon" data-id="${protocol.id}">
+                  <i class="fas fa-eye" style="color: #3b82f6;"></i>
+              </a>
+          </div>
+          <img src="../images/pdf.svg" alt="محضر PDF">
+          <div class="file-info">
+              <div class="file-name">${protocol.title}</div>
+              <div class="approval-status ${approvalClass}">${approvalStatus}</div>
+              <div class="file-date">${formattedDate}</div>
+              <div class="file-date">عدد المواضيع: ${protocol.topics_count}</div>
+          </div>
+      `;
+      
+      filesList.appendChild(protocolItem);
+      
+      // إضافة مستمع النقر لعرض المحضر
+      const viewBtn = protocolItem.querySelector('.view-protocol-icon');
+      viewBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.open(`/frontend/html/protocol-list.html?view=${protocol.id}`, '_blank');
+      });
+      
+      // إضافة مستمع النقر على المحضر نفسه لفتح PDF
+      protocolItem.addEventListener('click', function(e) {
+        if (!e.target.closest('.view-protocol-icon')) {
+          if (protocol.file_path) {
+            window.open(`http://10.99.28.23:3006/uploads/${protocol.file_path}`, '_blank');
+          } else {
+            showToast('ملف PDF غير متوفر', 'error');
+          }
+        }
+      });
+    });
+  }
+  
+  // إذا لم تكن هناك محتويات ولا محاضر
+  if (contents.length === 0 && (!protocols || protocols.length === 0)) {
     filesList.innerHTML = `<div class="no-content" data-translate="no-contents">${getTranslation('no-contents')}</div>`;
   }
 }

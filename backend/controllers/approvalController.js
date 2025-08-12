@@ -494,92 +494,37 @@ const handleApproval = async (req, res) => {
     const contentsTable = 'contents';
     const generatePdfFunction = generateFinalSignedPDF;
 
-    // منطق الاعتماد المزدوج للمستخدم المفوض له - محسن للأداء
-    if (isDelegated) {
-      // التوقيع الأول: شخصي
-      // استخدام INSERT ... ON DUPLICATE KEY UPDATE لتجنب خطأ duplicate entry
-      await db.execute(`
-        INSERT INTO ${approvalLogsTable} (
-          content_id, approver_id, delegated_by, signed_as_proxy, status, signature, electronic_signature, comments, created_at
-        ) VALUES (?, ?, NULL, 0, ?, ?, ?, ?, NOW())
-        ON DUPLICATE KEY UPDATE 
-          status = VALUES(status),
-          signature = VALUES(signature),
-          electronic_signature = VALUES(electronic_signature),
-          comments = VALUES(comments),
-          created_at = NOW()
-      `, [
-        contentId,
-        approverId,
-        approved ? 'approved' : 'rejected',
-        signature || null,
-        electronic_signature || null,
-        notes || ''
-      ]);
-      
-      // التوقيع الثاني: بالنيابة
-      // استخدام INSERT ... ON DUPLICATE KEY UPDATE لتجنب خطأ duplicate entry
-      await db.execute(`
-        INSERT INTO ${approvalLogsTable} (
-          content_id,
-          approver_id,
-          delegated_by,
-          signed_as_proxy,
-          status,
-          signature,
-          electronic_signature,
-          comments,
-          created_at
-        )
-        VALUES (?, ?, ?, 1, ?, ?, ?, ?, NOW())
-        ON DUPLICATE KEY UPDATE 
-          status = VALUES(status),
-          signature = VALUES(signature),
-          electronic_signature = VALUES(electronic_signature),
-          comments = VALUES(comments),
-          created_at = NOW()
-      `, [
-        contentId,
-        approverId,
-        delegatorId,
-        approved ? 'approved' : 'rejected',
-        signature || null,
-        electronic_signature || null,
-        notes || ''
-      ]);
-    } else {
-      // المستخدم عادي - اعتماد واحد فقط
-      // استخدام INSERT ... ON DUPLICATE KEY UPDATE لتجنب خطأ duplicate entry
-      await db.execute(`
-        INSERT INTO ${approvalLogsTable} (
-          content_id,
-          approver_id,
-          delegated_by,
-          signed_as_proxy,
-          status,
-          signature,
-          electronic_signature,
-          comments,
-          created_at
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
-        ON DUPLICATE KEY UPDATE 
-          status = VALUES(status),
-          signature = VALUES(signature),
-          electronic_signature = VALUES(electronic_signature),
-          comments = VALUES(comments),
-          created_at = NOW()
-      `, [
-        contentId,
-        approverId,
-        delegatedBy,
-        isProxy ? 1 : 0,
-        approved ? 'approved' : 'rejected',
-        signature || null,
-        electronic_signature || null,
-        notes || ''
-      ]);
-    }
+    // منطق الاعتماد - توقيع واحد فقط
+    // حذف أي سجلات موجودة مسبقاً لنفس المستخدم على نفس المحتوى
+    await db.execute(`
+      DELETE FROM ${approvalLogsTable} 
+      WHERE content_id = ? AND approver_id = ?
+    `, [contentId, approverId]);
+
+    // إنشاء توقيع واحد فقط
+    await db.execute(`
+      INSERT INTO ${approvalLogsTable} (
+        content_id,
+        approver_id,
+        delegated_by,
+        signed_as_proxy,
+        status,
+        signature,
+        electronic_signature,
+        comments,
+        created_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+    `, [
+      contentId,
+      approverId,
+      isDelegated ? delegatorId : delegatedBy,
+      isDelegated || isProxy ? 1 : 0,
+      approved ? 'approved' : 'rejected',
+      signature || null,
+      electronic_signature || null,
+      notes || ''
+    ]);
 
     // إضافة المستخدم المفوض له إلى content_approvers إذا لم يكن موجوداً
     // فقط للمستخدمين المفوض لهم تفويض جماعي (ليس للتفويضات الفردية)
@@ -2822,16 +2767,8 @@ const delegateAllApprovalsUnified = async (req, res) => {
       
       console.log('🔍 Protocol file delegation result for protocol', row.id, ':', protFileResult);
 
-      // سجل منفصل لتوقيع المرسل لهذا المحضر
-      if (signature) {
-        try {
-          await db.execute(`
-            INSERT IGNORE INTO protocol_approval_logs (
-              protocol_id, approver_id, delegated_by, signed_as_proxy, status, comments, signature, created_at
-            ) VALUES (?, ?, ?, 0, 'sender_signature', ?, ?, NOW())
-          `, [row.id, currentUserId, currentUserId, 'توقيع المرسل على اقرار التفويض', signature]);
-        } catch (_) {}
-      }
+      // لا نحتاج لإنشاء سجل منفصل لتوقيع المرسل للمحاضر
+      // سيتم التعامل مع التوقيع في وقت التوقيع الفعلي
     }
     
     // إرسال إشعار جماعي موحد للمفوض له
@@ -3602,21 +3539,8 @@ const delegateSingleApproval = async (req, res) => {
 
       console.log('🔍 Protocol delegation result:', protocolDelegationResult);
 
-      // إنشاء سجل منفصل لتوقيع المرسل للمحاضر
-      const protocolSenderSignatureResult = await db.execute(`
-        INSERT IGNORE INTO protocol_approval_logs (
-          protocol_id,
-          approver_id,
-          delegated_by,
-          signed_as_proxy,
-          status,
-          comments,
-          signature,
-          created_at
-        ) VALUES (?, ?, ?, 0, 'sender_signature', ?, ?, NOW())
-      `, [cleanContentId, currentUserId, currentUserId, 'توقيع المرسل على اقرار التفويض', signature || null]);
-
-      console.log('🔍 Protocol sender signature result:', protocolSenderSignatureResult);
+      // لا نحتاج لإنشاء سجل منفصل لتوقيع المرسل للمحاضر
+      // سيتم التعامل مع التوقيع في وقت التوقيع الفعلي
     }
 
     // إرسال إشعار للمفوض له

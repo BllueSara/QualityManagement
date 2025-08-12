@@ -8,6 +8,8 @@ router.use(authenticateToken); // Apply authentication to all routes
 // Basic CRUD operations
 router.post('/', protocolController.createProtocol);
 router.get('/', protocolController.getAllProtocols);
+// جلب المحاضر المرتبطة بمجلد معين
+router.get('/folder/:folderId', protocolController.getProtocolsByFolder);
 // Specific routes MUST come before generic '/:id'
 router.get('/pending/approvals', protocolController.getPendingApprovals);
 router.get('/track/:id', protocolController.getProtocolTrack);

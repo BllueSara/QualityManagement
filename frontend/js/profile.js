@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error('No token available');
             }
 
-            const response = await fetch(`http://localhost:3006/api/users/${userId}`, {
+            const response = await fetch(`http://10.99.28.23:3006/api/users/${userId}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -516,7 +516,7 @@ async function saveProfileChanges() {
          };
         
         // إرسال البيانات للخادم
-        const response = await fetch(`http://localhost:3006/api/users/${user.id}`, {
+        const response = await fetch(`http://10.99.28.23:3006/api/users/${user.id}`, {
             method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -544,7 +544,7 @@ async function saveProfileChanges() {
 async function fetchDepartmentsForEditModal(selectedId, selectedName) {
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:3006/api/departments/all', {
+        const response = await fetch('http://10.99.28.23:3006/api/departments/all', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -588,7 +588,7 @@ async function fetchDepartmentsForEditModal(selectedId, selectedName) {
 async function fetchJobTitlesForEditModal(selectedId, selectedTitle) {
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:3006/api/job-titles', {
+        const response = await fetch('http://10.99.28.23:3006/api/job-titles', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -659,7 +659,7 @@ async function fetchJobTitlesForEditModal(selectedId, selectedTitle) {
 async function fetchJobNamesForEditModal(selectedId, selectedName) {
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:3006/api/job-names', {
+        const response = await fetch('http://10.99.28.23:3006/api/job-names', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -740,7 +740,7 @@ async function fetchUserProfile(userId) {
             throw new Error('No token available');
         }
 
-        const response = await fetch(`http://localhost:3006/api/users/${userId}`, {
+        const response = await fetch(`http://10.99.28.23:3006/api/users/${userId}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -848,7 +848,7 @@ async function saveNewJobTitle() {
             return;
         }
         
-        const response = await fetch('http://localhost:3006/api/job-titles', {
+        const response = await fetch('http://10.99.28.23:3006/api/job-titles', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -888,7 +888,7 @@ async function saveNewJobTitle() {
 async function refreshJobTitlesList() {
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:3006/api/job-titles', {
+        const response = await fetch('http://10.99.28.23:3006/api/job-titles', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -1058,7 +1058,7 @@ function setupCustomJobNameSelect() {
 async function refreshJobNamesList() {
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:3006/api/job-names', {
+        const response = await fetch('http://10.99.28.23:3006/api/job-names', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -1182,7 +1182,7 @@ async function saveNewJobName() {
             return;
         }
         
-        const response = await fetch('http://localhost:3006/api/job-names', {
+        const response = await fetch('http://10.99.28.23:3006/api/job-names', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,

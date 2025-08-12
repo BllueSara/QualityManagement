@@ -1,6 +1,6 @@
 // departments.js
 // Add JavaScript specific to the departments page here
-const apiBase      = 'http://localhost:3006/api';
+const apiBase      = 'http://10.99.28.23:3006/api';
 
 document.addEventListener('DOMContentLoaded', async function() {
     // دالة إظهار التوست
@@ -359,7 +359,7 @@ function closeModal(modal) {
 
             // إنشاء عنصر الصورة مع التعامل مع الحالات التي لا توجد فيها صورة
             const imageElement = dept.image ? 
-                `<img src="http://localhost:3006/${dept.image}" alt="${deptName}">` :
+                `<img src="http://10.99.28.23:3006/${dept.image}" alt="${deptName}">` :
                 `<div style="font-size: 24px; color: #fff;">${deptName.charAt(0).toUpperCase()}</div>`;
 
             card.innerHTML = icons +
@@ -407,7 +407,7 @@ function closeModal(modal) {
     // Fetch and render departments
 async function fetchDepartments() {
     try {
-        const res = await fetch('http://localhost:3006/api/departments', {
+        const res = await fetch('http://10.99.28.23:3006/api/departments', {
             headers: { 'Authorization': `Bearer ${getToken()}` }
         });
         const result = await res.json();
@@ -598,7 +598,7 @@ editModalSaveBtn.addEventListener('click', async () => {
         if (!permissions.canDelete) return;
         const id = deleteDepartmentModal.dataset.departmentId;
         try {
-            const res = await fetch(`http://localhost:3006/api/departments/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${getToken()}` } });
+            const res = await fetch(`http://10.99.28.23:3006/api/departments/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${getToken()}` } });
             const r = await res.json(); if (!res.ok) throw new Error(r.message);
             showToast(getTranslation('department-deleted-success'), 'success'); 
             closeModal(deleteDepartmentModal); 

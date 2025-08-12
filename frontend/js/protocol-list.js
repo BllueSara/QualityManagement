@@ -54,7 +54,7 @@ async function loadProtocols() {
             throw new Error('غير مصرح لك، يرجى تسجيل الدخول مرة أخرى');
         }
 
-        const response = await fetch('http://localhost:3006/api/protocols', {
+        const response = await fetch('http://10.99.28.23:3006/api/protocols', {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -185,7 +185,7 @@ async function downloadPDF(protocolId) {
         }
 
         // إنشاء رابط تحميل
-        const downloadUrl = `http://localhost:3006/api/protocols/${protocolId}/pdf`;
+        const downloadUrl = `http://10.99.28.23:3006/api/protocols/${protocolId}/pdf`;
         
         // إنشاء عنصر a مؤقت للتحميل
         const link = document.createElement('a');
@@ -368,7 +368,7 @@ async function viewProtocol(protocolId) {
         }
 
         // إنشاء رابط تحميل PDF
-        const downloadUrl = `http://localhost:3006/api/protocols/${protocolId}/pdf`;
+        const downloadUrl = `http://10.99.28.23:3006/api/protocols/${protocolId}/pdf`;
         
         // فتح PDF في نافذة جديدة
         const response = await fetch(downloadUrl, {
@@ -420,7 +420,7 @@ async function deleteProtocol(protocolId) {
             throw new Error('غير مصرح لك، يرجى تسجيل الدخول مرة أخرى');
         }
 
-        const response = await fetch(`http://localhost:3006/api/protocols/${protocolId}`, {
+        const response = await fetch(`http://10.99.28.23:3006/api/protocols/${protocolId}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${token}`

@@ -25,6 +25,10 @@ function initializeForm() {
     if (protocolDateInput) {
         protocolDateInput.value = today;
     }
+    
+    // تحميل الأقسام واللجان
+    loadDepartments();
+    loadCommittees();
 }
 
 // فحص إذا كنا في وضع التعديل وجلب بيانات المحضر
@@ -37,7 +41,7 @@ async function maybeLoadProtocolForEdit() {
     try {
         showToast('جاري تحميل بيانات المحضر...', 'info');
         const token = getAuthToken();
-        const res = await fetch(`http://localhost:3006/api/protocols/${encodeURIComponent(id)}`, {
+        const res = await fetch(`http://10.99.28.23:3006/api/protocols/${encodeURIComponent(id)}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const json = await res.json();
@@ -203,12 +207,7 @@ async function handleFormSubmit(event) {
     }
 
     // جمع بيانات النموذج
-    const formData = new FormData(event.target);
-    const protocolData = {
-        protocolTitle: formData.get('protocolTitle'),
-        protocolDate: formData.get('protocolDate'),
-        topics: collectTopicsData()
-    };
+    const protocolData = collectFormData();
 
     try {
         // إظهار رسالة التحميل
@@ -256,6 +255,38 @@ function collectTopicsData() {
     return topics;
 }
 
+// جمع بيانات النموذج مع القسم والمجلد واللجنة
+function collectFormData() {
+    const formData = new FormData(document.getElementById('protocolForm'));
+    const assignmentType = formData.get('assignmentType');
+    
+    let departmentId = null;
+    let folderId = null;
+    let committeeId = null;
+    
+    if (assignmentType === 'department') {
+        departmentId = formData.get('protocolDepartment') || null;
+        folderId = formData.get('protocolFolder') || null;
+    } else if (assignmentType === 'committee') {
+        committeeId = formData.get('protocolCommittee') || null;
+        folderId = formData.get('committeeFolder') || null;
+    } else if (assignmentType === 'both') {
+        departmentId = formData.get('protocolDepartment') || null;
+        folderId = formData.get('protocolFolder') || null;
+        committeeId = formData.get('protocolCommittee') || null;
+    }
+    
+    return {
+        protocolTitle: formData.get('protocolTitle'),
+        protocolDate: formData.get('protocolDate'),
+        assignmentType: assignmentType,
+        departmentId: departmentId,
+        folderId: folderId,
+        committeeId: committeeId,
+        topics: collectTopicsData()
+    };
+}
+
 // حفظ المحضر
 async function saveProtocol(protocolData) {
     try {
@@ -264,7 +295,7 @@ async function saveProtocol(protocolData) {
             throw new Error('غير مصرح لك، يرجى تسجيل الدخول مرة أخرى');
         }
 
-        const response = await fetch('http://localhost:3006/api/protocols', {
+        const response = await fetch('http://10.99.28.23:3006/api/protocols', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -294,7 +325,7 @@ async function updateProtocol(protocolId, protocolData) {
             throw new Error('غير مصرح لك، يرجى تسجيل الدخول مرة أخرى');
         }
 
-        const response = await fetch(`http://localhost:3006/api/protocols/${encodeURIComponent(protocolId)}`, {
+        const response = await fetch(`http://10.99.28.23:3006/api/protocols/${encodeURIComponent(protocolId)}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -439,6 +470,34 @@ function resetForm() {
             protocolDateInput.value = today;
         }
         
+        // إعادة تعيين الحقول الجديدة
+        const departmentSelect = document.getElementById('protocolDepartment');
+        const folderSelect = document.getElementById('protocolFolder');
+        const committeeSelect = document.getElementById('protocolCommittee');
+        const committeeFolderSelect = document.getElementById('committeeFolder');
+        
+        if (departmentSelect) departmentSelect.value = '';
+        if (folderSelect) {
+            folderSelect.value = '';
+            folderSelect.disabled = true;
+            folderSelect.innerHTML = '<option value="">اختر القسم أولاً</option>';
+        }
+        if (committeeSelect) committeeSelect.value = '';
+        if (committeeFolderSelect) {
+            committeeFolderSelect.value = '';
+            committeeFolderSelect.disabled = true;
+            committeeFolderSelect.innerHTML = '<option value="">اختر اللجنة أولاً</option>';
+        }
+        
+        // إعادة تعيين نوع التخصيص
+        const departmentOption = document.getElementById('optionDepartment');
+        if (departmentOption) departmentOption.checked = true;
+        toggleAssignmentType();
+        
+        // إخفاء قسم اللجنة في البداية
+        const committeeSection = document.getElementById('committeeAssignment');
+        if (committeeSection) committeeSection.style.display = 'none';
+        
         // مسح المواضيع
         const topicsContainer = document.getElementById('topicsContainer');
         const topicsSection = document.getElementById('topicsSection');
@@ -500,6 +559,289 @@ function showToast(message, type = 'info') {
 // الحصول على رمز المصادقة
 function getAuthToken() {
     return localStorage.getItem('token');
+}
+
+// =====================
+// وظائف تحميل الأقسام والمجلدات واللجان
+// =====================
+
+// تحميل الأقسام
+async function loadDepartments() {
+    try {
+        const token = getAuthToken();
+        if (!token) {
+            throw new Error('غير مصرح لك، يرجى تسجيل الدخول مرة أخرى');
+        }
+
+        const response = await fetch('http://10.99.28.23:3006/api/departments/all', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`فشل في جلب الأقسام (${response.status})`);
+        }
+
+        const result = await response.json();
+        const departments = Array.isArray(result) ? result : (result.data || []);
+
+        const departmentSelect = document.getElementById('protocolDepartment');
+        if (!departmentSelect) return;
+
+        const lang = localStorage.getItem('language') || 'ar';
+        const selectText = lang === 'ar' ? 'اختر القسم' : 'Select Department';
+        departmentSelect.innerHTML = `<option value="">${selectText}</option>`;
+
+        departments.forEach(dept => {
+            const option = document.createElement('option');
+            option.value = dept.id;
+            let name = dept.name;
+            try {
+                if (typeof name === 'string' && name.trim().startsWith('{')) {
+                    name = JSON.parse(name);
+                }
+                option.textContent = typeof name === 'object'
+                    ? (name[lang] || name.ar || name.en || '')
+                    : name;
+            } catch {
+                option.textContent = name || '';
+            }
+            departmentSelect.appendChild(option);
+        });
+
+        console.log('✅ تم تحميل', departments.length, 'قسم');
+    } catch (error) {
+        console.error('❌ خطأ في تحميل الأقسام:', error);
+        showToast('خطأ في جلب الأقسام: ' + error.message, 'error');
+    }
+}
+
+// تحميل مجلدات القسم المحدد
+async function loadFoldersForDepartment() {
+    const departmentSelect = document.getElementById('protocolDepartment');
+    const folderSelect = document.getElementById('protocolFolder');
+    
+    if (!departmentSelect || !folderSelect) return;
+    
+    const departmentId = departmentSelect.value;
+    
+    if (!departmentId) {
+        folderSelect.innerHTML = '<option value="">اختر القسم أولاً</option>';
+        folderSelect.disabled = true;
+        return;
+    }
+    
+    try {
+        const token = getAuthToken();
+        if (!token) {
+            throw new Error('غير مصرح لك، يرجى تسجيل الدخول مرة أخرى');
+        }
+
+        const response = await fetch(`http://10.99.28.23:3006/api/departments/${departmentId}/folders`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`فشل في جلب مجلدات القسم (${response.status})`);
+        }
+
+        const result = await response.json();
+        const folders = result.data || [];
+
+        const lang = localStorage.getItem('language') || 'ar';
+        const selectText = lang === 'ar' ? 'اختر المجلد' : 'Select Folder';
+        folderSelect.innerHTML = `<option value="">${selectText}</option>`;
+
+        folders.forEach(folder => {
+            const option = document.createElement('option');
+            option.value = folder.id;
+            let name = folder.name;
+            try {
+                if (typeof name === 'string' && name.trim().startsWith('{')) {
+                    name = JSON.parse(name);
+                }
+                option.textContent = typeof name === 'object'
+                    ? (name[lang] || name.ar || name.en || '')
+                    : name;
+            } catch {
+                option.textContent = name || '';
+            }
+            folderSelect.appendChild(option);
+        });
+
+        folderSelect.disabled = false;
+        console.log('✅ تم تحميل', folders.length, 'مجلد للقسم', departmentId);
+    } catch (error) {
+        console.error('❌ خطأ في تحميل مجلدات القسم:', error);
+        showToast('خطأ في جلب مجلدات القسم: ' + error.message, 'error');
+        folderSelect.innerHTML = '<option value="">خطأ في التحميل</option>';
+        folderSelect.disabled = true;
+    }
+}
+
+// تحميل اللجان
+async function loadCommittees() {
+    try {
+        const token = getAuthToken();
+        if (!token) {
+            throw new Error('غير مصرح لك، يرجى تسجيل الدخول مرة أخرى');
+        }
+
+        const response = await fetch('http://10.99.28.23:3006/api/committees', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`فشل في جلب اللجان (${response.status})`);
+        }
+
+        const result = await response.json();
+        const committees = Array.isArray(result) ? result : (result.data || []);
+
+        const committeeSelect = document.getElementById('protocolCommittee');
+        if (!committeeSelect) return;
+
+        const lang = localStorage.getItem('language') || 'ar';
+        const selectText = lang === 'ar' ? 'اختر اللجنة' : 'Select Committee';
+        committeeSelect.innerHTML = `<option value="">${selectText}</option>`;
+
+        committees.forEach(committee => {
+            const option = document.createElement('option');
+            option.value = committee.id;
+            let name = committee.name;
+            try {
+                if (typeof name === 'string' && name.trim().startsWith('{')) {
+                    name = JSON.parse(name);
+                }
+                option.textContent = typeof name === 'object'
+                    ? (name[lang] || name.ar || name.en || '')
+                    : name;
+            } catch {
+                option.textContent = name || '';
+            }
+            committeeSelect.appendChild(option);
+        });
+
+        console.log('✅ تم تحميل', committees.length, 'لجنة');
+    } catch (error) {
+        console.error('❌ خطأ في تحميل اللجان:', error);
+        showToast('خطأ في جلب اللجان: ' + error.message, 'error');
+    }
+}
+
+// تبديل نوع التخصيص
+function toggleAssignmentType() {
+    const assignmentType = document.querySelector('input[name="assignmentType"]:checked').value;
+    const departmentSection = document.getElementById('departmentAssignment');
+    const committeeSection = document.getElementById('committeeAssignment');
+    
+    if (assignmentType === 'department') {
+        departmentSection.style.display = 'block';
+        committeeSection.style.display = 'none';
+        
+        // إعادة تعيين حقول اللجنة
+        const committeeSelect = document.getElementById('protocolCommittee');
+        const committeeFolderSelect = document.getElementById('committeeFolder');
+        if (committeeSelect) committeeSelect.value = '';
+        if (committeeFolderSelect) {
+            committeeFolderSelect.value = '';
+            committeeFolderSelect.disabled = true;
+            committeeFolderSelect.innerHTML = '<option value="">اختر اللجنة أولاً</option>';
+        }
+    } else if (assignmentType === 'committee') {
+        departmentSection.style.display = 'none';
+        committeeSection.style.display = 'block';
+        
+        // إعادة تعيين حقول القسم
+        const departmentSelect = document.getElementById('protocolDepartment');
+        const folderSelect = document.getElementById('protocolFolder');
+        if (departmentSelect) departmentSelect.value = '';
+        if (folderSelect) {
+            folderSelect.value = '';
+            folderSelect.disabled = true;
+            folderSelect.innerHTML = '<option value="">اختر القسم أولاً</option>';
+        }
+    } else if (assignmentType === 'both') {
+        // إظهار كلا القسمين
+        departmentSection.style.display = 'block';
+        committeeSection.style.display = 'block';
+        
+        // تفعيل جميع الحقول
+        const folderSelect = document.getElementById('protocolFolder');
+        const committeeFolderSelect = document.getElementById('committeeFolder');
+        if (folderSelect) folderSelect.disabled = false;
+        if (committeeFolderSelect) committeeFolderSelect.disabled = false;
+    }
+}
+
+// تحميل مجلدات اللجنة المحددة
+async function loadFoldersForCommittee() {
+    const committeeSelect = document.getElementById('protocolCommittee');
+    const committeeFolderSelect = document.getElementById('committeeFolder');
+    
+    if (!committeeSelect || !committeeFolderSelect) return;
+    
+    const committeeId = committeeSelect.value;
+    
+    if (!committeeId) {
+        committeeFolderSelect.innerHTML = '<option value="">اختر اللجنة أولاً</option>';
+        committeeFolderSelect.disabled = true;
+        return;
+    }
+    
+    try {
+        const token = getAuthToken();
+        if (!token) {
+            throw new Error('غير مصرح لك، يرجى تسجيل الدخول مرة أخرى');
+        }
+
+        const response = await fetch(`http://10.99.28.23:3006/api/committees/${committeeId}/folders`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`فشل في جلب مجلدات اللجنة (${response.status})`);
+        }
+
+        const result = await response.json();
+        const folders = result.data || [];
+
+        const lang = localStorage.getItem('language') || 'ar';
+        const selectText = lang === 'ar' ? 'اختر مجلد اللجنة' : 'Select Committee Folder';
+        committeeFolderSelect.innerHTML = `<option value="">${selectText}</option>`;
+
+        folders.forEach(folder => {
+            const option = document.createElement('option');
+            option.value = folder.id;
+            let name = folder.name;
+            try {
+                if (typeof name === 'string' && name.trim().startsWith('{')) {
+                    name = JSON.parse(name);
+                }
+                option.textContent = typeof name === 'object'
+                    ? (name[lang] || name.ar || name.en || '')
+                    : name;
+            } catch {
+                option.textContent = name || '';
+            }
+            committeeFolderSelect.appendChild(option);
+        });
+
+        committeeFolderSelect.disabled = false;
+        console.log('✅ تم تحميل', folders.length, 'مجلد للجنة', committeeId);
+    } catch (error) {
+        console.error('❌ خطأ في تحميل مجلدات اللجنة:', error);
+        showToast('خطأ في جلب مجلدات اللجنة: ' + error.message, 'error');
+        committeeFolderSelect.innerHTML = '<option value="">خطأ في التحميل</option>';
+        committeeFolderSelect.disabled = true;
+    }
 }
 
 // تصدير الدوال للاستخدام العام

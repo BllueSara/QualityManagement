@@ -295,7 +295,7 @@
   // ——————————— 1) متغيّرات عامّة ———————————
   const form                  = document.getElementById('editTicketForm');
   const ticketId              = new URLSearchParams(location.search).get('id');
-  const apiBase               = 'http://localhost:3006/api';
+  const apiBase               = 'http://10.99.28.23:3006/api';
   const reportingDeptSelect   = document.getElementById('reporting_dept_id');
   const respondingDeptSelect  = document.getElementById('responding_dept_id');
   const otherDeptsSelect      = document.getElementById('other_depts');
@@ -371,7 +371,7 @@ depts.forEach(d => {
 async function loadClassifications(selectedValues = []) {
     const lang = localStorage.getItem('language') || 'ar';
     const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:3006/api/tickets/classifications?lang=${lang}`, {
+    const response = await fetch(`http://10.99.28.23:3006/api/tickets/classifications?lang=${lang}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const result = await response.json();
@@ -410,7 +410,7 @@ async function loadClassifications(selectedValues = []) {
   async function loadHarmLevelsEdit(selectedId = null) {
     const lang = localStorage.getItem('language') || 'ar';
     const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:3006/api/tickets/harm-levels?lang=${lang}`, {
+    const response = await fetch(`http://10.99.28.23:3006/api/tickets/harm-levels?lang=${lang}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const result = await response.json();
@@ -495,7 +495,7 @@ async function loadTicket() {
       if (Array.isArray(t.attachments) && t.attachments.length) {
         t.attachments.forEach(att => {
           const filename = att.filename;
-          const url = `http://localhost:3006/uploads/tickets/${filename}`;
+          const url = `http://10.99.28.23:3006/uploads/tickets/${filename}`;
           const link = document.createElement('a');
           link.href = url;
           link.target = '_blank';

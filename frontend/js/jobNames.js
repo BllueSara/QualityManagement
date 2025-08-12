@@ -1,7 +1,7 @@
 // دالة تحميل المسميات (job_names)
 async function loadJobNames() {
     try {
-        const response = await fetch('http://localhost:3006/api/job-names');
+        const response = await fetch('http://10.99.28.23:3006/api/job-names');
         const result = await response.json();
         
         if (result.success) {
@@ -19,7 +19,7 @@ async function loadJobNames() {
 // دالة إضافة مسمى جديد
 async function addJobName(name) {
     try {
-        const response = await fetch('http://localhost:3006/api/job-names', {
+        const response = await fetch('http://10.99.28.23:3006/api/job-names', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
