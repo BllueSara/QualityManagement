@@ -1,5 +1,5 @@
 // --- المتغيرات العامة ---
-const apiBase = 'http://10.99.28.23:3006';
+const apiBase = 'http://localhost:3006';
 let currentCommitteeId = null;
 let currentCommitteeName = null;
 let currentFolderId = null;
@@ -850,7 +850,7 @@ window.open(`${baseUrl}/${filePath}`, '_blank');
       protocolItem.addEventListener('click', function(e) {
         if (!e.target.closest('.view-protocol-icon')) {
           if (protocol.file_path) {
-            window.open(`http://10.99.28.23:3006/uploads/${protocol.file_path}`, '_blank');
+            window.open(`http://localhost:3006/uploads/${protocol.file_path}`, '_blank');
           } else {
             showToast('ملف PDF غير متوفر', 'error');
           }

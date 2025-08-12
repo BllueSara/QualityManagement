@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // دالة حذف سجل واحد
   async function deleteLog(logId) {
     try {
-      const response = await fetch(`http://10.99.28.23:3006/api/users/logs/${logId}`, {
+      const response = await fetch(`http://localhost:3006/api/users/logs/${logId}`, {
         method: 'DELETE',
         headers: {
           ...authHeader(),
@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // دالة حذف سجلات متعددة
   async function deleteMultipleLogs(logIds) {
     try {
-      const response = await fetch('http://10.99.28.23:3006/api/users/logs/bulk-delete', {
+      const response = await fetch('http://localhost:3006/api/users/logs/bulk-delete', {
         method: 'DELETE',
         headers: {
           ...authHeader(),
@@ -97,7 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // دالة حذف جميع السجلات
   async function deleteAllLogs() {
     try {
-      const response = await fetch('http://10.99.28.23:3006/api/users/logs/delete-all', {
+      const response = await fetch('http://localhost:3006/api/users/logs/delete-all', {
         method: 'DELETE',
         headers: {
           ...authHeader(),
@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
       exportBtn.disabled = true;
 
-      const response = await fetch('http://10.99.28.23:3006/api/users/logs/export/excel', {
+      const response = await fetch('http://localhost:3006/api/users/logs/export/excel', {
         method: 'GET',
         headers: authHeader()
       });
@@ -664,7 +664,7 @@ document.addEventListener('DOMContentLoaded', () => {
     params.append('lang', userLanguage);
 
     try {
-      const res = await fetch('http://10.99.28.23:3006/api/users/logs?' + params.toString(), {
+      const res = await fetch('http://localhost:3006/api/users/logs?' + params.toString(), {
         headers: authHeader()
       });
       
@@ -792,7 +792,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function fetchUsers() {
     try {
-      const res = await fetch('http://10.99.28.23:3006/api/users?roles', { headers: authHeader() });
+      const res = await fetch('http://localhost:3006/api/users?roles', { headers: authHeader() });
       
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
@@ -815,7 +815,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function fetchActionTypes() {
     try {
-      const res = await fetch('http://10.99.28.23:3006/api/users/action-types', { headers: authHeader() });
+      const res = await fetch('http://localhost:3006/api/users/action-types', { headers: authHeader() });
       
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);

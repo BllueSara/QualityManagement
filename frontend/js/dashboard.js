@@ -1,6 +1,6 @@
 async function fetchStats() {
   const token = localStorage.getItem('token');
-  const res = await fetch('http://10.99.28.23:3006/api/dashboard/stats', {
+  const res = await fetch('http://localhost:3006/api/dashboard/stats', {
     headers: {
       'Authorization': `Bearer ${token}`
     }
@@ -15,7 +15,7 @@ async function fetchStats() {
 
 async function fetchClosedWeek() {
   const token = localStorage.getItem('token');
-  const res = await fetch('http://10.99.28.23:3006/api/dashboard/closed-week', {
+  const res = await fetch('http://localhost:3006/api/dashboard/closed-week', {
     headers: {
       'Authorization': `Bearer ${token}`
     }
@@ -31,7 +31,7 @@ async function fetchClosedWeek() {
 // دالة جلب إحصائيات الأقسام
 async function fetchDepartmentStats() {
   const token = localStorage.getItem('token');
-  const res = await fetch('http://10.99.28.23:3006/api/dashboard/department-stats', {
+  const res = await fetch('http://localhost:3006/api/dashboard/department-stats', {
     headers: {
       'Authorization': `Bearer ${token}`
     }
@@ -47,7 +47,7 @@ async function fetchDepartmentStats() {
 // دالة جلب إحصائيات اللجان
 async function fetchCommitteeStats() {
   const token = localStorage.getItem('token');
-  const res = await fetch('http://10.99.28.23:3006/api/dashboard/committee-stats', {
+  const res = await fetch('http://localhost:3006/api/dashboard/committee-stats', {
     headers: {
       'Authorization': `Bearer ${token}`
     }
@@ -63,7 +63,7 @@ async function fetchCommitteeStats() {
 // دالة جلب الأداء الشهري
 async function fetchMonthlyPerformance() {
   const token = localStorage.getItem('token');
-  const res = await fetch('http://10.99.28.23:3006/api/dashboard/monthly-performance', {
+  const res = await fetch('http://localhost:3006/api/dashboard/monthly-performance', {
     headers: {
       'Authorization': `Bearer ${token}`
     }
@@ -269,7 +269,7 @@ async function exportDashboardToExcel() {
     showToast(getTranslation('exporting'), 'info');
     
     const token = localStorage.getItem('token');
-    const response = await fetch('http://10.99.28.23:3006/api/dashboard/export-excel', {
+    const response = await fetch('http://localhost:3006/api/dashboard/export-excel', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,

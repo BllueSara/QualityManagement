@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function fetchAllDepartments() {
     const token = localStorage.getItem('token');
-    const res = await fetch('http://10.99.28.23:3006/api/departments/all', {
+    const res = await fetch('http://localhost:3006/api/departments/all', {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const data = await res.json();
@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 🟡 الدالة التي تجلب وتعرض الردود
   async function reloadReplies() {
     try {
-      const res = await fetch(`http://10.99.28.23:3006/api/tickets/${ticketId}`, {
+      const res = await fetch(`http://localhost:3006/api/tickets/${ticketId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const ticket = await res.json();
@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // جلب بيانات التذكرة
-  fetch(`http://10.99.28.23:3006/api/tickets/${ticketId}`, {
+  fetch(`http://localhost:3006/api/tickets/${ticketId}`, {
     headers: { 'Authorization': `Bearer ${token}` }
   })
     .then(response => {
@@ -138,7 +138,7 @@ document.querySelector('[data-field="responding-dept"]').textContent = parseDept
         attachmentsEl.innerHTML = '';
         ticket.attachments.forEach(att => {
           const filename = att.filename; // استخراج اسم الملف من الكائن
-          const url = `http://10.99.28.23:3006/uploads/tickets/${filename}`;
+          const url = `http://localhost:3006/uploads/tickets/${filename}`;
           const link = document.createElement('a');
           link.href = url;
           link.target = '_blank';
@@ -248,7 +248,7 @@ document.querySelector('[data-field="responding-dept"]').textContent = parseDept
     submitReply.textContent = getTranslation('sending');
 
     try {
-      const res = await fetch(`http://10.99.28.23:3006/api/tickets/${ticketId}/replies`, {
+      const res = await fetch(`http://localhost:3006/api/tickets/${ticketId}/replies`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

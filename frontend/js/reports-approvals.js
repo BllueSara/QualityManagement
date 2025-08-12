@@ -1,6 +1,6 @@
 // Language labels
 let currentLang = localStorage.getItem('lang') || 'ar';
-apiBase = 'http://10.99.28.23:3006';
+apiBase = 'http://localhost:3006';
 console.log('API Base URL:', apiBase); // Debug log
 // صلاحيات المستخدم (افتراضيًا كل شيء false)
 const permissions = {

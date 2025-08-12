@@ -1,5 +1,5 @@
 // manage-settings.js
-const apiBase = 'http://10.99.28.23:3006/api';
+const apiBase = 'http://localhost:3006/api';
 
 // دالة إظهار التوست - خارج DOMContentLoaded لتكون متاحة في كل مكان
 function showToast(message, type = 'info', duration = 3000) {

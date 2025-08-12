@@ -1,5 +1,5 @@
 // scripts.js
-apiBase = 'http://10.99.28.23:3006/api';
+apiBase = 'http://localhost:3006/api';
 let permissionsKeys = [];
 const permissions = {
   canDelete: false,
@@ -21,7 +21,7 @@ async function fetchPermissions() {
     return;
   }
 
-  const res = await fetch(`http://10.99.28.23:3006/api/users/${userId}/permissions`, { headers });
+  const res = await fetch(`http://localhost:3006/api/users/${userId}/permissions`, { headers });
   const { data: perms } = await res.json();
 
   const keys = perms.map(p => typeof p === 'string' ? p : p.permission);
@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Fetch tickets from the backend
     async function fetchTickets() {
         try {
-            const response = await fetch('http://10.99.28.23:3006/api/tickets/assigned', {
+            const response = await fetch('http://localhost:3006/api/tickets/assigned', {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 }

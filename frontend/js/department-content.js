@@ -1,4 +1,4 @@
-const apiBase      = 'http://10.99.28.23:3006/api';
+const apiBase      = 'http://localhost:3006/api';
 let currentDepartmentId = null;
 let currentFolderId     = null;
 let currentFolderName   = null;
@@ -682,7 +682,7 @@ async function fetchFolders(departmentId) {
 
         try {
             // جلب المحتويات العادية
-            const response = await fetch(`http://10.99.28.23:3006/api/folders/${folderId}/contents`, {
+            const response = await fetch(`http://localhost:3006/api/folders/${folderId}/contents`, {
                 headers: {
                     'Authorization': `Bearer ${getToken()}`
                 }
@@ -693,7 +693,7 @@ async function fetchFolders(departmentId) {
             // جلب المحاضر المرتبطة بالمجلد
             let protocols = [];
             try {
-                const protocolsResponse = await fetch(`http://10.99.28.23:3006/api/protocols/folder/${folderId}`, {
+                const protocolsResponse = await fetch(`http://localhost:3006/api/protocols/folder/${folderId}`, {
                     headers: {
                         'Authorization': `Bearer ${getToken()}`
                     }
@@ -826,7 +826,7 @@ icons += '</div>';
                                     // تسجيل عرض المحتوى في اللوقز
                                     logContentView(content.id, displayTitle, currentFolderName, currentDepartmentName);
                                     
-                                    const fullFileUrl = `http://10.99.28.23:3006/uploads/${content.fileUrl}`;
+                                    const fullFileUrl = `http://localhost:3006/uploads/${content.fileUrl}`;
                                     window.open(fullFileUrl, '_blank');
                                 } else {
                                     showToast(getTranslation('pdf-only'), 'error'); 
@@ -890,7 +890,7 @@ icons += '</div>';
                         protocolItem.addEventListener('click', function(e) {
                             if (!e.target.closest('.view-protocol-icon')) {
                                 if (protocol.file_path) {
-                                    window.open(`http://10.99.28.23:3006/uploads/${protocol.file_path}`, '_blank');
+                                    window.open(`http://localhost:3006/uploads/${protocol.file_path}`, '_blank');
                                 } else {
                                     showToast('ملف PDF غير متوفر', 'error');
                                 }
@@ -911,7 +911,7 @@ icons += '</div>';
     async function handleApproveContent(contentId) {
         console.log('Attempting to approve content with ID:', contentId);
         try {
-            const response = await fetch(`http://10.99.28.23:3006/api/contents/${contentId}/approve`, {
+            const response = await fetch(`http://localhost:3006/api/contents/${contentId}/approve`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${getToken()}`,
@@ -965,7 +965,7 @@ function closeAddFolderModal() {
         }
 
         try {
-            const response = await fetch(`http://10.99.28.23:3006/api/departments/${currentDepartmentId}/folders`, {
+            const response = await fetch(`http://localhost:3006/api/departments/${currentDepartmentId}/folders`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${getToken()}`,
@@ -1457,7 +1457,7 @@ document.getElementById('updateFolderBtn')
         }
 
         try {
-            const response = await fetch(`http://10.99.28.23:3006/api/folders/${folderId}`, {
+            const response = await fetch(`http://localhost:3006/api/folders/${folderId}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${getToken()}`
@@ -1486,7 +1486,7 @@ document.getElementById('updateFolderBtn')
      async function openEditContentModal(contentId) {
   if (editContentModal) {
     try {
-      const response = await fetch(`http://10.99.28.23:3006/api/contents/${contentId}`, {
+      const response = await fetch(`http://localhost:3006/api/contents/${contentId}`, {
         headers: { 'Authorization': `Bearer ${getToken()}` }
       });
       const data = await response.json();
@@ -1568,7 +1568,7 @@ function closeEditContentModal() {
         if (startDate) formData.append('start_date', startDate);
         if (endDate)   formData.append('end_date', endDate);
         try {
-          const response = await fetch(`http://10.99.28.23:3006/api/contents/${contentId}`, {
+          const response = await fetch(`http://localhost:3006/api/contents/${contentId}`, {
             method: 'PUT',
             headers: {
               'Authorization': `Bearer ${getToken()}`
@@ -1881,7 +1881,7 @@ if (departmentIdFromUrl && isInitialFetch) {
         }
     
         try {
-            const response = await fetch(`http://10.99.28.23:3006/api/contents/${contentId}`, {
+            const response = await fetch(`http://localhost:3006/api/contents/${contentId}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${getToken()}`
@@ -2121,7 +2121,7 @@ async function handleCreateContent() {
 
   try {
     const response = await fetch(
-      `http://10.99.28.23:3006/api/folders/${folderIdToUpload}/contents`,
+      `http://localhost:3006/api/folders/${folderIdToUpload}/contents`,
       {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${getToken()}` },
@@ -2309,7 +2309,7 @@ document.addEventListener('DOMContentLoaded', function() {
           fileItem.addEventListener('click', function(e) {
             if (!e.target.closest('.edit-icon') && !e.target.closest('.delete-icon')) {
               if (content.fileUrl) {
-                const fullFileUrl = `http://10.99.28.23:3006/uploads/${content.fileUrl}`;
+                const fullFileUrl = `http://localhost:3006/uploads/${content.fileUrl}`;
                 window.open(fullFileUrl, '_blank');
               } else {
                 showToast(getTranslation('pdf-only'), 'error');

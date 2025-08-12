@@ -55,7 +55,7 @@ function showToast(message, type = 'info', duration = 3000) {
   }, duration);
 }
 
-const apiBase      = ' http://10.99.28.23:3006/api';
+const apiBase      = ' http://localhost:3006/api';
 let authToken      = localStorage.getItem('token') || null;
 let selectedUserId = null;
 let myPermsSet     = new Set(); // صلاحيات المستخدم الحالي

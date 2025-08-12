@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     } else {
       endpoint = 'contents/track';
     }
-    const url = `http://10.99.28.23:3006/api/${endpoint}/${contentId}`;
+    const url = `http://localhost:3006/api/${endpoint}/${contentId}`;
 
     // 3) أرسل هيدر التفويض
     const res = await fetch(url, {

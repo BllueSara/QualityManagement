@@ -1,5 +1,5 @@
 // sub-departments.js
-const apiBase = 'http://10.99.28.23:3006/api';
+const apiBase = 'http://localhost:3006/api';
 
 document.addEventListener('DOMContentLoaded', async function() {
     // دالة إظهار التوست
@@ -417,7 +417,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             // إنشاء عنصر الصورة مع التعامل مع الحالات التي لا توجد فيها صورة
             const imageElement = dept.image ? 
-                `<img src="http://10.99.28.23:3006/${dept.image}" alt="${deptName}">` :
+                `<img src="http://localhost:3006/${dept.image}" alt="${deptName}">` :
                 `<div style="font-size: 24px; color: #fff;">${deptName.charAt(0).toUpperCase()}</div>`;
 
             card.innerHTML = icons +

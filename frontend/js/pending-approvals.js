@@ -1,4 +1,4 @@
-const apiBase = 'http://10.99.28.23:3006/api';
+const apiBase = 'http://localhost:3006/api';
 const authToken = localStorage.getItem('token') || null;
 
 async function fetchJSON(url, opts = {}) {

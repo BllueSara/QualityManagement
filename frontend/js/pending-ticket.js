@@ -1,5 +1,5 @@
 // استيراد الترجمة
-const apiBase = 'http://10.99.28.23:3006/api';
+const apiBase = 'http://localhost:3006/api';
 
 // دالة إظهار التوست - خارج DOMContentLoaded لتكون متاحة في كل مكان
 function showToast(message, type = 'info', duration = 3000) {
@@ -105,14 +105,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     el.style.display = isAdmin ? '' : 'none';
   });
   // 1) جلب كل التذاكر
-  const ticketsRes = await fetch('http://10.99.28.23:3006/api/tickets', {
+  const ticketsRes = await fetch('http://localhost:3006/api/tickets', {
     headers: { 'Authorization': `Bearer ${token}` }
   });
   const { data: tickets } = await ticketsRes.json();
   console.log('tickets:', tickets);
 
 
-const deptsRes = await fetch('http://10.99.28.23:3006/api/departments/all', {
+const deptsRes = await fetch('http://localhost:3006/api/departments/all', {
   headers: { 'Authorization': `Bearer ${token}` }
 });
 
@@ -444,7 +444,7 @@ async function rebuildUsersList() {
 
     try {
       // 1) حدّث الحالة إلى "تم الإرسال"
-      const statusRes = await fetch(`http://10.99.28.23:3006/api/tickets/${ticketId}`, {
+      const statusRes = await fetch(`http://localhost:3006/api/tickets/${ticketId}`, {
   method: 'PUT',
   headers: {
     'Authorization': `Bearer ${token}`,
@@ -455,7 +455,7 @@ async function rebuildUsersList() {
 
 if (!statusRes.ok) throw new Error('Failed to update status');
 
-const assignRes = await fetch(`http://10.99.28.23:3006/api/tickets/${ticketId}/assign`, {
+const assignRes = await fetch(`http://localhost:3006/api/tickets/${ticketId}/assign`, {
   method: 'POST',
   headers: {
     'Authorization': `Bearer ${token}`,

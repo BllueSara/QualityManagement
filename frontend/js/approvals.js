@@ -1,6 +1,6 @@
 // approvals.js
 let permissionsKeys = [];
-apiBase = 'http://10.99.28.23:3006/api';
+apiBase = 'http://localhost:3006/api';
 async function fetchPermissions() {
     const token = localStorage.getItem('token');
     if (!token) return;
@@ -11,7 +11,7 @@ async function fetchPermissions() {
         return;
     }
     const userId = payload.id;
-    const res = await fetch(`http://10.99.28.23:3006/api/users/${userId}/permissions`, {
+    const res = await fetch(`http://localhost:3006/api/users/${userId}/permissions`, {
         headers: { 'Authorization': `Bearer ${token}` }
     });
     if (!res.ok) return;

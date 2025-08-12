@@ -1,7 +1,7 @@
 // approvals-recived.js
 let filteredItems = [];
 
-const apiBase = 'http://10.99.28.23:3006/api';
+const apiBase = 'http://localhost:3006/api';
 const token = localStorage.getItem('token');
 let permissionsKeys = [];
 // تم إزالة التصريحات المكررة للمتغيرات العامة لأنها موجودة في sign.js
@@ -574,7 +574,7 @@ function rejectDelegation() {
 // دوال معالجة التفويضات المختلفة
 async function processSingleDepartmentDelegationAcceptance(delegationId) {
   try {
-    const response = await fetch('http://10.99.28.23:3006/api/approvals/single-delegation-unified/process', {
+    const response = await fetch('http://localhost:3006/api/approvals/single-delegation-unified/process', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -604,7 +604,7 @@ async function processSingleDepartmentDelegationAcceptance(delegationId) {
 
 async function processSingleCommitteeDelegationAcceptance(delegationId) {
   try {
-    const response = await fetch('http://10.99.28.23:3006/api/committee-approvals/single-delegation-unified/process', {
+    const response = await fetch('http://localhost:3006/api/committee-approvals/single-delegation-unified/process', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -634,7 +634,7 @@ async function processSingleCommitteeDelegationAcceptance(delegationId) {
 
 async function processBulkDelegationAcceptance(delegationId) {
   try {
-    const response = await fetch('http://10.99.28.23:3006/api/approvals/bulk-delegation-unified/process', {
+    const response = await fetch('http://localhost:3006/api/approvals/bulk-delegation-unified/process', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -664,7 +664,7 @@ async function processBulkDelegationAcceptance(delegationId) {
 
 async function processSingleDepartmentDelegationRejection(delegationId) {
   try {
-    const response = await fetch('http://10.99.28.23:3006/api/approvals/single-delegation-unified/process', {
+    const response = await fetch('http://localhost:3006/api/approvals/single-delegation-unified/process', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -694,7 +694,7 @@ async function processSingleDepartmentDelegationRejection(delegationId) {
 
 async function processSingleCommitteeDelegationRejection(delegationId) {
   try {
-    const response = await fetch('http://10.99.28.23:3006/api/committee-approvals/single-delegation-unified/process', {
+    const response = await fetch('http://localhost:3006/api/committee-approvals/single-delegation-unified/process', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -724,7 +724,7 @@ async function processSingleCommitteeDelegationRejection(delegationId) {
 
 async function processBulkDelegationRejection(delegationId) {
   try {
-    const response = await fetch('http://10.99.28.23:3006/api/approvals/bulk-delegation-unified/process', {
+    const response = await fetch('http://localhost:3006/api/approvals/bulk-delegation-unified/process', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -754,7 +754,7 @@ async function processBulkDelegationRejection(delegationId) {
 
 async function processDirectDelegationUnified(delegatorId, action) {
   try {
-    const res = await fetch('http://10.99.28.23:3006/api/approvals/direct-delegation-unified/process', {
+    const res = await fetch('http://localhost:3006/api/approvals/direct-delegation-unified/process', {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ delegatorId, action })
@@ -801,7 +801,7 @@ async function showSingleDelegationConfirmation(delegateTo, contentId, contentTy
       isBulk: false
     };
     
-    const response = await fetch('http://10.99.28.23:3006/api/approvals/new-delegation-confirmation-data', {
+    const response = await fetch('http://localhost:3006/api/approvals/new-delegation-confirmation-data', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -837,7 +837,7 @@ async function showSingleDelegationConfirmation(delegateTo, contentId, contentTy
 
 async function showBulkDelegationConfirmation(delegateTo, notes = '') {
   try {
-    const response = await fetch('http://10.99.28.23:3006/api/approvals/new-delegation-confirmation-data', {
+    const response = await fetch('http://localhost:3006/api/approvals/new-delegation-confirmation-data', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -899,7 +899,7 @@ async function showSingleCommitteeDelegationConfirmation(delegateTo, contentId, 
       isBulk: false
     };
     
-    const response = await fetch('http://10.99.28.23:3006/api/approvals/new-delegation-confirmation-data', {
+    const response = await fetch('http://localhost:3006/api/approvals/new-delegation-confirmation-data', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -935,7 +935,7 @@ async function showSingleCommitteeDelegationConfirmation(delegateTo, contentId, 
 
 async function showBulkProtocolDelegationConfirmation(delegateTo, notes = '') {
   try {
-    const response = await fetch('http://10.99.28.23:3006/api/protocols/new-delegation-confirmation-data', {
+    const response = await fetch('http://localhost:3006/api/protocols/new-delegation-confirmation-data', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -998,7 +998,7 @@ async function showSingleProtocolDelegationConfirmation(delegateTo, contentId, c
       isBulk: false
     };
     
-    const response = await fetch('http://10.99.28.23:3006/api/protocols/new-delegation-confirmation-data', {
+    const response = await fetch('http://localhost:3006/api/protocols/new-delegation-confirmation-data', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1034,7 +1034,7 @@ async function showSingleProtocolDelegationConfirmation(delegateTo, contentId, c
 
 async function showBulkCommitteeDelegationConfirmation(delegateTo, notes = '') {
   try {
-    const response = await fetch('http://10.99.28.23:3006/api/approvals/new-delegation-confirmation-data', {
+    const response = await fetch('http://localhost:3006/api/approvals/new-delegation-confirmation-data', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -3038,11 +3038,11 @@ async function processSingleDelegation(data) {
   try {
     let endpoint;
     if (data.isCommittee) {
-      endpoint = 'http://10.99.28.23:3006/api/committee-approvals/committee-delegations/single';
+      endpoint = 'http://localhost:3006/api/committee-approvals/committee-delegations/single';
     } else if (data.isProtocol) {
-      endpoint = 'http://10.99.28.23:3006/api/approvals/delegate-single';
+      endpoint = 'http://localhost:3006/api/approvals/delegate-single';
     } else {
-      endpoint = 'http://10.99.28.23:3006/api/approvals/delegate-single';
+      endpoint = 'http://localhost:3006/api/approvals/delegate-single';
     }
     console.log('🔍 Using endpoint:', endpoint);
     
@@ -3102,11 +3102,11 @@ async function processBulkDelegation(data) {
   try {
     let endpoint;
     if (data.isCommittee) {
-      endpoint = 'http://10.99.28.23:3006/api/committee-approvals/committee-delegations/bulk';
+      endpoint = 'http://localhost:3006/api/committee-approvals/committee-delegations/bulk';
     } else if (data.isProtocol) {
-      endpoint = 'http://10.99.28.23:3006/api/protocols/delegate-all-unified';
+      endpoint = 'http://localhost:3006/api/protocols/delegate-all-unified';
     } else {
-      endpoint = 'http://10.99.28.23:3006/api/approvals/delegate-all-unified';
+      endpoint = 'http://localhost:3006/api/approvals/delegate-all-unified';
     }
     console.log('🔍 Using endpoint:', endpoint);
     

@@ -7,7 +7,7 @@ function startStatusPolling() {
 
   setInterval(async () => {
     try {
-      const res = await fetch(`http://10.99.28.23:3006/api/users/${myId}`, {
+      const res = await fetch(`http://localhost:3006/api/users/${myId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!res.ok) throw new Error();
@@ -41,7 +41,7 @@ function checkUserProfileCompletion() {
   // التحقق من اكتمال البيانات كل 30 ثانية
   setInterval(async () => {
     try {
-      const res = await fetch(`http://10.99.28.23:3006/api/users/${myId}`, {
+      const res = await fetch(`http://localhost:3006/api/users/${myId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       

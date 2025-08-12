@@ -41,7 +41,7 @@ async function maybeLoadProtocolForEdit() {
     try {
         showToast('جاري تحميل بيانات المحضر...', 'info');
         const token = getAuthToken();
-        const res = await fetch(`http://10.99.28.23:3006/api/protocols/${encodeURIComponent(id)}`, {
+        const res = await fetch(`http://localhost:3006/api/protocols/${encodeURIComponent(id)}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const json = await res.json();
@@ -295,7 +295,7 @@ async function saveProtocol(protocolData) {
             throw new Error('غير مصرح لك، يرجى تسجيل الدخول مرة أخرى');
         }
 
-        const response = await fetch('http://10.99.28.23:3006/api/protocols', {
+        const response = await fetch('http://localhost:3006/api/protocols', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -325,7 +325,7 @@ async function updateProtocol(protocolId, protocolData) {
             throw new Error('غير مصرح لك، يرجى تسجيل الدخول مرة أخرى');
         }
 
-        const response = await fetch(`http://10.99.28.23:3006/api/protocols/${encodeURIComponent(protocolId)}`, {
+        const response = await fetch(`http://localhost:3006/api/protocols/${encodeURIComponent(protocolId)}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -573,7 +573,7 @@ async function loadDepartments() {
             throw new Error('غير مصرح لك، يرجى تسجيل الدخول مرة أخرى');
         }
 
-        const response = await fetch('http://10.99.28.23:3006/api/departments/all', {
+        const response = await fetch('http://localhost:3006/api/departments/all', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -638,7 +638,7 @@ async function loadFoldersForDepartment() {
             throw new Error('غير مصرح لك، يرجى تسجيل الدخول مرة أخرى');
         }
 
-        const response = await fetch(`http://10.99.28.23:3006/api/departments/${departmentId}/folders`, {
+        const response = await fetch(`http://localhost:3006/api/departments/${departmentId}/folders`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -690,7 +690,7 @@ async function loadCommittees() {
             throw new Error('غير مصرح لك، يرجى تسجيل الدخول مرة أخرى');
         }
 
-        const response = await fetch('http://10.99.28.23:3006/api/committees', {
+        const response = await fetch('http://localhost:3006/api/committees', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -800,7 +800,7 @@ async function loadFoldersForCommittee() {
             throw new Error('غير مصرح لك، يرجى تسجيل الدخول مرة أخرى');
         }
 
-        const response = await fetch(`http://10.99.28.23:3006/api/committees/${committeeId}/folders`, {
+        const response = await fetch(`http://localhost:3006/api/committees/${committeeId}/folders`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }

@@ -159,7 +159,7 @@ if (window.registerScriptInitialized) {
             if (window.departmentsLoaded) return;
             try {
                 console.log('🔍 Fetching departments...');
-                const response = await fetch('http://10.99.28.23:3006/api/departments/all');
+                const response = await fetch('http://localhost:3006/api/departments/all');
                 if (!response.ok) throw new Error(`فشل جلب الأقسام: ${response.status}`);
                 const result = await response.json();
                 console.log('🔍 Departments response:', result);
@@ -201,7 +201,7 @@ if (window.registerScriptInitialized) {
             if (window.jobTitlesLoaded) return;
             try {
                 console.log('🔍 Fetching job titles...');
-                const response = await fetch('http://10.99.28.23:3006/api/job-titles');
+                const response = await fetch('http://localhost:3006/api/job-titles');
                 if (!response.ok) throw new Error(`فشل جلب المناصب الإدارية: ${response.status}`);
                 const result = await response.json();
                 console.log('🔍 Job titles response:', result);
@@ -239,7 +239,7 @@ if (window.registerScriptInitialized) {
             if (window.jobNamesLoaded) return;
             try {
                 console.log('🔍 Fetching job names...');
-                const response = await fetch('http://10.99.28.23:3006/api/job-names');
+                const response = await fetch('http://localhost:3006/api/job-names');
                 if (!response.ok) throw new Error(`فشل جلب المسميات الوظيفية: ${response.status}`);
                 const result = await response.json();
                 console.log('🔍 Job names response:', result);
@@ -431,7 +431,7 @@ if (window.registerScriptInitialized) {
                     submitBtn.disabled = true;
                     submitBtn.textContent = 'جاري التسجيل...';
                     
-                    const response = await fetch('http://10.99.28.23:3006/api/auth/register', {
+                    const response = await fetch('http://localhost:3006/api/auth/register', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',

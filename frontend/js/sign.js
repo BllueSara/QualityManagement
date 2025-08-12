@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Test backend connectivity first
   try {
-    const healthRes = await fetch('http://10.99.28.23:3006/health');
+    const healthRes = await fetch('http://localhost:3006/health');
     if (healthRes.ok) {
       console.log('✅ Backend server is running');
     } else {
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // فحص تشخيصي للتفويضات
   try {
-    const debugRes = await fetch(`http://10.99.28.23:3006/api/approvals/debug-delegations/${currentUserId}`, {
+    const debugRes = await fetch(`http://localhost:3006/api/approvals/debug-delegations/${currentUserId}`, {
       headers: authHeaders()
     });
     if (debugRes.ok) {
@@ -83,8 +83,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   loadDelegations();
 });
 
-const apiBaseDept = 'http://10.99.28.23:3006/api/approvals/proxy';
-const apiBaseComm = 'http://10.99.28.23:3006/api/committee-approvals/proxy';
+const apiBaseDept = 'http://localhost:3006/api/approvals/proxy';
+const apiBaseComm = 'http://localhost:3006/api/committee-approvals/proxy';
 const token = localStorage.getItem('token');
 let currentUserId = null;
 if (token) {
@@ -123,7 +123,7 @@ async function checkSingleDelegations() {
     console.log('🔍 Checking single delegations for userId:', currentUserId);
 
     // فحص التفويضات الفردية للأقسام
-    const deptSingleDelegationsUrl = `http://10.99.28.23:3006/api/approvals/single-delegations/${currentUserId}`;
+    const deptSingleDelegationsUrl = `http://localhost:3006/api/approvals/single-delegations/${currentUserId}`;
     const deptSingleRes = await fetch(deptSingleDelegationsUrl, { headers: authHeaders() });
 
     if (deptSingleRes.ok) {
@@ -137,7 +137,7 @@ async function checkSingleDelegations() {
     }
 
     // فحص التفويضات الفردية للجان
-    const commSingleDelegationsUrl = `http://10.99.28.23:3006/api/committee-approvals/single-delegations/${currentUserId}`;
+    const commSingleDelegationsUrl = `http://localhost:3006/api/committee-approvals/single-delegations/${currentUserId}`;
     const commSingleRes = await fetch(commSingleDelegationsUrl, { headers: authHeaders() });
 
     if (commSingleRes.ok) {
@@ -151,7 +151,7 @@ async function checkSingleDelegations() {
     }
 
     // فحص التفويضات الفردية للمحاضر
-    const protSingleDelegationsUrl = `http://10.99.28.23:3006/api/protocols/single-delegations/${currentUserId}`;
+    const protSingleDelegationsUrl = `http://localhost:3006/api/protocols/single-delegations/${currentUserId}`;
     const protSingleRes = await fetch(protSingleDelegationsUrl, { headers: authHeaders() });
     if (protSingleRes.ok) {
       const protSingleJson = await protSingleRes.json();
@@ -209,7 +209,7 @@ async function checkDelegationStatus() {
     }
 
     // 2. فحص التفويض المباشر من جدول active_delegations (جميع الملفات)
-    const delegationUrl = `http://10.99.28.23:3006/api/users/${currentUserId}/delegation-status`;
+    const delegationUrl = `http://localhost:3006/api/users/${currentUserId}/delegation-status`;
     console.log('Calling delegation status URL:', delegationUrl);
     const delegationRes = await fetch(delegationUrl, {
       headers: authHeaders()
@@ -244,7 +244,7 @@ async function checkDelegationStatus() {
 
     // 3. فحص التفويضات المعلقة الموحدة (أقسام ولجان) - جميع الملفات
     // ملاحظة: التفويضات الفردية لا تظهر هنا لأنها تظهر في الجدول فقط
-    const pendingDelegationsUrl = `http://10.99.28.23:3006/api/approvals/pending-delegations-unified/${currentUserId}`;
+    const pendingDelegationsUrl = `http://localhost:3006/api/approvals/pending-delegations-unified/${currentUserId}`;
     console.log('Calling pending delegations unified URL:', pendingDelegationsUrl);
     const pendingDelegationsRes = await fetch(pendingDelegationsUrl, {
       headers: authHeaders()
@@ -283,7 +283,7 @@ async function checkDelegationStatus() {
     // تشخيص إضافي للتفويضات الجماعية
     console.log('🔍 Checking for bulk delegations specifically...');
     try {
-      const bulkCheckUrl = `http://10.99.28.23:3006/api/approvals/pending-delegations-unified/${currentUserId}`;
+      const bulkCheckUrl = `http://localhost:3006/api/approvals/pending-delegations-unified/${currentUserId}`;
       const bulkCheckRes = await fetch(bulkCheckUrl, { headers: authHeaders() });
       if (bulkCheckRes.ok) {
         const bulkCheckJson = await bulkCheckRes.json();
@@ -301,7 +301,7 @@ async function checkDelegationStatus() {
     // تشخيص إضافي لـ active_delegations
     console.log('🔍 Checking active_delegations specifically...');
     try {
-      const activeCheckUrl = `http://10.99.28.23:3006/api/users/${currentUserId}/delegation-status`;
+      const activeCheckUrl = `http://localhost:3006/api/users/${currentUserId}/delegation-status`;
       const activeCheckRes = await fetch(activeCheckUrl, { headers: authHeaders() });
       if (activeCheckRes.ok) {
         const activeCheckJson = await activeCheckRes.json();
@@ -314,7 +314,7 @@ async function checkDelegationStatus() {
     // تشخيص إضافي للتفويضات الجماعية في approval_logs
     console.log('🔍 Checking approval_logs for bulk delegations...');
     try {
-      const approvalLogsUrl = `http://10.99.28.23:3006/api/approvals/delegation-logs/${currentUserId}/6`;
+      const approvalLogsUrl = `http://localhost:3006/api/approvals/delegation-logs/${currentUserId}/6`;
       const approvalLogsRes = await fetch(approvalLogsUrl, { headers: authHeaders() });
       if (approvalLogsRes.ok) {
         const approvalLogsJson = await approvalLogsRes.json();
@@ -353,7 +353,7 @@ async function checkPendingDelegationConfirmations() {
 
     // فحص التفويضات الفردية المعلقة للأقسام
     console.log('🔍 Checking department single delegations...');
-    const singleDeptResponse = await fetch(`http://10.99.28.23:3006/api/approvals/single-delegations/${currentUserId}`, {
+    const singleDeptResponse = await fetch(`http://localhost:3006/api/approvals/single-delegations/${currentUserId}`, {
       headers: authHeaders()
     });
 
@@ -364,7 +364,7 @@ async function checkPendingDelegationConfirmations() {
 
         for (const delegation of singleDeptData.data) {
           // جلب بيانات التأكيد للمفوض له
-          const confirmationResponse = await fetch('http://10.99.28.23:3006/api/approvals/delegation-confirmation-data', {
+          const confirmationResponse = await fetch('http://localhost:3006/api/approvals/delegation-confirmation-data', {
             method: 'POST',
             headers: {
               ...authHeaders(),
@@ -401,7 +401,7 @@ async function checkPendingDelegationConfirmations() {
 
     // فحص التفويضات الفردية المعلقة للجان
     console.log('🔍 Checking committee single delegations...');
-    const singleCommResponse = await fetch(`http://10.99.28.23:3006/api/committee-approvals/single-delegations/${currentUserId}`, {
+    const singleCommResponse = await fetch(`http://localhost:3006/api/committee-approvals/single-delegations/${currentUserId}`, {
       headers: authHeaders()
     });
 
@@ -412,7 +412,7 @@ async function checkPendingDelegationConfirmations() {
 
         for (const delegation of singleCommData.data) {
           // جلب بيانات التأكيد للمفوض له
-          const confirmationResponse = await fetch('http://10.99.28.23:3006/api/approvals/delegation-confirmation-data', {
+          const confirmationResponse = await fetch('http://localhost:3006/api/approvals/delegation-confirmation-data', {
             method: 'POST',
             headers: {
               ...authHeaders(),
@@ -448,7 +448,7 @@ async function checkPendingDelegationConfirmations() {
     }
 
     // فحص التفويضات الفردية المعلقة للمحاضر
-    const singleProtResponse = await fetch(`http://10.99.28.23:3006/api/protocols/single-delegations/${currentUserId}`, {
+    const singleProtResponse = await fetch(`http://localhost:3006/api/protocols/single-delegations/${currentUserId}`, {
       headers: authHeaders()
     });
 
@@ -469,7 +469,7 @@ async function checkPendingDelegationConfirmations() {
           console.log('🔍 delegation.content_id:', delegation.content_id);
 
           // جلب بيانات التأكيد للمفوض له
-          const confirmationResponse = await fetch('http://10.99.28.23:3006/api/protocols/delegation-confirmation-data', {
+          const confirmationResponse = await fetch('http://localhost:3006/api/protocols/delegation-confirmation-data', {
             method: 'POST',
             headers: {
               ...authHeaders(),
@@ -522,7 +522,7 @@ async function checkPendingDelegationConfirmations() {
     }
 
     // فحص التفويضات الشاملة المعلقة
-    const bulkResponse = await fetch(`http://10.99.28.23:3006/api/approvals/pending-delegations-unified/${currentUserId}`, {
+    const bulkResponse = await fetch(`http://localhost:3006/api/approvals/pending-delegations-unified/${currentUserId}`, {
       headers: authHeaders()
     });
 
@@ -533,7 +533,7 @@ async function checkPendingDelegationConfirmations() {
 
         for (const delegation of bulkData.data) {
           // جلب بيانات التأكيد للمفوض له
-          const confirmationResponse = await fetch('http://10.99.28.23:3006/api/approvals/delegation-confirmation-data', {
+          const confirmationResponse = await fetch('http://localhost:3006/api/approvals/delegation-confirmation-data', {
             method: 'POST',
             headers: {
               ...authHeaders(),
@@ -587,7 +587,7 @@ async function checkDelegationApprovalLogs(delegatorId, delegationType, delegati
     }
 
     // التحقق من سجلات الموافقة للأقسام
-    const deptLogsUrl = `http://10.99.28.23:3006/api/approvals/delegation-logs/${currentUserId}/${delegatorId}`;
+    const deptLogsUrl = `http://localhost:3006/api/approvals/delegation-logs/${currentUserId}/${delegatorId}`;
     const deptLogsRes = await fetch(deptLogsUrl, { headers: authHeaders() });
 
     if (deptLogsRes.ok) {
@@ -612,7 +612,7 @@ async function checkDelegationApprovalLogs(delegatorId, delegationType, delegati
     }
 
     // التحقق من سجلات الموافقة للجان
-    const commLogsUrl = `http://10.99.28.23:3006/api/committee-approvals/delegation-logs/${currentUserId}/${delegatorId}`;
+    const commLogsUrl = `http://localhost:3006/api/committee-approvals/delegation-logs/${currentUserId}/${delegatorId}`;
     const commLogsRes = await fetch(commLogsUrl, { headers: authHeaders() });
 
     if (commLogsRes.ok) {
@@ -638,7 +638,7 @@ async function checkDelegationApprovalLogs(delegatorId, delegationType, delegati
 
     // التحقق من سجلات الموافقة العامة (approval_logs و committee_approval_logs)
     try {
-      const generalLogsUrl = `http://10.99.28.23:3006/api/approvals/user-approval-status/${currentUserId}/${delegatorId}`;
+      const generalLogsUrl = `http://localhost:3006/api/approvals/user-approval-status/${currentUserId}/${delegatorId}`;
       const generalLogsRes = await fetch(generalLogsUrl, { headers: authHeaders() });
 
       if (generalLogsRes.ok) {
@@ -660,7 +660,7 @@ async function checkDelegationApprovalLogs(delegatorId, delegationType, delegati
     // التحقق من سجلات active_delegations (إذا كان التفويض لا يزال نشطاً)
     if (delegationType === 'direct') {
       try {
-        const activeDelegationUrl = `http://10.99.28.23:3006/api/users/${currentUserId}/delegation-status`;
+        const activeDelegationUrl = `http://localhost:3006/api/users/${currentUserId}/delegation-status`;
         const activeDelegationRes = await fetch(activeDelegationUrl, { headers: authHeaders() });
 
         if (activeDelegationRes.ok) {
@@ -698,13 +698,13 @@ async function showDirectDelegationPopup(delegatorId) {
 
   try {
     // جلب بيانات المفوض
-    const userRes = await fetch(`http://10.99.28.23:3006/api/users/${delegatorId}`, { headers: authHeaders() });
+    const userRes = await fetch(`http://localhost:3006/api/users/${delegatorId}`, { headers: authHeaders() });
     const userJson = await userRes.json();
     const delegatorName = userJson.data?.name || userJson.data?.username || 'المفوض';
     const delegatorIdNumber = userJson.data?.national_id || userJson.data?.id_number || 'غير محدد';
 
     // جلب بيانات المفوض له
-    const currentUserRes = await fetch(`http://10.99.28.23:3006/api/users/${currentUserId}`, { headers: authHeaders() });
+    const currentUserRes = await fetch(`http://localhost:3006/api/users/${currentUserId}`, { headers: authHeaders() });
     const currentUserJson = await currentUserRes.json();
     const delegateName = currentUserJson.data?.name || currentUserJson.data?.username || 'المفوض له';
     const delegateIdNumber = currentUserJson.data?.national_id || currentUserJson.data?.id_number || 'غير محدد';
@@ -752,7 +752,7 @@ async function showBulkDelegationPopup(delegationId, delegatorName) {
 
   try {
     // جلب بيانات التفويض الجماعي للحصول على معرف المفوض
-    const delegationRes = await fetch(`http://10.99.28.23:3006/api/approvals/pending-delegations-unified/${currentUserId}`, {
+    const delegationRes = await fetch(`http://localhost:3006/api/approvals/pending-delegations-unified/${currentUserId}`, {
       headers: authHeaders()
     });
 
@@ -762,12 +762,12 @@ async function showBulkDelegationPopup(delegationId, delegatorName) {
 
       if (delegation) {
         // جلب بيانات المفوض
-        const delegatorRes = await fetch(`http://10.99.28.23:3006/api/users/${delegation.delegated_by}`, { headers: authHeaders() });
+        const delegatorRes = await fetch(`http://localhost:3006/api/users/${delegation.delegated_by}`, { headers: authHeaders() });
         const delegatorJson = await delegatorRes.json();
         const delegatorIdNumber = delegatorJson.data?.national_id || delegatorJson.data?.id_number || 'غير محدد';
 
         // جلب بيانات المفوض له
-        const currentUserRes = await fetch(`http://10.99.28.23:3006/api/users/${currentUserId}`, { headers: authHeaders() });
+        const currentUserRes = await fetch(`http://localhost:3006/api/users/${currentUserId}`, { headers: authHeaders() });
         const currentUserJson = await currentUserRes.json();
         const delegateName = currentUserJson.data?.name || currentUserJson.data?.username || 'المفوض له';
         const delegateIdNumber = currentUserJson.data?.national_id || currentUserJson.data?.id_number || 'غير محدد';
@@ -816,7 +816,7 @@ async function showBulkDelegationPopup(delegationId, delegatorName) {
 async function processDirectDelegationUnified(delegatorId, action) {
   try {
     console.log('🔍 Processing direct delegation unified:', { delegatorId, action });
-    const res = await fetch('http://10.99.28.23:3006/api/approvals/direct-delegation-unified/process', {
+    const res = await fetch('http://localhost:3006/api/approvals/direct-delegation-unified/process', {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ delegatorId, action })
@@ -857,7 +857,7 @@ async function processDirectDelegationUnified(delegatorId, action) {
 async function processBulkDelegationUnified(delegationId, action) {
   try {
     console.log('🔍 Processing bulk delegation unified:', { delegationId, action });
-    const res = await fetch('http://10.99.28.23:3006/api/approvals/bulk-delegation-unified/process', {
+    const res = await fetch('http://localhost:3006/api/approvals/bulk-delegation-unified/process', {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ delegationId, action })
@@ -935,9 +935,9 @@ async function loadDelegations() {
     // جلب التفويضات الفردية أيضاً
     try {
       const [deptSingleRes, commSingleRes, protSingleRes] = await Promise.all([
-        fetch(`http://10.99.28.23:3006/api/approvals/single-delegations/${currentUserId}`, { headers: authHeaders() }),
-        fetch(`http://10.99.28.23:3006/api/committee-approvals/single-delegations/${currentUserId}`, { headers: authHeaders() }),
-        fetch(`http://10.99.28.23:3006/api/protocols/single-delegations/${currentUserId}`, { headers: authHeaders() })
+        fetch(`http://localhost:3006/api/approvals/single-delegations/${currentUserId}`, { headers: authHeaders() }),
+        fetch(`http://localhost:3006/api/committee-approvals/single-delegations/${currentUserId}`, { headers: authHeaders() }),
+        fetch(`http://localhost:3006/api/protocols/single-delegations/${currentUserId}`, { headers: authHeaders() })
       ]);
 
       console.log('🔍 Department single delegations response:', deptSingleRes.status);
@@ -1069,7 +1069,7 @@ async function loadDelegations() {
               if (contentType === 'committee') endpointRoot = 'committee-approvals';
               else if (contentType === 'protocol') endpointRoot = 'protocols';
               else endpointRoot = 'approvals';
-              const res = await fetch(`http://10.99.28.23:3006/api/${endpointRoot}/single-delegation-unified/process`, {
+              const res = await fetch(`http://localhost:3006/api/${endpointRoot}/single-delegation-unified/process`, {
                 method: 'POST',
                 headers: authHeaders(),
                 body: JSON.stringify({
@@ -1091,7 +1091,7 @@ async function loadDelegations() {
               if (contentType === 'committee') endpointRoot = 'committee-approvals';
               else if (contentType === 'protocol') endpointRoot = 'protocols';
               else endpointRoot = 'approvals';
-              const res = await fetch(`http://10.99.28.23:3006/api/${endpointRoot}/proxy/accept/${contentId}`, {
+              const res = await fetch(`http://localhost:3006/api/${endpointRoot}/proxy/accept/${contentId}`, {
                 method: 'POST',
                 headers: authHeaders()
               });
@@ -1159,7 +1159,7 @@ async function submitReject() {
       if (selectedContentType === 'committee') endpointRoot = 'committee-approvals';
       else if (selectedContentType === 'protocol') endpointRoot = 'protocols';
       else endpointRoot = 'approvals';
-      const res = await fetch(`http://10.99.28.23:3006/api/${endpointRoot}/single-delegation-unified/process`, {
+      const res = await fetch(`http://localhost:3006/api/${endpointRoot}/single-delegation-unified/process`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify({
@@ -1184,7 +1184,7 @@ async function submitReject() {
       else if (selectedContentType === 'protocol') endpointRoot = 'protocols';
       else endpointRoot = 'approvals';
 
-      const res = await fetch(`http://10.99.28.23:3006/api/${endpointRoot}/${selectedContentId}/approve`, {
+      const res = await fetch(`http://localhost:3006/api/${endpointRoot}/${selectedContentId}/approve`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify({
@@ -1479,7 +1479,7 @@ function rejectDelegation() {
 
 async function processSingleDepartmentDelegationAcceptance(delegationId) {
   try {
-    const response = await fetch('http://10.99.28.23:3006/api/approvals/single-delegation-unified/process', {
+    const response = await fetch('http://localhost:3006/api/approvals/single-delegation-unified/process', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1513,7 +1513,7 @@ async function processSingleDepartmentDelegationAcceptance(delegationId) {
 
 async function processSingleCommitteeDelegationAcceptance(delegationId) {
   try {
-    const response = await fetch('http://10.99.28.23:3006/api/committee-approvals/single-delegation-unified/process', {
+    const response = await fetch('http://localhost:3006/api/committee-approvals/single-delegation-unified/process', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1547,7 +1547,7 @@ async function processSingleCommitteeDelegationAcceptance(delegationId) {
 
 async function processBulkDelegationAcceptance(delegationId) {
   try {
-    const response = await fetch('http://10.99.28.23:3006/api/approvals/bulk-delegation-unified/process', {
+    const response = await fetch('http://localhost:3006/api/approvals/bulk-delegation-unified/process', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1581,7 +1581,7 @@ async function processBulkDelegationAcceptance(delegationId) {
 
 async function processSingleDepartmentDelegationRejection(delegationId) {
   try {
-    const response = await fetch('http://10.99.28.23:3006/api/approvals/single-delegation-unified/process', {
+    const response = await fetch('http://localhost:3006/api/approvals/single-delegation-unified/process', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1615,7 +1615,7 @@ async function processSingleDepartmentDelegationRejection(delegationId) {
 
 async function processSingleCommitteeDelegationRejection(delegationId) {
   try {
-    const response = await fetch('http://10.99.28.23:3006/api/committee-approvals/single-delegation-unified/process', {
+    const response = await fetch('http://localhost:3006/api/committee-approvals/single-delegation-unified/process', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1649,7 +1649,7 @@ async function processSingleCommitteeDelegationRejection(delegationId) {
 
 async function processBulkDelegationRejection(delegationId) {
   try {
-    const response = await fetch('http://10.99.28.23:3006/api/approvals/bulk-delegation-unified/process', {
+    const response = await fetch('http://localhost:3006/api/approvals/bulk-delegation-unified/process', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1697,7 +1697,7 @@ async function processBulkDelegationRejection(delegationId) {
 // دالة لعرض بوب أب اقرار التفويض الفردي
 async function showSingleDelegationConfirmation(delegateTo, contentId, contentType, notes = '') {
   try {
-    const response = await fetch('http://10.99.28.23:3006/api/delegations/single', {
+    const response = await fetch('http://localhost:3006/api/delegations/single', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1740,7 +1740,7 @@ async function showSingleDelegationConfirmation(delegateTo, contentId, contentTy
 // دالة لعرض بوب أب اقرار التفويض الشامل
 async function showBulkDelegationConfirmation(delegateTo, notes = '') {
   try {
-    const response = await fetch('http://10.99.28.23:3006/api/delegations/bulk', {
+    const response = await fetch('http://localhost:3006/api/delegations/bulk', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1788,7 +1788,7 @@ async function showSingleCommitteeDelegationConfirmation(delegateTo, contentId, 
       showConfirmation: true
     };
 
-    const response = await fetch('http://10.99.28.23:3006/api/committee-approvals/committee-delegations/single', {
+    const response = await fetch('http://localhost:3006/api/committee-approvals/committee-delegations/single', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1850,7 +1850,7 @@ async function showSingleCommitteeDelegationConfirmation(delegateTo, contentId, 
 // دالة لعرض بوب أب اقرار التفويض الشامل للجان
 async function showBulkCommitteeDelegationConfirmation(delegateTo, notes = '') {
   try {
-    const response = await fetch('http://10.99.28.23:3006/api/committee-approvals/committee-delegations/bulk', {
+    const response = await fetch('http://localhost:3006/api/committee-approvals/committee-delegations/bulk', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1890,7 +1890,7 @@ async function showBulkCommitteeDelegationConfirmation(delegateTo, notes = '') {
 // تحديث دالة processSingleDelegation لدعم اللجان
 async function processSingleDelegation(data) {
   try {
-    const endpoint = data.isCommittee ? 'http://10.99.28.23:3006/api/committee-approvals/committee-delegations/single' : 'http://10.99.28.23:3006/api/approvals/delegate-single';
+    const endpoint = data.isCommittee ? 'http://localhost:3006/api/committee-approvals/committee-delegations/single' : 'http://localhost:3006/api/approvals/delegate-single';
 
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -1930,7 +1930,7 @@ async function processSingleDelegation(data) {
 // تحديث دالة processBulkDelegation لدعم اللجان
 async function processBulkDelegation(data) {
   try {
-    const endpoint = data.isCommittee ? 'http://10.99.28.23:3006/api/committee-approvals/committee-delegations/bulk' : 'http://10.99.28.23:3006/api/approvals/delegate-all-unified';
+    const endpoint = data.isCommittee ? 'http://localhost:3006/api/committee-approvals/committee-delegations/bulk' : 'http://localhost:3006/api/approvals/delegate-all-unified';
 
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -1980,7 +1980,7 @@ async function processSingleProtocolDelegationAcceptance(delegationId) {
 
     console.log('🔍 Request body being sent:', requestBody);
 
-    const response = await fetch('http://10.99.28.23:3006/api/protocols/single-delegation-unified/process', {
+    const response = await fetch('http://localhost:3006/api/protocols/single-delegation-unified/process', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -2027,7 +2027,7 @@ async function processSingleProtocolDelegationRejection(delegationId) {
 
     console.log('🔍 Request body being sent:', requestBody);
 
-    const response = await fetch('http://10.99.28.23:3006/api/protocols/single-delegation-unified/process', {
+    const response = await fetch('http://localhost:3006/api/protocols/single-delegation-unified/process', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -2065,7 +2065,7 @@ async function processSingleProtocolDelegationRejection(delegationId) {
 async function showSingleProtocolDelegationConfirmation(delegateTo, contentId, contentType, notes = '') {
   try {
     // استخدام API المحاضر المخصص
-    const response = await fetch('http://10.99.28.23:3006/api/protocols/delegation-confirmation-data', {
+    const response = await fetch('http://localhost:3006/api/protocols/delegation-confirmation-data', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
