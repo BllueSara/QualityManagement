@@ -771,6 +771,7 @@ class ProtocolController {
         }
     }
 
+
     // اعتماد/رفض محضر - محسن للأداء (نفس طريقة approvalController.js)
     async handleApproval(req, res) {
         let { id: originalProtocolId } = req.params;
@@ -937,8 +938,7 @@ class ProtocolController {
                 }
             }
 
-            // ——— منطق التوقيع بالنيابة ———
-            // عند التوقيع بالنيابة، يتم إنشاء توقيع واحد فقط للمفوض له
+            // ——— منطق التوقيع المزدوج للمفوض له ———
             let delegatedBy = null;
             let isProxy = false;
             let singleDelegationRows = [];
@@ -996,41 +996,136 @@ class ProtocolController {
             const protocolApproversTable = 'protocol_approvers';
             const protocolsTable = 'protocols';
 
-            // منطق الاعتماد - توقيع واحد فقط
-            // حذف أي سجلات موجودة مسبقاً لنفس المستخدم على نفس المحضر
-            await protocolModel.pool.execute(`
-                DELETE FROM ${approvalLogsTable} 
-                WHERE protocol_id = ? AND approver_id = ?
-            `, [protocolId, approverId]);
-
-            // إنشاء توقيع واحد فقط
-            await protocolModel.pool.execute(`
-                INSERT INTO ${approvalLogsTable} (
-                    protocol_id,
-                    approver_id,
-                    delegated_by,
-                    signed_as_proxy,
-                    status,
-                    signature,
-                    electronic_signature,
-                    comments,
-                    created_at
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
-            `, [
-                protocolId,
-                approverId,
-                isDelegated ? delegatorId : delegatedBy,
-                isDelegated || isProxy ? 1 : 0,
-                approved ? 'approved' : 'rejected',
-                signature || null,
-                electronic_signature || null,
-                notes || ''
-            ]);
+            // منطق الاعتماد - محسن للأداء
+            if (isDelegated) {
+                // التفويض الجماعي: توقيعين (شخصي + بالنيابة)
+                // التوقيع الأول: شخصي
+                await protocolModel.pool.execute(`
+                    INSERT INTO ${approvalLogsTable} (
+                        protocol_id,
+                        approver_id,
+                        delegated_by,
+                        signed_as_proxy,
+                        status,
+                        signature,
+                        electronic_signature,
+                        comments,
+                        created_at
+                    )
+                    VALUES (?, ?, NULL, 0, ?, ?, ?, ?, NOW())
+                    ON DUPLICATE KEY UPDATE 
+                        status = VALUES(status),
+                        signature = VALUES(signature),
+                        electronic_signature = VALUES(electronic_signature),
+                        comments = VALUES(comments),
+                        created_at = NOW()
+                `, [
+                    protocolId,
+                    approverId,
+                    approved ? 'approved' : 'rejected',
+                    signature || null,
+                    electronic_signature || null,
+                    notes || ''
+                ]);
+                
+                // التوقيع الثاني: بالنيابة
+                await protocolModel.pool.execute(`
+                    INSERT INTO ${approvalLogsTable} (
+                        protocol_id,
+                        approver_id,
+                        delegated_by,
+                        signed_as_proxy,
+                        status,
+                        signature,
+                        electronic_signature,
+                        comments,
+                        created_at
+                    )
+                    VALUES (?, ?, ?, 1, ?, ?, ?, ?, NOW())
+                    ON DUPLICATE KEY UPDATE 
+                        status = VALUES(status),
+                        signature = VALUES(signature),
+                        electronic_signature = VALUES(electronic_signature),
+                        comments = VALUES(comments),
+                        created_at = NOW()
+                `, [
+                    protocolId,
+                    approverId,
+                    delegatorId,
+                    approved ? 'approved' : 'rejected',
+                    signature || null,
+                    electronic_signature || null,
+                    notes || ''
+                ]);
+            } else if (isProxy) {
+                // التفويض الفردي: توقيع واحد فقط بالنيابة
+                await protocolModel.pool.execute(`
+                    INSERT INTO ${approvalLogsTable} (
+                        protocol_id,
+                        approver_id,
+                        delegated_by,
+                        signed_as_proxy,
+                        status,
+                        signature,
+                        electronic_signature,
+                        comments,
+                        created_at
+                    )
+                    VALUES (?, ?, ?, 1, ?, ?, ?, ?, NOW())
+                    ON DUPLICATE KEY UPDATE 
+                        status = VALUES(status),
+                        signature = VALUES(signature),
+                        electronic_signature = VALUES(electronic_signature),
+                        comments = VALUES(comments),
+                        created_at = NOW()
+                `, [
+                    protocolId,
+                    approverId,
+                    delegatedBy,
+                    approved ? 'approved' : 'rejected',
+                    signature || null,
+                    electronic_signature || null,
+                    notes || ''
+                ]);
+            } else {
+                // المستخدم عادي: توقيع واحد شخصي
+                await protocolModel.pool.execute(`
+                    INSERT INTO ${approvalLogsTable} (
+                        protocol_id,
+                        approver_id,
+                        delegated_by,
+                        signed_as_proxy,
+                        status,
+                        signature,
+                        electronic_signature,
+                        comments,
+                        created_at
+                    )
+                    VALUES (?, ?, NULL, 0, ?, ?, ?, ?, NOW())
+                    ON DUPLICATE KEY UPDATE 
+                        status = VALUES(status),
+                        signature = VALUES(signature),
+                        electronic_signature = VALUES(electronic_signature),
+                        comments = VALUES(comments),
+                        created_at = NOW()
+                `, [
+                    protocolId,
+                    approverId,
+                    approved ? 'approved' : 'rejected',
+                    signature || null,
+                    electronic_signature || null,
+                    notes || ''
+                ]);
+            }
 
             // إضافة المستخدم المفوض له إلى protocol_approvers إذا لم يكن موجوداً
-            // للمستخدمين المفوض لهم، نضيفهم في كلا الحالتين (شخصي وبالنيابة)
-
+            // فقط للمستخدمين المفوض لهم تفويض جماعي (ليس للتفويضات الفردية)
+            if (isDelegated && approved) {
+                await protocolModel.pool.execute(
+                    `INSERT IGNORE INTO ${protocolApproversTable} (protocol_id, user_id) VALUES (?, ?)`,
+                    [protocolId, approverId]
+                );
+            }
 
             // تحديث حالة التفويض الفردي إلى 'approved' قبل حساب المعتمدين المتبقين
             if (singleDelegationRows && singleDelegationRows.length > 0) {
@@ -1154,13 +1249,7 @@ class ProtocolController {
                 } catch (_) {}
             }
 
-            if (approved === true && isProxy) {
-                // إضافة المعتمد بالتفويض
-                await protocolModel.pool.execute(
-                    `INSERT IGNORE INTO ${protocolApproversTable} (protocol_id, user_id) VALUES (?, ?)`,
-                    [protocolId, approverId]
-                );
-            }
+
 
             // تحديث PDF بعد كل اعتماد - جعلها غير متزامنة لتجنب التأخير
             if (approved) {
@@ -1193,6 +1282,7 @@ class ProtocolController {
             res.status(500).json({ status: 'error', message: 'خطأ أثناء معالجة الاعتماد' });
         }
     }
+
 
     // إضافة معتمد لمحضر
     async addApprover(req, res) {

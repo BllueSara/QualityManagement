@@ -55,7 +55,7 @@ function showToast(message, type = 'info', duration = 3000) {
   }, duration);
 }
 
-const apiBase      = 'http://10.99.28.23:3006/api';
+const apiBase      = ' http://10.99.28.23:3006/api';
 let authToken      = localStorage.getItem('token') || null;
 let selectedUserId = null;
 let myPermsSet     = new Set(); // صلاحيات المستخدم الحالي
@@ -2728,6 +2728,11 @@ function renderDelegationConfirmations(confirmations) {
         ${filesHTML}
         
         ${(() => {
+          // عرض التوقيع فقط للمرسل (sender) وليس للمستقبل (receiver)
+          if (confirmation.delegation_type !== 'sender') {
+            return '';
+          }
+          
           const signature = getSignatureFromData(confirmation);
           if (signature && typeof signature === 'string' && signature.trim() !== '') {
             // التحقق من أن التوقيع يحتوي على بيانات صحيحة
@@ -2752,36 +2757,20 @@ function renderDelegationConfirmations(confirmations) {
               `;
             }
           } else {
-            // عرض رسالة عندما لا يوجد توقيع
-            if (confirmation.delegation_type === 'sender') {
-              return `
-                <div class="delegation-confirmation-signature">
-                  <h4>التوقيع الشخصي</h4>
-                  <div class="delegation-confirmation-signature-container">
-                    <div class="delegation-confirmation-signature-item">
-                      <span class="delegation-confirmation-signature-label">التوقيع:</span>
-                      <span class="delegation-confirmation-signature-missing" style="color: #888; font-style: italic;">
-                        لم يتم حفظ توقيع المرسل
-                      </span>
-                    </div>
+            // عرض رسالة عندما لا يوجد توقيع للمرسل فقط
+            return `
+              <div class="delegation-confirmation-signature">
+                <h4>التوقيع الشخصي</h4>
+                <div class="delegation-confirmation-signature-container">
+                  <div class="delegation-confirmation-signature-item">
+                    <span class="delegation-confirmation-signature-label">التوقيع:</span>
+                    <span class="delegation-confirmation-signature-missing" style="color: #888; font-style: italic;">
+                      لم يتم حفظ توقيع المرسل
+                    </span>
                   </div>
                 </div>
-              `;
-            } else {
-              return `
-                <div class="delegation-confirmation-signature">
-                  <h4>التوقيع الشخصي</h4>
-                  <div class="delegation-confirmation-signature-container">
-                    <div class="delegation-confirmation-signature-item">
-                      <span class="delegation-confirmation-signature-label">التوقيع:</span>
-                      <span class="delegation-confirmation-signature-missing" style="color: #888; font-style: italic;">
-                        لم يتم التوقيع بعد
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              `;
-            }
+              </div>
+            `;
           }
           return '';
         })()}

@@ -563,6 +563,28 @@ async function updateProtocolPDFAfterApproval(protocolId, db) {
             { text: 'Date', style: 'tableHeader' }
         ]);
 
+        // تجميع التوقيعات لتجنب التكرار في التفويض الجماعي
+        const groupedSignatures = new Map();
+        
+        for (const log of logs) {
+            const signerId = log.actual_signer;
+            
+            if (!groupedSignatures.has(signerId)) {
+                groupedSignatures.set(signerId, {
+                    personalLog: null,
+                    proxyLog: null,
+                    signerData: log
+                });
+            }
+            
+            const group = groupedSignatures.get(signerId);
+            if (log.signed_as_proxy === 0) {
+                group.personalLog = log;
+            } else if (log.signed_as_proxy === 1) {
+                group.proxyLog = log;
+            }
+        }
+
         // إضافة بيانات الاعتمادات
         let rowIndex = 1;
         const getSignatureCell = (log) => {
@@ -575,58 +597,63 @@ async function updateProtocolPDFAfterApproval(protocolId, db) {
             }
         };
 
-        for (const log of logs) {
+        for (const [signerId, group] of groupedSignatures) {
+            // استخدام البيانات الشخصية إذا كانت متوفرة، وإلا استخدام بيانات التفويض
+            const mainLog = group.personalLog || group.proxyLog;
+            
             const approvalType = rowIndex === 1 ? 'Reviewed' : 
-                                rowIndex === logs.length ? 'Approver' : 'Reviewed';
+                                rowIndex === groupedSignatures.size ? 'Approver' : 'Reviewed';
             
-            const approvalMethod = log.signature ? 'Hand Signature' : 
-                                  log.electronic_signature ? 'Electronic Signature' : 'Not Specified';
+            const approvalMethod = mainLog.signature ? 'Hand Signature' : 
+                                  mainLog.electronic_signature ? 'Electronic Signature' : 'Not Specified';
             
-            const approvalDate = new Date(log.created_at).toLocaleDateString('en-US', {
+            const approvalDate = new Date(mainLog.created_at).toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: '2-digit',
                 day: '2-digit'
             });
 
             const actualSignerFullName = buildFullName(
-                log.actual_first_name,
-                log.actual_second_name,
-                log.actual_third_name,
-                log.actual_last_name
-            ) || log.actual_signer || 'N/A';
+                mainLog.actual_first_name,
+                mainLog.actual_second_name,
+                mainLog.actual_third_name,
+                mainLog.actual_last_name
+            ) || mainLog.actual_signer || 'N/A';
 
             // إضافة المسمى الوظيفي قبل الاسم إذا كان متوفراً
-            const actualSignerFullNameWithJobName = log.signer_job_name && log.signer_job_name.trim() ? 
-                `${log.signer_job_name} ${actualSignerFullName}` : actualSignerFullName;
+            const actualSignerFullNameWithJobName = mainLog.signer_job_name && mainLog.signer_job_name.trim() ? 
+                `${mainLog.signer_job_name} ${actualSignerFullName}` : actualSignerFullName;
 
+            // إضافة صف الموقّع الرئيسي
             approvalTableBody.push([
                 { text: approvalType, style: 'tableCell' },
                 { text: fixArabicOrder(actualSignerFullNameWithJobName), style: 'tableCell' },
-                { text: fixArabicOrder(log.signer_job_title || 'Not Specified'), style: 'tableCell' },
+                { text: fixArabicOrder(mainLog.signer_job_title || 'Not Specified'), style: 'tableCell' },
                 { text: approvalMethod, style: 'tableCell' },
-                getSignatureCell(log),
+                getSignatureCell(mainLog),
                 { text: approvalDate, style: 'tableCell' }
             ]);
 
-            if (log.signed_as_proxy && log.original_user) {
+            // إذا كان هناك توقيع بالنيابة، أضف صف "Proxy for"
+            if (group.proxyLog && group.proxyLog.original_user) {
                 const originalUserFullName = buildFullName(
-                    log.original_first_name,
-                    log.original_second_name,
-                    log.original_third_name,
-                    log.original_last_name
-                ) || log.original_user || 'N/A';
+                    group.proxyLog.original_first_name,
+                    group.proxyLog.original_second_name,
+                    group.proxyLog.original_third_name,
+                    group.proxyLog.original_last_name
+                ) || group.proxyLog.original_user || 'N/A';
 
                 // إضافة المسمى الوظيفي قبل الاسم إذا كان متوفراً
-                const originalUserFullNameWithJobName = log.original_job_name && log.original_job_name.trim() ? 
-                    `${log.original_job_name} ${originalUserFullName}` : originalUserFullName;
+                const originalUserFullNameWithJobName = group.proxyLog.original_job_name && group.proxyLog.original_job_name.trim() ? 
+                    `${group.proxyLog.original_job_name} ${originalUserFullName}` : originalUserFullName;
 
                 approvalTableBody.push([
                     { text: '(Proxy for)', style: 'proxyCell' },
                     { text: fixArabicOrder(originalUserFullNameWithJobName), style: 'proxyCell' },
-                    { text: fixArabicOrder(log.original_job_title || 'Not Specified'), style: 'proxyCell' },
+                    { text: fixArabicOrder(group.proxyLog.original_job_title || 'Not Specified'), style: 'proxyCell' },
                     { text: 'Delegated', style: 'proxyCell' },
-                    { text: '-', style: 'proxyCell' },
-                    { text: '-', style: 'proxyCell' }
+                    { text: '', style: 'proxyCell' },
+                    { text: '', style: 'proxyCell' }
                 ]);
             }
 

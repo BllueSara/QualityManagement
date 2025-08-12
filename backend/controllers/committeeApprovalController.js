@@ -5,7 +5,7 @@ const path = require('path');
 
 const { logAction } = require('../models/logger');
 const { insertNotification, sendProxyNotification, sendOwnerApprovalNotification, sendPartialApprovalNotification, sendRejectionNotification } = require('../models/notfications-utils');
-const { getFullNameSQLWithAliasAndFallback } = require('../models/userUtils');
+const { getFullNameSQLWithAliasAndFallback,getFullNameWithJobNameSQLWithAliasAndFallback } = require('../models/userUtils');
 require('dotenv').config();
 
 // متغير global لحفظ علاقات التفويض الدائم (delegateeId -> delegatorId)
@@ -812,8 +812,7 @@ async function getAssignedCommitteeApprovals(req, res) {
         JOIN committee_folders cf       ON cc.folder_id = cf.id
         JOIN committees com             ON cf.committee_id = com.id
         JOIN users u                    ON cc.created_by = u.id
-        LEFT JOIN committee_content_approvers cca 
-          ON cca.content_id = cc.id
+        LEFT JOIN committee_content_approvers cca  ON cca.content_id = cc.id
         LEFT JOIN users u2 
           ON u2.id = cca.user_id
         WHERE NOT EXISTS (
@@ -823,16 +822,8 @@ async function getAssignedCommitteeApprovals(req, res) {
             AND cal.signed_as_proxy = 1
             AND cal.status = 'accepted'
         )
-        AND NOT EXISTS (
-          SELECT 1 FROM committee_approval_logs cal2
-          WHERE cal2.content_id = cc.id
-            AND cal2.approver_id = ?
-            AND cal2.signed_as_proxy = 1
-            AND cal2.status = 'accepted'
-        )
         GROUP BY cc.id, cca.sequence_number
-        ORDER BY cc.created_at DESC, cca.sequence_number
-      `, [userId, userId]);
+      `, [userId]);
 
       allRows = rows;
     } else {
@@ -857,13 +848,8 @@ async function getAssignedCommitteeApprovals(req, res) {
         JOIN committee_folders cf       ON cc.folder_id = cf.id
         JOIN committees com             ON cf.committee_id = com.id
         JOIN users u                    ON cc.created_by = u.id
-        JOIN committee_content_approvers cca ON cca.content_id = cc.id AND (
-          cca.user_id = ? OR cca.user_id IN (
-            SELECT ad.user_id FROM active_delegations ad WHERE ad.delegate_id = ?
-          )
-        )
-        LEFT JOIN users u2 
-          ON u2.id = cca.user_id
+        JOIN committee_content_approvers cca ON cca.content_id = cc.id AND cca.user_id = ?
+        LEFT JOIN users u2 ON u2.id = cca.user_id
         WHERE NOT EXISTS (
           SELECT 1 FROM committee_approval_logs cal
           WHERE cal.content_id = cc.id
@@ -875,25 +861,18 @@ async function getAssignedCommitteeApprovals(req, res) {
           SELECT 1 FROM committee_approval_logs cal2
           WHERE cal2.content_id = cc.id
             AND cal2.approver_id = ?
-            AND cal2.signed_as_proxy = 1
-            AND cal2.status = 'accepted'
-        )
-        AND NOT EXISTS (
-          SELECT 1 FROM committee_approval_logs cal3
-          WHERE cal3.content_id = cc.id
-            AND cal3.approver_id = ?
-            AND cal3.status = 'approved'
+            AND cal2.status = 'approved'
         )
         GROUP BY cc.id, cca.sequence_number
         ORDER BY cc.created_at DESC, cca.sequence_number
-      `, [userId, userId, userId, userId, userId]);
+      `, [userId, userId, userId ]);
 
       allRows = rows;
     }
 
     // في حالة الأدمن: تجاوز التسلسل واعرض الكل
     let resultRows = [];
-  if (canViewAll) {
+    if (canViewAll) {
       resultRows = allRows;
     } else {
       // فلترة النتائج حسب التسلسل
@@ -960,40 +939,11 @@ async function checkPreviousCommitteeApproversSigned(contentId, currentSequence)
       FROM committee_content_approvers cca
       WHERE cca.content_id = ? 
         AND cca.sequence_number < ?
-        AND (
-          -- للمستخدمين العاديين: لا يوجد توقيع شخصي
-          (cca.user_id NOT IN (
-            SELECT delegate_id FROM active_delegations
-          ) AND NOT EXISTS (
-            SELECT 1 FROM committee_approval_logs cal
-            WHERE cal.content_id = cca.content_id 
-              AND cal.approver_id = cca.user_id
-              AND cal.signed_as_proxy = 0
-              AND cal.status = 'approved'
-          ))
-          OR
-          -- للمستخدمين المفوض لهم: لا يوجد توقيع شخصي أو لا يوجد توقيع بالنيابة
-          (cca.user_id IN (
-            SELECT delegate_id FROM active_delegations
-          ) AND (
-            -- لا يوجد توقيع شخصي
-            NOT EXISTS (
-              SELECT 1 FROM committee_approval_logs cal
-              WHERE cal.content_id = cca.content_id 
-                AND cal.approver_id = cca.user_id
-                AND cal.signed_as_proxy = 0
-                AND cal.status = 'approved'
-            )
-            OR
-            -- لا يوجد توقيع بالنيابة
-            NOT EXISTS (
-              SELECT 1 FROM committee_approval_logs cal
-              WHERE cal.content_id = cca.content_id 
-                AND cal.approver_id = cca.user_id
-                AND cal.signed_as_proxy = 1
-                AND cal.status = 'approved'
-            )
-          ))
+        AND NOT EXISTS (
+          SELECT 1 FROM committee_approval_logs cal
+          WHERE cal.content_id = cca.content_id 
+            AND cal.approver_id = cca.user_id
+            AND cal.status = 'approved'
         )
     `, [actualContentId, currentSequence]);
 
@@ -1218,8 +1168,8 @@ async function generateFinalSignedCommitteePDF(contentId) {
   const [logs] = await db.execute(`
     SELECT
       al.signed_as_proxy,
-      ${getFullNameSQLWithAliasAndFallback('u_actual')}   AS actual_signer,
-      ${getFullNameSQLWithAliasAndFallback('u_original')} AS original_user,
+      ${getFullNameWithJobNameSQLWithAliasAndFallback('u_actual')}   AS actual_signer,
+      ${getFullNameWithJobNameSQLWithAliasAndFallback('u_original')} AS original_user,
       u_actual.first_name AS actual_first_name,
       u_actual.second_name AS actual_second_name,
       u_actual.third_name AS actual_third_name,
