@@ -81,11 +81,11 @@ async function getUserPendingCommitteeApprovals(req, res) {
           'admin' AS signature_type,
           cca.sequence_number
         FROM committee_contents cc
-        JOIN committee_folders cf     ON cc.folder_id = cf.id
-        JOIN committees com           ON cf.committee_id = com.id
+        JOIN committee_folders cf     ON cc.folder_id = cf.id AND cf.deleted_at IS NULL
+        JOIN committees com           ON cf.committee_id = com.id AND com.deleted_at IS NULL
         LEFT JOIN committee_content_approvers cca ON cca.content_id = cc.id
         LEFT JOIN users u2            ON cca.user_id = u2.id
-        WHERE cc.is_approved = 0
+        WHERE cc.deleted_at IS NULL AND cc.is_approved = 0
           AND NOT EXISTS (
             SELECT 1 FROM committee_approval_logs cal
             WHERE cal.content_id = cc.id
@@ -119,11 +119,11 @@ async function getUserPendingCommitteeApprovals(req, res) {
           GROUP_CONCAT(DISTINCT ${getFullNameSQLWithAliasAndFallback('u2')}) AS assigned_approvers,
           'dual' AS signature_type
         FROM committee_contents cc
-        JOIN committee_folders cf     ON cc.folder_id = cf.id
-        JOIN committees com           ON cf.committee_id = com.id
+        JOIN committee_folders cf     ON cc.folder_id = cf.id AND cf.deleted_at IS NULL
+        JOIN committees com           ON cf.committee_id = com.id AND com.deleted_at IS NULL
         JOIN committee_content_approvers cca ON cca.content_id = cc.id AND cca.user_id = ?
         LEFT JOIN users u2            ON cca.user_id = u2.id
-        WHERE cc.is_approved = 0
+        WHERE cc.deleted_at IS NULL AND cc.is_approved = 0
           AND NOT EXISTS (
             SELECT 1 FROM committee_approval_logs cal
             WHERE cal.content_id = cc.id
@@ -154,11 +154,11 @@ async function getUserPendingCommitteeApprovals(req, res) {
           GROUP_CONCAT(DISTINCT ${getFullNameSQLWithAliasAndFallback('u2')}) AS assigned_approvers,
           'normal' AS signature_type
         FROM committee_contents cc
-        JOIN committee_folders cf     ON cc.folder_id = cf.id
-        JOIN committees com           ON cf.committee_id = com.id
+        JOIN committee_folders cf     ON cc.folder_id = cf.id AND cf.deleted_at IS NULL
+        JOIN committees com           ON cf.committee_id = com.id AND com.deleted_at IS NULL
         JOIN committee_content_approvers cca ON cca.content_id = cc.id AND cca.user_id = ?
         LEFT JOIN users u2            ON cca.user_id = u2.id
-        WHERE cc.is_approved = 0
+        WHERE cc.deleted_at IS NULL AND cc.is_approved = 0
           AND NOT EXISTS (
             SELECT 1 FROM committee_approval_logs cal
             WHERE cal.content_id = cc.id
@@ -242,7 +242,7 @@ async function handleCommitteeApproval(req, res) {
           cc.created_by,
           cc.is_approved
         FROM committee_contents cc
-        WHERE cc.id = ?
+        WHERE cc.id = ? AND cc.deleted_at IS NULL
       `, [contentId]);
 
       if (!contentRows.length) {
@@ -696,9 +696,9 @@ async function getAssignedCommitteeApprovals(req, res) {
           cc.start_date,
           cc.end_date
         FROM committee_contents cc
-        JOIN committee_folders cf       ON cc.folder_id = cf.id
-        JOIN committees com             ON cf.committee_id = com.id
-        JOIN users u                    ON cc.created_by = u.id
+        JOIN committee_folders cf       ON cc.folder_id = cf.id AND cf.deleted_at IS NULL
+        JOIN committees com             ON cf.committee_id = com.id AND com.deleted_at IS NULL
+        JOIN users u                    ON cc.created_by = u.id AND u.deleted_at IS NULL
         LEFT JOIN committee_content_approvers cca  ON cca.content_id = cc.id
         LEFT JOIN users u2 
           ON u2.id = cca.user_id
@@ -731,9 +731,9 @@ async function getAssignedCommitteeApprovals(req, res) {
           cc.start_date,
           cc.end_date
         FROM committee_contents cc
-        JOIN committee_folders cf       ON cc.folder_id = cf.id
-        JOIN committees com             ON cf.committee_id = com.id
-        JOIN users u                    ON cc.created_by = u.id
+        JOIN committee_folders cf       ON cc.folder_id = cf.id AND cf.deleted_at IS NULL
+        JOIN committees com             ON cf.committee_id = com.id AND com.deleted_at IS NULL
+        JOIN users u                    ON cc.created_by = u.id AND u.deleted_at IS NULL
         JOIN committee_content_approvers cca ON cca.content_id = cc.id AND cca.user_id = ?
         LEFT JOIN users u2 ON u2.id = cca.user_id
         WHERE NOT EXISTS (
@@ -847,7 +847,7 @@ async function delegateCommitteeApproval(req, res) {
 
     // 5) جلب عنوان المحتوى من جدول committee_contents
     const [contentRows] = await db.execute(
-      'SELECT title FROM committee_contents WHERE id = ?', 
+      'SELECT title FROM committee_contents WHERE id = ? AND deleted_at IS NULL', 
       [contentId]
     );
     const rawTitle = contentRows.length
@@ -927,8 +927,8 @@ async function getProxyCommitteeApprovals(req, res) {
         ${getFullNameSQLWithAliasAndFallback('u')} AS delegated_by,
         u.id AS delegated_by_id
       FROM committee_contents cc
-      JOIN committee_folders cf ON cc.folder_id = cf.id
-      JOIN committees com ON cf.committee_id = com.id
+      JOIN committee_folders cf ON cc.folder_id = cf.id AND cf.deleted_at IS NULL
+      JOIN committees com ON cf.committee_id = com.id AND com.deleted_at IS NULL
       JOIN committee_content_approvers cca ON cc.id = cca.content_id
       JOIN users u ON cca.user_id = u.id
       WHERE cca.user_id = ?
@@ -962,7 +962,7 @@ async function getProxyCommitteeApprovals(req, res) {
 async function generateFinalSignedCommitteePDF(contentId) {
   // 1) جلب مسار الملف
   const [fileRows] = await db.execute(
-    `SELECT file_path FROM committee_contents WHERE id = ?`,
+    `SELECT file_path FROM committee_contents WHERE id = ? AND deleted_at IS NULL`,
     [contentId]
   );
   if (!fileRows.length) {
@@ -1070,7 +1070,7 @@ async function generateFinalSignedCommitteePDF(contentId) {
 
   // 5) جلب اسم الملف لعرضه كعنوان
   const [contentRows] = await db.execute(
-    `SELECT title FROM committee_contents WHERE id = ?`,
+    `SELECT title FROM committee_contents WHERE id = ? AND deleted_at IS NULL`,
     [contentId]
   );
   const fileName = contentRows.length > 0 ? contentRows[0].title : `Committee File ${contentId}`;
@@ -1294,7 +1294,7 @@ async function updateCommitteePDFAfterApproval(contentId) {
   try {
     // 1) جلب مسار الملف
     const [fileRows] = await db.execute(
-      `SELECT file_path FROM committee_contents WHERE id = ?`,
+      `SELECT file_path FROM committee_contents WHERE id = ? AND deleted_at IS NULL`,
       [contentId]
     );
     if (!fileRows.length) {
@@ -1393,7 +1393,7 @@ async function updateCommitteePDFAfterApproval(contentId) {
 
     // 5) جلب اسم الملف لعرضه كعنوان
     const [contentRows] = await db.execute(
-      `SELECT title FROM committee_contents WHERE id = ?`,
+      `SELECT title FROM committee_contents WHERE id = ? AND deleted_at IS NULL`,
       [contentId]
     );
     const fileName = contentRows.length > 0 ? contentRows[0].title : `Committee File ${contentId}`;
@@ -2335,7 +2335,7 @@ const delegateAllCommitteeApprovalsUnified = async (req, res) => {
       SELECT cc.id, 'committee' as type
       FROM committee_contents cc
       JOIN committee_content_approvers cca ON cca.content_id = cc.id
-      WHERE cc.approval_status = 'pending' AND cca.user_id = ?
+      WHERE cc.deleted_at IS NULL AND cc.approval_status = 'pending' AND cca.user_id = ?
     `, [currentUserId]);
 
     const committeeFiles = committeeRows.map(r => r.id);

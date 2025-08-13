@@ -24,7 +24,7 @@ exports.getApprovalsReports = async (req, res) => {
       SELECT p.permission_key
       FROM permissions p
       JOIN user_permissions up ON up.permission_id = p.id
-      WHERE up.user_id = ?
+      WHERE up.user_id = ? AND p.deleted_at IS NULL
     `, [userId]);
     const perms = new Set(permRows.map(r => r.permission_key));
     const canViewAll = userRole === 'admin' || perms.has('view_all_reports_approvals');
@@ -53,7 +53,7 @@ exports.getApprovalsReports = async (req, res) => {
       FROM contents c
       JOIN folders f ON c.folder_id = f.id
       LEFT JOIN departments d ON f.department_id = d.id
-      ${deptWhere}
+      WHERE c.deleted_at IS NULL AND f.deleted_at IS NULL ${deptWhere ? 'AND ' + deptWhere.replace('WHERE ', '') : ''}
     `;
 
     // تنفيذ الاستعلام

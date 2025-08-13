@@ -507,7 +507,7 @@ async function updateProtocolPDFAfterApproval(protocolId, db) {
     try {
         // 1) جلب مسار الملف
         const [fileRows] = await db.pool.execute(
-            `SELECT file_path FROM protocols WHERE id = ?`,
+            `SELECT file_path FROM protocols WHERE id = ? AND deleted_at IS NULL`,
             [protocolId]
         );
         if (!fileRows.length) {

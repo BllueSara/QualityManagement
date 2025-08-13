@@ -124,7 +124,7 @@ const getFolders = async (req, res) => {
               `SELECT f.id, f.name, f.type, f.created_at, ${getFullNameSQLWithAliasAndFallback('u')} AS created_by
        FROM folders f
        LEFT JOIN users u ON u.id = f.created_by
-       WHERE f.department_id = ?
+       WHERE f.department_id = ? AND f.deleted_at IS NULL
        ORDER BY f.created_at DESC`,
       [departmentId]
     );
@@ -193,7 +193,7 @@ const createFolder = async (req, res) => {
 
     // تحقق عدم التكرار
     const [exists] = await conn.execute(
-      'SELECT id FROM folders WHERE department_id = ? AND name = ?',
+      'SELECT id FROM folders WHERE department_id = ? AND name = ? AND deleted_at IS NULL',
       [departmentId, name]
     );
     if (exists.length) {
@@ -273,7 +273,7 @@ const updateFolder = async (req, res) => {
 
     // جلب المجلد القديم مع اسم القسم
     const [rows] = await conn.execute(
-      'SELECT f.*, d.name as department_name FROM folders f JOIN departments d ON f.department_id = d.id WHERE f.id = ?', 
+      'SELECT f.*, d.name as department_name FROM folders f JOIN departments d ON f.department_id = d.id WHERE f.id = ? AND f.deleted_at IS NULL AND d.deleted_at IS NULL', 
       [folderId]
     );
     if (!rows.length) {
@@ -341,7 +341,7 @@ const getFolderById = async (req, res) => {
        FROM folders f
        LEFT JOIN users u ON f.created_by = u.id
        LEFT JOIN departments d ON f.department_id = d.id
-       WHERE f.id = ?`,
+       WHERE f.id = ? AND f.deleted_at IS NULL`,
       [folderId]
     );
 
@@ -378,7 +378,7 @@ const deleteFolder = async (req, res) => {
 
     // تحقق من وجود المجلد مع اسم القسم
     const [folder] = await conn.execute(
-      'SELECT f.*, d.name as department_name FROM folders f JOIN departments d ON f.department_id = d.id WHERE f.id = ?', 
+      'SELECT f.*, d.name as department_name FROM folders f JOIN departments d ON f.department_id = d.id WHERE f.id = ? AND f.deleted_at IS NULL AND d.deleted_at IS NULL', 
       [folderId]
     );
     if (!folder.length) {
@@ -392,11 +392,11 @@ const deleteFolder = async (req, res) => {
     const userLanguage = getUserLanguageFromToken(h.split(' ')[1]);
     const departmentName = getDepartmentNameByLanguage(folder[0].department_name, userLanguage);
 
-    // حذف كل المحتويات المرتبطة أولاً
-    await conn.execute('DELETE FROM contents WHERE folder_id = ?', [folderId]);
+    // تطبيق soft delete للمحتويات المرتبطة أولاً
+    await conn.execute('UPDATE contents SET deleted_at = NOW(), deleted_by = ? WHERE folder_id = ? AND deleted_at IS NULL', [decoded.id, folderId]);
 
-    // ثم حذف المجلد
-    await conn.execute('DELETE FROM folders WHERE id = ?', [folderId]);
+    // ثم تطبيق soft delete للمجلد
+    await conn.execute('UPDATE folders SET deleted_at = NOW(), deleted_by = ? WHERE id = ? AND deleted_at IS NULL', [decoded.id, folderId]);
 
     conn.release();
     
@@ -761,7 +761,7 @@ const getSharedUsersForFolder = async (req, res) => {
 
     // تحقق من وجود المجلد وأنه من نوع shared
     const [folder] = await conn.execute(
-      'SELECT id, type FROM folders WHERE id = ?',
+      'SELECT id, type FROM folders WHERE id = ? AND deleted_at IS NULL',
       [folderId]
     );
     

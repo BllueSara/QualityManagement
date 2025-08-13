@@ -85,7 +85,7 @@ const register = async (req, res) => {
     }
 
     // 4) تحقق من عدم تكرار اسم مستخدم أو بريد
-    let existingQuery = `SELECT id FROM users WHERE username = ? OR email = ?`;
+    let existingQuery = `SELECT id FROM users WHERE (username = ? OR email = ?) AND deleted_at IS NULL`;
     let existingParams = [username, email];
     
     // إضافة التحقق من الرقم الوظيفي للمستخدمين غير admin
@@ -110,7 +110,7 @@ const register = async (req, res) => {
 
     // 5) تحقق من وجود القسم
     if (department_id) {
-      const [deps] = await db.execute('SELECT id FROM departments WHERE id = ?', [department_id]);
+      const [deps] = await db.execute('SELECT id FROM departments WHERE id = ? AND deleted_at IS NULL', [department_id]);
       if (deps.length === 0) {
         return res.status(400).json({
           status: 'error',
@@ -281,7 +281,7 @@ const login = async (req, res) => {
       });
     }
 const [departmentRows] = await db.query(
-  'SELECT name FROM departments WHERE id = ?',
+  'SELECT name FROM departments WHERE id = ? AND deleted_at IS NULL',
   [user.department_id]
 );
 
@@ -294,7 +294,7 @@ const departmentName = departmentRows[0]?.name || '';
     
     // جلب الأسماء من قاعدة البيانات
     const [nameRows] = await db.execute(
-      'SELECT first_name, second_name, third_name, last_name FROM users WHERE id = ?',
+      'SELECT first_name, second_name, third_name, last_name FROM users WHERE id = ? AND deleted_at IS NULL',
       [user.id]
     );
     
@@ -374,7 +374,7 @@ const forgotPassword = async (req, res) => {
   }
 
   try {
-    const [rows] = await db.execute('SELECT id, username FROM users WHERE email = ?', [email]);
+    const [rows] = await db.execute('SELECT id, username FROM users WHERE email = ? AND deleted_at IS NULL', [email]);
     if (rows.length === 0) {
       return res.status(404).json({ 
         status: 'error', 
@@ -507,7 +507,7 @@ const resetPassword = async (req, res) => {
 
   try {
     const [rows] = await db.execute(
-      'SELECT id FROM users WHERE reset_token = ? AND reset_token_expires > NOW()',
+      'SELECT id FROM users WHERE reset_token = ? AND reset_token_expires > NOW() AND deleted_at IS NULL',
       [token]
     );
 

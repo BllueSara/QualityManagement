@@ -66,7 +66,7 @@ async function notifyExpiredContents() {
     const [contents] = await connection.execute(`
       SELECT c.id, c.title, c.created_by, c.end_date, c.folder_id
       FROM contents c
-      WHERE c.end_date IS NOT NULL
+      WHERE c.end_date IS NOT NULL AND c.deleted_at IS NULL
     `);
 
     for (const row of contents) {
@@ -81,7 +81,7 @@ async function notifyExpiredContents() {
         `SELECT f.name AS folder_name, d.name AS department_name
          FROM folders f
          JOIN departments d ON f.department_id = d.id
-         WHERE f.id = ?`,
+         WHERE f.id = ? AND f.deleted_at IS NULL AND d.deleted_at IS NULL`,
         [row.folder_id]
       );
       const folderName = folderRows[0]?.folder_name || '';
@@ -279,7 +279,7 @@ const getContentsByFolderId = async (req, res) => {
             FROM contents c
             LEFT JOIN users u ON c.created_by = u.id
             LEFT JOIN users a ON c.approved_by = a.id
-            WHERE c.folder_id = ?
+            WHERE c.folder_id = ? AND c.deleted_at IS NULL
         `;
         let params = [folderId];
 
@@ -402,7 +402,7 @@ const addContent = async (req, res) => {
   
       // التحقق من وجود المجلد وجلب اسم القسم
       const [folder] = await connection.execute(
-        'SELECT id, department_id FROM folders WHERE id = ?',
+        'SELECT id, department_id FROM folders WHERE id = ? AND deleted_at IS NULL',
         [folderId]
       );
   
@@ -417,7 +417,7 @@ const addContent = async (req, res) => {
       // جلب اسم القسم باللغة المناسبة
       let departmentName = '';
       if (folder[0].department_id) {
-        const [deptRows] = await connection.execute('SELECT name FROM departments WHERE id = ?', [folder[0].department_id]);
+        const [deptRows] = await connection.execute('SELECT name FROM departments WHERE id = ? AND deleted_at IS NULL', [folder[0].department_id]);
         if (deptRows.length > 0) {
           departmentName = deptRows[0].name; // استخدام النص الأصلي من قاعدة البيانات
         }
@@ -536,7 +536,7 @@ const updateContent = async (req, res) => {
   
       // جلب المحتوى القديم (بما في ذلك approvers_required وfolder_id)
       const [oldContent] = await connection.execute(
-        'SELECT folder_id, approvers_required, title FROM contents WHERE id = ?',
+        'SELECT folder_id, approvers_required, title FROM contents WHERE id = ? AND deleted_at IS NULL',
         [originalId]
       );
       if (!oldContent.length) {
@@ -550,9 +550,9 @@ const updateContent = async (req, res) => {
       // جلب اسم القسم باللغة المناسبة
       let departmentName = '';
       if (folderId) {
-        const [folderRows] = await connection.execute('SELECT department_id FROM folders WHERE id = ?', [folderId]);
+        const [folderRows] = await connection.execute('SELECT department_id FROM folders WHERE id = ? AND deleted_at IS NULL', [folderId]);
         if (folderRows.length > 0 && folderRows[0].department_id) {
-          const [deptRows] = await connection.execute('SELECT name FROM departments WHERE id = ?', [folderRows[0].department_id]);
+          const [deptRows] = await connection.execute('SELECT name FROM departments WHERE id = ? AND deleted_at IS NULL', [folderRows[0].department_id]);
           if (deptRows.length > 0) {
             departmentName = deptRows[0].name; // استخدام النص الأصلي من قاعدة البيانات
           }
@@ -649,7 +649,7 @@ const deleteContent = async (req, res) => {
 
         // التحقق من صلاحيات المستخدم
         const [content] = await connection.execute(
-            'SELECT file_path, created_by, is_approved, title, folder_id FROM contents WHERE id = ?',
+            'SELECT file_path, created_by, is_approved, title, folder_id FROM contents WHERE id = ? AND deleted_at IS NULL',
             [contentId]
         );
 
@@ -682,23 +682,20 @@ const deleteContent = async (req, res) => {
         // جلب اسم القسم باللغة المناسبة
         let departmentName = '';
         if (content[0].folder_id) {
-            const [folderRows] = await connection.execute('SELECT department_id FROM folders WHERE id = ?', [content[0].folder_id]);
+            const [folderRows] = await connection.execute('SELECT department_id FROM folders WHERE id = ? AND deleted_at IS NULL', [content[0].folder_id]);
             if (folderRows.length > 0 && folderRows[0].department_id) {
-                const [deptRows] = await connection.execute('SELECT name FROM departments WHERE id = ?', [folderRows[0].department_id]);
+                const [deptRows] = await connection.execute('SELECT name FROM departments WHERE id = ? AND deleted_at IS NULL', [folderRows[0].department_id]);
                 if (deptRows.length > 0) {
                     departmentName = deptRows[0].name; // استخدام النص الأصلي من قاعدة البيانات
                 }
             }
         }
 
-        // حذف الملف
-        const filePath = path.join('./uploads', content[0].file_path);
-        if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
-        }
-
-        // حذف المحتوى من قاعدة البيانات
-        await connection.execute('DELETE FROM contents WHERE id = ?', [contentId]);
+        // تطبيق soft delete بدلاً من حذف الملف والمحتوى نهائياً
+        await connection.execute(
+            'UPDATE contents SET deleted_at = NOW(), deleted_by = ? WHERE id = ? AND deleted_at IS NULL',
+            [decodedToken.id, contentId]
+        );
 
         // ✅ تسجيل اللوق بعد نجاح حذف المحتوى
         try {
@@ -738,7 +735,7 @@ const downloadContent = async (req, res) => {
         const connection = await db.getConnection();
 
         const [content] = await connection.execute(
-            'SELECT file_path, title FROM contents WHERE id = ?',
+            'SELECT file_path, title FROM contents WHERE id = ? AND deleted_at IS NULL',
             [contentId]
         );
 
@@ -781,7 +778,7 @@ const getContentById = async (req, res) => {
             FROM contents c
             LEFT JOIN users u ON c.created_by = u.id
             LEFT JOIN users a ON c.approved_by = a.id
-            WHERE c.id = ?`,
+            WHERE c.id = ? AND c.deleted_at IS NULL`,
             [contentId]
         );
 
@@ -831,7 +828,7 @@ const approveContent = async (req, res) => {
 
         // التحقق من وجود المحتوى
         const [content] = await connection.execute(
-            'SELECT c.*, f.department_id FROM contents c JOIN folders f ON c.folder_id = f.id WHERE c.id = ?',
+            'SELECT c.*, f.department_id FROM contents c JOIN folders f ON c.folder_id = f.id WHERE c.id = ? AND c.deleted_at IS NULL AND f.deleted_at IS NULL',
             [contentId]
         );
 
@@ -846,7 +843,7 @@ const approveContent = async (req, res) => {
         // جلب اسم القسم باللغة المناسبة
         let departmentName = '';
         if (content[0].department_id) {
-            const [deptRows] = await connection.execute('SELECT name FROM departments WHERE id = ?', [content[0].department_id]);
+            const [deptRows] = await connection.execute('SELECT name FROM departments WHERE id = ? AND deleted_at IS NULL', [content[0].department_id]);
             if (deptRows.length > 0) {
                 departmentName = deptRows[0].name; // استخدام النص الأصلي من قاعدة البيانات
             }
@@ -989,7 +986,7 @@ const getMyUploadedContent = async (req, res) => {
          FROM contents c
          JOIN folders f ON c.folder_id = f.id
          LEFT JOIN departments d ON f.department_id = d.id
-         WHERE c.created_by = ?
+         WHERE c.created_by = ? AND c.deleted_at IS NULL
          ORDER BY c.created_at DESC`,
         [userId]
       );

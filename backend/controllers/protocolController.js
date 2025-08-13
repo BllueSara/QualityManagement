@@ -383,7 +383,7 @@ class ProtocolController {
             const userId = req.user.id;
             // جلب مسار الملف قبل الحذف
             const [rows] = await protocolModel.pool.execute(
-                'SELECT file_path FROM protocols WHERE id = ?',
+                'SELECT file_path FROM protocols WHERE id = ? AND deleted_at IS NULL',
                 [id]
             );
 
@@ -399,31 +399,8 @@ class ProtocolController {
             // حذف السجل من قاعدة البيانات (سيحذف الجداول التابعة عبر CASCADE)
             const result = await protocolModel.deleteProtocol(id, userId);
 
-            // محاولة حذف ملف PDF الحالي إن وجد + تنظيف أي ملفات قديمة للمحضر نفسه
-            try {
-                const uploadsBase = path.join(__dirname, '../../uploads');
-                if (currentFileRelative) {
-                    const absolutePath = path.join(uploadsBase, currentFileRelative);
-                    if (fs.existsSync(absolutePath)) {
-                        fs.unlinkSync(absolutePath);
-                    }
-                }
-
-                // حذف أي ملفات سابقة تخص نفس المحضر وفق النمط protocol_<id>_*.pdf
-                const protocolsDir = path.join(uploadsBase, 'protocols');
-                if (fs.existsSync(protocolsDir)) {
-                    const prefix = `protocol_${id}_`;
-                    const files = fs.readdirSync(protocolsDir);
-                    for (const file of files) {
-                        if (file.startsWith(prefix) && file.endsWith('.pdf')) {
-                            const filePath = path.join(protocolsDir, file);
-                            try { fs.unlinkSync(filePath); } catch (e) { /* ignore */ }
-                        }
-                    }
-                }
-            } catch (fsErr) {
-                console.error('Error removing protocol files:', fsErr);
-            }
+            // لا نحذف الملفات عند استخدام soft delete - سيتم الاحتفاظ بها للاسترجاع
+            // يمكن حذفها لاحقاً عند الحذف النهائي من قبل السوبر أدمن
 
             console.log(`Protocol deleted successfully by user ${userId}`, {
                 protocolId: id,
@@ -538,7 +515,7 @@ class ProtocolController {
                         ) AS assigned_approvers
                     FROM protocols p
                     LEFT JOIN users u ON p.created_by = u.id
-                    WHERE p.is_approved = 0
+                    WHERE p.deleted_at IS NULL AND p.is_approved = 0
                     GROUP BY p.id
                 `);
                 allRows = rows;
@@ -577,7 +554,7 @@ class ProtocolController {
                       )
                     )
                     LEFT JOIN users u ON p.created_by = u.id
-                    WHERE p.is_approved = 0
+                    WHERE p.deleted_at IS NULL AND p.is_approved = 0
                       AND NOT EXISTS (
                         SELECT 1 FROM protocol_approval_logs pal_ex
                         WHERE pal_ex.protocol_id = p.id
@@ -812,7 +789,7 @@ class ProtocolController {
                         p.created_by,
                         p.is_approved
                     FROM protocols p
-                    WHERE p.id = ?
+                    WHERE p.id = ? AND p.deleted_at IS NULL
                 `, [protocolId]);
 
                 if (!protocolRows.length) {
@@ -851,7 +828,7 @@ class ProtocolController {
                         pal_personal.status as personal_status,
                         pal_proxy.status as proxy_status
                     FROM protocol_approvers pa
-                    JOIN protocols p ON p.id = pa.protocol_id
+                    JOIN protocols p ON p.id = pa.protocol_id AND p.deleted_at IS NULL
                     LEFT JOIN active_delegations ad ON ad.delegate_id = pa.user_id
                     LEFT JOIN protocol_approval_logs pal_personal ON pal_personal.protocol_id = pa.protocol_id 
                         AND pal_personal.approver_id = pa.user_id 
@@ -1372,7 +1349,7 @@ class ProtocolController {
                     pal.status,
                     pal.created_at
                 FROM protocol_approval_logs pal
-                JOIN protocols p ON pal.protocol_id = p.id
+                JOIN protocols p ON pal.protocol_id = p.id AND p.deleted_at IS NULL
                 JOIN users u ON pal.delegated_by = u.id
                 WHERE pal.approver_id = ?
                   AND pal.signed_as_proxy = 1
@@ -1730,7 +1707,7 @@ class ProtocolController {
                 SELECT DISTINCT p.id, p.title
                 FROM protocols p
                 JOIN protocol_approvers pa ON p.id = pa.protocol_id
-                WHERE pa.user_id = ? AND p.is_approved = 0
+                WHERE pa.user_id = ? AND p.deleted_at IS NULL AND p.is_approved = 0
                 AND NOT EXISTS (
                     SELECT 1 FROM protocol_approval_logs pal
                     WHERE pal.protocol_id = p.id AND pal.approver_id = pa.user_id
@@ -1849,7 +1826,7 @@ class ProtocolController {
                     SELECT DISTINCT p.id, p.title
                     FROM protocols p
                     JOIN protocol_approvers pa ON p.id = pa.protocol_id
-                    WHERE pa.user_id = ? AND p.is_approved = 0
+                    WHERE pa.user_id = ? AND p.deleted_at IS NULL AND p.is_approved = 0
                     AND NOT EXISTS (
                         SELECT 1 FROM protocol_approval_logs pal
                         WHERE pal.protocol_id = p.id AND pal.approver_id = pa.user_id
@@ -1864,7 +1841,7 @@ class ProtocolController {
             } else if (contentId) {
                 // جلب المحضر المحدد
                 const [protocolRows] = await protocolModel.pool.execute(`
-                    SELECT id, title FROM protocols WHERE id = ?
+                    SELECT id, title FROM protocols WHERE id = ? AND deleted_at IS NULL
                 `, [contentId]);
 
                 if (protocolRows.length) {
@@ -2150,7 +2127,7 @@ class ProtocolController {
 
                     // جلب معلومات المحضر
                     const [contentRows] = await protocolModel.pool.execute(`
-                        SELECT id, title FROM protocols WHERE id = ?
+                        SELECT id, title FROM protocols WHERE id = ? AND deleted_at IS NULL
                     `, [delegation.content_id]);
 
                     if (contentRows.length) {
@@ -2234,7 +2211,7 @@ class ProtocolController {
                     SELECT DISTINCT p.id, p.title
                     FROM protocols p
                     JOIN protocol_approvers pa ON p.id = pa.protocol_id
-                    WHERE pa.user_id = ? AND p.is_approved = 0
+                    WHERE pa.user_id = ? AND p.deleted_at IS NULL AND p.is_approved = 0
                     AND NOT EXISTS (
                         SELECT 1 FROM protocol_approval_logs pal
                         WHERE pal.protocol_id = p.id AND pal.approver_id = pa.user_id

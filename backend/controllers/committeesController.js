@@ -181,7 +181,7 @@ exports.getCommittees = async (req, res) => {
                     SELECT p.permission_key
                     FROM permissions p
                     JOIN user_permissions up ON up.permission_id = p.id
-                    WHERE up.user_id = ?
+                    WHERE up.user_id = ? AND p.deleted_at IS NULL
                 `, [userId]);
                 
                 const userPermissions = new Set(permRows.map(r => r.permission_key));
@@ -191,12 +191,12 @@ exports.getCommittees = async (req, res) => {
             }
         }
 
-        let query = 'SELECT * FROM committees';
+        let query = 'SELECT * FROM committees WHERE deleted_at IS NULL';
         let params = [];
 
         // إذا كان المستخدم admin أو ليس لديه صلاحية view_own_committees، اجلب كل اللجان
         if (userRole === 'admin' || !canViewOwnCommittees) {
-            query = 'SELECT * FROM committees';
+            query = 'SELECT * FROM committees WHERE deleted_at IS NULL';
         } else {
             // إذا كان لديه صلاحية view_own_committees، تحقق من وجود لجان مختارة
             if (userId) {
@@ -211,17 +211,17 @@ exports.getCommittees = async (req, res) => {
                         SELECT DISTINCT c.* 
                         FROM committees c
                         JOIN user_committees uc ON c.id = uc.committee_id
-                        WHERE uc.user_id = ?
+                        WHERE uc.user_id = ? AND c.deleted_at IS NULL
                         ORDER BY c.name
                     `;
                     params = [userId];
                 } else {
                     // إذا لم يكن لديه لجان مختارة، اجلب كل اللجان
-                    query = 'SELECT * FROM committees';
+                    query = 'SELECT * FROM committees WHERE deleted_at IS NULL';
                 }
             } else {
                 // إذا لم يكن هناك userId، اجلب كل اللجان
-                query = 'SELECT * FROM committees';
+                query = 'SELECT * FROM committees WHERE deleted_at IS NULL';
             }
         }
 
@@ -235,7 +235,7 @@ exports.getCommittees = async (req, res) => {
 
 exports.getCommittee = async (req, res) => {
     try {
-        const [rows] = await db.execute('SELECT * FROM committees WHERE id = ?', [req.params.id]);
+        const [rows] = await db.execute('SELECT * FROM committees WHERE id = ? AND deleted_at IS NULL', [req.params.id]);
         if (rows.length === 0) return res.status(404).json({ message: 'اللجنة غير موجودة' });
         res.status(200).json(rows[0]);
     } catch (error) {
@@ -290,7 +290,7 @@ exports.addCommittee = async (req, res) => {
         imagePath = path.posix.join('backend', 'uploads', 'images', req.file.filename);
       }
   
-      const [exists] = await db.execute('SELECT id FROM committees WHERE name = ?', [name]);
+      const [exists] = await db.execute('SELECT id FROM committees WHERE name = ? AND deleted_at IS NULL', [name]);
       if (exists.length > 0) {
         return res.status(409).json({ message: 'هذه اللجنة موجودة بالفعل' });
       }
@@ -324,7 +324,7 @@ exports.addCommittee = async (req, res) => {
       }
   
       // ✅ الآن نرد على العميل مع بيانات اللجنة المضافة
-      const [newCommittee] = await db.execute('SELECT * FROM committees WHERE id = ?', [committeeId]);
+      const [newCommittee] = await db.execute('SELECT * FROM committees WHERE id = ? AND deleted_at IS NULL', [committeeId]);
       res.status(201).json({ 
         message: 'تم إضافة اللجنة بنجاح', 
         committeeId,
@@ -422,7 +422,7 @@ exports.addCommittee = async (req, res) => {
       }
   
       // إرجاع بيانات اللجنة المحدثة
-      const [updatedCommittee] = await db.execute('SELECT * FROM committees WHERE id = ?', [id]);
+      const [updatedCommittee] = await db.execute('SELECT * FROM committees WHERE id = ? AND deleted_at IS NULL', [id]);
       res.status(200).json({ 
         message: 'تم تعديل اللجنة بنجاح',
         committee: updatedCommittee[0]
@@ -440,16 +440,17 @@ exports.deleteCommittee = async (req, res) => {
         const { id } = req.params;
         
         // جلب اسم اللجنة قبل الحذف للتسجيل
-        const [[committeeDetails]] = await db.execute('SELECT name FROM committees WHERE id = ?', [id]);
+        const [[committeeDetails]] = await db.execute('SELECT name FROM committees WHERE id = ? AND deleted_at IS NULL', [id]);
         if (!committeeDetails) {
             return res.status(404).json({ message: 'اللجنة غير موجودة' });
         }
         
-        // Check for related folders/contents
-        const [related] = await db.execute('SELECT COUNT(*) as count FROM committee_folders f JOIN committee_contents c ON f.id = c.folder_id WHERE f.committee_id = ?', [id]);
+        // Check for related folders/contents (non-deleted only)
+        const [related] = await db.execute('SELECT COUNT(*) as count FROM committee_folders f JOIN committee_contents c ON f.id = c.folder_id WHERE f.committee_id = ? AND f.deleted_at IS NULL AND c.deleted_at IS NULL', [id]);
         if (related[0].count > 0) return res.status(400).json({ message: 'لا يمكن حذف اللجنة لوجود محتويات مرتبطة بها' });
         
-        const [result] = await db.execute('DELETE FROM committees WHERE id = ?', [id]);
+        // Apply soft delete
+        const [result] = await db.execute('UPDATE committees SET deleted_at = NOW(), deleted_by = ? WHERE id = ? AND deleted_at IS NULL', [null, id]);
         if (result.affectedRows === 0) return res.status(404).json({ message: 'اللجنة غير موجودة' });
         
         // ✅ تسجيل اللوق بعد نجاح حذف اللجنة
@@ -481,16 +482,16 @@ exports.getFolders = async (req, res) => {
     try {
         const committeeId = req.params.committeeId;
         
-        // جلب المجلدات مع اسم اللجنة
+        // جلب المجلدات مع اسم اللجنة - إضافة فحص deleted_at
         const [rows] = await db.execute(`
             SELECT cf.*, c.name as committee_name 
             FROM committee_folders cf 
             JOIN committees c ON cf.committee_id = c.id 
-            WHERE cf.committee_id = ?
+            WHERE cf.committee_id = ? AND cf.deleted_at IS NULL AND c.deleted_at IS NULL
         `, [committeeId]);
         
         // جلب اسم اللجنة للاستجابة
-        const [committeeRows] = await db.execute('SELECT name FROM committees WHERE id = ?', [committeeId]);
+        const [committeeRows] = await db.execute('SELECT name FROM committees WHERE id = ? AND deleted_at IS NULL', [committeeId]);
         const committeeName = committeeRows.length > 0 ? committeeRows[0].name : '';
         
         res.status(200).json({
@@ -504,7 +505,7 @@ exports.getFolders = async (req, res) => {
 
 exports.getFolder = async (req, res) => {
     try {
-        const [rows] = await db.execute('SELECT * FROM committee_folders WHERE id = ?', [req.params.id]);
+        const [rows] = await db.execute('SELECT * FROM committee_folders WHERE id = ? AND deleted_at IS NULL', [req.params.id]);
         if (rows.length === 0) return res.status(404).json({ message: 'المجلد غير موجود' });
         res.status(200).json(rows[0]);
     } catch (error) {
@@ -527,7 +528,7 @@ exports.addFolder = async (req, res) => {
         
         // جلب اسم اللجنة باللغة المناسبة
         let committeeName = '';
-        const [comRows] = await db.execute('SELECT name FROM committees WHERE id = ?', [committeeId]);
+        const [comRows] = await db.execute('SELECT name FROM committees WHERE id = ? AND deleted_at IS NULL', [committeeId]);
         if (comRows.length > 0) {
             const userLanguage = getUserLanguageFromToken(token);
             committeeName = getCommitteeNameByLanguage(comRows[0].name, userLanguage);
@@ -538,8 +539,8 @@ exports.addFolder = async (req, res) => {
         // ✅ تسجيل اللوق بعد نجاح إضافة المجلد
         try {
             const logDescription = {
-                ar: `تمت إضافة مجلد جديد: ${getContentNameByLanguage(name, 'ar')} في لجنة: ${getCommitteeNameByLanguage(comRows[0].name, 'ar')}`,
-                en: `Added new folder: ${getContentNameByLanguage(name, 'en')} in committee: ${getCommitteeNameByLanguage(comRows[0].name, 'en')}`
+                ar: `تمت إضافة مجلد جديد: ${getContentNameByLanguage(name, 'ar')} في لجنة: ${comRows.length > 0 ? getCommitteeNameByLanguage(comRows[0].name, 'ar') : 'غير معروف'}`,
+                en: `Added new folder: ${getContentNameByLanguage(name, 'en')} in committee: ${comRows.length > 0 ? getCommitteeNameByLanguage(comRows[0].name, 'en') : 'Unknown'}`
             };
             
             await logAction(
@@ -566,15 +567,16 @@ exports.updateFolder = async (req, res) => {
         if (!name) return res.status(400).json({ message: 'اسم المجلد مطلوب' });
         
         // جلب الاسم القديم وcommittee_id قبل التحديث
-        const [oldNameRows] = await db.execute('SELECT name, committee_id FROM committee_folders WHERE id = ?', [id]);
+        const [oldNameRows] = await db.execute('SELECT name, committee_id FROM committee_folders WHERE id = ? AND deleted_at IS NULL', [id]);
         if (oldNameRows.length === 0) return res.status(404).json({ message: 'المجلد غير موجود' });
         const oldName = oldNameRows[0].name;
         const committeeId = oldNameRows[0].committee_id;
         
         // جلب اسم اللجنة باللغة المناسبة
         let committeeName = '';
+        let comRows = []; // تعريف المتغير خارج if statement
         if (committeeId) {
-            const [comRows] = await db.execute('SELECT name FROM committees WHERE id = ?', [committeeId]);
+            [comRows] = await db.execute('SELECT name FROM committees WHERE id = ? AND deleted_at IS NULL', [committeeId]);
             if (comRows.length > 0) {
                 const token = req.headers.authorization?.split(' ')[1];
                 const userLanguage = token ? getUserLanguageFromToken(token) : 'ar';
@@ -593,8 +595,8 @@ exports.updateFolder = async (req, res) => {
             
             try {
                 const logDescription = {
-                    ar: `تم تعديل مجلد من: ${getContentNameByLanguage(oldName, 'ar')} إلى: ${getContentNameByLanguage(name, 'ar')} في لجنة: ${getCommitteeNameByLanguage(comRows[0].name, 'ar')}`,
-                    en: `Updated folder from: ${getContentNameByLanguage(oldName, 'en')} to: ${getContentNameByLanguage(name, 'en')} in committee: ${getCommitteeNameByLanguage(comRows[0].name, 'en')}`
+                    ar: `تم تعديل مجلد من: ${getContentNameByLanguage(oldName, 'ar')} إلى: ${getContentNameByLanguage(name, 'ar')} في لجنة: ${comRows.length > 0 ? getCommitteeNameByLanguage(comRows[0].name, 'ar') : 'غير معروف'}`,
+                    en: `Updated folder from: ${getContentNameByLanguage(oldName, 'en')} to: ${getContentNameByLanguage(name, 'en')} in committee: ${comRows.length > 0 ? getCommitteeNameByLanguage(comRows[0].name, 'en') : 'Unknown'}`
                 };
                 
                 await logAction(
@@ -619,14 +621,15 @@ exports.deleteFolder = async (req, res) => {
     try {
       const { id } = req.params;
       // جلب اسم المجلد وcommittee_id قبل الحذف
-      const [nameRows] = await db.execute('SELECT name, committee_id FROM committee_folders WHERE id = ?', [id]);
+      const [nameRows] = await db.execute('SELECT name, committee_id FROM committee_folders WHERE id = ? AND deleted_at IS NULL', [id]);
       const folderName = nameRows.length > 0 ? nameRows[0].name : 'غير معروف';
       const committeeId = nameRows.length > 0 ? nameRows[0].committee_id : null;
       
       // جلب اسم اللجنة باللغة المناسبة
       let committeeName = '';
+      let comRows = []; // تعريف المتغير خارج if statement
       if (committeeId) {
-        const [comRows] = await db.execute('SELECT name FROM committees WHERE id = ?', [committeeId]);
+        [comRows] = await db.execute('SELECT name FROM committees WHERE id = ? AND deleted_at IS NULL', [committeeId]);
         if (comRows.length > 0) {
           const token = req.headers.authorization?.split(' ')[1];
           const userLanguage = token ? getUserLanguageFromToken(token) : 'ar';
@@ -634,7 +637,7 @@ exports.deleteFolder = async (req, res) => {
         }
       }
 
-      const [result] = await db.execute('DELETE FROM committee_folders WHERE id = ?', [id]);
+      const [result] = await db.execute('UPDATE committee_folders SET deleted_at = NOW(), deleted_by = ? WHERE id = ? AND deleted_at IS NULL', [null, id]);
       if (result.affectedRows === 0) {
         return res.status(404).json({ message: 'المجلد غير موجود' });
       }
@@ -647,8 +650,8 @@ exports.deleteFolder = async (req, res) => {
   
         try {
           const logDescription = {
-              ar: `تم حذف المجلد: ${getContentNameByLanguage(folderName, 'ar')} من لجنة: ${getCommitteeNameByLanguage(comRows[0].name, 'ar')}`,
-              en: `Deleted folder: ${getContentNameByLanguage(folderName, 'en')} from committee: ${getCommitteeNameByLanguage(comRows[0].name, 'en')}`
+              ar: `تم حذف المجلد: ${getContentNameByLanguage(folderName, 'ar')} من لجنة: ${comRows.length > 0 ? getCommitteeNameByLanguage(comRows[0].name, 'ar') : 'غير معروف'}`,
+              en: `Deleted folder: ${getContentNameByLanguage(folderName, 'en')} from committee: ${comRows.length > 0 ? getCommitteeNameByLanguage(comRows[0].name, 'en') : 'Unknown'}`
           };
           
           await logAction(
@@ -692,7 +695,7 @@ exports.getContents = async (req, res) => {
                 com.name as committee_name
             FROM committee_folders cf 
             JOIN committees com ON cf.committee_id = com.id
-            WHERE cf.id = ?`,
+            WHERE cf.id = ? AND cf.deleted_at IS NULL AND com.deleted_at IS NULL`,
             [folderId]
         );
 
@@ -709,7 +712,7 @@ exports.getContents = async (req, res) => {
             FROM committee_contents c
             LEFT JOIN users u ON c.created_by = u.id
             LEFT JOIN users a ON c.approved_by = a.id
-            WHERE c.folder_id = ?
+            WHERE c.folder_id = ? AND c.deleted_at IS NULL
         `;
         let params = [folderId];
 
@@ -741,7 +744,7 @@ exports.getContents = async (req, res) => {
 
 exports.getContent = async (req, res) => {
     try {
-        const [rows] = await db.execute('SELECT * FROM committee_contents WHERE id = ?', [req.params.id]);
+        const [rows] = await db.execute('SELECT * FROM committee_contents WHERE id = ? AND deleted_at IS NULL', [req.params.id]);
         if (rows.length === 0) return res.status(404).json({ message: 'المحتوى غير موجود' });
         res.status(200).json(rows[0]);
     } catch (error) {
@@ -768,7 +771,10 @@ exports.addContent = async (req, res) => {
   
       // جلب اسم اللجنة باللغة المناسبة
       let committeeName = '';
-      const [comRows] = await db.execute('SELECT com.name FROM committees com JOIN committee_folders cf ON com.id = cf.committee_id WHERE cf.id = ?', [folderId]);
+      const [comRows] = await db.execute('SELECT com.name FROM committees com JOIN committee_folders cf ON com.id = cf.committee_id WHERE cf.id = ? AND cf.deleted_at IS NULL AND com.deleted_at IS NULL', [folderId]);
+      if (comRows.length === 0) {
+        return res.status(404).json({ message: 'المجلد أو اللجنة غير موجودة' });
+      }
       if (comRows.length > 0) {
         const userLanguage = getUserLanguageFromToken(token);
         committeeName = getCommitteeNameByLanguage(comRows[0].name, userLanguage);
@@ -842,7 +848,7 @@ exports.updateContent = async (req, res) => {
     const [oldRows] = await connection.execute(
       `SELECT folder_id, title, approvers_required
        FROM committee_contents
-       WHERE id = ?`,
+       WHERE id = ? AND deleted_at IS NULL`,
       [originalId]
     );
     if (!oldRows.length) {
@@ -858,7 +864,7 @@ exports.updateContent = async (req, res) => {
         `SELECT com.name
          FROM committees com
          JOIN committee_folders cf ON com.id = cf.committee_id
-         WHERE cf.id = ?`,
+         WHERE cf.id = ? AND cf.deleted_at IS NULL AND com.deleted_at IS NULL`,
         [folderId]
       );
       if (cf.length) {
@@ -928,14 +934,17 @@ exports.deleteContent = async (req, res) => {
       const { id } = req.params;
 
       // جلب العنوان وfolder_id قبل الحذف
-      const [nameRows] = await db.execute('SELECT title, folder_id FROM committee_contents WHERE id = ?', [id]);
+      const [nameRows] = await db.execute('SELECT title, folder_id FROM committee_contents WHERE id = ? AND deleted_at IS NULL', [id]);
       const contentTitle = nameRows.length > 0 ? nameRows[0].title : 'غير معروف';
       const folderId = nameRows.length > 0 ? nameRows[0].folder_id : null;
       
       // جلب اسم اللجنة باللغة المناسبة
       let committeeName = '';
       if (folderId) {
-        const [comRows] = await db.execute('SELECT com.name FROM committees com JOIN committee_folders cf ON com.id = cf.committee_id WHERE cf.id = ?', [folderId]);
+        const [comRows] = await db.execute('SELECT com.name FROM committees com JOIN committee_folders cf ON com.id = cf.committee_id WHERE cf.id = ? AND cf.deleted_at IS NULL AND com.deleted_at IS NULL', [folderId]);
+        if (comRows.length === 0) {
+          return res.status(404).json({ message: 'المجلد أو اللجنة غير موجودة' });
+        }
         if (comRows.length > 0) {
           const token = req.headers.authorization?.split(' ')[1];
           const userLanguage = token ? getUserLanguageFromToken(token) : 'ar';
@@ -943,7 +952,7 @@ exports.deleteContent = async (req, res) => {
         }
       }
   
-      const [result] = await db.execute('DELETE FROM committee_contents WHERE id = ?', [id]);
+      const [result] = await db.execute('UPDATE committee_contents SET deleted_at = NOW(), deleted_by = ? WHERE id = ? AND deleted_at IS NULL', [null, id]);
       if (result.affectedRows === 0) {
         return res.status(404).json({ message: 'المحتوى غير موجود' });
       }
@@ -1008,7 +1017,7 @@ exports.getMyUploadedCommitteeContents = async (req, res) => {
             FROM committee_contents cc
             JOIN committee_folders cf ON cc.folder_id = cf.id
             JOIN committees com ON cf.committee_id = com.id
-            WHERE cc.created_by = ?
+            WHERE cc.created_by = ? AND cc.deleted_at IS NULL AND cf.deleted_at IS NULL AND com.deleted_at IS NULL
             ORDER BY cc.created_at DESC
         `, [userId]);
 
@@ -1100,7 +1109,7 @@ exports.trackCommitteeContent = async (req, res) => {
             FROM committee_contents cc
             JOIN committee_folders cf ON cc.folder_id = cf.id
             JOIN committees com ON cf.committee_id = com.id
-            WHERE cc.id = ?
+            WHERE cc.id = ? AND cc.deleted_at IS NULL AND cf.deleted_at IS NULL AND com.deleted_at IS NULL
         `, [contentId]);
 
         if (contentRows.length === 0) {
@@ -1121,7 +1130,7 @@ exports.trackCommitteeContent = async (req, res) => {
             JOIN committee_contents cc ON cal.content_id = cc.id
             JOIN committee_folders cf ON cc.folder_id = cf.id
             JOIN committees com ON cf.committee_id = com.id
-            WHERE cal.content_id = ?
+            WHERE cal.content_id = ? AND cc.deleted_at IS NULL AND cf.deleted_at IS NULL AND com.deleted_at IS NULL
             ORDER BY cal.created_at ASC
         `, [contentId]);
 
@@ -1135,7 +1144,7 @@ exports.trackCommitteeContent = async (req, res) => {
             JOIN committee_contents cc ON cca.content_id = cc.id
             JOIN committee_folders cf ON cc.folder_id = cf.id
             JOIN committees com ON cf.committee_id = com.id
-            WHERE cca.content_id = ? AND NOT EXISTS (
+            WHERE cca.content_id = ? AND cc.deleted_at IS NULL AND cf.deleted_at IS NULL AND com.deleted_at IS NULL AND NOT EXISTS (
                 SELECT 1 FROM committee_approval_logs cal
                 WHERE cal.content_id = cca.content_id AND cal.approver_id = cca.user_id AND cal.status = 'approved'
             )

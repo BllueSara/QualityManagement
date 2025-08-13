@@ -225,7 +225,7 @@ class ProtocolModel {
                 LEFT JOIN folders f ON p.folder_id = f.id
                 LEFT JOIN committees c ON p.committee_id = c.id
                 LEFT JOIN protocol_topics pt ON p.id = pt.protocol_id
-                WHERE p.status != 'deleted'
+                WHERE p.deleted_at IS NULL
             `;
 
             const params = [];
@@ -298,7 +298,7 @@ class ProtocolModel {
                 LEFT JOIN departments d ON p.department_id = d.id
                 LEFT JOIN folders f ON p.folder_id = f.id
                 LEFT JOIN committees c ON p.committee_id = c.id
-                WHERE p.id = ? AND p.status != 'deleted'
+                WHERE p.id = ? AND p.deleted_at IS NULL
             `;
 
             const params = [protocolId];
@@ -397,7 +397,7 @@ class ProtocolModel {
 
             // التحقق من وجود المحضر
             const [existingProtocol] = await connection.execute(
-                'SELECT id FROM protocols WHERE id = ? AND status != "deleted"',
+                'SELECT id FROM protocols WHERE id = ? AND deleted_at IS NULL',
                 [protocolId]
             );
 
@@ -480,19 +480,19 @@ class ProtocolModel {
         }
     }
 
-    // حذف محضر (حذف كامل مع الاعتماد على CASCADE للجداول التابعة)
+    // حذف محضر (soft delete)
     async deleteProtocol(protocolId, userId) {
         try {
             const [result] = await this.pool.execute(
-                'DELETE FROM protocols WHERE id = ?',
-                [protocolId]
+                'UPDATE protocols SET deleted_at = NOW(), deleted_by = ? WHERE id = ? AND deleted_at IS NULL',
+                [userId, protocolId]
             );
 
             if (result.affectedRows === 0) {
                 throw new Error('المحضر غير موجود');
             }
 
-            return { success: true, message: 'تم حذف المحضر كاملاً بنجاح' };
+            return { success: true, message: 'تم حذف المحضر بنجاح' };
         } catch (error) {
             console.error('Error deleting protocol:', error);
             throw error;
@@ -508,7 +508,7 @@ class ProtocolModel {
                     COUNT(CASE WHEN DATE(created_at) = CURDATE() THEN 1 END) as today_protocols,
                     COUNT(CASE WHEN DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 END) as this_week_protocols
                 FROM protocols 
-                WHERE status != 'deleted' AND created_by = ?
+                WHERE deleted_at IS NULL AND created_by = ?
             `, [userId]);
 
             return stats[0];
@@ -577,6 +577,7 @@ class ProtocolModel {
                 JOIN protocol_approvers pa ON p.id = pa.protocol_id
                 LEFT JOIN users u ON p.created_by = u.id
                 WHERE p.is_approved = 0
+                  AND p.deleted_at IS NULL
                   AND pa.user_id = ?
                   -- استبعاد الحالات التي قام فيها المستخدم بتفويض شخص آخر وقَبِل التفويض (لا تظهر له)
                   AND NOT EXISTS (
@@ -775,7 +776,7 @@ class ProtocolModel {
                 FROM protocols p
                 LEFT JOIN users u ON p.created_by = u.id
                 LEFT JOIN protocol_topics pt ON p.id = pt.protocol_id
-                WHERE p.folder_id = ? AND p.status != 'deleted'
+                WHERE p.folder_id = ? AND p.deleted_at IS NULL
             `;
 
             const params = [folderId];

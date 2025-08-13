@@ -55,6 +55,7 @@ const getPermissionsList = async (req, res) => {
          permission_key AS \`key\`,
          description
        FROM permissions
+       WHERE deleted_at IS NULL
        ORDER BY permission_key`
     );
 
@@ -87,7 +88,7 @@ const addPermissionDef = async (req, res) => {
 
   try {
     const [exists] = await db.execute(
-      'SELECT id FROM permissions WHERE permission_key = ?',
+      'SELECT id FROM permissions WHERE permission_key = ? AND deleted_at IS NULL',
       [key]
     );
 
@@ -143,7 +144,7 @@ const updatePermissionDef = async (req, res) => {
   try {
     // Fetch old permission details for logging
     const [[oldPermission]] = await db.execute(
-      'SELECT permission_key, description FROM permissions WHERE id = ?',
+      'SELECT permission_key, description FROM permissions WHERE id = ? AND deleted_at IS NULL',
       [id]
     );
 
@@ -152,7 +153,7 @@ const updatePermissionDef = async (req, res) => {
     }
 
     const [exists] = await db.execute(
-      'SELECT id FROM permissions WHERE permission_key = ? AND id != ?',
+      'SELECT id FROM permissions WHERE permission_key = ? AND id != ? AND deleted_at IS NULL',
       [key, id]
     );
 
@@ -208,7 +209,7 @@ const deletePermissionDef = async (req, res) => {
   try {
     // Fetch permission details for logging
     const [[permissionDetails]] = await db.execute(
-      'SELECT permission_key, description FROM permissions WHERE id = ?',
+      'SELECT permission_key, description FROM permissions WHERE id = ? AND deleted_at IS NULL',
       [id]
     );
 
@@ -226,7 +227,7 @@ const deletePermissionDef = async (req, res) => {
     }
 
     const [result] = await db.execute(
-      'DELETE FROM permissions WHERE id = ?',
+      'UPDATE permissions SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL',
       [id]
     );
 

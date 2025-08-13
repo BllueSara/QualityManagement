@@ -668,7 +668,7 @@ exports.assignToUsers = async (req, res) => {
 
     // 2) التحقق من حالة الحدث عارض - منع تحويل التذاكر المغلقة
     const [ticketRows] = await db.execute(
-      'SELECT status FROM tickets WHERE id = ?',
+      'SELECT status FROM tickets WHERE id = ? AND deleted_at IS NULL',
       [ticketId]
     );
     
@@ -702,7 +702,7 @@ exports.assignToUsers = async (req, res) => {
 
     // 4) جلب أسماء المكلَّفين الجدد فقط
     const placeholders = newAssigneeIds.map(() => '?').join(',');
-    const sql = `SELECT username FROM users WHERE id IN (${placeholders})`;
+    const sql = `SELECT username FROM users WHERE id IN (${placeholders}) AND deleted_at IS NULL`;
     const [assigneeUsers] = await db.execute(sql, newAssigneeIds);
     const assigneeNames = assigneeUsers.map(u => u.username).join(', ');
 
@@ -892,7 +892,7 @@ exports.getClassifications = async (req, res) => {
       password: process.env.DB_PASSWORD || '',
       database: process.env.DB_NAME || 'Quality'
     });
-    const [rows] = await db.query('SELECT id, name_ar, name_en FROM classifications');
+    const [rows] = await db.query('SELECT id, name_ar, name_en FROM classifications WHERE deleted_at IS NULL');
     const data = rows.map(row => ({
       id: row.id,
       name: lang === 'en' ? row.name_en : row.name_ar
@@ -913,7 +913,7 @@ exports.getClassificationById = async (req, res) => {
       database: process.env.DB_NAME || 'Quality'
     });
     
-    const [rows] = await db.query('SELECT id, name_ar, name_en FROM classifications WHERE id = ?', [id]);
+    const [rows] = await db.query('SELECT id, name_ar, name_en FROM classifications WHERE id = ? AND deleted_at IS NULL', [id]);
     
     if (rows.length === 0) {
       return res.status(404).json({ status: 'error', message: 'التصنيف غير موجود.' });
@@ -935,7 +935,7 @@ exports.getHarmLevels = async (req, res) => {
       password: process.env.DB_PASSWORD || '',
       database: process.env.DB_NAME || 'Quality'
     });
-    const [rows] = await db.query('SELECT id, code, name_ar, name_en, desc_ar, desc_en FROM harm_levels');
+    const [rows] = await db.query('SELECT id, code, name_ar, name_en, desc_ar, desc_en FROM harm_levels WHERE deleted_at IS NULL');
     const data = rows.map(row => ({
       id: row.id,
       code: row.code,
@@ -958,7 +958,7 @@ exports.getHarmLevelById = async (req, res) => {
       database: process.env.DB_NAME || 'Quality'
     });
     
-    const [rows] = await db.query('SELECT id, code, name_ar, name_en, desc_ar, desc_en FROM harm_levels WHERE id = ?', [id]);
+    const [rows] = await db.query('SELECT id, code, name_ar, name_en, desc_ar, desc_en FROM harm_levels WHERE id = ? AND deleted_at IS NULL', [id]);
     
     if (rows.length === 0) {
       return res.status(404).json({ status: 'error', message: 'مستوى الضرر غير موجود.' });
@@ -1097,7 +1097,7 @@ exports.deleteClassification = async (req, res) => {
       });
     }
     
-    await db.query('DELETE FROM classifications WHERE id = ?', [id]);
+    await db.query('UPDATE classifications SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL', [id]);
     
     // تسجيل اللوق
     try {
@@ -1281,9 +1281,9 @@ exports.deleteHarmLevel = async (req, res) => {
       return res.status(404).json({ status: 'error', message: 'مستوى الضرر غير موجود.' });
     }
     
-    // Check if harm level is used in tickets
+    // Check if harm level is used in tickets (only active tickets)
     const [tickets] = await db.query(
-      'SELECT COUNT(*) as count FROM tickets WHERE harm_level_id = ?',
+      'SELECT COUNT(*) as count FROM tickets WHERE harm_level_id = ? AND deleted_at IS NULL',
       [id]
     );
     
@@ -1294,7 +1294,7 @@ exports.deleteHarmLevel = async (req, res) => {
       });
     }
     
-    await db.query('DELETE FROM harm_levels WHERE id = ?', [id]);
+    await db.query('UPDATE harm_levels SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL', [id]);
     
     // تسجيل اللوق
     try {

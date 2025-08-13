@@ -1,0 +1,741 @@
+const jwt = require('jsonwebtoken');
+const { 
+    getDeletedItems, 
+    restoreDeleted, 
+    permanentDelete, 
+    getDeletedStats,
+    db 
+} = require('../utils/softDelete');
+const { logAction } = require('../models/logger');
+
+/**
+ * التحقق من صلاحيات السوبر أدمن
+ */
+const checkSuperAdminAuth = (req, res, next) => {
+    try {
+        const token = req.headers.authorization?.split(' ')[1];
+        
+        if (!token) {
+            return res.status(401).json({ 
+                status: 'error', 
+                message: 'رمز التحقق مطلوب' 
+            });
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        
+        if (decoded.role !== 'admin') {
+            return res.status(403).json({ 
+                status: 'error', 
+                message: 'غير مسموح - يتطلب صلاحيات السوبر أدمن' 
+            });
+        }
+
+        req.user = decoded;
+        next();
+    } catch (error) {
+        return res.status(401).json({ 
+            status: 'error', 
+            message: 'رمز التحقق غير صحيح' 
+        });
+    }
+};
+
+/**
+ * جلب إحصائيات العناصر المحذوفة
+ */
+const getDeletedStatistics = async (req, res) => {
+    try {
+        const stats = await getDeletedStats();
+        
+        res.status(200).json({
+            status: 'success',
+            data: stats
+        });
+    } catch (error) {
+        console.error('خطأ في جلب إحصائيات العناصر المحذوفة:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'حدث خطأ في جلب الإحصائيات'
+        });
+    }
+};
+
+/**
+ * جلب العناصر المحذوفة لجدول معين
+ */
+const getDeletedItemsByTable = async (req, res) => {
+    try {
+        const { table } = req.params;
+        const { page = 1, limit = 20 } = req.query;
+        
+        const allowedTables = [
+            'users', 'departments', 'folders', 'contents',
+            'committees', 'committee_folders', 'committee_contents',
+            'tickets', 'protocols', 'job_names', 'job_titles'
+        ];
+        
+        if (!allowedTables.includes(table)) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'جدول غير مسموح'
+            });
+        }
+        
+        const offset = (parseInt(page) - 1) * parseInt(limit);
+        const deletedItems = await getDeletedItems(table, parseInt(limit), parseInt(offset));
+        
+        // جلب العدد الإجمالي
+        const [totalResult] = await db.execute(`
+            SELECT COUNT(*) as total FROM ${table} WHERE deleted_at IS NOT NULL
+        `);
+        const total = totalResult[0].total;
+        
+        res.status(200).json({
+            status: 'success',
+            data: {
+                items: deletedItems,
+                pagination: {
+                    current_page: parseInt(page),
+                    total_pages: Math.ceil(total / limit),
+                    total_items: total,
+                    per_page: parseInt(limit)
+                }
+            }
+        });
+    } catch (error) {
+        console.error('خطأ في جلب العناصر المحذوفة:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'حدث خطأ في جلب العناصر المحذوفة'
+        });
+    }
+};
+
+/**
+ * استرجاع عنصر محذوف
+ */
+const restoreDeletedItem = async (req, res) => {
+    try {
+        const { table, id } = req.params;
+        
+        const allowedTables = [
+            'users', 'departments', 'folders', 'contents',
+            'committees', 'committee_folders', 'committee_contents',
+            'tickets', 'protocols', 'job_names', 'job_titles'
+        ];
+        
+        if (!allowedTables.includes(table)) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'جدول غير مسموح'
+            });
+        }
+        
+        // جلب تفاصيل العنصر قبل الاسترجاع
+        const [itemDetails] = await db.execute(`
+            SELECT * FROM ${table} WHERE id = ? AND deleted_at IS NOT NULL
+        `, [id]);
+        
+        if (itemDetails.length === 0) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'العنصر غير موجود أو غير محذوف'
+            });
+        }
+        
+        const restored = await restoreDeleted(table, id);
+        
+        if (!restored) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'فشل في استرجاع العنصر'
+            });
+        }
+        
+        // // تسجيل عملية الاسترجاع
+        // try {
+        //     const itemName = itemDetails[0].name || itemDetails[0].title || itemDetails[0].username || `ID: ${id}`;
+        //     const logDescription = {
+        //         ar: `تم استرجاع ${getTableNameAr(table)}: ${itemName}`,
+        //         en: `Restored ${table}: ${itemName}`
+        //     };
+            
+        //     await logAction(
+        //         req.user.id,
+        //         'update',
+        //         JSON.stringify(logDescription),
+        //         table,
+        //         id
+        //     );
+        // } catch (logErr) {
+        //     console.error('خطأ في تسجيل عملية الاسترجاع:', logErr);
+        // }
+        
+        res.status(200).json({
+            status: 'success',
+            message: 'تم استرجاع العنصر بنجاح'
+        });
+    } catch (error) {
+        console.error('خطأ في استرجاع العنصر:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'حدث خطأ في استرجاع العنصر'
+        });
+    }
+};
+
+/**
+ * حذف عنصر نهائياً
+ */
+const permanentDeleteItem = async (req, res) => {
+    try {
+        const { table, id } = req.params;
+        
+        const allowedTables = [
+            'users', 'departments', 'folders', 'contents',
+            'committees', 'committee_folders', 'committee_contents',
+            'tickets', 'protocols', 'job_names', 'job_titles'
+        ];
+        
+        if (!allowedTables.includes(table)) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'جدول غير مسموح'
+            });
+        }
+        
+        // جلب تفاصيل العنصر قبل الحذف النهائي
+        const [itemDetails] = await db.execute(`
+            SELECT * FROM ${table} WHERE id = ? AND deleted_at IS NOT NULL
+        `, [id]);
+        
+        if (itemDetails.length === 0) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'العنصر غير موجود أو غير محذوف'
+            });
+        }
+        
+        // حذف نهائي مع التعامل مع الملفات المرفقة
+        await handleFileCleanup(table, itemDetails[0]);
+        
+        const deleted = await permanentDelete(table, id);
+        
+        if (!deleted) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'فشل في الحذف النهائي'
+            });
+        }
+        
+        // تسجيل عملية الحذف النهائي
+        try {
+            const itemName = itemDetails[0].name || itemDetails[0].title || itemDetails[0].username || `ID: ${id}`;
+            const logDescription = {
+                ar: `تم حذف ${getTableNameAr(table)} نهائياً: ${itemName}`,
+                en: `Permanently deleted ${table}: ${itemName}`
+            };
+            
+            await logAction(
+                req.user.id,
+                'permanent_delete',
+                JSON.stringify(logDescription),
+                table,
+                id
+            );
+        } catch (logErr) {
+            console.error('خطأ في تسجيل عملية الحذف النهائي:', logErr);
+        }
+        
+        res.status(200).json({
+            status: 'success',
+            message: 'تم حذف العنصر نهائياً'
+        });
+    } catch (error) {
+        console.error('خطأ في الحذف النهائي:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'حدث خطأ في الحذف النهائي'
+        });
+    }
+};
+
+/**
+ * حذف جميع العناصر المحذوفة لجدول معين نهائياً
+ */
+const permanentDeleteAllByTable = async (req, res) => {
+    try {
+        const { table } = req.params;
+        
+        const allowedTables = [
+            'users', 'departments', 'folders', 'contents',
+            'committees', 'committee_folders', 'committee_contents',
+            'tickets', 'protocols', 'job_names', 'job_titles'
+        ];
+        
+        if (!allowedTables.includes(table)) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'جدول غير مسموح'
+            });
+        }
+        
+        // حذف جميع العناصر المحذوفة نهائياً
+        const [result] = await db.execute(`
+            DELETE FROM ${table} WHERE deleted_at IS NOT NULL
+        `);
+        
+        res.status(200).json({
+            status: 'success',
+            message: `تم حذف ${result.affectedRows} عنصر نهائياً من جدول ${table}`,
+            deleted_count: result.affectedRows
+        });
+    } catch (error) {
+        console.error('خطأ في حذف جميع العناصر:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'حدث خطأ في حذف جميع العناصر'
+        });
+    }
+};
+
+/**
+ * جلب جميع العناصر المحذوفة من جميع الجداول
+ */
+const getAllDeletedItems = async (req, res) => {
+    try {
+        const { page = 1, limit = 20 } = req.query;
+        const offset = (parseInt(page) - 1) * parseInt(limit);
+        
+        const allowedTables = [
+            'users', 'departments', 'folders', 'contents',
+            'committees', 'committee_folders', 'committee_contents',
+            'tickets', 'protocols', 'job_names', 'job_titles'
+        ];
+        
+        let allItems = [];
+        let totalItems = 0;
+        
+        // جلب العناصر المحذوفة من جميع الجداول
+        for (const table of allowedTables) {
+            try {
+                let selectQuery;
+                
+                // تحديد الاستعلام المناسب لكل جدول
+                switch (table) {
+                    case 'users':
+                        selectQuery = `
+                            SELECT 
+                                id,
+                                COALESCE(username, CONCAT(first_name, ' ', last_name)) as display_name,
+                                deleted_at,
+                                deleted_by,
+                                '${table}' as table_type
+                            FROM ${table} 
+                            WHERE deleted_at IS NOT NULL
+                        `;
+                        break;
+                        
+                    case 'departments':
+                        selectQuery = `
+                            SELECT 
+                                id,
+                                name as display_name,
+                                deleted_at,
+                                deleted_by,
+                                '${table}' as table_type
+                            FROM ${table} 
+                            WHERE deleted_at IS NOT NULL
+                        `;
+                        break;
+                        
+                    case 'folders':
+                        selectQuery = `
+                            SELECT 
+                                id,
+                                name as display_name,
+                                deleted_at,
+                                deleted_by,
+                                '${table}' as table_type
+                            FROM ${table} 
+                            WHERE deleted_at IS NOT NULL
+                        `;
+                        break;
+                        
+                    case 'contents':
+                        selectQuery = `
+                            SELECT 
+                                id,
+                                title as display_name,
+                                deleted_at,
+                                deleted_by,
+                                '${table}' as table_type
+                            FROM ${table} 
+                            WHERE deleted_at IS NOT NULL
+                        `;
+                        break;
+                        
+                    case 'committees':
+                        selectQuery = `
+                            SELECT 
+                                id,
+                                name as display_name,
+                                deleted_at,
+                                deleted_by,
+                                '${table}' as table_type
+                            FROM ${table} 
+                            WHERE deleted_at IS NOT NULL
+                        `;
+                        break;
+                        
+                    case 'committee_folders':
+                        selectQuery = `
+                            SELECT 
+                                id,
+                                name as display_name,
+                                deleted_at,
+                                deleted_by,
+                                '${table}' as table_type
+                            FROM ${table} 
+                            WHERE deleted_at IS NOT NULL
+                        `;
+                        break;
+                        
+                    case 'committee_contents':
+                        selectQuery = `
+                            SELECT 
+                                id,
+                                title as display_name,
+                                deleted_at,
+                                deleted_by,
+                                '${table}' as table_type
+                            FROM ${table} 
+                            WHERE deleted_at IS NOT NULL
+                        `;
+                        break;
+                        
+                    case 'tickets':
+                        selectQuery = `
+                            SELECT 
+                                id,
+                                id as display_name,
+                                deleted_at,
+                                deleted_by,
+                                '${table}' as table_type
+                            FROM ${table} 
+                            WHERE deleted_at IS NOT NULL
+                        `;
+                        break;
+                        
+                    case 'protocols':
+                        selectQuery = `
+                            SELECT 
+                                id,
+                                title as display_name,
+                                deleted_at,
+                                deleted_by,
+                                '${table}' as table_type
+                            FROM ${table} 
+                            WHERE deleted_at IS NOT NULL
+                        `;
+                        break;
+                        
+                    case 'job_names':
+                        selectQuery = `
+                            SELECT 
+                                id,
+                                name as display_name,
+                                deleted_at,
+                                deleted_by,
+                                '${table}' as table_type
+                            FROM ${table} 
+                            WHERE deleted_at IS NOT NULL
+                        `;
+                        break;
+                        
+                    case 'job_titles':
+                        selectQuery = `
+                            SELECT 
+                                id,
+                                title as display_name,
+                                deleted_at,
+                                deleted_by,
+                                '${table}' as table_type
+                            FROM ${table} 
+                            WHERE deleted_at IS NOT NULL
+                        `;
+                        break;
+                        
+                    default:
+                        selectQuery = `
+                            SELECT 
+                                id,
+                                id as display_name,
+                                deleted_at,
+                                deleted_by,
+                                '${table}' as table_type
+                            FROM ${table} 
+                            WHERE deleted_at IS NOT NULL
+                        `;
+                }
+                
+                const [items] = await db.execute(selectQuery);
+                
+                // إضافة معلومات المستخدم الذي حذف العنصر
+                const itemsWithUserInfo = await Promise.all(items.map(async (item) => {
+                    if (item.deleted_by) {
+                        try {
+                            const [userResult] = await db.execute(`
+                                SELECT username FROM users WHERE id = ?
+                            `, [item.deleted_by]);
+                            item.deleted_by_username = userResult[0]?.username || 'غير محدد';
+                        } catch (err) {
+                            item.deleted_by_username = 'غير محدد';
+                        }
+                    } else {
+                        item.deleted_by_username = 'غير محدد';
+                    }
+                    return item;
+                }));
+                
+                allItems.push(...itemsWithUserInfo);
+                totalItems += items.length;
+            } catch (tableError) {
+                console.error(`خطأ في جلب العناصر من جدول ${table}:`, tableError);
+                // استمر مع الجداول الأخرى
+            }
+        }
+        
+        // ترتيب العناصر حسب تاريخ الحذف (الأحدث أولاً)
+        allItems.sort((a, b) => new Date(b.deleted_at) - new Date(a.deleted_at));
+        
+        // تطبيق الصفحات
+        const paginatedItems = allItems.slice(offset, offset + parseInt(limit));
+        
+        res.status(200).json({
+            status: 'success',
+            data: {
+                items: paginatedItems,
+                pagination: {
+                    current_page: parseInt(page),
+                    total_pages: Math.ceil(totalItems / limit),
+                    total_items: totalItems,
+                    per_page: parseInt(limit)
+                }
+            }
+        });
+    } catch (error) {
+        console.error('خطأ في جلب جميع العناصر المحذوفة:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'حدث خطأ في جلب جميع العناصر المحذوفة'
+        });
+    }
+};
+
+/**
+ * استرجاع جميع العناصر المحذوفة من جدول معين
+ */
+const restoreAllItemsByTable = async (req, res) => {
+    try {
+        const { table } = req.params;
+        
+        const allowedTables = [
+            'users', 'departments', 'folders', 'contents',
+            'committees', 'committee_folders', 'committee_contents',
+            'tickets', 'protocols', 'job_names', 'job_titles'
+        ];
+        
+        if (!allowedTables.includes(table)) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'جدول غير مسموح'
+            });
+        }
+        
+        // استرجاع جميع العناصر المحذوفة
+        const [result] = await db.execute(`
+            UPDATE ${table} 
+            SET deleted_at = NULL, deleted_by = NULL 
+            WHERE deleted_at IS NOT NULL
+        `);
+        
+        res.status(200).json({
+            status: 'success',
+            message: `تم استرجاع ${result.affectedRows} عنصر من جدول ${table}`,
+            restored_count: result.affectedRows
+        });
+    } catch (error) {
+        console.error('خطأ في استرجاع جميع العناصر:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'حدث خطأ في استرجاع جميع العناصر'
+        });
+    }
+};
+
+/**
+ * استرجاع جميع العناصر المحذوفة من جميع الجداول
+ */
+const restoreAllItems = async (req, res) => {
+    try {
+        const allowedTables = [
+            'users', 'departments', 'folders', 'contents',
+            'committees', 'committee_folders', 'committee_contents',
+            'tickets', 'protocols', 'job_names', 'job_titles'
+        ];
+        
+        let totalRestored = 0;
+        
+        // استرجاع العناصر من جميع الجداول
+        for (const table of allowedTables) {
+            try {
+                const [result] = await db.execute(`
+                    UPDATE ${table} 
+                    SET deleted_at = NULL, deleted_by = NULL 
+                    WHERE deleted_at IS NOT NULL
+                `);
+                totalRestored += result.affectedRows;
+            } catch (tableError) {
+                console.error(`خطأ في استرجاع العناصر من جدول ${table}:`, tableError);
+                // استمر مع الجداول الأخرى
+            }
+        }
+        
+        res.status(200).json({
+            status: 'success',
+            message: `تم استرجاع ${totalRestored} عنصر من جميع الجداول`,
+            restored_count: totalRestored
+        });
+    } catch (error) {
+        console.error('خطأ في استرجاع جميع العناصر:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'حدث خطأ في استرجاع جميع العناصر'
+        });
+    }
+};
+
+/**
+ * حذف جميع العناصر المحذوفة من جميع الجداول نهائياً
+ */
+const permanentDeleteAllItems = async (req, res) => {
+    try {
+        const allowedTables = [
+            'users', 'departments', 'folders', 'contents',
+            'committees', 'committee_folders', 'committee_contents',
+            'tickets', 'protocols', 'job_names', 'job_titles'
+        ];
+        
+        let totalDeleted = 0;
+        
+        // حذف العناصر من جميع الجداول
+        for (const table of allowedTables) {
+            try {
+                const [result] = await db.execute(`
+                    DELETE FROM ${table} WHERE deleted_at IS NOT NULL
+                `);
+                totalDeleted += result.affectedRows;
+            } catch (tableError) {
+                console.error(`خطأ في حذف العناصر من جدول ${table}:`, tableError);
+                // استمر مع الجداول الأخرى
+            }
+        }
+        
+        res.status(200).json({
+            status: 'success',
+            message: `تم حذف ${totalDeleted} عنصر نهائياً من جميع الجداول`,
+            deleted_count: totalDeleted
+        });
+    } catch (error) {
+        console.error('خطأ في حذف جميع العناصر:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'حدث خطأ في حذف جميع العناصر'
+        });
+    }
+};
+
+/**
+ * تنظيف الملفات المرتبطة بالعنصر المحذوف
+ */
+const handleFileCleanup = async (table, item) => {
+    const fs = require('fs');
+    const path = require('path');
+    
+    try {
+        let filePath = null;
+        
+        // تحديد مسار الملف حسب نوع الجدول
+        switch (table) {
+            case 'contents':
+            case 'committee_contents':
+                if (item.file_path) {
+                    filePath = path.join('./uploads', item.file_path);
+                }
+                break;
+            case 'protocols':
+                if (item.file_path) {
+                    filePath = path.join('./uploads/protocols', item.file_path);
+                }
+                break;
+            case 'tickets':
+                // حذف مرفقات التذاكر
+                const [attachments] = await db.execute(`
+                    SELECT file_path FROM ticket_attachments WHERE ticket_id = ?
+                `, [item.id]);
+                
+                for (const attachment of attachments) {
+                    if (attachment.file_path) {
+                        const attachmentPath = path.join('./uploads/tickets', attachment.file_path);
+                        if (fs.existsSync(attachmentPath)) {
+                            fs.unlinkSync(attachmentPath);
+                        }
+                    }
+                }
+                break;
+        }
+        
+        // حذف الملف الرئيسي إذا كان موجوداً
+        if (filePath && fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
+    } catch (error) {
+        console.error('خطأ في تنظيف الملفات:', error);
+    }
+};
+
+/**
+ * ترجمة أسماء الجداول للعربية
+ */
+const getTableNameAr = (table) => {
+    const tableNames = {
+        'users': 'مستخدم',
+        'departments': 'قسم',
+        'folders': 'مجلد',
+        'contents': 'محتوى',
+        'committees': 'لجنة',
+        'committee_folders': 'مجلد لجنة',
+        'committee_contents': 'محتوى لجنة',
+        'tickets': 'تذكرة',
+        'protocols': 'محضر',
+        'job_names': 'اسم وظيفة',
+        'job_titles': 'مسمى وظيفي'
+    };
+    
+    return tableNames[table] || table;
+};
+
+module.exports = {
+    checkSuperAdminAuth,
+    getDeletedStatistics,
+    getDeletedItemsByTable,
+    getAllDeletedItems,
+    restoreDeletedItem,
+    restoreAllItemsByTable,
+    restoreAllItems,
+    permanentDeleteItem,
+    permanentDeleteAllByTable,
+    permanentDeleteAllItems
+};

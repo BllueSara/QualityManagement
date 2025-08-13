@@ -16,7 +16,7 @@ async function getUserPerms(userId) {
     SELECT p.permission_key
     FROM permissions p
     JOIN user_permissions up ON up.permission_id = p.id
-    WHERE up.user_id = ?
+    WHERE up.user_id = ? AND p.deleted_at IS NULL
   `, [userId]);
   return new Set(rows.map(r => r.permission_key));
 }
@@ -89,6 +89,7 @@ const getStats = async (req, res) => {
       SELECT COUNT(*) AS total_users,
              SUM(role = 'admin') AS admins
       FROM users
+      WHERE deleted_at IS NULL
     `);
 
     const [[contentStats]] = await db.execute(`
@@ -96,12 +97,13 @@ const getStats = async (req, res) => {
         COUNT(*) AS pending_contents,
         SUM(is_approved = 1) AS approved_contents
       FROM contents
+      WHERE deleted_at IS NULL
     `);
 
     const [[committeeStats]] = await db.execute(`
       SELECT
-        (SELECT COUNT(*) FROM committees) AS committees,
-        (SELECT COUNT(*) FROM committee_contents WHERE approval_status = 'pending') AS committee_contents_pending
+        (SELECT COUNT(*) FROM committees WHERE deleted_at IS NULL) AS committees,
+        (SELECT COUNT(*) FROM committee_contents WHERE approval_status = 'pending' AND deleted_at IS NULL) AS committee_contents_pending
     `);
 
     const [[protocolStats]] = await db.execute(`
@@ -110,7 +112,7 @@ const getStats = async (req, res) => {
         SUM(CASE WHEN approval_status = 'pending' THEN 1 ELSE 0 END) AS pending_protocols,
         SUM(CASE WHEN approval_status = 'approved' THEN 1 ELSE 0 END) AS approved_protocols,
         SUM(CASE WHEN approval_status = 'rejected' THEN 1 ELSE 0 END) AS rejected_protocols
-      FROM protocols WHERE status = 'active'
+      FROM protocols WHERE deleted_at IS NULL
     `);
 
     return res.status(200).json({
@@ -252,6 +254,7 @@ const exportDashboardExcel = async (req, res) => {
       SELECT COUNT(*) AS total_users,
              SUM(role = 'admin') AS admins
       FROM users
+      WHERE deleted_at IS NULL
     `);
 
     // جلب إحصائيات المحتويات
@@ -260,13 +263,14 @@ const exportDashboardExcel = async (req, res) => {
         COUNT(*) AS pending_contents,
         SUM(is_approved = 1) AS approved_contents
       FROM contents
+      WHERE deleted_at IS NULL
     `);
 
     // جلب إحصائيات اللجان
     const [[committeeStats]] = await db.execute(`
       SELECT
-        (SELECT COUNT(*) FROM committees) AS committees,
-        (SELECT COUNT(*) FROM committee_contents WHERE approval_status = 'pending') AS committee_contents_pending
+        (SELECT COUNT(*) FROM committees WHERE deleted_at IS NULL) AS committees,
+        (SELECT COUNT(*) FROM committee_contents WHERE approval_status = 'pending' AND deleted_at IS NULL) AS committee_contents_pending
     `);
 
     // جلب إحصائيات المحاضر
@@ -276,7 +280,7 @@ const exportDashboardExcel = async (req, res) => {
         SUM(CASE WHEN approval_status = 'pending' THEN 1 ELSE 0 END) AS pending_protocols,
         SUM(CASE WHEN approval_status = 'approved' THEN 1 ELSE 0 END) AS approved_protocols,
         SUM(CASE WHEN approval_status = 'rejected' THEN 1 ELSE 0 END) AS rejected_protocols
-      FROM protocols WHERE status = 'active'
+      FROM protocols WHERE deleted_at IS NULL
     `);
 
     // جلب إحصائيات الأقسام
@@ -1203,7 +1207,7 @@ const getProtocolStats = async (req, res) => {
           COUNT(CASE WHEN DATE(created_at) = CURDATE() THEN 1 END) AS today_protocols,
           COUNT(CASE WHEN created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 END) AS week_protocols
         FROM protocols 
-        WHERE status = 'active'
+        WHERE deleted_at IS NULL
         GROUP BY DATE_FORMAT(created_at, '%Y-%m')
         ORDER BY month DESC
         LIMIT 6
@@ -1219,7 +1223,7 @@ const getProtocolStats = async (req, res) => {
           COUNT(CASE WHEN DATE(created_at) = CURDATE() THEN 1 END) AS today_protocols,
           COUNT(CASE WHEN created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 END) AS week_protocols
         FROM protocols 
-        WHERE status = 'active' AND created_by = ?
+        WHERE deleted_at IS NULL AND created_by = ?
         GROUP BY DATE_FORMAT(created_at, '%Y-%m')
         ORDER BY month DESC
         LIMIT 6
@@ -1236,13 +1240,13 @@ const getProtocolStats = async (req, res) => {
         SUM(CASE WHEN approval_status = 'pending' THEN 1 ELSE 0 END) AS pending_protocols,
         SUM(CASE WHEN approval_status = 'approved' THEN 1 ELSE 0 END) AS approved_protocols,
         SUM(CASE WHEN approval_status = 'rejected' THEN 1 ELSE 0 END) AS rejected_protocols
-       FROM protocols WHERE status = 'active'` :
+       FROM protocols WHERE deleted_at IS NULL` :
       `SELECT 
         COUNT(*) AS total_protocols,
         SUM(CASE WHEN approval_status = 'pending' THEN 1 ELSE 0 END) AS pending_protocols,
         SUM(CASE WHEN approval_status = 'approved' THEN 1 ELSE 0 END) AS approved_protocols,
         SUM(CASE WHEN approval_status = 'rejected' THEN 1 ELSE 0 END) AS rejected_protocols
-       FROM protocols WHERE status = 'active' AND created_by = ?`;
+       FROM protocols WHERE deleted_at IS NULL AND created_by = ?`;
     
     const totalParams = canViewAll ? [] : [userId];
     const [[totalStats]] = await db.execute(totalSql, totalParams);

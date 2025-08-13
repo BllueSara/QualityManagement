@@ -43,7 +43,7 @@ async function getUserPerms(pool, userId) {
     SELECT p.permission_key
     FROM permissions p
     JOIN user_permissions up ON up.permission_id = p.id
-    WHERE up.user_id = ?
+    WHERE up.user_id = ? AND p.deleted_at IS NULL
   `, [userId]);
   return new Set(rows.map(r => r.permission_key));
 }
@@ -103,7 +103,7 @@ exports.getPendingApprovals = async (req, res) => {
         JOIN users u ON cc.created_by = u.id
         LEFT JOIN committee_content_approvers cca ON cca.content_id = cc.id
         LEFT JOIN users u2 ON cca.user_id = u2.id
-        WHERE cc.approval_status = 'pending'
+        WHERE cc.approval_status = 'pending' AND cc.deleted_at IS NULL AND cf.deleted_at IS NULL AND com.deleted_at IS NULL AND u.deleted_at IS NULL
         ${!canViewAll ? `AND (EXISTS (SELECT 1 FROM committee_content_approvers WHERE content_id = cc.id AND user_id = ?) OR cc.created_by = ?)` : ''}
         AND NOT EXISTS (
           SELECT 1 FROM committee_approval_logs cal
@@ -186,7 +186,7 @@ exports.sendApprovalRequest = async (req, res) => {
         `SELECT cc.title, com.name as committee_name FROM committee_contents cc
          JOIN committee_folders cf ON cc.folder_id = cf.id
          JOIN committees com ON cf.committee_id = com.id
-         WHERE cc.id = ?`,
+         WHERE cc.id = ? AND cc.deleted_at IS NULL AND cf.deleted_at IS NULL AND com.deleted_at IS NULL`,
         [contentId]
     );
 
@@ -336,7 +336,7 @@ exports.sendApprovalRequest = async (req, res) => {
       if (count > 1 && !processedUsers.has(parseInt(userId))) {
         // هذا المستخدم موجود مرتين، أضف سجل بالنيابة إضافي
         const [delegationRows] = await conn.execute(
-          'SELECT permanent_delegate_id FROM users WHERE id = ?',
+          'SELECT permanent_delegate_id FROM users WHERE id = ? AND deleted_at IS NULL',
           [userId]
         );
         
@@ -424,7 +424,7 @@ exports.delegateCommitteeApproval = async (req, res) => {
             `SELECT cc.title, com.name as committee_name FROM committee_contents cc
              JOIN committee_folders cf ON cc.folder_id = cf.id
              JOIN committees com ON cf.committee_id = com.id
-             WHERE cc.id = ?`,
+             WHERE cc.id = ? AND cc.deleted_at IS NULL AND cf.deleted_at IS NULL AND com.deleted_at IS NULL`,
             [contentId]
         );
 

@@ -39,6 +39,7 @@ const jobNamesRoutes = require('./routes/jobNames');
 const deadlineRoutes = require('./routes/deadlineRoutes');
 const protocolRoutes = require('./routes/protocolRoutes');
 const protocolModel = require('./models/protocolModel');
+const { setupSoftDelete } = require('./setup-soft-delete');
 
  
 
@@ -93,6 +94,7 @@ app.use('/api/job-titles', jobTitlesRoutes);
 app.use('/api/job-names', jobNamesRoutes);
 app.use('/api/deadlines', deadlineRoutes);
 app.use('/api/protocols', protocolRoutes);
+app.use('/api/super-admin', require('./routes/superAdmin.routes'));
 app.use('/api', globalContentRouter); // 👈 هذا يعطيك: /api/content-names
 
 // Ensure all committee routes are correctly loaded
@@ -308,6 +310,18 @@ const initializeJobNames = async () => {
   }
 };
 
+// تهيئة نظام Soft Delete عند بدء التطبيق
+const initializeSoftDelete = async () => {
+  try {
+    await setupSoftDelete();
+    console.log('✅ تم تهيئة نظام Soft Delete بنجاح');
+  } catch (error) {
+    console.error('❌ خطأ في تهيئة نظام Soft Delete:', error);
+    // لا نريد إيقاف الخادم بسبب خطأ في تهيئة Soft Delete
+    console.log('سيستمر الخادم في العمل رغم خطأ تهيئة Soft Delete');
+  }
+};
+
 const PORT = process.env.PORT || 3006;
 app.listen(PORT, async () => {
   console.log(`Server running on http://localhost:${PORT}`);
@@ -336,6 +350,12 @@ app.listen(PORT, async () => {
     console.error('خطأ في تهيئة جدول job_names:', error);
   }
   
+  try {
+    await initializeSoftDelete();
+  } catch (error) {
+    console.error('خطأ في تهيئة Soft Delete:', error);
+  }
+
   try {
     await checkExpiredDeadlines();
   } catch (error) {

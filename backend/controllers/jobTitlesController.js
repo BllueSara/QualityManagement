@@ -13,7 +13,7 @@ const getAllJobTitles = async (req, res) => {
         const connection = await db.getConnection();
         
         const [rows] = await connection.execute(
-            'SELECT id, title FROM job_titles ORDER BY title ASC'
+            'SELECT id, title FROM job_titles WHERE deleted_at IS NULL ORDER BY title ASC'
         );
         
         connection.release();
@@ -48,7 +48,7 @@ const addJobTitle = async (req, res) => {
         
         // التحقق من عدم وجود مسمى وظيفي بنفس الاسم
         const [existingRows] = await connection.execute(
-            'SELECT id FROM job_titles WHERE title = ?',
+            'SELECT id FROM job_titles WHERE title = ? AND deleted_at IS NULL',
             [title.trim()]
         );
         
@@ -94,7 +94,7 @@ const deleteJobTitle = async (req, res) => {
         
         // التحقق من وجود المسمى الوظيفي
         const [existingRows] = await connection.execute(
-            'SELECT id FROM job_titles WHERE id = ?',
+            'SELECT id FROM job_titles WHERE id = ? AND deleted_at IS NULL',
             [id]
         );
         
@@ -108,7 +108,7 @@ const deleteJobTitle = async (req, res) => {
         
         // التحقق من عدم استخدام المسمى الوظيفي في جدول المستخدمين
         const [usersWithJobTitle] = await connection.execute(
-            'SELECT id FROM users WHERE job_title_id = ?',
+            'SELECT id FROM users WHERE job_title_id = ? AND deleted_at IS NULL',
             [id]
         );
         
@@ -122,7 +122,7 @@ const deleteJobTitle = async (req, res) => {
         
         // حذف المسمى الوظيفي
         await connection.execute(
-            'DELETE FROM job_titles WHERE id = ?',
+            'UPDATE job_titles SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL',
             [id]
         );
         
@@ -158,7 +158,7 @@ const updateJobTitle = async (req, res) => {
         
         // التحقق من وجود المسمى الوظيفي
         const [existingRows] = await connection.execute(
-            'SELECT id FROM job_titles WHERE id = ?',
+            'SELECT id FROM job_titles WHERE id = ? AND deleted_at IS NULL',
             [id]
         );
         
@@ -172,7 +172,7 @@ const updateJobTitle = async (req, res) => {
         
         // التحقق من عدم وجود مسمى وظيفي آخر بنفس الاسم
         const [duplicateRows] = await connection.execute(
-            'SELECT id FROM job_titles WHERE title = ? AND id != ?',
+            'SELECT id FROM job_titles WHERE title = ? AND id != ? AND deleted_at IS NULL',
             [title.trim(), id]
         );
         

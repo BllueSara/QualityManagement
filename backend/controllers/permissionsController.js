@@ -61,7 +61,7 @@ const getUserPermissions = async (req, res) => {
          p.description
        FROM permissions p
        JOIN user_permissions up ON p.id = up.permission_id
-       WHERE up.user_id = ?
+       WHERE up.user_id = ? AND p.deleted_at IS NULL
        ORDER BY p.permission_key`,
       [userId]
     );
@@ -100,7 +100,7 @@ const updateUserPermissions = async (req, res) => {
   try {
     // Fetch user details for logging
     const [[userDetails]] = await conn.execute(
-      'SELECT username FROM users WHERE id = ?',
+      'SELECT username FROM users WHERE id = ? AND deleted_at IS NULL',
       [userId]
     );
 
@@ -109,7 +109,7 @@ const updateUserPermissions = async (req, res) => {
       `SELECT p.permission_key
        FROM permissions p
        JOIN user_permissions up ON p.id = up.permission_id
-       WHERE up.user_id = ?`,
+       WHERE up.user_id = ? AND p.deleted_at IS NULL`,
       [userId]
     );
     const oldPerms = oldPermsRows.map(r => r.permission_key);
@@ -122,7 +122,7 @@ const updateUserPermissions = async (req, res) => {
     const keys = Object.keys(newPerms).filter(k => newPerms[k]);
     if (keys.length) {
       const placeholders = keys.map(() => '?').join(',');
-      const sqlFetch = `SELECT id FROM permissions WHERE permission_key IN (${placeholders})`;
+      const sqlFetch = `SELECT id FROM permissions WHERE permission_key IN (${placeholders}) AND deleted_at IS NULL`;
       const [permsRows] = await conn.execute(sqlFetch, keys);
 
       const inserts = permsRows.map(p => [userId, p.id]);
@@ -190,7 +190,7 @@ const addUserPermission = async (req, res) => {
 
   try {
     const [[perm]] = await db.execute(
-      'SELECT id FROM permissions WHERE permission_key = ?',
+      'SELECT id FROM permissions WHERE permission_key = ? AND deleted_at IS NULL',
       [key]
     );
 
@@ -210,7 +210,7 @@ const addUserPermission = async (req, res) => {
 
     // Fetch user details for logging
     const [[userDetails]] = await db.execute(
-      'SELECT username FROM users WHERE id = ?',
+      'SELECT username FROM users WHERE id = ? AND deleted_at IS NULL',
       [userId]
     );
 
@@ -265,7 +265,7 @@ const removeUserPermission = async (req, res) => {
 
   try {
     const [[perm]] = await db.execute(
-      'SELECT id FROM permissions WHERE permission_key = ?',
+      'SELECT id FROM permissions WHERE permission_key = ? AND deleted_at IS NULL',
       [key]
     );
 
@@ -275,7 +275,7 @@ const removeUserPermission = async (req, res) => {
 
     // Fetch user details for logging
     const [[userDetails]] = await db.execute(
-      'SELECT username FROM users WHERE id = ?',
+      'SELECT username FROM users WHERE id = ? AND deleted_at IS NULL',
       [userId]
     );
 
@@ -406,7 +406,7 @@ const grantAllPermissions = async (req, res) => {
   try {
     // Fetch user details for logging
     const [[userDetails]] = await conn.execute(
-      'SELECT username FROM users WHERE id = ?',
+      'SELECT username FROM users WHERE id = ? AND deleted_at IS NULL',
       [userId]
     );
 
@@ -415,7 +415,7 @@ const grantAllPermissions = async (req, res) => {
       `SELECT p.permission_key
        FROM permissions p
        JOIN user_permissions up ON p.id = up.permission_id
-       WHERE up.user_id = ?`,
+       WHERE up.user_id = ? AND p.deleted_at IS NULL`,
       [userId]
     );
     const oldPerms = oldPermsRows.map(r => r.permission_key);
@@ -442,7 +442,7 @@ const grantAllPermissions = async (req, res) => {
       // جلب جميع الصلاحيات المتاحة مع استثناء الصلاحيات المحددة
       const placeholders = excludedPermissions.map(() => '?').join(',');
       const [allPerms] = await conn.execute(
-        `SELECT id, permission_key FROM permissions WHERE permission_key NOT IN (${placeholders})`,
+        `SELECT id, permission_key FROM permissions WHERE permission_key NOT IN (${placeholders}) AND deleted_at IS NULL`,
         excludedPermissions
       );
       
@@ -470,7 +470,7 @@ const grantAllPermissions = async (req, res) => {
       `SELECT p.permission_key
        FROM permissions p
        JOIN user_permissions up ON p.id = up.permission_id
-       WHERE up.user_id = ?`,
+       WHERE up.user_id = ? AND p.deleted_at IS NULL`,
       [userId]
     );
     const newPerms = newPermsRows.map(r => r.permission_key);

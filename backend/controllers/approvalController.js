@@ -158,11 +158,11 @@ const getUserPendingApprovals = async (req, res) => {
           'dual' AS signature_type,
           ca.sequence_number
         FROM contents c
-        JOIN folders f ON c.folder_id = f.id
-        LEFT JOIN departments d ON f.department_id = d.id
+        JOIN folders f ON c.folder_id = f.id AND f.deleted_at IS NULL
+        LEFT JOIN departments d ON f.department_id = d.id AND d.deleted_at IS NULL
         JOIN content_approvers ca ON ca.content_id = c.id
-        LEFT JOIN users u2 ON ca.user_id = u2.id
-        WHERE c.is_approved = 0
+        LEFT JOIN users u2 ON ca.user_id = u2.id AND u2.deleted_at IS NULL
+        WHERE c.deleted_at IS NULL AND c.is_approved = 0
           AND ca.user_id = ?
           AND NOT EXISTS (
             SELECT 1 FROM approval_logs
@@ -216,11 +216,11 @@ const getUserPendingApprovals = async (req, res) => {
           'normal' AS signature_type,
           ca.sequence_number
         FROM contents c
-        JOIN folders f ON c.folder_id = f.id
-        LEFT JOIN departments d ON f.department_id = d.id
+        JOIN folders f ON c.folder_id = f.id AND f.deleted_at IS NULL
+        LEFT JOIN departments d ON f.department_id = d.id AND d.deleted_at IS NULL
         JOIN content_approvers ca ON ca.content_id = c.id
-        LEFT JOIN users u2 ON ca.user_id = u2.id
-        WHERE c.is_approved = 0
+        LEFT JOIN users u2 ON ca.user_id = u2.id AND u2.deleted_at IS NULL
+        WHERE c.deleted_at IS NULL AND c.is_approved = 0
           AND ca.user_id = ?
           AND NOT EXISTS (
             SELECT 1 FROM approval_logs
@@ -338,7 +338,7 @@ const handleApproval = async (req, res) => {
           c.created_by,
           c.is_approved
         FROM contents c
-        WHERE c.id = ?
+        WHERE c.id = ? AND c.deleted_at IS NULL
       `, [contentId]);
 
       if (!contentRows.length) {
@@ -760,7 +760,7 @@ const handleApproval = async (req, res) => {
 async function generateFinalSignedPDF(contentId) {
   // 1) جلب مسار الملف
   const [fileRows] = await db.execute(
-    `SELECT file_path FROM contents WHERE id = ?`,
+    `SELECT file_path FROM contents WHERE id = ? AND deleted_at IS NULL`,
     [contentId]
   );
   if (!fileRows.length) {
@@ -879,7 +879,7 @@ async function generateFinalSignedPDF(contentId) {
 
   // 5) جلب اسم الملف لعرضه كعنوان
   const [contentRows] = await db.execute(
-    `SELECT title FROM contents WHERE id = ?`,
+    `SELECT title FROM contents WHERE id = ? AND deleted_at IS NULL`,
     [contentId]
   );
   const fileName = contentRows.length > 0 ? contentRows[0].title : `File ${contentId}`;
@@ -1429,7 +1429,7 @@ async function getUserPermissions(userId) {
     SELECT p.permission_key
     FROM permissions p
     JOIN user_permissions up ON up.permission_id = p.id
-    WHERE up.user_id = ?
+    WHERE up.user_id = ? AND p.deleted_at IS NULL
   `, [userId]);
   return new Set(permRows.map(r => r.permission_key));
 }
@@ -1467,12 +1467,12 @@ const getAssignedApprovals = async (req, res) => {
           c.end_date,
           ca.sequence_number
         FROM contents c
-        JOIN folders f        ON c.folder_id = f.id
-        JOIN departments d    ON f.department_id = d.id
-        JOIN users u          ON c.created_by = u.id
+        JOIN folders f        ON c.folder_id = f.id AND f.deleted_at IS NULL
+        JOIN departments d    ON f.department_id = d.id AND d.deleted_at IS NULL
+        JOIN users u          ON c.created_by = u.id AND u.deleted_at IS NULL
         LEFT JOIN content_approvers ca ON ca.content_id = c.id
-        LEFT JOIN users u2     ON ca.user_id = u2.id
-        WHERE NOT EXISTS (
+        LEFT JOIN users u2     ON ca.user_id = u2.id AND u2.deleted_at IS NULL
+        WHERE c.deleted_at IS NULL AND NOT EXISTS (
           SELECT 1 FROM approval_logs al
           WHERE al.content_id = c.id
             AND al.delegated_by = ?
@@ -1511,7 +1511,7 @@ const getAssignedApprovals = async (req, res) => {
         JOIN users u          ON c.created_by = u.id
         JOIN content_approvers ca ON ca.content_id = c.id AND ca.user_id = ?
         LEFT JOIN users u2     ON ca.user_id = u2.id
-        WHERE NOT EXISTS (
+        WHERE c.deleted_at IS NULL AND NOT EXISTS (
           SELECT 1 FROM approval_logs al
           WHERE al.content_id = c.id
             AND al.delegated_by = ?
@@ -1703,7 +1703,7 @@ const delegateApproval = async (req, res) => {
 
     // 2) احضُر اسم المستخدم والمحتوى بشكل صحيح
     const [delegateRows] = await db.execute(
-      'SELECT username FROM users WHERE id = ?', 
+      'SELECT username FROM users WHERE id = ? AND deleted_at IS NULL', 
       [delegateTo]
     );
     const isCommittee = rawId.startsWith('comm-');
@@ -1736,7 +1736,7 @@ const delegateApproval = async (req, res) => {
 
     // إرسال إشعار فوري للمفوض له
     let delegatorName = '';
-    const [delegatorRows] = await db.execute('SELECT username FROM users WHERE id = ?', [currentUserId]);
+    const [delegatorRows] = await db.execute('SELECT username FROM users WHERE id = ? AND deleted_at IS NULL', [currentUserId]);
     delegatorName = delegatorRows.length ? delegatorRows[0].username : '';
     await sendProxyNotification(delegateTo, contentId, isCommittee);
 
@@ -2460,7 +2460,7 @@ const delegateAllApprovalsUnified = async (req, res) => {
 
 
     // جلب اسم المفوض
-    const [delegatorRows] = await db.execute('SELECT username FROM users WHERE id = ?', [currentUserId]);
+    const [delegatorRows] = await db.execute('SELECT username FROM users WHERE id = ? AND deleted_at IS NULL', [currentUserId]);
     const delegatorName = delegatorRows.length ? delegatorRows[0].username : '';
 
     // جلب جميع ملفات الأقسام المعلقة للمستخدم الحالي
@@ -2468,7 +2468,7 @@ const delegateAllApprovalsUnified = async (req, res) => {
       SELECT c.id, 'department' as type
       FROM contents c
       JOIN content_approvers ca ON ca.content_id = c.id
-      WHERE c.is_approved = 0 AND ca.user_id = ?
+      WHERE c.deleted_at IS NULL AND c.is_approved = 0 AND ca.user_id = ?
     `, [currentUserId]);
 
     // جلب جميع ملفات اللجان المعلقة للمستخدم الحالي
@@ -2476,7 +2476,7 @@ const delegateAllApprovalsUnified = async (req, res) => {
       SELECT cc.id, 'committee' as type
       FROM committee_contents cc
       JOIN committee_content_approvers cca ON cca.content_id = cc.id
-      WHERE cc.approval_status = 'pending' AND cca.user_id = ?
+      WHERE cc.deleted_at IS NULL AND cc.approval_status = 'pending' AND cca.user_id = ?
     `, [currentUserId]);
 
     // جلب جميع المحاضر المعلقة للمستخدم الحالي
@@ -2484,7 +2484,7 @@ const delegateAllApprovalsUnified = async (req, res) => {
       SELECT p.id, 'protocol' as type
       FROM protocols p
       JOIN protocol_approvers pa ON pa.protocol_id = p.id
-      WHERE p.is_approved = 0 AND pa.user_id = ?
+      WHERE p.deleted_at IS NULL AND p.is_approved = 0 AND pa.user_id = ?
     `, [currentUserId]);
 
     const allFiles = [...departmentRows, ...committeeRows, ...protocolRows];
@@ -3021,7 +3021,7 @@ const processDirectDelegationUnified = async (req, res) => {
         SELECT p.id
         FROM protocols p
         JOIN protocol_approvers pa ON p.id = pa.protocol_id
-        WHERE p.is_approved = 0 AND pa.user_id = ?
+        WHERE p.deleted_at IS NULL AND p.is_approved = 0 AND pa.user_id = ?
       `, [delegatorId]);
 
       for (const prot of pendingProtocols) {
@@ -3174,7 +3174,7 @@ const processBulkDelegationUnified = async (req, res) => {
           SELECT p.id
           FROM protocols p
           JOIN protocol_approvers pa ON p.id = pa.protocol_id
-          WHERE p.is_approved = 0 AND pa.user_id = ?
+          WHERE p.deleted_at IS NULL AND p.is_approved = 0 AND pa.user_id = ?
         `, [delegatorId]);
 
         for (const prot of pendingProtocols) {
@@ -3262,7 +3262,7 @@ const delegateSingleApproval = async (req, res) => {
       [contentRows] = await db.execute(`
         SELECT c.id, c.title, c.is_approved 
         FROM contents c 
-        WHERE c.id = ?
+        WHERE c.id = ? AND c.deleted_at IS NULL
       `, [cleanContentId]);
 
       console.log('🔍 Department content rows:', contentRows);
@@ -3297,7 +3297,7 @@ const delegateSingleApproval = async (req, res) => {
       [contentRows] = await db.execute(`
         SELECT cc.id, cc.title, cc.approval_status, cc.is_approved
         FROM committee_contents cc 
-        WHERE cc.id = ?
+        WHERE cc.id = ? AND cc.deleted_at IS NULL
       `, [cleanContentId]);
 
       console.log('🔍 Committee content rows in approvalController:', contentRows);
@@ -3335,7 +3335,7 @@ const delegateSingleApproval = async (req, res) => {
       [contentRows] = await db.execute(`
         SELECT p.id, p.title, p.is_approved, p.approval_status
         FROM protocols p 
-        WHERE p.id = ?
+        WHERE p.id = ? AND p.deleted_at IS NULL
       `, [cleanContentId]);
 
       console.log('🔍 Protocol rows in approvalController:', contentRows);
@@ -3371,7 +3371,7 @@ const delegateSingleApproval = async (req, res) => {
     }
 
     // جلب اسم المفوض
-    const [delegatorRows] = await db.execute('SELECT username FROM users WHERE id = ?', [currentUserId]);
+    const [delegatorRows] = await db.execute('SELECT username FROM users WHERE id = ? AND deleted_at IS NULL', [currentUserId]);
     const delegatorName = delegatorRows.length ? delegatorRows[0].username : '';
 
     if (isCommittee) {
@@ -3742,7 +3742,7 @@ const getDelegationConfirmationData = async (req, res) => {
 
         // جلب معلومات الملف
         const [contentRows] = await db.execute(`
-          SELECT id, title FROM committee_contents WHERE id = ?
+          SELECT id, title FROM committee_contents WHERE id = ? AND deleted_at IS NULL
         `, [delegation.content_id]);
         
         if (contentRows.length) {
@@ -3798,7 +3798,7 @@ const getDelegationConfirmationData = async (req, res) => {
 
         // جلب معلومات المحضر
         const [contentRows] = await db.execute(`
-          SELECT id, title FROM protocols WHERE id = ?
+          SELECT id, title FROM protocols WHERE id = ? AND deleted_at IS NULL
         `, [delegation.content_id]);
         
         if (contentRows.length) {
@@ -3907,7 +3907,7 @@ const getDelegationConfirmations = async (req, res) => {
 
     // التحقق من أن المستخدم مدير
     const [userRows] = await db.execute(`
-      SELECT role FROM users WHERE id = ?
+      SELECT role FROM users WHERE id = ? AND deleted_at IS NULL
     `, [currentUserId]);
 
     if (!userRows.length || (userRows[0].role !== 'admin' && userRows[0].role !== 'manager')) {
@@ -3979,7 +3979,7 @@ const getDelegationConfirmations = async (req, res) => {
         'protocol' as content_type,
         'all' as delegation_type
       FROM protocol_approval_logs pal
-      LEFT JOIN protocols p ON pal.protocol_id = p.id
+      LEFT JOIN protocols p ON pal.protocol_id = p.id AND p.deleted_at IS NULL
       WHERE pal.signed_as_proxy = 1 
       AND pal.status IN ('accepted', 'approved')
       ORDER BY pal.created_at DESC
@@ -4211,7 +4211,7 @@ const getNewDelegationConfirmationData = async (req, res) => {
         SELECT p.id, p.title, 'protocol' as type
         FROM protocols p
         JOIN protocol_approvers pa ON pa.protocol_id = p.id
-        WHERE p.is_approved = 0 AND pa.user_id = ?
+        WHERE p.deleted_at IS NULL AND p.is_approved = 0 AND pa.user_id = ?
       `, [currentUserId]);
 
       const allFiles = [...departmentRows, ...committeeRows, ...protocolRows];
@@ -4274,7 +4274,7 @@ const getNewDelegationConfirmationData = async (req, res) => {
         }
       } else if (contentType === 'committee') {
         const [contentRows] = await db.execute(`
-          SELECT id, title FROM committee_contents WHERE id = ?
+          SELECT id, title FROM committee_contents WHERE id = ? AND deleted_at IS NULL
         `, [parsedContentId]);
         
         console.log('🔍 Committee content rows found:', contentRows.length);
@@ -4289,7 +4289,7 @@ const getNewDelegationConfirmationData = async (req, res) => {
         }
       } else if (contentType === 'protocol') {
         const [contentRows] = await db.execute(`
-          SELECT id, title FROM protocols WHERE id = ?
+          SELECT id, title FROM protocols WHERE id = ? AND deleted_at IS NULL
         `, [parsedContentId]);
 
         console.log('🔍 Protocol rows found:', contentRows.length);

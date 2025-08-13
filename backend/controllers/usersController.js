@@ -67,12 +67,13 @@ const getUsers = async (req, res) => {
         u.updated_at
       FROM users u
       LEFT JOIN departments d ON u.department_id = d.id
+      WHERE u.deleted_at IS NULL
     `;
 
     const params = [];
 
     if (departmentId) {
-      query += ` WHERE u.department_id = ?`;
+      query += ` AND u.department_id = ?`;
       params.push(departmentId);
     }
 
@@ -121,7 +122,7 @@ const getUserById = async (req, res) => {
        LEFT JOIN departments d ON u.department_id = d.id
        LEFT JOIN job_titles jt ON u.job_title_id = jt.id
        LEFT JOIN job_names jn ON u.job_name_id = jn.id
-       WHERE u.id = ?`,
+       WHERE u.id = ? AND u.deleted_at IS NULL`,
       [id]
     );
     
@@ -169,7 +170,7 @@ const addUser = async (req, res) => {
     // التحقق من البريد الإلكتروني فقط إذا كان موجوداً
     if (email && email.trim()) {
       const [existingUser] = await db.execute(
-        'SELECT id FROM users WHERE email = ?',
+        'SELECT id FROM users WHERE email = ? AND deleted_at IS NULL',
         [email]
       );
 
@@ -185,7 +186,7 @@ const addUser = async (req, res) => {
     let departmentName = null;
     if (departmentId) {
       const [[deptDetails]] = await db.execute(
-        'SELECT name FROM departments WHERE id = ?',
+        'SELECT name FROM departments WHERE id = ? AND deleted_at IS NULL',
         [departmentId]
       );
       departmentName = deptDetails ? deptDetails.name : null;
@@ -287,7 +288,7 @@ const updateUser = async (req, res) => {
     // التحقق من عدم وجود البريد الإلكتروني مع مستخدم آخر (فقط إذا كان موجوداً)
     if (email && email.trim()) {
       const [existingUser] = await db.execute(
-        'SELECT id FROM users WHERE email = ? AND id != ?',
+        'SELECT id FROM users WHERE email = ? AND id != ? AND deleted_at IS NULL',
         [email, id]
       );
 
@@ -310,7 +311,7 @@ const updateUser = async (req, res) => {
     // التحقق من عدم تكرار رقم الهوية مع مستخدم آخر
     if (national_id && national_id.trim()) {
       const [existingUser] = await db.execute(
-        'SELECT id FROM users WHERE national_id = ? AND id != ?',
+        'SELECT id FROM users WHERE national_id = ? AND id != ? AND deleted_at IS NULL',
         [national_id, id]
       );
 
@@ -326,7 +327,7 @@ const updateUser = async (req, res) => {
     let newDepartmentName = null;
     if (departmentId) {
       const [[deptDetails]] = await db.execute(
-        'SELECT name FROM departments WHERE id = ?',
+        'SELECT name FROM departments WHERE id = ? AND deleted_at IS NULL',
         [departmentId]
       );
       newDepartmentName = deptDetails ? deptDetails.name : null;
@@ -461,7 +462,7 @@ const deleteUser = async (req, res) => {
   try {
     // جلب تفاصيل المستخدم قبل الحذف للتسجيل
     const [[userDetails]] = await db.execute(
-      `SELECT ${getFullNameSQLWithFallback()} AS full_name FROM users WHERE id = ?`,
+      `SELECT ${getFullNameSQLWithFallback()} AS full_name FROM users WHERE id = ? AND deleted_at IS NULL`,
       [id]
     );
 
@@ -469,51 +470,32 @@ const deleteUser = async (req, res) => {
       return res.status(404).json({ status:'error', message:'المستخدم غير موجود' });
     }
 
-    // بدء المعاملة لحذف البيانات المرتبطة أولاً
-    const connection = await db.getConnection();
-    await connection.beginTransaction();
-
-    try {
-      // حذف السجلات المرتبطة من ticket_assignments
-      await connection.execute('DELETE FROM ticket_assignments WHERE assigned_to = ?', [id]);
-      
-
-      // الآن يمكن حذف المستخدم بأمان
-      const [result] = await connection.execute('DELETE FROM users WHERE id = ?', [id]);
-      
-      if (!result.affectedRows) {
-        await connection.rollback();
-        connection.release();
-        return res.status(404).json({ status:'error', message:'المستخدم غير موجود' });
-      }
-
-      // تأكيد المعاملة
-      await connection.commit();
-      connection.release();
-
-      // ✅ تسجيل اللوق بعد نجاح حذف المستخدم
-      try {
-          const logDescription = {
-              ar: `تم حذف مستخدم: ${userDetails.full_name}`,
-              en: `Deleted user: ${userDetails.full_name}`
-          };
-          
-          await logAction(adminUserId, 'delete_user', JSON.stringify(logDescription), 'user', id);
-      } catch (logErr) {
-          console.error('logAction error:', logErr);
-      }
-
-      res.status(200).json({ 
-        status: 'success',
-        message: 'تم حذف المستخدم بنجاح'
-      });
-
-    } catch (deleteError) {
-      // في حالة حدوث خطأ، التراجع عن المعاملة
-      await connection.rollback();
-      connection.release();
-      throw deleteError;
+    // تطبيق soft delete بدلاً من الحذف النهائي
+    const [result] = await db.execute(
+      'UPDATE users SET deleted_at = NOW(), deleted_by = ? WHERE id = ? AND deleted_at IS NULL',
+      [adminUserId, id]
+    );
+    
+    if (!result.affectedRows) {
+      return res.status(404).json({ status:'error', message:'المستخدم غير موجود أو محذوف بالفعل' });
     }
+
+    // ✅ تسجيل اللوق بعد نجاح حذف المستخدم
+    try {
+        const logDescription = {
+            ar: `تم حذف مستخدم: ${userDetails.full_name}`,
+            en: `Deleted user: ${userDetails.full_name}`
+        };
+        
+        await logAction(adminUserId, 'delete_user', JSON.stringify(logDescription), 'user', id);
+    } catch (logErr) {
+        console.error('logAction error:', logErr);
+    }
+
+    res.status(200).json({ 
+      status: 'success',
+      message: 'تم حذف المستخدم بنجاح'
+    });
 
   } catch (error) {
     console.error('deleteUser error:', error);
@@ -551,7 +533,7 @@ const changeUserRole = async (req, res) => {
   try {
     // Fetch user details for logging
     const [[userDetails]] = await db.execute(
-      `SELECT ${getFullNameSQLWithFallback()} AS full_name, role as old_role FROM users WHERE id = ?`,
+      `SELECT ${getFullNameSQLWithFallback()} AS full_name, role as old_role FROM users WHERE id = ? AND deleted_at IS NULL`,
       [id]
     );
 
@@ -611,7 +593,7 @@ const adminResetPassword = async (req, res) => {
   try {
     // Fetch user details for logging
     const [[userDetails]] = await db.execute(
-      `SELECT ${getFullNameSQLWithFallback()} AS full_name FROM users WHERE id = ?`,
+      `SELECT ${getFullNameSQLWithFallback()} AS full_name FROM users WHERE id = ? AND deleted_at IS NULL`,
       [id]
     );
 
@@ -1148,7 +1130,7 @@ const getUserApprovalSequenceFiles = async (req, res) => {
         'protocol' as fileType
       FROM protocols p
       JOIN protocol_approvers pa ON pa.protocol_id = p.id
-      WHERE pa.user_id = ?
+      WHERE pa.user_id = ? AND p.deleted_at IS NULL
     `, [userId]);
 
     // توحيد النتائج مع فلترة اللغة
@@ -1385,7 +1367,7 @@ const getIdsByNames = async (req, res) => {
     const placeholders = names.map(() => '?').join(',');
     
     const [rows] = await db.execute(
-      `SELECT id, username FROM users WHERE username IN (${placeholders})`,
+      `SELECT id, username FROM users WHERE username IN (${placeholders}) AND deleted_at IS NULL`,
       names
     );
 

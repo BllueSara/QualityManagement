@@ -44,7 +44,7 @@ async function getUserPerms(pool, userId) {
     SELECT p.permission_key
     FROM permissions p
     JOIN user_permissions up ON up.permission_id = p.id
-    WHERE up.user_id = ?
+    WHERE up.user_id = ? AND p.deleted_at IS NULL
   `, [userId]);
   return new Set(rows.map(r => r.permission_key));
 }
@@ -104,7 +104,7 @@ exports.getPendingApprovals = async (req, res) => {
         JOIN users u ON c.created_by = u.id
         LEFT JOIN content_approvers ca ON ca.content_id = c.id
         LEFT JOIN users u2 ON ca.user_id = u2.id
-        WHERE c.approval_status = 'pending'
+        WHERE c.approval_status = 'pending' AND c.deleted_at IS NULL AND f.deleted_at IS NULL AND d.deleted_at IS NULL AND u.deleted_at IS NULL
         ${!canViewAll ? `AND (EXISTS (SELECT 1 FROM content_approvers WHERE content_id = c.id AND user_id = ?) OR c.created_by = ?)` : ''}
         GROUP BY c.id
     `;
@@ -169,7 +169,7 @@ exports.sendApprovalRequest = async (req, res) => {
         `SELECT c.title, d.name as department_name FROM contents c
          JOIN folders f ON c.folder_id = f.id
          JOIN departments d ON f.department_id = d.id
-         WHERE c.id = ?`,
+         WHERE c.id = ? AND c.deleted_at IS NULL AND f.deleted_at IS NULL AND d.deleted_at IS NULL`,
         [contentId]
     );
 
@@ -472,7 +472,7 @@ exports.delegateApproval = async (req, res) => {
         `SELECT c.title, d.name as department_name FROM contents c
          JOIN folders f ON c.folder_id = f.id
          JOIN departments d ON f.department_id = d.id
-         WHERE c.id = ?`,
+         WHERE c.id = ? AND c.deleted_at IS NULL AND f.deleted_at IS NULL AND d.deleted_at IS NULL`,
         [contentId]
     );
 
@@ -484,7 +484,7 @@ exports.delegateApproval = async (req, res) => {
           CASE WHEN third_name IS NOT NULL AND third_name != '' THEN CONCAT(' ', third_name) ELSE '' END,
           CASE WHEN last_name IS NOT NULL AND last_name != '' THEN CONCAT(' ', last_name) ELSE '' END
         ) AS full_name
-      FROM users WHERE id = ?`,
+      FROM users WHERE id = ? AND deleted_at IS NULL`,
       [delegateeUserId]
     );
     const delegateeUsername = delegateeUser.map(u => u.full_name)[0] || '';

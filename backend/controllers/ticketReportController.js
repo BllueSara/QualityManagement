@@ -23,7 +23,7 @@ exports.getClosedTicketsReport = async (req, res) => {
       SELECT p.permission_key
       FROM permissions p
       JOIN user_permissions up ON up.permission_id = p.id
-      WHERE up.user_id = ?
+      WHERE up.user_id = ? AND p.deleted_at IS NULL
     `, [userId]);
     const perms = new Set(permRows.map(r => r.permission_key));
     const canViewAll = userRole === 'admin' || userRole === 'manager_ovr' || perms.has('view_all_reports_tickets');
@@ -72,7 +72,7 @@ exports.getClosedTicketsReport = async (req, res) => {
       JOIN ticket_status_history h ON h.ticket_id = t.id
       JOIN ticket_classifications tc ON tc.ticket_id = t.id
       JOIN classifications c ON c.id = tc.classification_id
-      ${where}
+      WHERE t.deleted_at IS NULL AND c.deleted_at IS NULL AND ${where.replace('WHERE ', '')}
       GROUP BY classification, year, month
       ORDER BY year DESC, month DESC, classification
     `;

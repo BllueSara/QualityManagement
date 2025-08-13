@@ -113,7 +113,7 @@ static async findAllAndAssignments(userId, userRole) {
       `SELECT p.permission_key
        FROM permissions p
        JOIN user_permissions up ON up.permission_id = p.id
-       WHERE up.user_id = ?`,
+       WHERE up.user_id = ? AND p.deleted_at IS NULL`,
       [userId]
     );
     const userPerms = new Set(permRows.map(r => r.permission_key));
@@ -142,9 +142,9 @@ static async findAllAndAssignments(userId, userRole) {
           JSON_ARRAY()
         ) AS classifications
       FROM tickets t
-      LEFT JOIN departments rd ON t.reporting_dept_id = rd.id
-      LEFT JOIN departments sd ON t.responding_dept_id = sd.id
-      LEFT JOIN users u       ON t.created_by = u.id
+      LEFT JOIN departments rd ON t.reporting_dept_id = rd.id AND rd.deleted_at IS NULL
+      LEFT JOIN departments sd ON t.responding_dept_id = sd.id AND sd.deleted_at IS NULL
+      LEFT JOIN users u       ON t.created_by = u.id AND u.deleted_at IS NULL
       LEFT JOIN (
         SELECT h1.ticket_id, h1.status
         FROM ticket_status_history h1
@@ -161,9 +161,12 @@ static async findAllAndAssignments(userId, userRole) {
     // 3) شرط لغير الأدمن
     let whereClause = '';
     const params = [];
+    // إضافة شرط المحذوفة إلى WHERE clause أولاً
+    whereClause = 'WHERE t.deleted_at IS NULL';
+    
     if (!canViewAll) {
       whereClause = `
-        WHERE EXISTS (
+        WHERE t.deleted_at IS NULL AND EXISTS (
           SELECT 1
           FROM ticket_assignments ta
           WHERE ta.ticket_id   = t.id
@@ -228,13 +231,16 @@ static async findAll(userId, userRole) {
       FROM tickets t
       LEFT JOIN departments rd ON t.reporting_dept_id = rd.id
       LEFT JOIN departments sd ON t.responding_dept_id = sd.id
-      LEFT JOIN users u      ON t.created_by = u.id
+      LEFT JOIN users u      ON t.created_by = u.id AND u.deleted_at IS NULL
     `;
     const params = [];
     if (userRole !== 'admin' && userRole !== 'manager_ovr') {
       // تصفية فقط على التذاكر التي أنشأها المستخدم
-      sql += ` WHERE t.created_by = ?`;
+      sql += ` WHERE t.deleted_at IS NULL AND t.created_by = ?`;
       params.push(userId);
+    } else {
+      // للأدمن، عرض جميع التذاكر غير المحذوفة
+      sql += ` WHERE t.deleted_at IS NULL`;
     }
     sql += ` ORDER BY t.created_at DESC`;
     const [rows] = await conn.query(sql, params);
@@ -281,10 +287,10 @@ static async findById(id, userId, userRole) {
         FROM tickets t
         LEFT JOIN departments rd ON t.reporting_dept_id = rd.id
         LEFT JOIN departments sd ON t.responding_dept_id = sd.id
-        LEFT JOIN users u1 ON t.created_by   = u1.id
-        LEFT JOIN users u2 ON t.assigned_to  = u2.id
+        LEFT JOIN users u1 ON t.created_by   = u1.id AND u1.deleted_at IS NULL
+        LEFT JOIN users u2 ON t.assigned_to  = u2.id AND u2.deleted_at IS NULL
         LEFT JOIN harm_levels h ON t.harm_level_id = h.id
-        WHERE t.id = ?
+        WHERE t.id = ? AND t.deleted_at IS NULL
       `, [id]);
 
       if (tickets.length === 0) {
@@ -624,14 +630,8 @@ static async update(id, ticketData, userId) {
         try {
             await connection.beginTransaction();
 
-            // Delete attachments
-            await connection.query('DELETE FROM ticket_attachments WHERE ticket_id = ?', [id]);
-
-            // Delete status history
-            await connection.query('DELETE FROM ticket_status_history WHERE ticket_id = ?', [id]);
-
-            // Delete ticket
-            await connection.query('DELETE FROM tickets WHERE id = ?', [id]);
+            // Apply soft delete to ticket instead of permanent deletion
+            await connection.query('UPDATE tickets SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL', [id]);
 
             await connection.commit();
         } catch (error) {
@@ -832,10 +832,10 @@ static async track(ticketId) {
          rd.name AS reporting_dept_name,
          sd.name AS responding_dept_name
        FROM tickets t
-       LEFT JOIN users u1 ON t.created_by = u1.id
+       LEFT JOIN users u1 ON t.created_by = u1.id AND u1.deleted_at IS NULL
        LEFT JOIN departments rd ON t.reporting_dept_id = rd.id
        LEFT JOIN departments sd ON t.responding_dept_id = sd.id
-       WHERE t.id = ?`,
+       WHERE t.id = ? AND t.deleted_at IS NULL`,
       [ticketId]
     );
     if (!ticket) return null;
@@ -849,8 +849,8 @@ static async track(ticketId) {
          u.username AS changed_by,
          d.name     AS department_name
        FROM ticket_status_history h
-       LEFT JOIN users u ON h.changed_by = u.id
-       LEFT JOIN departments d ON u.department_id = d.id
+       LEFT JOIN users u ON h.changed_by = u.id AND u.deleted_at IS NULL
+       LEFT JOIN departments d ON u.department_id = d.id AND d.deleted_at IS NULL
        WHERE h.ticket_id = ?
        ORDER BY h.created_at ASC`,
       [ticketId]
@@ -865,8 +865,8 @@ static async track(ticketId) {
          d.name     AS department_name,
          'رد'      AS status
        FROM ticket_replies r
-       LEFT JOIN users u ON r.author_id = u.id
-       LEFT JOIN departments d ON u.department_id = d.id
+       LEFT JOIN users u ON r.author_id = u.id AND u.deleted_at IS NULL
+       LEFT JOIN departments d ON u.department_id = d.id AND d.deleted_at IS NULL
        WHERE r.ticket_id = ?
        ORDER BY r.created_at ASC`,
       [ticketId]
@@ -881,8 +881,8 @@ static async track(ticketId) {
     const [assignees] = await conn.query(
       `SELECT u.id, u.username, d.name AS department
        FROM ticket_assignments ta
-       JOIN users u ON ta.assigned_to = u.id
-       LEFT JOIN departments d ON u.department_id = d.id
+       JOIN users u ON ta.assigned_to = u.id AND u.deleted_at IS NULL
+       LEFT JOIN departments d ON u.department_id = d.id AND d.deleted_at IS NULL
        WHERE ta.ticket_id = ?`,
       [ticketId]
     );

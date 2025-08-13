@@ -147,7 +147,7 @@ const getDepartments = async (req, res) => {
                     SELECT p.permission_key
                     FROM permissions p
                     JOIN user_permissions up ON up.permission_id = p.id
-                    WHERE up.user_id = ?
+                    WHERE up.user_id = ? AND p.deleted_at IS NULL
                 `, [userId]);
                 
                 const userPermissions = new Set(permRows.map(r => r.permission_key));
@@ -176,13 +176,13 @@ const getDepartments = async (req, res) => {
         if (hasParentIdColumn) {
             // النظام الجديد - مع parent_id: دائماً جلب الأقسام الرئيسية فقط (parent_id IS NULL)
             if (userRole === 'admin' || !canViewOwnDepartment) {
-                query = 'SELECT * FROM departments WHERE parent_id IS NULL ORDER BY type, name';
+                query = 'SELECT * FROM departments WHERE parent_id IS NULL AND deleted_at IS NULL ORDER BY type, name';
                 params = [];
                 console.log('🔍 Fetching main departments only (parent_id IS NULL)');
             } else {
                 // إذا كان المستخدم ليس مسؤولاً ولديه صلاحية عرض قسمه الخاص، جلب قسمه الرئيسي فقط
                 if (userDepartmentId && userDepartmentId !== null && userDepartmentId !== undefined && userDepartmentId !== '') {
-                    query = 'SELECT * FROM departments WHERE id = ? AND parent_id IS NULL';
+                    query = 'SELECT * FROM departments WHERE id = ? AND parent_id IS NULL AND deleted_at IS NULL';
                     params = [userDepartmentId];
                     console.log('🔍 Fetching user\'s main department only:', userDepartmentId);
                 } else {
@@ -194,12 +194,12 @@ const getDepartments = async (req, res) => {
         } else {
             // النظام القديم - بدون parent_id
             if (userRole === 'admin' || !canViewOwnDepartment) {
-                query = 'SELECT * FROM departments';
+                query = 'SELECT * FROM departments WHERE deleted_at IS NULL';
                 params = [];
                 console.log('🔍 Fetching all departments (old system)');
             } else {
                 if (userDepartmentId && userDepartmentId !== null && userDepartmentId !== undefined && userDepartmentId !== '') {
-                    query = 'SELECT * FROM departments WHERE id = ?';
+                    query = 'SELECT * FROM departments WHERE id = ? AND deleted_at IS NULL';
                     params = [userDepartmentId];
                     console.log('🔍 Fetching user department:', userDepartmentId);
                 } else {
@@ -249,7 +249,7 @@ const getAllDepartments = async (req, res) => {
                     SELECT p.permission_key
                     FROM permissions p
                     JOIN user_permissions up ON up.permission_id = p.id
-                    WHERE up.user_id = ?
+                    WHERE up.user_id = ? AND p.deleted_at IS NULL
                 `, [userId]);
                 
                 const userPermissions = new Set(permRows.map(r => r.permission_key));
@@ -278,13 +278,13 @@ const getAllDepartments = async (req, res) => {
         if (hasParentIdColumn) {
             // النظام الجديد - مع parent_id: جلب جميع الأقسام (الرئيسية والفرعية)
             if (userRole === 'admin' || !canViewOwnDepartment) {
-                query = 'SELECT * FROM departments ORDER BY parent_id ASC, type, name';
+                query = 'SELECT * FROM departments WHERE deleted_at IS NULL ORDER BY parent_id ASC, type, name';
                 params = [];
                 console.log('🔍 Fetching all departments (main and sub) for admin/all users');
             } else {
                 // إذا كان المستخدم ليس مسؤولاً ولديه صلاحية عرض قسمه الخاص، جلب قسمه فقط
                 if (userDepartmentId && userDepartmentId !== null && userDepartmentId !== undefined && userDepartmentId !== '') {
-                    query = 'SELECT * FROM departments WHERE id = ?';
+                    query = 'SELECT * FROM departments WHERE id = ? AND deleted_at IS NULL';
                     params = [userDepartmentId];
                     console.log('🔍 Fetching user\'s department only:', userDepartmentId);
                 } else {
@@ -914,7 +914,7 @@ const deleteDepartment = async (req, res) => {
             // النظام الجديد - مع parent_id
             // جلب اسم القسم قبل الحذف
             const [department] = await db.execute(
-                'SELECT name, type FROM departments WHERE id = ?',
+                'SELECT name, type FROM departments WHERE id = ? AND deleted_at IS NULL',
                 [processedId]
             );
 
@@ -928,9 +928,9 @@ const deleteDepartment = async (req, res) => {
             const departmentName = department[0].name;
             const departmentType = department[0].type;
 
-            // التحقق من وجود تابعين
+            // التحقق من وجود تابعين غير محذوفين
             const [subDepartments] = await db.execute(
-                'SELECT COUNT(*) as count FROM departments WHERE parent_id = ?',
+                'SELECT COUNT(*) as count FROM departments WHERE parent_id = ? AND deleted_at IS NULL',
                 [processedId]
             );
 
@@ -941,9 +941,9 @@ const deleteDepartment = async (req, res) => {
                 });
             }
 
-            // التحقق من وجود محتويات مرتبطة بالقسم
+            // التحقق من وجود محتويات مرتبطة بالقسم غير محذوفة
             const [relatedContents] = await db.execute(
-                'SELECT COUNT(*) as count FROM folders f JOIN contents c ON f.id = c.folder_id WHERE f.department_id = ?',
+                'SELECT COUNT(*) as count FROM folders f JOIN contents c ON f.id = c.folder_id WHERE f.department_id = ? AND f.deleted_at IS NULL AND c.deleted_at IS NULL',
                 [processedId]
             );
 
@@ -954,9 +954,10 @@ const deleteDepartment = async (req, res) => {
                 });
             }
 
+            // تطبيق soft delete بدلاً من الحذف النهائي
             const [result] = await db.execute(
-                'DELETE FROM departments WHERE id = ?',
-                [processedId]
+                'UPDATE departments SET deleted_at = NOW(), deleted_by = ? WHERE id = ? AND deleted_at IS NULL',
+                [null, processedId]
             );
 
             if (result.affectedRows === 0) {
@@ -1003,7 +1004,7 @@ const deleteDepartment = async (req, res) => {
             // النظام القديم - بدون parent_id
             // جلب اسم القسم قبل الحذف
             const [department] = await db.execute(
-                'SELECT name FROM departments WHERE id = ?',
+                'SELECT name FROM departments WHERE id = ? AND deleted_at IS NULL',
                 [processedId]
             );
 
@@ -1016,9 +1017,9 @@ const deleteDepartment = async (req, res) => {
 
             const departmentName = department[0].name;
 
-            // التحقق من وجود محتويات مرتبطة بالقسم
+            // التحقق من وجود محتويات مرتبطة بالقسم غير محذوفة
             const [relatedContents] = await db.execute(
-                'SELECT COUNT(*) as count FROM folders f JOIN contents c ON f.id = c.folder_id WHERE f.department_id = ?',
+                'SELECT COUNT(*) as count FROM folders f JOIN contents c ON f.id = c.folder_id WHERE f.department_id = ? AND f.deleted_at IS NULL AND c.deleted_at IS NULL',
                 [processedId]
             );
 
@@ -1029,9 +1030,10 @@ const deleteDepartment = async (req, res) => {
                 });
             }
 
+            // تطبيق soft delete بدلاً من الحذف النهائي
             const [result] = await db.execute(
-                'DELETE FROM departments WHERE id = ?',
-                [processedId]
+                'UPDATE departments SET deleted_at = NOW(), deleted_by = ? WHERE id = ? AND deleted_at IS NULL',
+                [null, processedId]
             );
 
             if (result.affectedRows === 0) {
