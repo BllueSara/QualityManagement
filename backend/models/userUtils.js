@@ -32,6 +32,19 @@ function buildFullNameWithJobName(jobName, firstName, secondName, thirdName, las
 }
 
 /**
+ * Builds a name with job name + first name + last name only (no second/third names)
+ * @param {string} jobName - Job name (e.g., "Eng", "Dr", "Mr")
+ * @param {string} firstName - First name
+ * @param {string} lastName - Last name
+ * @returns {string} Job name + first name + last name
+ */
+function buildJobNameFirstLast(jobName, firstName, lastName) {
+  const nameParts = [firstName, lastName].filter(part => part && part.trim());
+  const simpleName = nameParts.join(' ');
+  return jobName && jobName.trim() ? `${jobName} ${simpleName}` : simpleName;
+}
+
+/**
  * SQL CONCAT expression for building full name from database fields
  * @returns {string} SQL CONCAT expression
  */
@@ -164,6 +177,7 @@ function getFullNameWithJobNameSQLWithAliasAndFallback(tableAlias, jobNameAlias 
 module.exports = {
   buildFullName,
   buildFullNameWithJobName,
+  buildJobNameFirstLast,
   getFullNameSQL,
   getFullNameWithJobNameSQL,
   getFullNameSQLWithAlias,

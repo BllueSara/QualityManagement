@@ -358,7 +358,12 @@ main h2 {
 .gradient-blue-7 { background: linear-gradient(to right, #0072ff, #00c6ff); }
 .gradient-blue-8 { background: linear-gradient(to right, #0072ff, #00c6ff); }
 .gradient-blue-9 { background: linear-gradient(to right, #0072ff, #00c6ff); }
+.gradient-blue-10 { background: linear-gradient(to right, #667eea, #764ba2); }
 
+/* تدرجات إضافية للمحاضر */
+.gradient-orange-1 { background: linear-gradient(to right, #ff7b7b, #ff9a56); }
+.gradient-green-1 { background: linear-gradient(to right, #56ccf2, #2f80ed); }
+.gradient-red-1 { background: linear-gradient(to right, #ff416c, #ff4b2b); }
 
 /* جعل الأيقونات بيضاء */
 .stat-icon i {

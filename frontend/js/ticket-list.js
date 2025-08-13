@@ -10,7 +10,8 @@ const permissions = {
 
 async function fetchPermissions() {
   const token = localStorage.getItem('token');
-  const payload = JSON.parse(atob(token.split('.')[1]));
+  const payload = await safeGetUserInfo(token);
+  if (!payload) return;
   const userId = payload.id;
   const role = payload.role;
 

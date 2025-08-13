@@ -6,7 +6,8 @@ const {
   exportDashboardExcel,
   getDepartmentStats,
   getCommitteeStats,
-  getMonthlyPerformance
+  getMonthlyPerformance,
+  getProtocolStats
 } = require('../controllers/dashboardController');
 
 // GET /api/dashboard/stats
@@ -26,5 +27,8 @@ router.get('/committee-stats', getCommitteeStats);
 
 // GET /api/dashboard/monthly-performance
 router.get('/monthly-performance', getMonthlyPerformance);
+
+// GET /api/dashboard/protocol-stats
+router.get('/protocol-stats', getProtocolStats);
 
 module.exports = router;

@@ -223,7 +223,7 @@ document.querySelector('[data-field="responding-dept"]').textContent = parseDept
     });
 
   // بعد جلب بيانات التذكرة
-  const tokenPayload = token ? JSON.parse(atob(token.split('.')[1])) : {};
+  const tokenPayload = token ? await safeGetUserInfo(token) : {};
   const userRole = tokenPayload.role;
 
   // إخفاء المرفقات وبيانات المبلغ لغير admin وmanager_ovr

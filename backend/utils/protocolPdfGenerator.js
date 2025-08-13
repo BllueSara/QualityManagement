@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { buildJobNameFirstLast } = require('../models/userUtils');
 
 // دالة محسنة لمعالجة النص العربي
 const processArabicText = (text) => {
@@ -97,16 +98,33 @@ const formatDate = (dateString) => {
 };
 
 // دالة ترتيب المدة بحيث يأتي الرقم قبل الكلمة (مثال: "10 أيام" بدلاً من "أيام 10")
+// تطبق عكس مسبق لمواجهة العكس التلقائي في pdfmake
 const normalizeDuration = (value) => {
-    if (!value) return '';
+    if (!value || value === ' ') return '';
+    
     const raw = String(value).trim().replace(/\s+/g, ' ');
-    // إيجاد أول رقم (يدعم الأرقام العربية والإنجليزية)
-    const numMatch = raw.match(/[\u0660-\u0669\d]+/);
-    if (!numMatch) return raw; // لا يوجد رقم، نعيد النص كما هو
-    const number = numMatch[0];
-    const rest = raw.replace(number, '').trim();
-    if (!rest) return number;
-    return `${number} ${rest}`;
+    if (!raw) return '';
+    
+    // البحث عن جميع الأرقام (عربية وإنجليزية)
+    const allNumbers = raw.match(/[\u0660-\u0669\d]+/g);
+    
+    if (!allNumbers || allNumbers.length === 0) {
+        return raw; // لا توجد أرقام، نعيد النص كما هو
+    }
+    
+    // أخذ أول رقم
+    const number = allNumbers[0];
+    
+    // إزالة جميع الأرقام من النص للحصول على الكلمات فقط
+    let textOnly = raw.replace(/[\u0660-\u0669\d]+/g, '').replace(/\s+/g, ' ').trim();
+    
+    if (!textOnly) {
+        return number; // فقط رقم
+    }
+    
+    // نطبق العكس المسبق على جميع النصوص لمواجهة العكس التلقائي في pdfmake
+    // لأن pdfmake يعكس جميع النصوص في السياق العربي (RTL context)
+    return `${textOnly} ${number}`;
 };
 
 
@@ -200,7 +218,7 @@ async function generateProtocolPDF(protocolData, db) {
                  { text: fixArabicOrder('تاريخ المحضر'), style: 'infoHeader', alignment: 'center' },
              ],
              [
-                 { text: fixArabicOrder(prepareArabic(protocolData.createdByName || protocolData.created_by_name || 'غير محدد')), style: 'infoCell', alignment: 'center' },
+                 { text: fixArabicOrder(prepareArabic(protocolData.createdByName || protocolData.created_by_name || ' ')), style: 'infoCell', alignment: 'center' },
                  { text: fixArabicOrder('صاحب المحضر'), style: 'infoHeader', alignment: 'center' },
              ]
          ];
@@ -250,40 +268,84 @@ async function generateProtocolPDF(protocolData, db) {
                  { text: fixArabicOrder('الموضوع'), style: 'tableHeader', alignment: 'center' }
              ]);
 
-            // إضافة بيانات المواضيع (من اليمين لليسار)
+                        // إضافة بيانات المواضيع (من اليمين لليسار)
             protocolData.topics.forEach((topic, index) => {
                 // تقسيم المناقشة والموضوع إلى أسطر كما أُدخلت (تشخيص للترتيب)
-                const discussionLines = splitArabicIntoLinesByWords(String(topic.discussion || 'غير محدد'));
-                const subjectLines = splitArabicIntoLinesByWords(String(topic.subject || 'غير محدد'));
+                const discussionLines = splitArabicIntoLinesByWords(String(topic.discussion || ' '));
+                const subjectLines = splitArabicIntoLinesByWords(String(topic.subject || ''));
                 console.log('🧪 Topic #'+(index+1)+' discussion lines (top→bottom):', discussionLines);
                 console.log('🧪 Topic #'+(index+1)+' subject lines (top→bottom):', subjectLines);
 
+                // حساب عدد المناقشات الجانبية الصالحة
+                const validSideDiscussions = topic.sideDiscussions && Array.isArray(topic.sideDiscussions) 
+                    ? topic.sideDiscussions.filter(sd => sd.content && sd.content.trim()) 
+                    : [];
+                const totalRows = 1 + validSideDiscussions.length; // الصف الرئيسي + المناقشات الجانبية
+
+                // إضافة صف الموضوع الرئيسي
                 topicsTableBody.push([
-                                         { 
-                         text: topic.end_date ? formatDate(topic.end_date) : 'غير محدد', 
-                         style: 'tableCell',
-                         alignment: 'center'
-                     },
                     { 
-                        text: normalizeDuration(topic.duration), 
+                        text: topic.end_date ? formatDate(topic.end_date) : ' ', 
                         style: 'tableCell',
                         alignment: 'center'
                     },
+                    { 
+                        text: normalizeDuration(topic.duration), 
+                        style: 'tableCell',
+                        alignment: 'center',
+                        bidi: false
+                    },
                     {
-                        // عرض المناقشة كسطور منفصلة والحفاظ على ترتيب الأسطر، مع عكس الكلمات داخل السطر للعربية
+                        // عرض المناقشة الرئيسية كسطور منفصلة والحفاظ على ترتيب الأسطر، مع عكس الكلمات داخل السطر للعربية
                         stack: discussionLines.map(line => fixArabicOrder(prepareArabic(line))),
                         style: 'rtlCell',
                         alignment: 'right',
                         lineHeight: 1.2
                     },
-                     {
-                         // دعم أسطر متعددة في الموضوع مع عكس الكلمات داخل السطر والحفاظ على ترتيب الأسطر
-                         stack: subjectLines.map(line => fixArabicOrder(prepareArabic(line))),
-                         style: 'tableCell',
-                         alignment: 'center',
-                         lineHeight: 1.2
-                     }
+                    {
+                        // دعم أسطر متعددة في الموضوع مع عكس الكلمات داخل السطر والحفاظ على ترتيب الأسطر
+                        // دمج الصفوف لتشمل جميع المناقشات الجانبية
+                        stack: subjectLines.map(line => fixArabicOrder(prepareArabic(line))),
+                        style: 'tableCell',
+                        alignment: 'center',
+                        lineHeight: 1.2,
+                        rowSpan: totalRows
+                    }
                 ]);
+
+                // إضافة المناقشات الجانبية كصفوف منفصلة
+                validSideDiscussions.forEach((sideDiscussion, sideIndex) => {
+                    const sideDiscussionLines = splitArabicIntoLinesByWords(String(sideDiscussion.content));
+                    // إضافة رقم قبل المناقشة الجانبية
+                    const numberedDiscussion = [`${sideIndex + 1}- ${sideDiscussionLines[0] || ''}`];
+                    // إضافة باقي الأسطر بدون رقم
+                    for (let i = 1; i < sideDiscussionLines.length; i++) {
+                        numberedDiscussion.push(sideDiscussionLines[i]);
+                    }
+                    
+                    topicsTableBody.push([
+                        { 
+                            text: sideDiscussion.end_date ? formatDate(sideDiscussion.end_date) : ' ', 
+                            style: 'tableCell',
+                            alignment: 'center'
+                        },
+                        { 
+                            text: normalizeDuration(sideDiscussion.duration) || ' ', 
+                            style: 'tableCell',
+                            alignment: 'center',
+                            bidi: false
+                        },
+                        {
+                            // عرض المناقشة الجانبية مع الرقم كسطور منفصلة
+                            stack: numberedDiscussion.map(line => fixArabicOrder(prepareArabic(line))),
+                            style: 'rtlCell',
+                            alignment: 'right',
+                            lineHeight: 1.2
+                        },
+                        // لا نضيف خانة الموضوع هنا لأنها مدمجة في الصف الأول
+                        {}
+                    ]);
+                });
             });
 
             // إضافة جدول المواضيع
@@ -613,16 +675,12 @@ async function updateProtocolPDFAfterApproval(protocolId, db) {
                 day: '2-digit'
             });
 
-            const actualSignerFullName = buildFullName(
+            // بناء الاسم مع job_name + الاسم الأول + الاسم الأخير فقط
+            const actualSignerFullNameWithJobName = buildJobNameFirstLast(
+                mainLog.signer_job_name,
                 mainLog.actual_first_name,
-                mainLog.actual_second_name,
-                mainLog.actual_third_name,
                 mainLog.actual_last_name
             ) || mainLog.actual_signer || 'N/A';
-
-            // إضافة المسمى الوظيفي قبل الاسم إذا كان متوفراً
-            const actualSignerFullNameWithJobName = mainLog.signer_job_name && mainLog.signer_job_name.trim() ? 
-                `${mainLog.signer_job_name} ${actualSignerFullName}` : actualSignerFullName;
 
             // إضافة صف الموقّع الرئيسي
             approvalTableBody.push([
@@ -636,16 +694,12 @@ async function updateProtocolPDFAfterApproval(protocolId, db) {
 
             // إذا كان هناك توقيع بالنيابة، أضف صف "Proxy for"
             if (group.proxyLog && group.proxyLog.original_user) {
-                const originalUserFullName = buildFullName(
+                // بناء الاسم مع job_name + الاسم الأول + الاسم الأخير فقط للمفوض الأصلي
+                const originalUserFullNameWithJobName = buildJobNameFirstLast(
+                    group.proxyLog.original_job_name,
                     group.proxyLog.original_first_name,
-                    group.proxyLog.original_second_name,
-                    group.proxyLog.original_third_name,
                     group.proxyLog.original_last_name
                 ) || group.proxyLog.original_user || 'N/A';
-
-                // إضافة المسمى الوظيفي قبل الاسم إذا كان متوفراً
-                const originalUserFullNameWithJobName = group.proxyLog.original_job_name && group.proxyLog.original_job_name.trim() ? 
-                    `${group.proxyLog.original_job_name} ${originalUserFullName}` : originalUserFullName;
 
                 approvalTableBody.push([
                     { text: '(Proxy for)', style: 'proxyCell' },

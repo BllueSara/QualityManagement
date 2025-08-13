@@ -14,16 +14,12 @@ function getToken() {
 }
 
 // دالة لفك التوكن واستخراج الدور
-function getUserRoleFromToken() {
+async function getUserRoleFromToken() {
   const token = getToken();
   if (!token) return null;
   try {
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(atob(base64).split('').map(c =>
-      '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
-    ).join(''));
-    return JSON.parse(jsonPayload).role;
+    const payload = await safeGetUserInfo(token);
+    return payload ? payload.role : null;
   } catch {
     return null;
   }
@@ -31,7 +27,9 @@ function getUserRoleFromToken() {
 
 // جلب صلاحيات المستخدم من الـ API
 async function fetchPermissions() {
-  const userId = JSON.parse(atob(getToken().split('.')[1])).id;
+  const payload = await safeGetUserInfo(getToken());
+  if (!payload) return;
+  const userId = payload.id;
   const headers = { 'Authorization': `Bearer ${getToken()}` };
   const res = await fetch(`${apiBase}/api/users/${userId}/permissions`, { headers });
   if (!res.ok) return;
@@ -239,7 +237,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   const downloadBtn = document.getElementById('download-btn');
 
   // إظهار/إخفاء زر التحميل بناءً على الدور أو الصلاحية
-  if (getUserRoleFromToken() === 'admin' || permissions.canDownloadReport) {
+  const userRole = await getUserRoleFromToken();
+  if (userRole === 'admin' || permissions.canDownloadReport) {
     downloadBtn.style.display = 'inline-block';
     downloadBtn.addEventListener('click', downloadCSV);
   } else {

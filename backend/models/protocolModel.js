@@ -87,6 +87,21 @@ class ProtocolModel {
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             `);
 
+            // جدول المناقشات الجانبية
+            await this.pool.execute(`
+                CREATE TABLE IF NOT EXISTS protocol_side_discussions (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    topic_id INT NOT NULL,
+                    content TEXT NOT NULL,
+                    duration VARCHAR(100),
+                    end_date DATE,
+                    discussion_order INT DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    FOREIGN KEY (topic_id) REFERENCES protocol_topics(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            `);
+
             console.log('Protocol tables initialized successfully');
         } catch (error) {
             console.error('Error initializing protocol tables:', error);
@@ -119,7 +134,7 @@ class ProtocolModel {
             if (protocolData.topics && protocolData.topics.length > 0) {
                 for (let i = 0; i < protocolData.topics.length; i++) {
                     const topic = protocolData.topics[i];
-                    await connection.execute(
+                    const [topicResult] = await connection.execute(
                         'INSERT INTO protocol_topics (protocol_id, subject, discussion, duration, end_date, topic_order) VALUES (?, ?, ?, ?, ?, ?)',
                         [
                             protocolId,
@@ -130,6 +145,27 @@ class ProtocolModel {
                             i + 1
                         ]
                     );
+
+                    const topicId = topicResult.insertId;
+
+                    // إدراج المناقشات الجانبية للموضوع
+                    if (topic.sideDiscussions && Array.isArray(topic.sideDiscussions) && topic.sideDiscussions.length > 0) {
+                        for (let j = 0; j < topic.sideDiscussions.length; j++) {
+                            const sideDiscussion = topic.sideDiscussions[j];
+                            if (sideDiscussion.content && sideDiscussion.content.trim()) {
+                                await connection.execute(
+                                    'INSERT INTO protocol_side_discussions (topic_id, content, duration, end_date, discussion_order) VALUES (?, ?, ?, ?, ?)',
+                                    [
+                                        topicId,
+                                        sideDiscussion.content.trim(),
+                                        sideDiscussion.duration || null,
+                                        sideDiscussion.endDate || null,
+                                        j + 1
+                                    ]
+                                );
+                            }
+                        }
+                    }
                 }
             }
 
@@ -287,11 +323,20 @@ class ProtocolModel {
 
             const protocol = protocols[0];
 
-            // جلب مواضيع المحضر
+            // جلب مواضيع المحضر مع المناقشات الجانبية
             const [topics] = await this.pool.execute(
                 'SELECT * FROM protocol_topics WHERE protocol_id = ? ORDER BY topic_order',
                 [protocolId]
             );
+
+            // جلب المناقشات الجانبية لكل موضوع
+            for (let topic of topics) {
+                const [sideDiscussions] = await this.pool.execute(
+                    'SELECT * FROM protocol_side_discussions WHERE topic_id = ? ORDER BY discussion_order',
+                    [topic.id]
+                );
+                topic.sideDiscussions = sideDiscussions;
+            }
 
             // جلب معتمدي المحضر
             const [approvers] = await this.pool.execute(
@@ -389,7 +434,7 @@ class ProtocolModel {
             if (protocolData.topics && protocolData.topics.length > 0) {
                 for (let i = 0; i < protocolData.topics.length; i++) {
                     const topic = protocolData.topics[i];
-                    await connection.execute(
+                    const [topicResult] = await connection.execute(
                         'INSERT INTO protocol_topics (protocol_id, subject, discussion, duration, end_date, topic_order) VALUES (?, ?, ?, ?, ?, ?)',
                         [
                             protocolId,
@@ -400,6 +445,27 @@ class ProtocolModel {
                             i + 1
                         ]
                     );
+
+                    const topicId = topicResult.insertId;
+
+                    // إدراج المناقشات الجانبية للموضوع
+                    if (topic.sideDiscussions && Array.isArray(topic.sideDiscussions) && topic.sideDiscussions.length > 0) {
+                        for (let j = 0; j < topic.sideDiscussions.length; j++) {
+                            const sideDiscussion = topic.sideDiscussions[j];
+                            if (sideDiscussion.content && sideDiscussion.content.trim()) {
+                                await connection.execute(
+                                    'INSERT INTO protocol_side_discussions (topic_id, content, duration, end_date, discussion_order) VALUES (?, ?, ?, ?, ?)',
+                                    [
+                                        topicId,
+                                        sideDiscussion.content.trim(),
+                                        sideDiscussion.duration || null,
+                                        sideDiscussion.endDate || null,
+                                        j + 1
+                                    ]
+                                );
+                            }
+                        }
+                    }
                 }
             }
 

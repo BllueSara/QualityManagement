@@ -2,6 +2,7 @@ const mysql = require('mysql2/promise');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
+const { buildJobNameFirstLast } = require('../models/userUtils');
 
 const { logAction } = require('../models/logger');
 const { insertNotification, sendProxyNotification, sendOwnerApprovalNotification, sendPartialApprovalNotification, sendRejectionNotification } = require('../models/notfications-utils');
@@ -91,16 +92,16 @@ async function getUserPendingCommitteeApprovals(req, res) {
               AND cal.approver_id = ?
               AND cal.status = 'approved'
           )
-        GROUP BY cc.id, cca.sequence_number
-        ORDER BY cc.created_at DESC, cca.sequence_number
+        GROUP BY cc.id
+        ORDER BY cc.created_at DESC
       `, [userId]);
 
       rows = adminRows;
     } else if (delegationRows.length) {
-      // المستخدم مفوض له - سيظهر له الملف مرة واحدة وسيعتمد مرتين تلقائياً مع التحقق من التسلسل
+      // المستخدم مفوض له - سيظهر له الملف مرة واحدة وسيعتمد مرتين تلقائياً
       const delegatorId = delegationRows[0].user_id;
       
-      // جلب الملفات المكلف بها المستخدم (شخصياً أو بالنيابة) مع التحقق من التسلسل
+      // جلب الملفات المكلف بها المستخدم (شخصياً أو بالنيابة)
       const [delegatedRows] = await db.execute(`
         SELECT
           CONCAT('comm-', cc.id) AS id,
@@ -115,9 +116,8 @@ async function getUserPendingCommitteeApprovals(req, res) {
           cf.name AS folderName,
           com.name  AS source_name,
           'committee' AS type,
-          GROUP_CONCAT(DISTINCT ${getFullNameSQLWithAliasAndFallback('u2')} ORDER BY cca.sequence_number) AS assigned_approvers,
-          'dual' AS signature_type,
-          cca.sequence_number
+          GROUP_CONCAT(DISTINCT ${getFullNameSQLWithAliasAndFallback('u2')}) AS assigned_approvers,
+          'dual' AS signature_type
         FROM committee_contents cc
         JOIN committee_folders cf     ON cc.folder_id = cf.id
         JOIN committees com           ON cf.committee_id = com.id
@@ -130,57 +130,13 @@ async function getUserPendingCommitteeApprovals(req, res) {
               AND cal.approver_id = ?
               AND cal.status = 'approved'
           )
-          AND (
-            -- التحقق من أن جميع المعتمدين السابقين قد وقعوا - للمستخدمين المفوض لهم
-            cca.sequence_number = 1 
-            OR (
-              SELECT COUNT(*) FROM committee_content_approvers cca2
-              WHERE cca2.content_id = cc.id 
-                AND cca2.sequence_number < cca.sequence_number
-                AND (
-                  -- للمستخدمين العاديين: لا يوجد توقيع شخصي
-                  (cca2.user_id NOT IN (
-                    SELECT delegate_id FROM active_delegations
-                  ) AND NOT EXISTS (
-                    SELECT 1 FROM committee_approval_logs cal
-                    WHERE cal.content_id = cca2.content_id 
-                      AND cal.approver_id = cca2.user_id
-                      AND cal.signed_as_proxy = 0
-                      AND cal.status = 'approved'
-                  ))
-                  OR
-                  -- للمستخدمين المفوض لهم: لا يوجد توقيع شخصي أو لا يوجد توقيع بالنيابة
-                  (cca2.user_id IN (
-                    SELECT delegate_id FROM active_delegations
-                  ) AND (
-                    -- لا يوجد توقيع شخصي
-                    NOT EXISTS (
-                      SELECT 1 FROM committee_approval_logs cal
-                      WHERE cal.content_id = cca2.content_id 
-                        AND cal.approver_id = cca2.user_id
-                        AND cal.signed_as_proxy = 0
-                        AND cal.status = 'approved'
-                    )
-                    OR
-                    -- لا يوجد توقيع بالنيابة
-                    NOT EXISTS (
-                      SELECT 1 FROM committee_approval_logs cal
-                      WHERE cal.content_id = cca2.content_id 
-                        AND cal.approver_id = cca2.user_id
-                        AND cal.signed_as_proxy = 1
-                        AND cal.status = 'approved'
-                    )
-                  ))
-                )
-            ) = 0
-          )
-        GROUP BY cc.id, cca.sequence_number
-        ORDER BY cc.created_at DESC, cca.sequence_number
+        GROUP BY cc.id
+        ORDER BY cc.created_at DESC
       `, [userId, userId]);
 
       rows = delegatedRows;
     } else {
-      // المستخدم عادي - جلب الملفات المكلف بها فقط مع التحقق من التسلسل
+      // المستخدم عادي - جلب الملفات المكلف بها فقط
       const [normalRows] = await db.execute(`
         SELECT
           CONCAT('comm-', cc.id) AS id,
@@ -195,9 +151,8 @@ async function getUserPendingCommitteeApprovals(req, res) {
           cf.name AS folderName,
           com.name  AS source_name,
           'committee' AS type,
-          GROUP_CONCAT(DISTINCT ${getFullNameSQLWithAliasAndFallback('u2')} ORDER BY cca.sequence_number) AS assigned_approvers,
-          'normal' AS signature_type,
-          cca.sequence_number
+          GROUP_CONCAT(DISTINCT ${getFullNameSQLWithAliasAndFallback('u2')}) AS assigned_approvers,
+          'normal' AS signature_type
         FROM committee_contents cc
         JOIN committee_folders cf     ON cc.folder_id = cf.id
         JOIN committees com           ON cf.committee_id = com.id
@@ -210,52 +165,8 @@ async function getUserPendingCommitteeApprovals(req, res) {
               AND cal.approver_id = ?
               AND cal.status = 'approved'
           )
-          AND (
-            -- التحقق من أن جميع المعتمدين السابقين قد وقعوا - للمستخدمين العاديين
-            cca.sequence_number = 1 
-            OR (
-              SELECT COUNT(*) FROM committee_content_approvers cca2
-              WHERE cca2.content_id = cc.id 
-                AND cca2.sequence_number < cca.sequence_number
-                AND (
-                  -- للمستخدمين العاديين: لا يوجد توقيع شخصي
-                  (cca2.user_id NOT IN (
-                    SELECT delegate_id FROM active_delegations
-                  ) AND NOT EXISTS (
-                    SELECT 1 FROM committee_approval_logs cal
-                    WHERE cal.content_id = cca2.content_id 
-                      AND cal.approver_id = cca2.user_id
-                      AND cal.signed_as_proxy = 0
-                      AND cal.status = 'approved'
-                  ))
-                  OR
-                  -- للمستخدمين المفوض لهم: لا يوجد توقيع شخصي أو لا يوجد توقيع بالنيابة
-                  (cca2.user_id IN (
-                    SELECT delegate_id FROM active_delegations
-                  ) AND (
-                    -- لا يوجد توقيع شخصي
-                    NOT EXISTS (
-                      SELECT 1 FROM committee_approval_logs cal
-                      WHERE cal.content_id = cca2.content_id 
-                        AND cal.approver_id = cca2.user_id
-                        AND cal.signed_as_proxy = 0
-                        AND cal.status = 'approved'
-                    )
-                    OR
-                    -- لا يوجد توقيع بالنيابة
-                    NOT EXISTS (
-                      SELECT 1 FROM committee_approval_logs cal
-                      WHERE cal.content_id = cca2.content_id 
-                        AND cal.approver_id = cca2.user_id
-                        AND cal.signed_as_proxy = 1
-                        AND cal.status = 'approved'
-                    )
-                  ))
-                )
-            ) = 0
-          )
-        GROUP BY cc.id, cca.sequence_number
-        ORDER BY cc.created_at DESC, cca.sequence_number
+        GROUP BY cc.id
+        ORDER BY cc.created_at DESC
       `, [userId, userId]);
 
       rows = normalRows;
@@ -358,7 +269,6 @@ async function handleCommitteeApproval(req, res) {
       // للمستخدمين العاديين: التحقق من committee_content_approvers
       const [approverData] = await db.execute(`
         SELECT 
-          cca.sequence_number,
           cc.title,
           cc.created_by,
           cc.is_approved,
@@ -392,7 +302,6 @@ async function handleCommitteeApproval(req, res) {
     }
 
     const data = allData[0];
-    const currentSequence = data.sequence_number;
     const isDelegated = data.is_delegated === 1;
     const delegatorId = data.delegator_id;
     const hasPersonalLog = data.has_personal_log === 1;
@@ -402,28 +311,7 @@ async function handleCommitteeApproval(req, res) {
     const personalStatus = data.personal_status;
     const proxyStatus = data.proxy_status;
 
-    // التحقق من التسلسل - تحسين الأداء (الأدمن يمكنه التخطي)
-    if (currentSequence > 1 && !isAdmin) {
-      const [previousApprovers] = await db.execute(`
-        SELECT COUNT(*) as count
-        FROM committee_content_approvers cca
-        WHERE cca.content_id = ? 
-          AND cca.sequence_number < ?
-          AND NOT EXISTS (
-            SELECT 1 FROM committee_approval_logs cal
-            WHERE cal.content_id = cca.content_id 
-              AND cal.approver_id = cca.user_id
-              AND cal.status = 'approved'
-          )
-      `, [contentId, currentSequence]);
-
-      if (previousApprovers[0].count > 0) {
-        return res.status(400).json({ 
-          status: 'error', 
-          message: 'لا يمكنك التوقيع حتى يوقع المعتمد السابق' 
-        });
-      }
-    }
+    // إزالة التحقق من التسلسل - يمكن لجميع المعتمدين التوقيع في نفس الوقت
 
     // 2) منطق التوقيع المزدوج للمفوض له - محسن للأداء
     // المستخدم المفوض له يعتمد مرتين تلقائياً:
@@ -798,7 +686,7 @@ async function getAssignedCommitteeApprovals(req, res) {
           cc.title,
           cc.file_path,
           cc.approval_status,
-          GROUP_CONCAT(DISTINCT ${getFullNameSQLWithAliasAndFallback('u2')} ORDER BY cca.sequence_number)    AS assigned_approvers,
+          GROUP_CONCAT(DISTINCT ${getFullNameSQLWithAliasAndFallback('u2')})    AS assigned_approvers,
           com.name                              AS source_name,
           cf.name                               AS folder_name,
           ${getFullNameSQLWithAliasAndFallback('u')}                            AS created_by_username,
@@ -806,8 +694,7 @@ async function getAssignedCommitteeApprovals(req, res) {
           CAST(cc.approvers_required AS CHAR)   AS approvers_required,
           cc.created_at,
           cc.start_date,
-          cc.end_date,
-          cca.sequence_number
+          cc.end_date
         FROM committee_contents cc
         JOIN committee_folders cf       ON cc.folder_id = cf.id
         JOIN committees com             ON cf.committee_id = com.id
@@ -822,7 +709,7 @@ async function getAssignedCommitteeApprovals(req, res) {
             AND cal.signed_as_proxy = 1
             AND cal.status = 'accepted'
         )
-        GROUP BY cc.id, cca.sequence_number
+        GROUP BY cc.id
       `, [userId]);
 
       allRows = rows;
@@ -834,7 +721,7 @@ async function getAssignedCommitteeApprovals(req, res) {
           cc.title,
           cc.file_path,
           cc.approval_status,
-          GROUP_CONCAT(DISTINCT ${getFullNameSQLWithAliasAndFallback('u2')} ORDER BY cca.sequence_number)    AS assigned_approvers,
+          GROUP_CONCAT(DISTINCT ${getFullNameSQLWithAliasAndFallback('u2')})    AS assigned_approvers,
           com.name                              AS source_name,
           cf.name                               AS folder_name,
           ${getFullNameSQLWithAliasAndFallback('u')}                            AS created_by_username,
@@ -842,8 +729,7 @@ async function getAssignedCommitteeApprovals(req, res) {
           CAST(cc.approvers_required AS CHAR)   AS approvers_required,
           cc.created_at,
           cc.start_date,
-          cc.end_date,
-          cca.sequence_number
+          cc.end_date
         FROM committee_contents cc
         JOIN committee_folders cf       ON cc.folder_id = cf.id
         JOIN committees com             ON cf.committee_id = com.id
@@ -863,54 +749,15 @@ async function getAssignedCommitteeApprovals(req, res) {
             AND cal2.approver_id = ?
             AND cal2.status = 'approved'
         )
-        GROUP BY cc.id, cca.sequence_number
-        ORDER BY cc.created_at DESC, cca.sequence_number
+        GROUP BY cc.id
+        ORDER BY cc.created_at DESC
       `, [userId, userId, userId ]);
 
       allRows = rows;
     }
 
-    // في حالة الأدمن: تجاوز التسلسل واعرض الكل
-    let resultRows = [];
-    if (canViewAll) {
-      resultRows = allRows;
-    } else {
-      // فلترة النتائج حسب التسلسل
-      const filteredRows = [];
-      const processedContentIds = new Set();
-
-      for (const row of allRows) {
-        const contentId = row.id;
-        const sequenceNumber = row.sequence_number;
-
-      // إذا كانت حالة الملف مرفوضة، اعرضه بدون شرط التسلسل
-      if (row.approval_status === 'rejected') {
-        if (!processedContentIds.has(contentId)) {
-          filteredRows.push(row);
-          processedContentIds.add(contentId);
-        }
-        continue;
-      }
-
-        // إذا كان هذا أول معتمد في التسلسل
-        if (sequenceNumber === 1) {
-          if (!processedContentIds.has(contentId)) {
-            filteredRows.push(row);
-            processedContentIds.add(contentId);
-          }
-          continue;
-        }
-
-        // التحقق من أن جميع المعتمدين السابقين قد وقعوا
-        const isReadyForApproval = await checkPreviousCommitteeApproversSigned(contentId, sequenceNumber);
-        
-        if (isReadyForApproval && !processedContentIds.has(contentId)) {
-          filteredRows.push(row);
-          processedContentIds.add(contentId);
-        }
-      }
-      resultRows = filteredRows;
-    }
+    // إزالة فلترة التسلسل - جميع المعتمدين يمكنهم الوصول للملفات المكلفين بها
+    let resultRows = allRows;
 
     // تحويل الحقل من نص JSON إلى مصفوفة
     resultRows.forEach(row => {
@@ -928,32 +775,7 @@ async function getAssignedCommitteeApprovals(req, res) {
   }
 }
 
-// دالة مساعدة للتحقق من توقيع المعتمدين السابقين في اللجان
-async function checkPreviousCommitteeApproversSigned(contentId, currentSequence) {
-  try {
-    const actualContentId = contentId.replace('comm-', '');
-    
-    // جلب عدد المعتمدين السابقين الذين لم يكملوا اعتمادهم
-    const [remainingApprovers] = await db.execute(`
-      SELECT COUNT(*) as count
-      FROM committee_content_approvers cca
-      WHERE cca.content_id = ? 
-        AND cca.sequence_number < ?
-        AND NOT EXISTS (
-          SELECT 1 FROM committee_approval_logs cal
-          WHERE cal.content_id = cca.content_id 
-            AND cal.approver_id = cca.user_id
-            AND cal.status = 'approved'
-        )
-    `, [actualContentId, currentSequence]);
-
-    // إذا كان عدد المعتمدين المتبقين = 0، فهذا يعني أن جميع المعتمدين السابقين قد أكملوا اعتمادهم
-    return remainingApprovers[0].count === 0;
-  } catch (err) {
-    console.error('Error in checkPreviousCommitteeApproversSigned:', err);
-    return false;
-  }
-}
+// تم إزالة دالة التحقق من التسلسل لأنه لم يعد مطلوباً
 
 /**
  * 4. Delegate my committee approval to someone else
@@ -1297,18 +1119,12 @@ async function generateFinalSignedCommitteePDF(contentId) {
       day: '2-digit'
     });
 
-    // بناء الاسم الكامل للموقع الفعلي مع job_name
-    const actualSignerFullName = buildFullName(
+    // بناء الاسم مع job_name + الاسم الأول + الاسم الأخير فقط
+    const actualSignerFullNameWithJobName = buildJobNameFirstLast(
+      log.signer_job_name,
       log.actual_first_name,
-      log.actual_second_name,
-      log.actual_third_name,
       log.actual_last_name
     ) || log.actual_signer || 'N/A';
-    
-    // إضافة job_name كبادئة للاسم إذا كان موجوداً
-    const actualSignerFullNameWithJobName = log.signer_job_name && log.signer_job_name.trim() 
-      ? `${log.signer_job_name} ${actualSignerFullName}` 
-      : actualSignerFullName;
 
     // إضافة صف الاعتماد مع معالجة النصوص العربية والتواقيع
     approvalTableBody.push([
@@ -1322,17 +1138,16 @@ async function generateFinalSignedCommitteePDF(contentId) {
 
     // إذا كان تفويض، أضف صف إضافي للمفوض الأصلي
     if (log.signed_as_proxy && log.original_user) {
-      // بناء الاسم الكامل للمفوض الأصلي
-      const originalUserFullName = buildFullName(
+      // بناء الاسم مع job_name + الاسم الأول + الاسم الأخير فقط للمفوض الأصلي
+      const originalUserFullNameWithJobName = buildJobNameFirstLast(
+        log.original_job_name,
         log.original_first_name,
-        log.original_second_name,
-        log.original_third_name,
         log.original_last_name
       ) || log.original_user || 'N/A';
 
       approvalTableBody.push([
         { text: '(Proxy for)', style: 'proxyCell' },
-        { text: fixArabicOrder(originalUserFullName), style: 'proxyCell' },
+        { text: fixArabicOrder(originalUserFullNameWithJobName), style: 'proxyCell' },
         { text: fixArabicOrder(log.original_job_title || 'Not Specified'), style: 'proxyCell' },
         { text: 'Delegated', style: 'proxyCell' },
         { text: '-', style: 'proxyCell' },
@@ -1621,16 +1436,16 @@ async function updateCommitteePDFAfterApproval(contentId) {
         day: '2-digit'
       });
 
-      const actualSignerFullName = buildFullName(
+      // بناء الاسم مع job_name + الاسم الأول + الاسم الأخير فقط
+      const actualSignerFullNameWithJobName = buildJobNameFirstLast(
+        log.signer_job_name,
         log.actual_first_name,
-        log.actual_second_name,
-        log.actual_third_name,
         log.actual_last_name
       ) || log.actual_signer || 'N/A';
 
       approvalTableBody.push([
         { text: approvalType, style: 'tableCell' },
-        { text: fixArabicOrder(actualSignerFullName), style: 'tableCell' },
+        { text: fixArabicOrder(actualSignerFullNameWithJobName), style: 'tableCell' },
         { text: fixArabicOrder(log.signer_job_title || 'Not Specified'), style: 'tableCell' },
         { text: approvalMethod, style: 'tableCell' },
         getSignatureCell(log),
@@ -1638,16 +1453,16 @@ async function updateCommitteePDFAfterApproval(contentId) {
       ]);
 
       if (log.signed_as_proxy && log.original_user) {
-        const originalUserFullName = buildFullName(
+        // بناء الاسم مع job_name + الاسم الأول + الاسم الأخير فقط للمفوض الأصلي
+        const originalUserFullNameWithJobName = buildJobNameFirstLast(
+          log.original_job_name,
           log.original_first_name,
-          log.original_second_name,
-          log.original_third_name,
           log.original_last_name
         ) || log.original_user || 'N/A';
 
         approvalTableBody.push([
           { text: '(Proxy for)', style: 'proxyCell' },
-          { text: fixArabicOrder(originalUserFullName), style: 'proxyCell' },
+          { text: fixArabicOrder(originalUserFullNameWithJobName), style: 'proxyCell' },
           { text: fixArabicOrder(log.original_job_title || 'Not Specified'), style: 'proxyCell' },
           { text: 'Delegated', style: 'proxyCell' },
           { text: '-', style: 'proxyCell' },

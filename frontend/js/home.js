@@ -9,20 +9,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  const payload = JSON.parse(atob(token.split('.')[1] || '{}'));
+  // استخدام الطريقة الآمنة لجلب معلومات المستخدم
+  const payload = await safeGetUserInfo(token);
+  if (!payload) {
+    localStorage.removeItem('token');
+    window.location.href = '/frontend/html/login.html';
+    return;
+  }
+  
   const userId  = payload.id;
   const role    = payload.role;
   const isAdmin = role === 'admin';
   
   // التحقق من صحة التوكن
   if (!userId || !role) {
-    localStorage.removeItem('token');
-    window.location.href = '/frontend/html/login.html';
-    return;
-  }
-  
-  // التحقق من انتهاء صلاحية التوكن
-  if (payload.exp && payload.exp * 1000 < Date.now()) {
     localStorage.removeItem('token');
     window.location.href = '/frontend/html/login.html';
     return;
@@ -154,7 +154,8 @@ document.addEventListener('visibilitychange', async () => {
 async function updateNotifCount() {
   const token = localStorage.getItem('token');
   if (!token) return;
-  const payload = JSON.parse(atob(token.split('.')[1] || '{}'));
+  const payload = await safeGetUserInfo(token);
+  if (!payload) return;
   const userId  = payload.id;
   try {
     const notifRes = await fetch(`${apiBase}/users/${userId}/notifications/unread-count`, {

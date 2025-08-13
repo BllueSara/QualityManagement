@@ -78,12 +78,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   function getToken() {
     return localStorage.getItem('token');
   }
-  function getUserId() {
+  async function getUserId() {
     const token = getToken();
     if (!token) return null;
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload.id || payload.userId || payload.sub || null;
+      const payload = await safeGetUserInfo(token);
+      return payload ? (payload.id || payload.userId || payload.sub || null) : null;
     } catch {
       return null;
     }
@@ -151,7 +151,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // fetch user role & permissions
   async function fetchPermissions() {
-    const userId = getUserId();
+    const userId = await getUserId();
     if (!userId) return;
 
     try {

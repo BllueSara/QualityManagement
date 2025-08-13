@@ -76,6 +76,22 @@ async function fetchMonthlyPerformance() {
   return json.data;
 }
 
+// دالة جلب إحصائيات المحاضر
+async function fetchProtocolStats() {
+  const token = localStorage.getItem('token');
+  const res = await fetch('http://localhost:3006/api/dashboard/protocol-stats', {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (res.status === 401) {
+    alert(getTranslation('please-login'));
+    return { monthlyData: [], totalStats: {} };
+  }
+  const json = await res.json();
+  return json.data;
+}
+
 function getTranslation(key) {
   const lang = localStorage.getItem('language') || document.documentElement.lang || 'ar';
   if (window.translations && window.translations[lang] && window.translations[lang][key]) {
@@ -131,7 +147,7 @@ function updateChartTitles() {
 
 // دالة لتنظيف الرسوم البيانية الموجودة
 function destroyExistingCharts() {
-  const chartIds = ['ticketsChart', 'departmentChart', 'departmentPerformanceChart', 'committeeChart', 'committeePerformanceChart', 'monthlyTrendsChart'];
+  const chartIds = ['ticketsChart', 'departmentChart', 'departmentPerformanceChart', 'committeeChart', 'committeePerformanceChart', 'monthlyTrendsChart', 'protocolChart'];
   chartIds.forEach(chartId => {
     const canvas = document.getElementById(chartId);
     if (canvas) {
@@ -342,6 +358,17 @@ function renderStats(data) {
   document.getElementById('approved-contents').textContent = data.approved_contents;
   document.getElementById('committee-count').textContent = data.committees;
   document.getElementById('pending-committee-contents').textContent = data.committee_contents_pending;
+  
+  // إضافة إحصائيات المحاضر
+  const totalProtocolsElement = document.getElementById('total-protocols');
+  const pendingProtocolsElement = document.getElementById('pending-protocols');
+  const approvedProtocolsElement = document.getElementById('approved-protocols');
+  const rejectedProtocolsElement = document.getElementById('rejected-protocols');
+  
+  if (totalProtocolsElement) totalProtocolsElement.textContent = data.total_protocols || 0;
+  if (pendingProtocolsElement) pendingProtocolsElement.textContent = data.pending_protocols || 0;
+  if (approvedProtocolsElement) approvedProtocolsElement.textContent = data.approved_protocols || 0;
+  if (rejectedProtocolsElement) rejectedProtocolsElement.textContent = data.rejected_protocols || 0;
 }
 
 function makeCardsClickable() {
@@ -463,6 +490,29 @@ function makeCardsClickable() {
       });
     }
   }
+
+  // جعل بطاقات المحاضر قابلة للنقر
+  const protocolElements = [
+    'total-protocols', 
+    'pending-protocols', 
+    'approved-protocols', 
+    'rejected-protocols'
+  ];
+  
+  protocolElements.forEach(elementId => {
+    const element = document.getElementById(elementId);
+    if (element) {
+      const card = element.closest('.stat-card');
+      if (card) {
+        card.style.cursor = 'pointer';
+        card.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          window.location.href = 'protocol-list.html';
+        });
+      }
+    }
+  });
 }
 
 
@@ -1067,6 +1117,102 @@ function renderMonthlyTrendsChart(data) {
   }
 }
 
+// دالة عرض رسم بياني للمحاضر
+function renderProtocolChart(protocolData) {
+  if (!protocolData || !protocolData.totalStats) {
+    const canvas = document.getElementById('protocolChart');
+    if (canvas) {
+      canvas.style.display = 'none';
+      canvas.parentElement.innerHTML = '<div class="chart-loading">لا توجد بيانات متاحة</div>';
+    }
+    return;
+  }
+
+  const canvas = ensureCanvasExists('protocolChart');
+  if (!canvas) return;
+
+  const { totalStats } = protocolData;
+  const labels = [
+    getTranslation('pending-protocols') || 'محاضر بانتظار الاعتماد',
+    getTranslation('approved-protocols') || 'المحاضر المعتمدة',
+    getTranslation('rejected-protocols') || 'المحاضر المرفوضة'
+  ];
+  
+  const data = [
+    totalStats.pending_protocols || 0,
+    totalStats.approved_protocols || 0,
+    totalStats.rejected_protocols || 0
+  ];
+
+  try {
+    new Chart(canvas.getContext('2d'), {
+      type: 'pie',
+      data: {
+        labels,
+        datasets: [{
+          data,
+          backgroundColor: [
+            '#ffc107', // أصفر للمحاضر بانتظار الاعتماد
+            '#28a745', // أخضر للمحاضر المعتمدة  
+            '#dc3545'  // أحمر للمحاضر المرفوضة
+          ],
+          borderColor: [
+            '#e0a800',
+            '#1e7e34',
+            '#c82333'
+          ],
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'nearest',
+          intersect: false
+        },
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              padding: 20,
+              usePointStyle: true,
+              font: {
+                size: 13,
+                family: "'Tajawal', 'Arial', sans-serif"
+              }
+            }
+          },
+          tooltip: {
+            enabled: true,
+            mode: 'nearest',
+            intersect: false,
+            callbacks: {
+              label: function(context) {
+                const label = context.label || '';
+                const value = context.parsed;
+                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                return `${label}: ${value} (${percentage}%)`;
+              }
+            },
+            titleFont: {
+              size: 14,
+              family: "'Tajawal', 'Arial', sans-serif"
+            },
+            bodyFont: {
+              size: 13,
+              family: "'Tajawal', 'Arial', sans-serif"
+            }
+          }
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error rendering protocol chart:', error);
+  }
+}
+
 (async () => {
   try {
     // إظهار حالة التحميل
@@ -1076,12 +1222,13 @@ function renderMonthlyTrendsChart(data) {
     destroyExistingCharts();
     
     // جلب جميع البيانات
-    const [stats, closed7d, departmentStats, committeeStats, monthlyPerformance] = await Promise.all([
+    const [stats, closed7d, departmentStats, committeeStats, monthlyPerformance, protocolStats] = await Promise.all([
       fetchStats(),
       fetchClosedWeek(),
       fetchDepartmentStats(),
       fetchCommitteeStats(),
-      fetchMonthlyPerformance()
+      fetchMonthlyPerformance(),
+      fetchProtocolStats()
     ]);
     
     // عرض البيانات
@@ -1092,6 +1239,7 @@ function renderMonthlyTrendsChart(data) {
     renderCommitteeChart(committeeStats);
     renderCommitteePerformanceChart(committeeStats);
     renderMonthlyTrendsChart(monthlyPerformance);
+    renderProtocolChart(protocolStats);
     
     // جعل البطاقات قابلة للنقر
     makeCardsClickable();

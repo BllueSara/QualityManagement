@@ -68,34 +68,26 @@ const permissions = {
 // 1) مصفوفة الأسماء والاختيار
 let folderNames = [];
 let selectedFolderId = null;
-function getUserRoleFromToken() {
+async function getUserRoleFromToken() {
   const token = localStorage.getItem('token');
   if (!token) return null;
   try {
-      const base64Url = token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-      }).join(''));
-      return JSON.parse(jsonPayload).role; // يفترض أن الدور موجود في الحمولة كـ 'role'
+      const payload = await safeGetUserInfo(token);
+      return payload ? payload.role : null;
   } catch (e) {
-      console.error('Error decoding token:', e);
+      console.error('Error getting user role:', e);
       return null;
   }
 }
 
-function getUserIdFromToken() {
+async function getUserIdFromToken() {
   const token = localStorage.getItem('token');
   if (!token) return null;
   try {
-      const base64Url = token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-      }).join(''));
-      return JSON.parse(jsonPayload).id; // يفترض أن معرف المستخدم موجود في الحمولة كـ 'id'
+      const payload = await safeGetUserInfo(token);
+      return payload ? payload.id : null;
   } catch (e) {
-      console.error('Error decoding token:', e);
+      console.error('Error getting user ID:', e);
       return null;
   }
 }
@@ -494,24 +486,22 @@ if (cancelContentBtn) {
     // دالة لجلب التوكن من localStorage (مكررة، يمكن نقلها إلى shared.js)
 
 
-    // دالة لفك تشفير التوكن والحصول على دور المستخدم
-    function getUserRoleFromToken() {
+    // دالة لفك تشفير التوكن والحصول على دور المستخدم (آمنة)
+    async function getUserRoleFromToken() {
         const token = getToken();
         if (!token) return null;
         try {
-            const base64Url = token.split('.')[1];
-            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-            }).join(''));
-            return JSON.parse(jsonPayload).role; // افترض أن الدور موجود في الحمولة كـ 'role'
+            const payload = await safeGetUserInfo(token);
+            return payload ? payload.role : null;
         } catch (e) {
-            console.error('Error decoding token:', e);
+            console.error('Error getting user role:', e);
             return null;
         }
     }
 async function fetchPermissions() {
-  const userId = JSON.parse(atob(getToken().split('.')[1])).id;
+  const payload = await safeGetUserInfo(getToken());
+  if (!payload) return;
+  const userId = payload.id;
   const headers = { 'Authorization': `Bearer ${getToken()}` };
   // كالمعتاد: جلب role
   const userRes = await fetch(`${apiBase}/users/${userId}`, { headers });
@@ -573,7 +563,7 @@ async function fetchFolders(departmentId) {
     }
 
     // تصفية المجلدات حسب نوعها وصلاحيات المستخدم
-    const userRole = getUserRoleFromToken();
+    const userRole = await getUserRoleFromToken();
     const userDepartmentId = currentDepartmentId;
     const filteredFolders = await filterFoldersByType(data.data, userRole, userDepartmentId);
 
@@ -678,7 +668,7 @@ async function fetchFolders(departmentId) {
             backToFilesContainer.style.display = 'none';
         }
         
-        const userRole = getUserRoleFromToken();
+        const userRole = await getUserRoleFromToken();
 
         try {
             // جلب المحتويات العادية
@@ -1919,17 +1909,16 @@ addOldContentBtn.innerHTML =
     const fileControlsBar = document.querySelector('.file-controls-bar');
     if (fileControlsBar) {
       // دالة جلب صلاحيات المستخدم
-      function userCanAddOldContent() {
-        const role = getUserRoleFromToken();
+      async function userCanAddOldContent() {
+        const role = await getUserRoleFromToken();
         if (role === 'admin') return true;
         // تحقق من الصلاحيات الإضافية
-if (fileControlsBar && (getUserRoleFromToken() === 'admin' || permissions.canAddOldContent)) {
-  fileControlsBar.insertBefore(addOldContentBtn, document.getElementById('addContentBtn'));
-}
-
-        return false;
+        return permissions.canAddOldContent || false;
       }
-      if (userCanAddOldContent()) {
+      
+      // إضافة زر المحتوى القديم إذا كان لديه صلاحية
+      const canAdd = await userCanAddOldContent();
+      if (canAdd) {
         fileControlsBar.insertBefore(addOldContentBtn, document.getElementById('addContentBtn'));
       }
     }
@@ -2163,7 +2152,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (typeof window._lastFoldersData === 'undefined') return;
       
       // تصفية المجلدات حسب نوعها وصلاحيات المستخدم أولاً
-      const userRole = getUserRoleFromToken();
+      const userRole = await getUserRoleFromToken();
       const userDepartmentId = currentDepartmentId;
       const accessibleFolders = await filterFoldersByType(window._lastFoldersData, userRole, userDepartmentId);
       
@@ -2361,7 +2350,8 @@ async function filterFoldersByType(folders, userRole, userDepartmentId) {
   if (!token) return folders;
   
   try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
+    const payload = await safeGetUserInfo(token);
+    if (!payload) return folders;
     const userId = payload.id;
     
     const filteredFolders = [];

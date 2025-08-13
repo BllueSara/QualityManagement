@@ -53,17 +53,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Add function to update page direction
 function updatePageDirection(lang) {
-  const mainContent = document.querySelector('.file-card');
+  const mainContent = document.querySelector('.cards-container');
   if (mainContent) {
     mainContent.dir = lang === 'ar' ? 'rtl' : 'ltr';
     mainContent.style.textAlign = lang === 'ar' ? 'right' : 'left';
   }
 
-  // Update table direction
-  const table = document.querySelector('.approvals-table');
-  if (table) {
-    table.dir = lang === 'ar' ? 'rtl' : 'ltr';
-  }
+  // Update cards direction
+  document.querySelectorAll('.approval-card').forEach(card => {
+    card.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  });
+
+  // Update approval items direction
+  document.querySelectorAll('.approval-item').forEach(item => {
+    item.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  });
 
   // Update dropdowns direction
   document.querySelectorAll('.dropdown-custom').forEach(dropdown => {
@@ -76,7 +80,7 @@ function updatePageDirection(lang) {
   });
 
   // Update buttons direction
-  document.querySelectorAll('.btn-send, .btn-view').forEach(btn => {
+  document.querySelectorAll('.btn-send, .btn-view, .btn-deadline').forEach(btn => {
     btn.dir = lang === 'ar' ? 'rtl' : 'ltr';
   });
 
@@ -101,49 +105,59 @@ async function loadPendingApprovals() {
     fetchJSON(`${apiBase}/protocols/pending/approvals`)
   ]);
 
-  // DEBUG: Log raw data from backend
-  
-
-  const uniqueApprovalsMap = new Map();
-  
-  // إضافة محتويات الأقسام أولاً
-  (departmentApprovals || []).forEach(item => {
-    uniqueApprovalsMap.set(item.id, { ...item, type: 'department' });
-  });
-  
-  // إضافة محتويات اللجان (ستحل محل أي تكرارات بنفس الـ ID)
-  (committeeApprovals || []).forEach(item => {
-    uniqueApprovalsMap.set(item.id, { ...item, type: 'committee' });
-  });
-
-  // إضافة المحاضر (ستحل محل أي تكرارات بنفس الـ ID)
-  (protocolApprovals || []).forEach(item => {
-    // تأكد أن approvers_required مصفوفة
+  // تجهيز البيانات لكل نوع
+  const departments = (departmentApprovals || []).map(item => ({ ...item, type: 'department' }));
+  const committees = (committeeApprovals || []).map(item => ({ ...item, type: 'committee' }));
+  const protocols = (protocolApprovals || []).map(item => {
     let approversReq = item.approvers_required;
     try {
       if (typeof approversReq === 'string') {
         approversReq = JSON.parse(approversReq || '[]');
       }
     } catch { approversReq = []; }
-    uniqueApprovalsMap.set(item.id, { ...item, type: 'protocol', approvers_required: approversReq });
+    return { ...item, type: 'protocol', approvers_required: approversReq };
   });
 
-  const rawApprovals = Array.from(uniqueApprovalsMap.values());
+  // تحديث العدادات
+  document.getElementById('departmentCount').textContent = departments.length;
+  document.getElementById('committeeCount').textContent = committees.length;
+  document.getElementById('protocolCount').textContent = protocols.length;
 
-  // DEBUG: Log rawApprovals after initial mapping and de-duplication
-  
-
-  const tbody = document.querySelector('.approvals-table tbody');
-  tbody.innerHTML = '';
-
+  // تحديد المستخدم الحالي
   const token = localStorage.getItem('token');
-  const decodedToken = token ? JSON.parse(atob(token.split('.')[1])) : null;
+  const decodedToken = token ? await safeGetUserInfo(token) : null;
   const currentUserId = decodedToken ? decodedToken.id : null;
 
-  const approvals = rawApprovals.sort((a, b) => {
-    // Ensure approvers_required is an array before checking includes
-    const aApprovers = Array.isArray(a.approvers_required) ? a.approvers_required : (a.approvers_required ? JSON.parse(a.approvers_required) : []);
-    const bApprovers = Array.isArray(b.approvers_required) ? b.approvers_required : (b.approvers_required ? JSON.parse(b.approvers_required) : []);
+  // تحميل البيانات في كل بطاقة
+  loadCardItems('departmentItems', departments, currentUserId);
+  loadCardItems('committeeItems', committees, currentUserId);
+  loadCardItems('protocolItems', protocols, currentUserId);
+}
+
+function loadCardItems(containerId, items, currentUserId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  if (items.length === 0) {
+    container.innerHTML = `
+      <div class="no-items-message">
+        <i class="fas fa-inbox"></i>
+        <p>${getTranslation('no-pending-approvals') || 'لا توجد ملفات بانتظار الاعتماد'}</p>
+      </div>
+    `;
+    return;
+  }
+
+  // ترتيب العناصر حسب المستخدم المسئول
+  const sortedItems = items.sort((a, b) => {
+    const aApprovers = Array.isArray(a.approvers_required) 
+      ? a.approvers_required 
+      : (a.approvers_required ? JSON.parse(a.approvers_required) : []);
+    const bApprovers = Array.isArray(b.approvers_required) 
+      ? b.approvers_required 
+      : (b.approvers_required ? JSON.parse(b.approvers_required) : []);
 
     const aIsAssigned = currentUserId && aApprovers.includes(currentUserId);
     const bIsAssigned = currentUserId && bApprovers.includes(currentUserId);
@@ -154,96 +168,202 @@ async function loadPendingApprovals() {
     return new Date(b.created_at) - new Date(a.created_at);
   });
 
-  approvals.forEach(item => {
-    // 1) افصل الأسماء المرسَلة سابقًا
+  sortedItems.forEach(item => {
+    const approvalItem = createApprovalItem(item);
+    container.appendChild(approvalItem);
+  });
+}
+
+function createApprovalItem(item) {
+  // إعداد الأسماء المعينة
     const assignedNamesRaw = item.assigned_approvers || item.assignedApprovers || '';
     const assignedApproverNames = assignedNamesRaw
       ? assignedNamesRaw.split(',').map(a => a.trim()).filter(Boolean)
       : [];
     const hasApprovers = assignedApproverNames.length > 0;
 
-    // 2) ابني badges من الأسماء مع أرقام التسلسل
-    // الأسماء تأتي مرتبة من GROUP_CONCAT ORDER BY ca.sequence_number
+  // إعداد المعتمدين المطلوبين
+  const assignedApproverIds = Array.isArray(item.approvers_required)
+    ? item.approvers_required
+    : JSON.parse(item.approvers_required || '[]');
+
+  // إعداد badges المعتمدين
     const approverBadges = assignedApproverNames
       .map((name, index) => {
-        const sequenceNumber = index + 1; // ترتيب حسب الترتيب في GROUP_CONCAT
+      const sequenceNumber = index + 1;
         const isFirst = sequenceNumber === 1;
         const badgeColor = isFirst ? '#28a745' : '#6c757d';
-        return `<span class="badge" style="background-color: ${badgeColor}; color: white;" data-sequence="${sequenceNumber}">${sequenceNumber}. ${name}</span>`;
+        
+        // إضافة الأرقام للأقسام فقط، بدون أرقام للجان والمحاضر
+        const displayText = item.type === 'department' 
+          ? `${sequenceNumber}. ${name}` 
+          : name;
+        
+      return `<span class="badge removable-badge" style="background-color: ${badgeColor}; color: white;" data-sequence="${sequenceNumber}" data-approver-name="${name}">
+        ${displayText}
+        <button class="remove-approver-btn" data-approver-name="${name}" title="${getTranslation('remove-approver') || 'حذف المعتمد'}">
+          <i class="fas fa-times"></i>
+        </button>
+      </span>`;
       })
       .join('');
 
+  // تحديد نوع المحتوى
     const contentType = item.type === 'committee'
       ? getTranslation('committee-file')
       : item.type === 'protocol'
       ? getTranslation('protocol-file') || 'محضر'
       : getTranslation('department-report');
 
-    // 3) أنشئ العنصر <tr> وخزن الأسماء في data-assigned-names
-    const tr = document.createElement('tr');
-    tr.dataset.id             = item.id;
-    tr.dataset.type           = item.type;
-    tr.dataset.assignedNames  = JSON.stringify(assignedApproverNames);
-    // لو الـ item.approvers_required من السيرفر هو array من الأي ديز:
-    const assignedApproverIds = Array.isArray(item.approvers_required)
-      ? item.approvers_required
-      : JSON.parse(item.approvers_required || '[]');
-    tr.dataset.assignedIds = JSON.stringify(assignedApproverIds);
-    
+  // إنشاء العنصر
+  const approvalItem = document.createElement('div');
+  approvalItem.className = 'approval-item';
+  approvalItem.dataset.id = item.id;
+  approvalItem.dataset.type = item.type;
+  approvalItem.dataset.assignedNames = JSON.stringify(assignedApproverNames);
+  approvalItem.dataset.assignedIds = JSON.stringify(assignedApproverIds);
 
-    // 4) الغِ innerHTML القديمة أو أضف فوقها
-    tr.innerHTML = `
-      <td>
-${parseLocalizedName(item.title)}
-        <div class="content-meta">(${contentType} - ${parseLocalizedName(item.source_name)})</div>
-      </td>
-      <td>
-        <div class="dropdown-custom" data-type="dept">
-          <button class="dropdown-btn">${getTranslation('select-department')}</button>
-          <div class="dropdown-content">
-            <input type="text" class="dropdown-search" placeholder="${getTranslation('search-department')}">
-          </div>
-        </div>
-      </td>
-      <td>
-        <div class="dropdown-custom" data-type="users">
-          <button class="dropdown-btn" disabled>${getTranslation('select-department-first')}</button>
-          <div class="dropdown-content">
-            <input class="dropdown-search" placeholder="${getTranslation('search-person')}">
-          </div>
-        </div>
-      </td>
-      <td class="selected-cell">${approverBadges}</td>
-      <td>
-        <span class="${hasApprovers ? 'badge-sent' : 'badge-pending'}">
+  approvalItem.innerHTML = `
+    <div class="item-header">
+      <div class="item-title">
+        <h3>${parseLocalizedName(item.title)}</h3>
+        <div class="item-meta">${contentType} - ${parseLocalizedName(item.source_name)}</div>
+      </div>
+      <div class="item-status">
+        <span class="status-badge ${hasApprovers ? 'badge-sent' : 'badge-pending'}">
           ${hasApprovers ? getTranslation('sent') : getTranslation('waiting-send')}
         </span>
-      </td>
-      <td>
-        <button class="btn-send" style="padding:6px 12px;">
+      </div>
+    </div>
+    
+    <div class="item-content">
+      ${hasApprovers ? `
+        <div class="selected-approvers" style="margin-bottom: 12px;">
+          ${approverBadges}
+        </div>
+      ` : ''}
+      
+      ${item.type === 'department' ? `
+        <div class="department-transfer-note" style="margin-bottom: 8px;">
+          <span style="font-size: 11px; color: #6c757d; background: #f8f9fa; padding: 4px 8px; border-radius: 4px; border: 1px solid #e9ecef; display: inline-block;">
+            💡 ${getTranslation('internal-first-external-second') || 'داخلي أولاً، ثم خارجي'}
+          </span>
+        </div>
+      ` : ''}
+      
+      <div class="approval-controls" style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <div class="dropdown-group" style="flex: 1; min-width: 180px;">
+          <label class="dropdown-label" style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151; font-size: 0.9rem;">
+            📋 ${getTranslation('select-department') || 'اختر القسم'}
+          </label>
+          <div class="dropdown-custom" data-type="dept">
+            <button class="dropdown-btn">${getTranslation('select-department')}</button>
+            <div class="dropdown-content">
+              <input type="text" class="dropdown-search" placeholder="${getTranslation('search-department')}">
+            </div>
+          </div>
+        </div>
+        <div class="dropdown-group" style="flex: 1; min-width: 180px;">
+          <label class="dropdown-label" style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151; font-size: 0.9rem;">
+            👥 ${getTranslation('select-people') || 'اختر الأشخاص'}
+          </label>
+          <div class="dropdown-custom" data-type="users">
+            <button class="dropdown-btn" disabled>${getTranslation('select-department-first')}</button>
+            <div class="dropdown-content">
+              <input class="dropdown-search" placeholder="${getTranslation('search-person')}">
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      ${!hasApprovers ? `
+        <div class="selected-approvers">
+          ${approverBadges}
+        </div>
+      ` : ''}
+    </div>
+    
+    <div class="item-actions" style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px;">
+      <button class="btn-send" style="flex: 1; min-width: 120px;">
           <i class="bi ${hasApprovers ? 'bi-plus-circle' : 'bi-send'}"></i>
           ${hasApprovers ? getTranslation('add-more') : getTranslation('send')}
-          <span style="font-size: 10px; margin-left: 4px; opacity: 0.8;">(${getTranslation('sequential')})</span>
+        ${item.type === 'department' ? `<br><small style="font-size: 9px; opacity: 0.7;">(${getTranslation('sequential')})</small>` : ''}
         </button>
-                 <button class="btn-deadline" data-content-id="${item.id}" data-content-type="${item.type}" data-content-title="${item.title}" data-source-name="${item.source_name || ''}" title="${getTranslation('set-deadline')}">
-           <i class="bi bi-clock"></i> ${getTranslation('set-deadline')}
+        <button class="btn-deadline" data-content-id="${item.id}" data-content-type="${item.type}" data-content-title="${item.title}" data-source-name="${item.source_name || ''}" title="${getTranslation('set-deadline')}" style="flex: 0 0 auto;">
+           <i class="bi bi-clock"></i>
          </button>
         ${item.file_path
-          ? `<button class="btn-view" data-file-path="${item.file_path}" style="margin-right:5px;padding:6px 12px;">
-               <i class="bi bi-eye"></i> ${getTranslation('view')}
+        ? `<button class="btn-view" data-file-path="${item.file_path}" style="flex: 0 0 auto;">
+               <i class="bi bi-eye"></i>
              </button>`
           : ''}
-      </td>
-    `;
+    </div>
+  `;
 
-    tbody.appendChild(tr);
+  // إضافة event listeners للأزرار
+  addItemEventListeners(approvalItem, item);
 
-    // 5) زوّد مستمع للعرض إذا لزم الأمر
-    const viewButton = tr.querySelector('.btn-view');
+  return approvalItem;
+}
+
+function addItemEventListeners(approvalItem, item) {
+  // زر العرض
+  const viewButton = approvalItem.querySelector('.btn-view');
     if (viewButton) {
       viewButton.addEventListener('click', async e => {
         e.stopPropagation();
+      await handleViewFile(item);
+    });
+  }
 
+  // زر تحديد الموعد النهائي
+  const deadlineButton = approvalItem.querySelector('.btn-deadline');
+  if (deadlineButton) {
+    deadlineButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      const contentId = deadlineButton.dataset.contentId;
+      const contentType = deadlineButton.dataset.contentType;
+      const contentTitle = deadlineButton.dataset.contentTitle;
+      const sourceName = deadlineButton.dataset.sourceName;
+      
+      openDeadlineModal(contentId, contentType, contentTitle, sourceName);
+    });
+  }
+
+  // أزرار حذف المعتمدين
+  const removeButtons = approvalItem.querySelectorAll('.remove-approver-btn');
+  removeButtons.forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      
+      const approverName = btn.dataset.approverName;
+      const contentId = approvalItem.dataset.id;
+      const contentType = approvalItem.dataset.type;
+      
+      // التحقق من حالة الإرسال
+      const statusBadge = approvalItem.querySelector('.status-badge');
+      const isSent = statusBadge && statusBadge.classList.contains('badge-sent');
+      
+      if (isSent) {
+        // إذا تم الإرسال: طلب تأكيد
+        const confirmMessage = getTranslation('confirm-remove-approver') || 
+          `هل أنت متأكد من حذف "${approverName}" من قائمة المعتمدين؟`;
+        
+        if (!confirm(confirmMessage)) {
+          return; // إلغاء العملية
+        }
+      }
+      
+      // تنفيذ الحذف (مع أو بدون تأكيد حسب الحالة)
+      await handleRemoveApprover(approvalItem, approverName, contentId, contentType, isSent);
+    });
+  });
+
+  // زر الإرسال - سيتم إعداده في initDropdowns
+}
+
+async function handleViewFile(item) {
         // تسجيل عرض المحتوى
         try {
           let numericItemId = item.id;
@@ -273,93 +393,340 @@ ${parseLocalizedName(item.title)}
           });
         } catch (err) {
           console.error('Failed to log content view:', err);
-          // لا نوقف العملية إذا فشل تسجيل اللوق
         }
 
-        // تحقق من وجود file_path في item مباشرة (مثل approvals-recived.js)
+  // عرض الملف
         if (!item || !item.file_path) {
           showToast(getTranslation('file-link-unavailable'), 'error');
           return;
         }
         
         let filePath = item.file_path;
-        
-        // للتأكد من القيمة
-
-
-        // استخدام نفس منطق approvals-recived.js
         const baseApiUrl = apiBase.replace('/api', '');
         let fileBaseUrl;
 
-        // حالة ملفات اللجان (مسار يبدأ بـ backend/uploads/)
         if (filePath.startsWith('backend/uploads/')) {
           fileBaseUrl = `${baseApiUrl}/backend/uploads`;
-          // شيل البادئة بالكامل
           filePath = filePath.replace(/^backend\/uploads\//, '');
-        }
-        // حالة ملفات الأقسام (مسار يبدأ بـ uploads/)
-        else if (filePath.startsWith('uploads/')) {
+  } else if (filePath.startsWith('uploads/')) {
           fileBaseUrl = `${baseApiUrl}/uploads`;
-          // شيل البادئة
           filePath = filePath.replace(/^uploads\//, '');
-        }
-        // أي حالة ثانية نفترض نفس مجلد uploads
-        else {
+  } else {
           fileBaseUrl = `${baseApiUrl}/uploads`;
         }
 
         const url = `${fileBaseUrl}/${filePath}`;
-
                  window.open(url, '_blank');
-       });
-     }
+}
 
-     // إضافة event listener لزر المواعيد النهائية
-     const deadlineButton = tr.querySelector('.btn-deadline');
-     if (deadlineButton) {
-       deadlineButton.addEventListener('click', (e) => {
-         e.preventDefault();
-         const contentId = deadlineButton.dataset.contentId;
-         const contentType = deadlineButton.dataset.contentType;
-         const contentTitle = deadlineButton.dataset.contentTitle;
-         const sourceName = deadlineButton.dataset.sourceName;
-         
-         openDeadlineModal(contentId, contentType, contentTitle, sourceName);
-       });
-     }
+async function handleRemoveApprover(approvalItem, approverName, contentId, contentType, isSent = false) {
+  try {
+    // 1) جلب البيانات الحالية
+    const existingAssignedNames = JSON.parse(approvalItem.dataset.assignedNames || '[]');
+    const existingIds = JSON.parse(approvalItem.dataset.assignedIds || '[]');
+    
+    // 2) العثور على فهرس المعتمد المراد حذفه
+    const approverIndex = existingAssignedNames.indexOf(approverName);
+    if (approverIndex === -1) {
+      showToast('المعتمد غير موجود في القائمة', 'error');
+      return;
+    }
+    
+    // 3) إزالة المعتمد من القوائم
+    const updatedNames = existingAssignedNames.filter((_, index) => index !== approverIndex);
+    const updatedIds = existingIds.filter((_, index) => index !== approverIndex);
+    const removedUserId = existingIds[approverIndex];
+    
+    // 4) إذا لم يتم الإرسال بعد، حذف من الواجهة فقط
+    if (!isSent) {
+      // حذف مباشر من الواجهة بدون استدعاء الخادم
+      updateApprovalItemUI(approvalItem, updatedNames, updatedIds);
+      approvalItem.dataset.assignedNames = JSON.stringify(updatedNames);
+      approvalItem.dataset.assignedIds = JSON.stringify(updatedIds);
+      
+      showToast('تم حذف المعتمد من القائمة', 'success');
+      return; // انتهاء العملية هنا
+    }
+    
+    // 5) إذا تم الإرسال، إرسال طلب الحذف للخادم
+    let endpoint;
+    let requestBody;
+    
+    if (contentType === 'protocol') {
+      // للمحاضر: حذف المعتمد من الجدول وإعادة ترقيم التسلسل
+      endpoint = `${apiBase}/protocols/${contentId}/approvers/${removedUserId}`;
+      await fetchJSON(endpoint, { method: 'DELETE' });
+      
+      // إعادة ترقيم المعتمدين المتبقيين
+      if (updatedIds.length > 0) {
+        await Promise.all(
+          updatedIds.map((userId, index) =>
+            fetchJSON(`${apiBase}/protocols/${contentId}/approvers/${userId}/sequence`, {
+              method: 'PUT',
+              body: JSON.stringify({ sequenceNumber: index + 1 })
+            })
+          )
+        );
+      }
+    } else {
+      // للأقسام واللجان: تحديث قائمة المعتمدين
+      endpoint = contentType === 'committee' 
+        ? `${apiBase}/pending-committee-approvals/update-approvers`
+        : `${apiBase}/pending-approvals/update-approvers`;
+      
+      requestBody = {
+        contentId: contentId,
+        approvers: updatedIds
+      };
+      
+      await fetchJSON(endpoint, {
+        method: 'PUT',
+        body: JSON.stringify(requestBody)
+      });
+    }
+    
+    // 6) تحديث الواجهة
+    updateApprovalItemUI(approvalItem, updatedNames, updatedIds);
+    
+    // 7) تحديث البيانات المحفوظة
+    approvalItem.dataset.assignedNames = JSON.stringify(updatedNames);
+    approvalItem.dataset.assignedIds = JSON.stringify(updatedIds);
+    
+    showToast(getTranslation('approver-removed-success') || 'تم حذف المعتمد بنجاح', 'success');
+    
+    // 8) إعادة تحميل البيانات للتأكد من التحديث (فقط للمرسل)
+    await loadPendingApprovals();
+    await initDropdowns();
+    
+  } catch (error) {
+    console.error('Error removing approver:', error);
+    showToast(getTranslation('remove-approver-failed') || 'فشل في حذف المعتمد', 'error');
+  }
+}
+
+function updateApprovalItemUI(approvalItem, updatedNames, updatedIds) {
+  const selectedApproversDiv = approvalItem.querySelector('.selected-approvers');
+  if (!selectedApproversDiv) return;
+  
+  // إعادة بناء badges المعتمدين
+  selectedApproversDiv.innerHTML = '';
+  
+  if (updatedNames.length === 0) {
+    // لا يوجد معتمدين
+    const statusBadge = approvalItem.querySelector('.status-badge');
+    if (statusBadge) {
+      statusBadge.textContent = getTranslation('waiting-send') || 'بانتظار الإرسال';
+      statusBadge.className = 'status-badge badge-pending';
+    }
+    
+    const sendBtn = approvalItem.querySelector('.btn-send');
+    if (sendBtn) {
+      const contentType = approvalItem.dataset.type;
+      const sequentialText = contentType === 'department' 
+        ? `<span style="font-size: 10px; margin-right: 4px; opacity: 0.8;">(${getTranslation('sequential') || 'تسلسلي'})</span>`
+        : '';
+      
+      sendBtn.innerHTML = `
+        <i class="bi bi-send"></i>
+        ${getTranslation('send') || 'إرسال'}
+        ${sequentialText}
+      `;
+    }
+  } else {
+    // إعادة بناء badges
+    updatedNames.forEach((name, index) => {
+      const sequenceNumber = index + 1;
+      const isFirst = sequenceNumber === 1;
+      const badgeColor = isFirst ? '#28a745' : '#6c757d';
+      
+      const badge = document.createElement('span');
+      badge.className = 'badge removable-badge';
+      badge.style.backgroundColor = badgeColor;
+      badge.style.color = 'white';
+      badge.dataset.sequence = sequenceNumber;
+      badge.dataset.approverName = name;
+      
+      // إضافة الأرقام للأقسام فقط، بدون أرقام للجان والمحاضر
+      const contentType = approvalItem.dataset.type;
+      const displayText = contentType === 'department' 
+        ? `${sequenceNumber}. ${name}` 
+        : name;
+      
+      badge.innerHTML = `
+        ${displayText}
+        <button class="remove-approver-btn" data-approver-name="${name}" title="${getTranslation('remove-approver') || 'حذف المعتمد'}">
+          <i class="fas fa-times"></i>
+        </button>
+      `;
+      
+      selectedApproversDiv.appendChild(badge);
+    });
+    
+    // تحديث حالة الإرسال
+    const statusBadge = approvalItem.querySelector('.status-badge');
+    if (statusBadge) {
+      statusBadge.textContent = getTranslation('sent') || 'تم الإرسال';
+      statusBadge.className = 'status-badge badge-sent';
+    }
+    
+    const sendBtn = approvalItem.querySelector('.btn-send');
+    if (sendBtn) {
+      const contentType = approvalItem.dataset.type;
+      const sequentialText = contentType === 'department' 
+        ? `<span style="font-size: 10px; margin-right: 4px; opacity: 0.8;">(${getTranslation('sequential') || 'تسلسلي'})</span>`
+        : '';
+        
+      sendBtn.innerHTML = `
+        <i class="bi bi-plus-circle"></i>
+        ${getTranslation('add-more') || 'إضافة المزيد'}
+        ${sequentialText}
+      `;
+    }
+  }
+  
+  // إعادة ربط event listeners لأزرار الحذف الجديدة
+  const newRemoveButtons = selectedApproversDiv.querySelectorAll('.remove-approver-btn');
+  newRemoveButtons.forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      
+      const approverName = btn.dataset.approverName;
+      const contentId = approvalItem.dataset.id;
+      const contentType = approvalItem.dataset.type;
+      
+      // التحقق من حالة الإرسال
+      const statusBadge = approvalItem.querySelector('.status-badge');
+      const isSent = statusBadge && statusBadge.classList.contains('badge-sent');
+      
+      if (isSent) {
+        // إذا تم الإرسال: طلب تأكيد
+        const confirmMessage = getTranslation('confirm-remove-approver') || 
+          `هل أنت متأكد من حذف "${approverName}" من قائمة المعتمدين؟`;
+        
+        if (!confirm(confirmMessage)) {
+          return; // إلغاء العملية
+        }
+      }
+      
+      // تنفيذ الحذف (مع أو بدون تأكيد حسب الحالة)
+      await handleRemoveApprover(approvalItem, approverName, contentId, contentType, isSent);
+    });
    });
  }
 
 async function initDropdowns() {
   const departments = await fetchJSON(`${apiBase}/departments/all`);
-  document.querySelectorAll('tbody tr').forEach(row => {
-    const deptDrop = row.querySelector('[data-type=dept]');
-    const userDrop = row.querySelector('[data-type=users]');
-    const sendBtn  = row.querySelector('.btn-send');
+  document.querySelectorAll('.approval-item').forEach(approvalItem => {
+    const deptDrop = approvalItem.querySelector('[data-type=dept]');
+    const userDrop = approvalItem.querySelector('[data-type=users]');
+    const sendBtn  = approvalItem.querySelector('.btn-send');
 
     if (!sendBtn) return;
     let selectedDepts = [];
     let selectedUsers = [];
     let selectionCounter = 0; // عداد لترتيب الاختيار
+    const contentType = approvalItem.dataset.type;
 
     const deptBtn  = deptDrop.querySelector('.dropdown-btn');
     const deptList = deptDrop.querySelector('.dropdown-content');
     deptList.innerHTML = `<input type="text" class="dropdown-search" placeholder="${getTranslation('search-department')}">`;
-    departments.forEach(d => {
-      const itm = document.createElement('div');
-      itm.className     = 'dropdown-item';
-      itm.dataset.value = d.id;
-      let name = d.name;
-      const lang = localStorage.getItem('language') || 'ar';
-      try {
-        const parsed = typeof name === 'string' ? JSON.parse(name) : name;
-        name = parsed[lang] || parsed.ar || parsed.en || '';
-      } catch {}
+    
+    // للأقسام: ترتيب الأقسام بحسب نوع التحويل
+    if (contentType === 'department') {
+      // الحصول على القسم الحالي للملف
+      const currentDepartmentName = approvalItem.querySelector('.item-meta')?.textContent?.split(' - ')[1] || '';
+      
+      // تقسيم الأقسام: نفس القسم أولاً، ثم الباقي
+      const sameDepartments = departments.filter(d => {
+        const lang = localStorage.getItem('language') || 'ar';
+        try {
+          const parsed = typeof d.name === 'string' ? JSON.parse(d.name) : d.name;
+          const name = parsed[lang] || parsed.ar || parsed.en || '';
+          return name === currentDepartmentName;
+        } catch {
+          return d.name === currentDepartmentName;
+        }
+      });
+      
+      const otherDepartments = departments.filter(d => {
+        const lang = localStorage.getItem('language') || 'ar';
+        try {
+          const parsed = typeof d.name === 'string' ? JSON.parse(d.name) : d.name;
+          const name = parsed[lang] || parsed.ar || parsed.en || '';
+          return name !== currentDepartmentName;
+        } catch {
+          return d.name !== currentDepartmentName;
+        }
+      });
+      
+      // إضافة قسم "التحويل الداخلي" إذا كان هناك نفس القسم
+      if (sameDepartments.length > 0) {
+        const internalHeader = document.createElement('div');
+        internalHeader.className = 'dropdown-header';
+        internalHeader.style.cssText = 'padding: 6px 10px; background: #e8f5e8; color: #155724; font-weight: bold; font-size: 10px; text-transform: uppercase;';
+        internalHeader.innerHTML = `🏢 ${getTranslation('internal-transfer') || 'داخلي'}`;
+        deptList.appendChild(internalHeader);
+        
+        sameDepartments.forEach(d => {
+          const itm = document.createElement('div');
+          itm.className = 'dropdown-item internal-dept';
+          itm.dataset.value = d.id;
+          itm.dataset.transferType = 'internal';
+          let name = d.name;
+          const lang = localStorage.getItem('language') || 'ar';
+          try {
+            const parsed = typeof name === 'string' ? JSON.parse(name) : name;
+            name = parsed[lang] || parsed.ar || parsed.en || '';
+          } catch {}
+          itm.textContent = name;
+          itm.dataset.label = name;
+          deptList.appendChild(itm);
+        });
+      }
+      
+      // إضافة قسم "التحويل الخارجي"
+      if (otherDepartments.length > 0) {
+        const externalHeader = document.createElement('div');
+        externalHeader.className = 'dropdown-header';
+        externalHeader.style.cssText = 'padding: 6px 10px; background: #fff3cd; color: #856404; font-weight: bold; font-size: 10px; text-transform: uppercase; margin-top: 3px;';
+        externalHeader.innerHTML = `🔄 ${getTranslation('external-transfer') || 'خارجي'}`;
+        deptList.appendChild(externalHeader);
+        
+        otherDepartments.forEach(d => {
+          const itm = document.createElement('div');
+          itm.className = 'dropdown-item external-dept';
+          itm.dataset.value = d.id;
+          itm.dataset.transferType = 'external';
+          let name = d.name;
+          const lang = localStorage.getItem('language') || 'ar';
+          try {
+            const parsed = typeof name === 'string' ? JSON.parse(name) : name;
+            name = parsed[lang] || parsed.ar || parsed.en || '';
+          } catch {}
+          itm.textContent = name;
+          itm.dataset.label = name;
+          deptList.appendChild(itm);
+        });
+      }
+    } else {
+      // للجان والمحاضر: عرض عادي
+      departments.forEach(d => {
+        const itm = document.createElement('div');
+        itm.className     = 'dropdown-item';
+        itm.dataset.value = d.id;
+        let name = d.name;
+        const lang = localStorage.getItem('language') || 'ar';
+        try {
+          const parsed = typeof name === 'string' ? JSON.parse(name) : name;
+          name = parsed[lang] || parsed.ar || parsed.en || '';
+        } catch {}
 
-      itm.textContent = name;
-      itm.dataset.label = name;
-      deptList.appendChild(itm);
-    });
+        itm.textContent = name;
+        itm.dataset.label = name;
+        deptList.appendChild(itm);
+      });
+    }
 
     (function setupDeptDropdown() {
       const search = deptList.querySelector('.dropdown-search');
@@ -380,7 +747,11 @@ async function initDropdowns() {
         const item = e.target;
         item.classList.toggle('selected');
         selectedDepts = Array.from(deptList.querySelectorAll('.dropdown-item.selected'))
-                              .map(i => ({ id: i.dataset.value, name: i.textContent }));
+                              .map(i => ({ 
+                                id: i.dataset.value, 
+                                name: i.textContent.replace(/[🏢🔄]/g, '').trim(), // إزالة الأيقونات
+                                transferType: i.dataset.transferType || 'external'
+                              }));
         if (selectedDepts.length === 0) {
           deptBtn.textContent = getTranslation('select-department');
           selectedUsers = [];
@@ -399,7 +770,7 @@ async function initDropdowns() {
       const uBtn  = userDrop.querySelector('.dropdown-btn');
       const uList = userDrop.querySelector('.dropdown-content');
       uList.innerHTML = `<input type="text" class="dropdown-search" placeholder="${getTranslation('search-person')}">`;
-      const existingAssignedNames = JSON.parse(row.dataset.assignedNames || '[]');
+      const existingAssignedNames = JSON.parse(approvalItem.dataset.assignedNames || '[]');
 
       if (!selectedDepts.length) {
         uBtn.disabled = true;
@@ -411,7 +782,7 @@ async function initDropdowns() {
       uBtn.textContent = selectedUsers.length ? `${selectedUsers.length} ${getTranslation('selected-count')}` : getTranslation('select-people');
       
       // إعادة بناء القائمة المعروضة للمعتمدين المختارين
-      const selCell = row.querySelector('.selected-cell');
+      const selCell = approvalItem.querySelector('.selected-approvers');
       if (selCell && selectedUsers.length > 0) {
         selCell.innerHTML = '';
         
@@ -424,8 +795,9 @@ async function initDropdowns() {
         
         sortedUsers.forEach((u, index) => {
           const badge = document.createElement('span');
-          badge.className = 'badge';
+          badge.className = 'badge removable-badge';
           badge.dataset.sequence = index + 1;
+          badge.dataset.approverName = u.name;
           
           const lang = localStorage.getItem('language') || 'ar';
           const dept = selectedDepts.find(d => d.id === u.deptId);
@@ -436,8 +808,18 @@ async function initDropdowns() {
             deptName = parsed?.[lang] || parsed?.ar || parsed?.en || '';
           } catch {}
 
-          // إضافة رقم التسلسل مع الاسم
-          badge.textContent = `${index + 1}. ${u.name} (${deptName})`;
+          // إضافة الأرقام للأقسام فقط، بدون أرقام للجان والمحاضر
+          const contentType = approvalItem.dataset.type;
+          const displayText = contentType === 'department' 
+            ? `${index + 1}. ${u.name} (${deptName})` 
+            : `${u.name} (${deptName})`;
+
+          badge.innerHTML = `
+            ${displayText}
+            <button class="remove-approver-btn" data-approver-name="${u.name}" title="${getTranslation('remove-approver') || 'حذف المعتمد'}">
+              <i class="fas fa-times"></i>
+            </button>
+          `;
           
           // إضافة لون مختلف للمعتمد الأول
           if (index === 0) {
@@ -449,6 +831,36 @@ async function initDropdowns() {
           }
           
           selCell.appendChild(badge);
+        });
+        
+        // إضافة event listeners لأزرار الحذف
+        const removeButtons = selCell.querySelectorAll('.remove-approver-btn');
+        removeButtons.forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            
+            const approverName = btn.dataset.approverName;
+            const contentId = approvalItem.dataset.id;
+            const contentType = approvalItem.dataset.type;
+            
+            // التحقق من حالة الإرسال
+            const statusBadge = approvalItem.querySelector('.status-badge');
+            const isSent = statusBadge && statusBadge.classList.contains('badge-sent');
+            
+            if (isSent) {
+              // إذا تم الإرسال: طلب تأكيد
+              const confirmMessage = getTranslation('confirm-remove-approver') || 
+                `هل أنت متأكد من حذف "${approverName}" من قائمة المعتمدين؟`;
+              
+              if (!confirm(confirmMessage)) {
+                return; // إلغاء العملية
+              }
+            }
+            
+            // تنفيذ الحذف (مع أو بدون تأكيد حسب الحالة)
+            await handleRemoveApprover(approvalItem, approverName, contentId, contentType, isSent);
+          });
         });
       }
 
@@ -469,9 +881,19 @@ async function initDropdowns() {
           if (existingAssignedNames.includes(u.name)) return;
           const item = document.createElement('div');
           item.className = 'dropdown-item';
-          item.textContent = u.name;
+          
+          // للأقسام: إضافة مؤشر مبسط للتحويل الداخلي/الخارجي
+          if (contentType === 'department') {
+            const transferType = dept.transferType || 'external';
+            const icon = transferType === 'internal' ? '🏢' : '🔄';
+            item.innerHTML = `${icon} ${u.name}`;
+          } else {
+            item.textContent = u.name;
+          }
+          
           item.dataset.deptId = dept.id;
           item.dataset.userId = u.id;
+          item.dataset.transferType = dept.transferType || 'external';
           const existingUser = selectedUsers.find(x => x.id === u.id);
           if (existingUser) {
             item.classList.add('selected');
@@ -506,9 +928,16 @@ async function initDropdowns() {
         const userId = item.dataset.userId;
 
         if (item.classList.toggle('selected')) {
-          // إضافة المعتمد مع حفظ ترتيب الاختيار
+          // إضافة المعتمد مع حفظ ترتيب الاختيار ونوع التحويل
           selectionCounter++;
-          selectedUsers.push({ id: userId, name, deptId, selectedAt: selectionCounter });
+          const transferType = item.dataset.transferType || 'external';
+          selectedUsers.push({ 
+            id: userId, 
+            name, 
+            deptId, 
+            selectedAt: selectionCounter,
+            transferType: transferType
+          });
         } else {
           // إزالة المعتمد
           selectedUsers = selectedUsers.filter(x => x.id !== userId);
@@ -516,7 +945,7 @@ async function initDropdowns() {
 
         btn.textContent = selectedUsers.length ? `${selectedUsers.length} ${getTranslation('selected-count')}` : getTranslation('select-people');
 
-        const selCell = row.querySelector('.selected-cell');
+        const selCell = approvalItem.querySelector('.selected-approvers');
         selCell.innerHTML = '';
         
         // ترتيب المعتمدين حسب وقت الاختيار
@@ -524,8 +953,9 @@ async function initDropdowns() {
         
         sortedUsers.forEach((u, index) => {
           const badge = document.createElement('span');
-          badge.className = 'badge';
+          badge.className = 'badge removable-badge';
           badge.dataset.sequence = index + 1;
+          badge.dataset.approverName = u.name;
           
           const lang = localStorage.getItem('language') || 'ar';
           const dept = selectedDepts.find(d => d.id === u.deptId);
@@ -536,8 +966,18 @@ async function initDropdowns() {
             deptName = parsed?.[lang] || parsed?.ar || parsed?.en || '';
           } catch {}
 
-          // إضافة رقم التسلسل مع الاسم
-          badge.textContent = `${index + 1}. ${u.name} (${deptName})`;
+          // إضافة الأرقام للأقسام فقط، بدون أرقام للجان والمحاضر
+          const contentType = approvalItem.dataset.type;
+          const displayText = contentType === 'department' 
+            ? `${index + 1}. ${u.name} (${deptName})` 
+            : `${u.name} (${deptName})`;
+
+          badge.innerHTML = `
+            ${displayText}
+            <button class="remove-approver-btn" data-approver-name="${u.name}" title="${getTranslation('remove-approver') || 'حذف المعتمد'}">
+              <i class="fas fa-times"></i>
+            </button>
+          `;
           
           // إضافة لون مختلف للمعتمد الأول
           if (index === 0) {
@@ -550,14 +990,44 @@ async function initDropdowns() {
           
           selCell.appendChild(badge);
         });
+        
+        // إضافة event listeners لأزرار الحذف
+        const removeButtons = selCell.querySelectorAll('.remove-approver-btn');
+        removeButtons.forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            
+            const approverName = btn.dataset.approverName;
+            const contentId = approvalItem.dataset.id;
+            const contentType = approvalItem.dataset.type;
+            
+            // التحقق من حالة الإرسال
+            const statusBadge = approvalItem.querySelector('.status-badge');
+            const isSent = statusBadge && statusBadge.classList.contains('badge-sent');
+            
+            if (isSent) {
+              // إذا تم الإرسال: طلب تأكيد
+              const confirmMessage = getTranslation('confirm-remove-approver') || 
+                `هل أنت متأكد من حذف "${approverName}" من قائمة المعتمدين؟`;
+              
+              if (!confirm(confirmMessage)) {
+                return; // إلغاء العملية
+              }
+            }
+            
+            // تنفيذ الحذف (مع أو بدون تأكيد حسب الحالة)
+            await handleRemoveApprover(approvalItem, approverName, contentId, contentType, isSent);
+          });
+        });
       });
     })();
 
     // داخل initDropdowns، بعد ربط الـ dropdowns وأيقونة Send
     sendBtn.addEventListener('click', async () => {
-      // تحقق من وجود row قبل المتابعة
-      if (!row) {
-        showToast('حدث خطأ: لم يتم العثور على الصف.', 'error');
+      // تحقق من وجود approvalItem قبل المتابعة
+      if (!approvalItem) {
+        showToast('حدث خطأ: لم يتم العثور على العنصر.', 'error');
         return;
       }
       
@@ -565,15 +1035,15 @@ async function initDropdowns() {
       sendBtn.disabled = true;
       
       // 1) أقرأ الأسماء المخزّنة حالياً
-      const existingAssignedNames = row.dataset.assignedNames
-        ? JSON.parse(row.dataset.assignedNames)
+      const existingAssignedNames = approvalItem.dataset.assignedNames
+        ? JSON.parse(approvalItem.dataset.assignedNames)
         : [];
-      const existingIds = row.dataset.assignedIds
-        ? JSON.parse(row.dataset.assignedIds)
+      const existingIds = approvalItem.dataset.assignedIds
+        ? JSON.parse(approvalItem.dataset.assignedIds)
         : [];
 
       // 2) جلب اللي اختارهم المستخدم
-      const userItems = row.querySelectorAll('[data-type="users"] .dropdown-item.selected');
+      const userItems = approvalItem.querySelectorAll('[data-type="users"] .dropdown-item.selected');
       const newUsers  = Array.from(userItems)
         .map(el => ({ id: +el.dataset.userId, name: el.textContent.trim() }))
         .filter(u => !existingAssignedNames.includes(u.name));
@@ -584,7 +1054,7 @@ async function initDropdowns() {
       }
 
       // 3) جلب الترتيب من الواجهة المعروضة حالياً
-      const selCell = row.querySelector('.selected-cell');
+      const selCell = approvalItem.querySelector('.selected-approvers');
       const displayedBadges = selCell.querySelectorAll('.badge');
       
       // إنشاء خريطة للترتيب المعروض
@@ -599,14 +1069,32 @@ async function initDropdowns() {
         }
       });
       
-      // إذا لم تكن هناك badges معروضة، استخدم ترتيب الاختيار
+      // ترتيب المعتمدين الجدد
       let sortedNewUsers;
       if (displayedBadges.length === 0) {
-        sortedNewUsers = newUsers.sort((a, b) => {
-          const aSelected = selectedUsers.find(u => u.id === a.id);
-          const bSelected = selectedUsers.find(u => u.id === b.id);
-          return (aSelected?.selectedAt || 0) - (bSelected?.selectedAt || 0);
-        });
+        // للأقسام: ترتيب بحسب نوع التحويل أولاً (داخلي ثم خارجي)، ثم بحسب وقت الاختيار
+        if (contentType === 'department') {
+          sortedNewUsers = newUsers.sort((a, b) => {
+            const aSelected = selectedUsers.find(u => u.id === a.id);
+            const bSelected = selectedUsers.find(u => u.id === b.id);
+            const aTransferType = aSelected?.transferType || 'external';
+            const bTransferType = bSelected?.transferType || 'external';
+            
+            // أولوية للتحويل الداخلي
+            if (aTransferType === 'internal' && bTransferType === 'external') return -1;
+            if (aTransferType === 'external' && bTransferType === 'internal') return 1;
+            
+            // إذا كان نفس النوع، ترتيب بحسب وقت الاختيار
+            return (aSelected?.selectedAt || 0) - (bSelected?.selectedAt || 0);
+          });
+        } else {
+          // للجان والمحاضر: ترتيب عادي بحسب وقت الاختيار
+          sortedNewUsers = newUsers.sort((a, b) => {
+            const aSelected = selectedUsers.find(u => u.id === a.id);
+            const bSelected = selectedUsers.find(u => u.id === b.id);
+            return (aSelected?.selectedAt || 0) - (bSelected?.selectedAt || 0);
+          });
+        }
       } else {
         // ترتيب المعتمدين الجدد حسب الترتيب المعروض
         sortedNewUsers = newUsers.sort((a, b) => {
@@ -620,9 +1108,9 @@ async function initDropdowns() {
       const allIds   = existingIds.concat(sortedNewUsers.map(u => u.id));
 
       // 4) أرسل الـ API
-      const contentId = row.dataset.id;
-      const isProtocol = row.dataset.type === 'protocol';
-      const endpoint  = row.dataset.type === 'committee'
+      const contentId = approvalItem.dataset.id;
+      const isProtocol = approvalItem.dataset.type === 'protocol';
+      const endpoint  = approvalItem.dataset.type === 'committee'
         ? 'pending-committee-approvals/send'
         : 'pending-approvals/send';
 
@@ -648,7 +1136,7 @@ async function initDropdowns() {
         }
         if (resp.status === 'success') {
           // 5) حدّث الواجهة
-          const selCell = row.querySelector('.selected-cell');
+          const selCell = approvalItem.querySelector('.selected-approvers');
           if (!selCell) {
             showToast('حدث خطأ: لم يتم العثور على خلية المختارين.', 'error');
             return;
@@ -665,6 +1153,9 @@ async function initDropdowns() {
             const sequenceNumber = index + 1;
             badge.dataset.sequence = sequenceNumber;
             
+            // إضافة الأرقام للأقسام فقط، بدون أرقام للجان والمحاضر
+            const contentType = approvalItem.dataset.type;
+            
             // تحقق إذا كان هذا المستخدم مفوض له
             const isNewUser = sortedNewUsers.some(u => u.name === name);
             if (isNewUser) {
@@ -672,11 +1163,17 @@ async function initDropdowns() {
               try {
                 const delegationResponse = await fetchJSON(`${apiBase}/users/${newUser.id}/delegation-status`);
                 if (delegationResponse && delegationResponse.delegated_by) {
-                  // هذا مفوض له، أضف إشارة مع رقم التسلسل
-                  badge.textContent = `${sequenceNumber}. ${name} (مفوض له)`;
+                  // هذا مفوض له، أضف إشارة
+                  const displayText = contentType === 'department' 
+                    ? `${sequenceNumber}. ${name} (مفوض له)` 
+                    : `${name} (مفوض له)`;
+                  badge.textContent = displayText;
                   badge.style.backgroundColor = '#ff6b6b'; // لون مختلف للمفوض له
                 } else {
-                  badge.textContent = `${sequenceNumber}. ${name}`;
+                  const displayText = contentType === 'department' 
+                    ? `${sequenceNumber}. ${name}` 
+                    : name;
+                  badge.textContent = displayText;
                   // لون حسب الترتيب
                   if (sequenceNumber === 1) {
                     badge.style.backgroundColor = '#28a745'; // أخضر للمعتمد الأول
@@ -685,8 +1182,11 @@ async function initDropdowns() {
                   }
                 }
               } catch (err) {
-                // إذا فشل التحقق، استخدم الاسم العادي مع رقم التسلسل
-                badge.textContent = `${sequenceNumber}. ${name}`;
+                // إذا فشل التحقق، استخدم الاسم العادي
+                const displayText = contentType === 'department' 
+                  ? `${sequenceNumber}. ${name}` 
+                  : name;
+                badge.textContent = displayText;
                 if (sequenceNumber === 1) {
                   badge.style.backgroundColor = '#28a745';
                 } else {
@@ -695,7 +1195,10 @@ async function initDropdowns() {
               }
             } else {
               // معتمد قديم
-              badge.textContent = `${sequenceNumber}. ${name}`;
+              const displayText = contentType === 'department' 
+                ? `${sequenceNumber}. ${name}` 
+                : name;
+              badge.textContent = displayText;
               if (sequenceNumber === 1) {
                 badge.style.backgroundColor = '#28a745'; // أخضر للمعتمد الأول
               } else {
@@ -708,12 +1211,12 @@ async function initDropdowns() {
           }
 
           // 6) خزّن القيم الجديدة في الـ data-attributes
-          row.dataset.assignedNames = JSON.stringify(allNames);
-          row.dataset.assignedIds   = JSON.stringify(allIds);
+          approvalItem.dataset.assignedNames = JSON.stringify(allNames);
+          approvalItem.dataset.assignedIds   = JSON.stringify(allIds);
 
           showToast(getTranslation('add-more-success'), 'success');
 
-          // 7) أعد تحميل الـ rows علشان تخزن الـ attributes الجديدة
+          // 7) أعد تحميل الـ البيانات
           await loadPendingApprovals();
           await initDropdowns();
         } else {
@@ -762,20 +1265,20 @@ async function openDeadlineModal(contentId, contentType, contentTitle, sourceNam
     document.getElementById('deadlineContentTitle').textContent = `${getTranslation('title')}: ${parseLocalizedName(contentTitle)}`;
     document.getElementById('deadlineContentType').textContent = `${getTranslation('type')}: ${contentType === 'committee' ? getTranslation('committee-file') : getTranslation('department-report')}`;
     // جلب المعتمدين الحاليين
-    let row = document.querySelector(`tr[data-id="${contentId}"]`);
-    if (!row) {
-      // إذا لم يتم العثور على الصف، جرب البحث بالبادئة
+    let approvalItem = document.querySelector(`.approval-item[data-id="${contentId}"]`);
+    if (!approvalItem) {
+      // إذا لم يتم العثور على العنصر، جرب البحث بالبادئة
       const prefix = contentType === 'department' ? 'dept-' : 'comm-';
       const prefixedId = `${prefix}${contentId}`;
-      row = document.querySelector(`tr[data-id="${prefixedId}"]`);
+      approvalItem = document.querySelector(`.approval-item[data-id="${prefixedId}"]`);
     }
-    if (!row) {
+    if (!approvalItem) {
       showToast('لم يتم العثور على بيانات المحتوى', 'error');
       return;
     }
 
-    const assignedNames = JSON.parse(row.dataset.assignedNames || '[]');
-    const assignedIds = JSON.parse(row.dataset.assignedIds || '[]');
+    const assignedNames = JSON.parse(approvalItem.dataset.assignedNames || '[]');
+    const assignedIds = JSON.parse(approvalItem.dataset.assignedIds || '[]');
 
     if (assignedNames.length === 0) {
       showToast('لا يوجد معتمدين محددين لهذا المحتوى', 'error');
@@ -820,11 +1323,16 @@ async function openDeadlineModal(contentId, contentType, contentTitle, sourceNam
       const name = assignedNames[i];
       const userId = assignedIds[i];
       
+      // إضافة الأرقام للأقسام فقط، بدون أرقام للجان والمحاضر
+      const displayName = contentType === 'department' 
+        ? `${i + 1}. ${name}` 
+        : name;
+      
       const deadlineItem = document.createElement('div');
       deadlineItem.className = 'deadline-item';
       deadlineItem.innerHTML = `
         <div class="deadline-item-info">
-          <div class="deadline-item-name">${i + 1}. ${name}</div>
+          <div class="deadline-item-name">${displayName}</div>
           <div class="deadline-item-department">${getTranslation('approver')}</div>
         </div>
         <div class="deadline-time-inputs">
@@ -884,19 +1392,19 @@ async function saveDeadlines() {
       return;
     }
 
-    let row = document.querySelector(`tr[data-id="${contentId}"]`);
-    if (!row) {
-      // إذا لم يتم العثور على الصف، جرب البحث بالبادئة
+    let approvalItem = document.querySelector(`.approval-item[data-id="${contentId}"]`);
+    if (!approvalItem) {
+      // إذا لم يتم العثور على العنصر، جرب البحث بالبادئة
       const prefix = contentType === 'department' ? 'dept-' : 'comm-';
       const prefixedId = `${prefix}${contentId}`;
-      row = document.querySelector(`tr[data-id="${prefixedId}"]`);
+      approvalItem = document.querySelector(`.approval-item[data-id="${prefixedId}"]`);
     }
-    if (!row) {
+    if (!approvalItem) {
       showToast('لم يتم العثور على بيانات المحتوى', 'error');
       return;
     }
 
-    const assignedIds = JSON.parse(row.dataset.assignedIds || '[]');
+    const assignedIds = JSON.parse(approvalItem.dataset.assignedIds || '[]');
     const deadlines = [];
 
     // جمع البيانات من النافذة

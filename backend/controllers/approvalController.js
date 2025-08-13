@@ -2,6 +2,7 @@ const mysql = require('mysql2/promise');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
+const { buildJobNameFirstLast } = require('../models/userUtils');
 
 // استيراد مكتبة arabic-reshaper لمعالجة النصوص العربية
 
@@ -926,18 +927,12 @@ async function generateFinalSignedPDF(contentId) {
       day: '2-digit'
     });
 
-    // بناء الاسم الكامل للموقع الفعلي مع job_name
-    const actualSignerFullName = buildFullName(
+    // بناء الاسم مع job_name + الاسم الأول + الاسم الأخير فقط
+    const actualSignerFullNameWithJobName = buildJobNameFirstLast(
+      log.signer_job_name,
       log.actual_first_name,
-      log.actual_second_name,
-      log.actual_third_name,
       log.actual_last_name
     ) || log.actual_signer || 'N/A';
-    
-    // إضافة job_name كبادئة للاسم إذا كان موجوداً
-    const actualSignerFullNameWithJobName = log.signer_job_name && log.signer_job_name.trim() 
-      ? `${log.signer_job_name} ${actualSignerFullName}` 
-      : actualSignerFullName;
 
     // إضافة صف الاعتماد مع معالجة النصوص العربية
     approvalTableBody.push([
@@ -951,18 +946,12 @@ async function generateFinalSignedPDF(contentId) {
 
     // إذا كان تفويض، أضف صف إضافي للمفوض الأصلي
     if (log.signed_as_proxy && log.original_user) {
-      // بناء الاسم الكامل للمفوض الأصلي مع job_name
-      const originalUserFullName = buildFullName(
+      // بناء الاسم مع job_name + الاسم الأول + الاسم الأخير فقط للمفوض الأصلي
+      const originalUserFullNameWithJobName = buildJobNameFirstLast(
+        log.original_job_name,
         log.original_first_name,
-        log.original_second_name,
-        log.original_third_name,
         log.original_last_name
       ) || log.original_user || 'N/A';
-      
-      // إضافة job_name كبادئة للاسم إذا كان موجوداً
-      const originalUserFullNameWithJobName = log.original_job_name && log.original_job_name.trim() 
-        ? `${log.original_job_name} ${originalUserFullName}` 
-        : originalUserFullName;
 
       approvalTableBody.push([
         { text: '(Proxy for)', style: 'proxyCell' },
@@ -1271,17 +1260,12 @@ async function updatePDFAfterApproval(contentId) {
         day: '2-digit'
       });
 
-      const actualSignerFullName = buildFullName(
+      // بناء الاسم مع job_name + الاسم الأول + الاسم الأخير فقط
+      const actualSignerFullNameWithJobName = buildJobNameFirstLast(
+        log.signer_job_name,
         log.actual_first_name,
-        log.actual_second_name,
-        log.actual_third_name,
         log.actual_last_name
       ) || log.actual_signer || 'N/A';
-      
-      // إضافة job_name كبادئة للاسم إذا كان موجوداً
-      const actualSignerFullNameWithJobName = log.signer_job_name && log.signer_job_name.trim() 
-        ? `${log.signer_job_name} ${actualSignerFullName}` 
-        : actualSignerFullName;
 
       approvalTableBody.push([
         { text: approvalType, style: 'tableCell' },
@@ -1293,17 +1277,12 @@ async function updatePDFAfterApproval(contentId) {
       ]);
 
       if (log.signed_as_proxy && log.original_user) {
-        const originalUserFullName = buildFullName(
+        // بناء الاسم مع job_name + الاسم الأول + الاسم الأخير فقط للمفوض الأصلي
+        const originalUserFullNameWithJobName = buildJobNameFirstLast(
+          log.original_job_name,
           log.original_first_name,
-          log.original_second_name,
-          log.original_third_name,
           log.original_last_name
         ) || log.original_user || 'N/A';
-        
-        // إضافة job_name كبادئة للاسم إذا كان موجوداً
-        const originalUserFullNameWithJobName = log.original_job_name && log.original_job_name.trim() 
-          ? `${log.original_job_name} ${originalUserFullName}` 
-          : originalUserFullName;
 
         approvalTableBody.push([
           { text: '(Proxy for)', style: 'proxyCell' },

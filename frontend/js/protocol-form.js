@@ -68,6 +68,27 @@ async function maybeLoadProtocolForEdit() {
                 document.getElementById(`topicDiscussion-${idx}`).value = t.discussion || '';
                 document.getElementById(`topicDuration-${idx}`).value = t.duration || '';
                 document.getElementById(`topicEndDate-${idx}`).value = t.endDate ? String(t.endDate).split('T')[0] : '';
+                
+                // تحميل المناقشات الجانبية إن وجدت
+                if (Array.isArray(t.sideDiscussions) && t.sideDiscussions.length > 0) {
+                    t.sideDiscussions.forEach((sideDiscussion) => {
+                        addSideDiscussion(idx);
+                        
+                        // العثور على آخر مناقشة جانبية مضافة وملء بياناتها
+                        const sideDiscussionsContainer = document.getElementById(`sideDiscussions-${idx}`);
+                        const lastSideDiscussion = sideDiscussionsContainer.lastElementChild;
+                        if (lastSideDiscussion) {
+                            const sideId = lastSideDiscussion.id.replace('sideDiscussion-', '');
+                            const contentField = document.getElementById(`sideDiscussionContent-${sideId}`);
+                            const durationField = document.getElementById(`sideDiscussionDuration-${sideId}`);
+                            const endDateField = document.getElementById(`sideDiscussionEndDate-${sideId}`);
+                            
+                            if (contentField) contentField.value = sideDiscussion.content || '';
+                            if (durationField) durationField.value = sideDiscussion.duration || '';
+                            if (endDateField) endDateField.value = sideDiscussion.endDate ? String(sideDiscussion.endDate).split('T')[0] : '';
+                        }
+                    });
+                }
             });
             topicsSection.style.display = 'block';
         }
@@ -102,7 +123,11 @@ function generateTopics() {
     const topicsCount = parseInt(document.getElementById('topicsCount').value);
     
     if (topicsCount < 1 || topicsCount > 20) {
-        showToast('يرجى إدخال عدد صحيح بين 1 و 20', 'error');
+        const lang = localStorage.getItem('language') || 'ar';
+        const errorMessage = lang === 'ar' ? 
+            'يرجى إدخال عدد صحيح بين 1 و 20' : 
+            'Please enter a valid number between 1 and 20';
+        showToast(errorMessage, 'error');
         return;
     }
 
@@ -121,7 +146,12 @@ function generateTopics() {
     // إظهار قسم المواضيع
     topicsSection.style.display = 'block';
     
-    showToast(`تم إنشاء ${topicsCount} موضوع/مواضيع`, 'success');
+    // رسالة مترجمة
+    const lang = localStorage.getItem('language') || 'ar';
+    const successMessage = lang === 'ar' ? 
+        `تم إنشاء ${topicsCount} موضوع/مواضيع` : 
+        `${topicsCount} topic(s) created successfully`;
+    showToast(successMessage, 'success');
 }
 
 // إضافة موضوع جديد
@@ -150,9 +180,9 @@ function addTopic() {
         </div>
         
         <div class="form-group full-width required">
-            <label for="topicDiscussion-${topicCounter}" data-translate="topic-discussion">موضوع المناقشة</label>
+            <label for="topicDiscussion-${topicCounter}" data-translate="topic-discussion">المناقشة الرئيسية</label>
             <textarea id="topicDiscussion-${topicCounter}" name="topics[${topicCounter}][discussion]" 
-                      rows="3" placeholder="أدخل موضوع المناقشة بالتفصيل" data-translate-placeholder="placeholder-topic-discussion" required></textarea>
+                      rows="3" placeholder="أدخل المناقشة الرئيسية بالتفصيل" data-translate-placeholder="placeholder-topic-discussion" required></textarea>
         </div>
         
         <div class="row">
@@ -167,9 +197,28 @@ function addTopic() {
                        placeholder="yyyy/mm/dd" data-translate-placeholder="placeholder-topic-end-date" />
             </div>
         </div>
+        
+        <!-- قسم المناقشات الجانبية -->
+        <div class="side-discussions-section">
+            <div class="side-discussions-header">
+                <h4 data-translate="side-discussions">المناقشات الجانبية</h4>
+                <button type="button" class="add-side-discussion-btn" onclick="addSideDiscussion(${topicCounter})" data-translate="add-side-discussion">
+                    <i class="fas fa-plus"></i>
+                    إضافة مناقشة جانبية
+                </button>
+            </div>
+            <div class="side-discussions-container" id="sideDiscussions-${topicCounter}">
+                <!-- المناقشات الجانبية ستظهر هنا -->
+            </div>
+        </div>
     `;
     
     topicsContainer.appendChild(topicItem);
+    
+    // تطبيق الترجمات على العناصر الجديدة
+    if (typeof applyTranslations === 'function') {
+        applyTranslations();
+    }
     
     // إظهار قسم المواضيع إذا كان مخفياً
     topicsSection.style.display = 'block';
@@ -184,7 +233,10 @@ function removeTopic(topicId) {
     if (topicElement) {
         topicElement.remove();
         updateTopicsCount();
-        showToast('تم حذف الموضوع', 'info');
+        // رسالة مترجمة
+        const lang = localStorage.getItem('language') || 'ar';
+        const deleteMessage = lang === 'ar' ? 'تم حذف الموضوع' : 'Topic deleted';
+        showToast(deleteMessage, 'info');
     }
 }
 
@@ -195,6 +247,94 @@ function updateTopicsCount() {
     if (topicsCountInput) {
         topicsCountInput.value = topics.length;
     }
+}
+
+// إضافة مناقشة جانبية
+function addSideDiscussion(topicId) {
+    const sideDiscussionsContainer = document.getElementById(`sideDiscussions-${topicId}`);
+    if (!sideDiscussionsContainer) return;
+    
+    const existingSideDiscussions = sideDiscussionsContainer.querySelectorAll('.side-discussion-item');
+    const sideDiscussionId = existingSideDiscussions.length + 1;
+    const uniqueId = `${topicId}-${sideDiscussionId}`;
+    
+    const sideDiscussionItem = document.createElement('div');
+    sideDiscussionItem.className = 'side-discussion-item';
+    sideDiscussionItem.id = `sideDiscussion-${uniqueId}`;
+    
+    sideDiscussionItem.innerHTML = `
+        <div class="side-discussion-header">
+            <span class="side-discussion-number" data-translate="side-discussion-number">مناقشة جانبية ${sideDiscussionId}</span>
+            <button type="button" class="remove-side-discussion-btn" onclick="removeSideDiscussion('${uniqueId}')" title="حذف المناقشة الجانبية" data-translate-title="remove-side-discussion">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+        
+        <div class="form-group full-width required">
+            <label for="sideDiscussionContent-${uniqueId}" data-translate="side-discussion-content">محتوى المناقشة الجانبية</label>
+            <textarea id="sideDiscussionContent-${uniqueId}" name="topics[${topicId}][sideDiscussions][${sideDiscussionId}][content]" 
+                      rows="3" placeholder="أدخل محتوى المناقشة الجانبية" data-translate-placeholder="placeholder-side-discussion-content" required></textarea>
+        </div>
+        
+        <div class="row">
+            <div class="form-group">
+                <label for="sideDiscussionDuration-${uniqueId}" data-translate="side-discussion-duration">مدة</label>
+                <input type="text" id="sideDiscussionDuration-${uniqueId}" name="topics[${topicId}][sideDiscussions][${sideDiscussionId}][duration]" 
+                       placeholder="مثال: 15 يوم" data-translate-placeholder="placeholder-side-discussion-duration" />
+            </div>
+            <div class="form-group">
+                <label for="sideDiscussionEndDate-${uniqueId}" data-translate="side-discussion-end-date">تاريخ انتهاء</label>
+                <input type="date" id="sideDiscussionEndDate-${uniqueId}" name="topics[${topicId}][sideDiscussions][${sideDiscussionId}][endDate]" />
+            </div>
+        </div>
+    `;
+    
+    sideDiscussionsContainer.appendChild(sideDiscussionItem);
+    
+    // تطبيق الترجمات على العناصر الجديدة
+    if (typeof applyTranslations === 'function') {
+        applyTranslations();
+    }
+    
+    // رسالة مترجمة
+    const lang = localStorage.getItem('language') || 'ar';
+    const successMessage = lang === 'ar' ? 'تم إضافة مناقشة جانبية جديدة' : 'Side discussion added successfully';
+    showToast(successMessage, 'success');
+}
+
+// حذف مناقشة جانبية
+function removeSideDiscussion(uniqueId) {
+    const sideDiscussionElement = document.getElementById(`sideDiscussion-${uniqueId}`);
+    if (sideDiscussionElement) {
+        sideDiscussionElement.remove();
+        
+        // رسالة مترجمة
+        const lang = localStorage.getItem('language') || 'ar';
+        const deleteMessage = lang === 'ar' ? 'تم حذف المناقشة الجانبية' : 'Side discussion deleted';
+        showToast(deleteMessage, 'info');
+        
+        // إعادة ترقيم المناقشات الجانبية المتبقية
+        const topicId = uniqueId.split('-')[0];
+        renumberSideDiscussions(topicId);
+    }
+}
+
+// إعادة ترقيم المناقشات الجانبية
+function renumberSideDiscussions(topicId) {
+    const sideDiscussionsContainer = document.getElementById(`sideDiscussions-${topicId}`);
+    if (!sideDiscussionsContainer) return;
+    
+    const sideDiscussions = sideDiscussionsContainer.querySelectorAll('.side-discussion-item');
+    sideDiscussions.forEach((item, index) => {
+        const newNumber = index + 1;
+        const numberSpan = item.querySelector('.side-discussion-number');
+        if (numberSpan) {
+            // استخدام النص المترجم بدلاً من النص الثابت
+            const lang = localStorage.getItem('language') || 'ar';
+            const sideDiscussionText = lang === 'ar' ? 'مناقشة جانبية' : 'Side Discussion';
+            numberSpan.textContent = `${sideDiscussionText} ${newNumber}`;
+        }
+    });
 }
 
 // معالجة إرسال النموذج
@@ -242,12 +382,33 @@ function collectTopicsData() {
     
     topicElements.forEach((topicElement, index) => {
         const topicId = topicElement.id.split('-')[1];
+        
+        // جمع بيانات المناقشات الجانبية
+        const sideDiscussions = [];
+        const sideDiscussionElements = topicElement.querySelectorAll('.side-discussion-item');
+        
+        sideDiscussionElements.forEach((sideElement) => {
+            const sideId = sideElement.id.replace('sideDiscussion-', '');
+            const contentElement = document.getElementById(`sideDiscussionContent-${sideId}`);
+            const durationElement = document.getElementById(`sideDiscussionDuration-${sideId}`);
+            const endDateElement = document.getElementById(`sideDiscussionEndDate-${sideId}`);
+            
+            if (contentElement && contentElement.value.trim()) {
+                sideDiscussions.push({
+                    content: contentElement.value.trim(),
+                    duration: durationElement ? durationElement.value.trim() : '',
+                    endDate: endDateElement ? endDateElement.value : ''
+                });
+            }
+        });
+        
         const topicData = {
             id: topicId,
             subject: document.getElementById(`topicSubject-${topicId}`).value,
             discussion: document.getElementById(`topicDiscussion-${topicId}`).value,
             duration: document.getElementById(`topicDuration-${topicId}`).value,
-            endDate: document.getElementById(`topicEndDate-${topicId}`).value
+            endDate: document.getElementById(`topicEndDate-${topicId}`).value,
+            sideDiscussions: sideDiscussions
         };
         topics.push(topicData);
     });
@@ -399,6 +560,29 @@ function validateForm() {
                 isValid = false;
             }
         }
+
+        // التحقق من المناقشات الجانبية
+        const sideDiscussionElements = topicElement.querySelectorAll('.side-discussion-item');
+        sideDiscussionElements.forEach(sideElement => {
+            const sideId = sideElement.id.replace('sideDiscussion-', '');
+            const contentField = document.getElementById(`sideDiscussionContent-${sideId}`);
+            
+            // التحقق من محتوى المناقشة الجانبية
+            if (contentField && !contentField.value.trim()) {
+                showFieldError(contentField, 'محتوى المناقشة الجانبية مطلوب');
+                isValid = false;
+            } else if (contentField) {
+                clearFieldError(contentField);
+            }
+
+            // التحقق من تاريخ انتهاء المناقشة الجانبية
+            const sideEndDateField = document.getElementById(`sideDiscussionEndDate-${sideId}`);
+            if (sideEndDateField && sideEndDateField.value) {
+                if (!validateSideDiscussionEndDate(sideEndDateField)) {
+                    isValid = false;
+                }
+            }
+        });
     });
 
     return isValid;
@@ -424,6 +608,20 @@ function validateTopicEndDate(endDateField) {
     
     if (endDate <= protocolDate) {
         showFieldError(endDateField, 'تاريخ انتهاء الموضوع يجب أن يكون بعد تاريخ المحضر');
+        return false;
+    } else {
+        clearFieldError(endDateField);
+        return true;
+    }
+}
+
+// التحقق من صحة تاريخ انتهاء المناقشة الجانبية
+function validateSideDiscussionEndDate(endDateField) {
+    const endDate = new Date(endDateField.value);
+    const protocolDate = new Date(document.getElementById('protocolDate').value);
+    
+    if (endDate <= protocolDate) {
+        showFieldError(endDateField, 'تاريخ انتهاء المناقشة الجانبية يجب أن يكون بعد تاريخ المحضر');
         return false;
     } else {
         clearFieldError(endDateField);
@@ -521,7 +719,9 @@ function resetForm() {
             input.style.borderColor = '#d1d5db';
         });
         
-        showToast('تم إعادة تعيين النموذج', 'info');
+        const lang = localStorage.getItem('language') || 'ar';
+        const resetMessage = lang === 'ar' ? 'تم إعادة تعيين النموذج' : 'Form has been reset';
+        showToast(resetMessage, 'info');
     }
 }
 
@@ -850,4 +1050,9 @@ window.showToast = showToast;
 window.generateTopics = generateTopics;
 window.addTopic = addTopic;
 window.removeTopic = removeTopic;
+window.addSideDiscussion = addSideDiscussion;
+window.removeSideDiscussion = removeSideDiscussion;
+window.loadFoldersForDepartment = loadFoldersForDepartment;
+window.loadFoldersForCommittee = loadFoldersForCommittee;
+window.toggleAssignmentType = toggleAssignmentType;
 

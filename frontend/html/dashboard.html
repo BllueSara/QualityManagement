@@ -148,6 +148,50 @@
     </div>
   </div>
 
+  <!-- إجمالي المحاضر -->
+  <div class="stat-card">
+    <div class="stat-icon gradient-blue-10">
+      <i class="fas fa-file-alt fa-2x text-white"></i>
+    </div>
+    <div class="stat-info">
+      <div class="stat-label" data-translate="total-protocols">إجمالي المحاضر</div>
+      <div class="stat-value" id="total-protocols"></div>
+    </div>
+  </div>
+
+  <!-- محاضر بانتظار الاعتماد -->
+  <div class="stat-card">
+    <div class="stat-icon gradient-orange-1">
+      <i class="fas fa-hourglass-half fa-2x text-white"></i>
+    </div>
+    <div class="stat-info">
+      <div class="stat-label" data-translate="pending-protocols">محاضر بانتظار الاعتماد</div>
+      <div class="stat-value" id="pending-protocols"></div>
+    </div>
+  </div>
+
+  <!-- المحاضر المعتمدة -->
+  <div class="stat-card">
+    <div class="stat-icon gradient-green-1">
+      <i class="fas fa-check-circle fa-2x text-white"></i>
+    </div>
+    <div class="stat-info">
+      <div class="stat-label" data-translate="approved-protocols">المحاضر المعتمدة</div>
+      <div class="stat-value" id="approved-protocols"></div>
+    </div>
+  </div>
+
+  <!-- المحاضر المرفوضة -->
+  <div class="stat-card">
+    <div class="stat-icon gradient-red-1">
+      <i class="fas fa-times-circle fa-2x text-white"></i>
+    </div>
+    <div class="stat-info">
+      <div class="stat-label" data-translate="rejected-protocols">المحاضر المرفوضة</div>
+      <div class="stat-value" id="rejected-protocols"></div>
+    </div>
+  </div>
+
 </div>
 
 
@@ -189,6 +233,15 @@
                 </div>
             </div>
 
+            <!-- قسم إحصائيات المحاضر -->
+            <div class="charts-section">
+                <h2 data-translate="protocol-statistics">إحصائيات المحاضر</h2>
+                <div class="chart-container">
+                    <h3 data-translate="protocol-status-distribution">توزيع حالات المحاضر</h3>
+                    <canvas id="protocolChart"></canvas>
+                </div>
+            </div>
+
             <!-- قسم التحليل الشهري -->
             <div class="charts-section">
                 <h2 data-translate="monthly-analysis">التحليل الشهري</h2>
@@ -202,8 +255,8 @@
     <script src="../js/language.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="../js/dashboard.js"></script>
-    <script src="/frontend/js/check-status.js"></script>
-    <script>
+<script src="../js/check-status.js"></script>
+<script src="../js/utils.js"></script>    <script>
         document.addEventListener("DOMContentLoaded", () => {
             // إظهار المحتوى بعد تحميل اللغة
             setTimeout(() => {

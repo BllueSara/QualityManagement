@@ -16,6 +16,8 @@ router.get('/track/:id', protocolController.getProtocolTrack);
 router.get('/:id/approvals', protocolController.getApprovalLogs);
 router.post('/:id/approve', protocolController.handleApproval);
 router.post('/:id/approvers', protocolController.addApprover);
+router.delete('/:protocolId/approvers/:userId', protocolController.removeApprover);
+router.put('/:protocolId/approvers/:userId/sequence', protocolController.updateApproverSequence);
 router.get('/:id/pdf', protocolController.downloadPDF);
 router.get('/:id', protocolController.getProtocolById);
 router.put('/:id', protocolController.updateProtocol);

@@ -30,16 +30,12 @@ function getToken() {
 }
 
 // فكّ التوكن لاستخراج دور المستخدم
-function getUserRoleFromToken() {
+async function getUserRoleFromToken() {
   const token = getToken();
   if (!token) return null;
   try {
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(atob(base64).split('').map(c =>
-      '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
-    ).join(''));
-    return JSON.parse(jsonPayload).role;
+    const payload = await safeGetUserInfo(token);
+    return payload ? payload.role : null;
   } catch {
     return null;
   }
@@ -79,7 +75,9 @@ async function fetchClassifications() {
 async function fetchPermissions() {
   const token = getToken();
   if (!token) return;
-  const userId = JSON.parse(atob(token.split('.')[1])).id;
+  const payload = await safeGetUserInfo(token);
+  if (!payload) return;
+  const userId = payload.id;
   const res = await fetch(`${apiBase}/users/${userId}/permissions`, {
     headers: { 'Authorization': `Bearer ${token}` }
   });
@@ -307,9 +305,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const downloadBtn = document.getElementById('downloadBtn');
   // إظهار أو إخفاء زر التنزيل حسب الدور أو الصلاحية
+  const userRole = await getUserRoleFromToken();
   if (
-    getUserRoleFromToken() === 'admin' ||
-    getUserRoleFromToken() === 'manager_ovr' ||
+    userRole === 'admin' ||
+    userRole === 'manager_ovr' ||
     permissions.canDownloadReport
   ) {
     downloadBtn.style.display = 'inline-block';
@@ -324,9 +323,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadTicketsReport();
     // إعادة فحص الصلاحية بعد تغيير اللغة
     const dl = document.getElementById('downloadBtn');
+    const userRole = await getUserRoleFromToken();
     if (
-      getUserRoleFromToken() === 'admin' ||
-      getUserRoleFromToken() === 'manager_ovr' ||
+      userRole === 'admin' ||
+      userRole === 'manager_ovr' ||
       permissions.canDownloadReport
     ) {
       dl.style.display = 'inline-block';

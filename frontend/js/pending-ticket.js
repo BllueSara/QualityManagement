@@ -93,11 +93,13 @@ function updateTableUI() {
 document.addEventListener('DOMContentLoaded', async () => {
   const token = localStorage.getItem('token');
   const tbody = document.querySelector('tbody');
-      // console.log( token ? JSON.parse(atob(token.split('.')[1])) : 'no token' );
 
   if (!token) return;
 
-  const { role } = JSON.parse(atob(token.split('.')[1]));
+  const payload = await safeGetUserInfo(token);
+  if (!payload) return;
+  
+  const { role } = payload;
   const isAdmin = role === 'admin' || role === 'manager_ovr';
 
   // أخفِ كل العناصر المعلّمة بـ data-role="admin" إن لم يكن المستخدم Admin

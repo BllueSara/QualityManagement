@@ -10,31 +10,7 @@ const jwt = require('jsonwebtoken');
 // متغير عام لتخزين التفويضات النشطة (نفس طريقة approvalController.js)
 const globalProxies = {};
 
-// دالة مساعدة خارجية للتحقق من توقيع جميع المعتمدين السابقين في التسلسل
-async function checkPreviousProtocolApproversSigned(protocolId, currentSequence) {
-    try {
-        const [remainingApprovers] = await protocolModel.pool.execute(`
-            SELECT COUNT(*) AS count
-            FROM protocol_approvers pa
-            WHERE pa.protocol_id = ? 
-              AND pa.sequence_number < ?
-              AND NOT EXISTS (
-                SELECT 1 FROM protocol_approval_logs pal
-                WHERE pal.protocol_id = pa.protocol_id 
-                  AND (
-                    (pal.approver_id = pa.user_id AND pal.signed_as_proxy = 0 AND pal.status = 'approved')
-                    OR
-                    (pal.delegated_by = pa.user_id AND pal.signed_as_proxy = 1 AND pal.status = 'approved')
-                  )
-              )
-        `, [protocolId, currentSequence]);
-
-        return remainingApprovers[0].count === 0;
-    } catch (err) {
-        console.error('Error in checkPreviousProtocolApproversSigned:', err);
-        return false;
-    }
-}
+// تم إزالة دالة التحقق من التسلسل لأنه لم يعد مطلوباً
 
 class ProtocolController {
     // إنشاء محضر جديد
@@ -73,6 +49,18 @@ class ProtocolController {
                         success: false,
                         message: 'موضوع المحضر وموضوع المناقشة مطلوبان لكل موضوع'
                     });
+                }
+
+                // التحقق من صحة المناقشات الجانبية إن وجدت
+                if (topic.sideDiscussions && Array.isArray(topic.sideDiscussions)) {
+                    for (const sideDiscussion of topic.sideDiscussions) {
+                        if (sideDiscussion.content && !sideDiscussion.content.trim()) {
+                            return res.status(400).json({
+                                success: false,
+                                message: 'محتوى المناقشة الجانبية لا يمكن أن يكون فارغاً'
+                            });
+                        }
+                    }
                 }
             }
 
@@ -210,7 +198,14 @@ class ProtocolController {
                     discussion: topic.discussion,
                     duration: topic.duration,
                     endDate: topic.end_date,
-                    topicOrder: topic.topic_order
+                    topicOrder: topic.topic_order,
+                    sideDiscussions: (topic.sideDiscussions || []).map(sideDiscussion => ({
+                        id: sideDiscussion.id,
+                        content: sideDiscussion.content,
+                        duration: sideDiscussion.duration,
+                        endDate: sideDiscussion.end_date,
+                        discussionOrder: sideDiscussion.discussion_order
+                    }))
                 })),
                 approvers: protocol.approvers.map(approver => ({
                     id: approver.id,
@@ -284,6 +279,18 @@ class ProtocolController {
                         success: false,
                         message: 'موضوع المحضر وموضوع المناقشة مطلوبان لكل موضوع'
                     });
+                }
+
+                // التحقق من صحة المناقشات الجانبية إن وجدت
+                if (topic.sideDiscussions && Array.isArray(topic.sideDiscussions)) {
+                    for (const sideDiscussion of topic.sideDiscussions) {
+                        if (sideDiscussion.content && !sideDiscussion.content.trim()) {
+                            return res.status(400).json({
+                                success: false,
+                                message: 'محتوى المناقشة الجانبية لا يمكن أن يكون فارغاً'
+                            });
+                        }
+                    }
                 }
             }
 
@@ -512,19 +519,18 @@ class ProtocolController {
                         p.approval_status,
                         p.is_approved,
                         p.created_at,
-                        1 AS sequence_number,
                         ${getFullNameSQLWithAliasAndFallback('u')} AS created_by_name,
                         (SELECT COUNT(*) FROM protocol_topics WHERE protocol_id = p.id) AS topics_count,
                         (SELECT MAX(end_date) FROM protocol_topics WHERE protocol_id = p.id) AS latest_end_date,
                         (
-                          SELECT CONCAT('[', GROUP_CONCAT(pa2.user_id ORDER BY pa2.sequence_number SEPARATOR ','), ']')
+                          SELECT CONCAT('[', GROUP_CONCAT(pa2.user_id SEPARATOR ','), ']')
                           FROM protocol_approvers pa2
                           WHERE pa2.protocol_id = p.id
                         ) AS approvers_required,
                         (
                           SELECT GROUP_CONCAT(
                                    ${getFullNameSQLWithAliasAndFallback('u2')}
-                                   ORDER BY pa2.sequence_number SEPARATOR ','
+                                   SEPARATOR ','
                                  )
                           FROM protocol_approvers pa2
                           LEFT JOIN users u2 ON pa2.user_id = u2.id
@@ -547,19 +553,18 @@ class ProtocolController {
                         p.approval_status,
                         p.is_approved,
                         p.created_at,
-                        pa.sequence_number,
                         ${getFullNameSQLWithAliasAndFallback('u')} AS created_by_name,
                         (SELECT COUNT(*) FROM protocol_topics WHERE protocol_id = p.id) AS topics_count,
                         (SELECT MAX(end_date) FROM protocol_topics WHERE protocol_id = p.id) AS latest_end_date,
                         (
-                          SELECT CONCAT('[', GROUP_CONCAT(pa2.user_id ORDER BY pa2.sequence_number SEPARATOR ','), ']')
+                          SELECT CONCAT('[', GROUP_CONCAT(pa2.user_id SEPARATOR ','), ']')
                           FROM protocol_approvers pa2
                           WHERE pa2.protocol_id = p.id
                         ) AS approvers_required,
                         (
                           SELECT GROUP_CONCAT(
                                    ${getFullNameSQLWithAliasAndFallback('u2')}
-                                   ORDER BY pa2.sequence_number SEPARATOR ','
+                                   SEPARATOR ','
                                  )
                           FROM protocol_approvers pa2
                           LEFT JOIN users u2 ON pa2.user_id = u2.id
@@ -606,43 +611,8 @@ class ProtocolController {
                 allRows = rows;
             }
 
-            // للأدمن: تخطي فلترة التسلسل. لغير الأدمن: تطبيق منطق التسلسل
-            let finalRows = [];
-            if (canViewAll) {
-                finalRows = allRows;
-            } else {
-                const filteredRows = [];
-                const processedProtocolIds = new Set();
-
-                for (const row of allRows) {
-                    const protocolId = row.id;
-                    const sequenceNumber = row.sequence_number;
-
-                    // إذا كانت حالة المحضر مرفوضة، اعرضه بدون شرط التسلسل
-                    if (row.approval_status === 'rejected') {
-                        if (!processedProtocolIds.has(protocolId)) {
-                            filteredRows.push(row);
-                            processedProtocolIds.add(protocolId);
-                        }
-                        continue;
-                    }
-
-                    if (sequenceNumber === 1) {
-                        if (!processedProtocolIds.has(protocolId)) {
-                            filteredRows.push(row);
-                            processedProtocolIds.add(protocolId);
-                        }
-                        continue;
-                    }
-
-                    const isReady = await checkPreviousProtocolApproversSigned(protocolId, sequenceNumber);
-                    if (isReady && !processedProtocolIds.has(protocolId)) {
-                        filteredRows.push(row);
-                        processedProtocolIds.add(protocolId);
-                    }
-                }
-                finalRows = filteredRows;
-            }
+            // إزالة فلترة التسلسل - جميع المعتمدين يمكنهم الوصول للمحاضر المكلفين بها
+            let finalRows = allRows;
 
             // ترتيب بالإنشاء الأحدث
             finalRows.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -657,7 +627,7 @@ class ProtocolController {
                 filePath: p.file_path,
                 file_path: p.file_path,
                 createdAt: p.created_at,
-                sequenceNumber: p.sequence_number,
+
                 createdByName: p.created_by_name,
                 approvers_required: p.approvers_required,
                 topicsCount: p.topics_count,
@@ -869,7 +839,6 @@ class ProtocolController {
                 // للمستخدمين العاديين: التحقق من protocol_approvers
                 const [approverData] = await protocolModel.pool.execute(`
                     SELECT 
-                        pa.sequence_number,
                         p.title,
                         p.created_by,
                         p.is_approved,
@@ -913,30 +882,7 @@ class ProtocolController {
             const personalStatus = data.personal_status;
             const proxyStatus = data.proxy_status;
 
-            // التحقق من التسلسل - تحسين الأداء (الأدمن يمكنه التخطي)
-            if (currentSequence > 1 && !isAdmin) {
-                const [previousApprovers] = await protocolModel.pool.execute(`
-                    SELECT COUNT(*) as count
-                    FROM protocol_approvers pa
-                    WHERE pa.protocol_id = ? 
-                        AND pa.sequence_number < ?
-                        AND NOT EXISTS (
-                            SELECT 1 FROM protocol_approval_logs pal
-                            WHERE pal.protocol_id = pa.protocol_id 
-                              AND (
-                                (pal.approver_id = pa.user_id AND pal.status = 'approved')
-                                OR (pal.delegated_by = pa.user_id AND pal.signed_as_proxy = 1 AND pal.status = 'approved')
-                              )
-                        )
-                `, [protocolId, currentSequence]);
-
-                if (previousApprovers[0].count > 0) {
-                    return res.status(400).json({ 
-                        status: 'error', 
-                        message: 'لا يمكنك التوقيع حتى يوقع المعتمد السابق' 
-                    });
-                }
-            }
+            // إزالة التحقق من التسلسل - يمكن لجميع المعتمدين التوقيع في نفس الوقت
 
             // ——— منطق التوقيع المزدوج للمفوض له ———
             let delegatedBy = null;
@@ -2359,6 +2305,92 @@ class ProtocolController {
             });
         }
     }
+
+    // حذف معتمد من المحضر
+    async removeApprover(req, res) {
+        const auth = req.headers.authorization;
+        if (!auth?.startsWith('Bearer ')) {
+            return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+        }
+
+        let payload;
+        try {
+            payload = jwt.verify(auth.slice(7), process.env.JWT_SECRET);
+        } catch (err) {
+            return res.status(401).json({ status: 'error', message: 'Invalid token' });
+        }
+
+        const { protocolId, userId } = req.params;
+        
+        if (!protocolId || !userId) {
+            return res.status(400).json({ status: 'error', message: 'البيانات غير صالحة' });
+        }
+
+        try {
+            const connection = await protocolModel.pool.getConnection();
+            await connection.beginTransaction();
+
+            // حذف المعتمد
+            await connection.execute(
+                'DELETE FROM protocol_approvers WHERE protocol_id = ? AND user_id = ?',
+                [protocolId, userId]
+            );
+
+            // حذف سجلات الاعتماد المرتبطة
+            await connection.execute(
+                'DELETE FROM protocol_approval_logs WHERE protocol_id = ? AND approver_id = ?',
+                [protocolId, userId]
+            );
+
+            await connection.commit();
+            connection.release();
+
+            res.json({ status: 'success', message: 'تم حذف المعتمد بنجاح' });
+        } catch (error) {
+            console.error('Error removing protocol approver:', error);
+            res.status(500).json({ status: 'error', message: 'خطأ في حذف المعتمد' });
+        }
+    }
+
+    // تحديث تسلسل معتمد في المحضر
+    async updateApproverSequence(req, res) {
+        const auth = req.headers.authorization;
+        if (!auth?.startsWith('Bearer ')) {
+            return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+        }
+
+        let payload;
+        try {
+            payload = jwt.verify(auth.slice(7), process.env.JWT_SECRET);
+        } catch (err) {
+            return res.status(401).json({ status: 'error', message: 'Invalid token' });
+        }
+
+        const { protocolId, userId } = req.params;
+        const { sequenceNumber } = req.body;
+        
+        if (!protocolId || !userId || !sequenceNumber) {
+            return res.status(400).json({ status: 'error', message: 'البيانات غير صالحة' });
+        }
+
+        try {
+            const connection = await protocolModel.pool.getConnection();
+            
+            // تحديث رقم التسلسل
+            await connection.execute(
+                'UPDATE protocol_approvers SET sequence_number = ? WHERE protocol_id = ? AND user_id = ?',
+                [sequenceNumber, protocolId, userId]
+            );
+
+            connection.release();
+
+            res.json({ status: 'success', message: 'تم تحديث التسلسل بنجاح' });
+        } catch (error) {
+            console.error('Error updating protocol approver sequence:', error);
+            res.status(500).json({ status: 'error', message: 'خطأ في تحديث التسلسل' });
+        }
+    }
+
 }
 
 module.exports = new ProtocolController();

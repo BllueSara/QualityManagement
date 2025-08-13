@@ -494,3 +494,159 @@ html[lang="en"] .toast-container,
   margin-bottom: 0;
 }
 
+/* ===== تنسيقات المناقشات الجانبية ===== */
+.side-discussions-section {
+  margin-top: 25px;
+  padding: 20px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.side-discussions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.side-discussions-header h4 {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #475569;
+  margin: 0;
+}
+
+.add-side-discussion-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #10b981;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.add-side-discussion-btn:hover {
+  background-color: #059669;
+}
+
+.add-side-discussion-btn i {
+  font-size: 12px;
+}
+
+.side-discussions-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.side-discussion-item {
+  background-color: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 20px;
+  position: relative;
+}
+
+.side-discussion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.side-discussion-number {
+  font-weight: 500;
+  color: #475569;
+  font-size: 14px;
+}
+
+.remove-side-discussion-btn {
+  background-color: #ef4444;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.remove-side-discussion-btn:hover {
+  background-color: #dc2626;
+}
+
+.remove-side-discussion-btn i {
+  font-size: 11px;
+}
+
+/* تنسيقات خاصة للحقول داخل المناقشات الجانبية */
+.side-discussion-item .form-group {
+  margin-bottom: 15px;
+}
+
+.side-discussion-item .form-group label {
+  font-size: 13px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.side-discussion-item .form-group input,
+.side-discussion-item .form-group textarea {
+  border-color: #e2e8f0;
+  font-size: 13px;
+}
+
+.side-discussion-item .form-group textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.side-discussion-item .row {
+  margin-bottom: 0;
+  gap: 15px;
+}
+
+/* تجاوب مع الشاشات الصغيرة */
+@media (max-width: 768px) {
+  .side-discussions-header {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+  
+  .add-side-discussion-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .side-discussion-header {
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+  }
+  
+  .remove-side-discussion-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .side-discussion-item .row {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+

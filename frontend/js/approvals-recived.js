@@ -1107,7 +1107,8 @@ function showToast(message, type = 'info', duration = 3000) {
 // جلب صلاحيات المستخدم
 async function fetchPermissions() {
   if (!token) return;
-  const payload = JSON.parse(atob(token.split('.')[1] || '{}'));
+  const payload = await safeGetUserInfo(token);
+  if (!payload) return;
   const userId = payload.id, role = payload.role;
   if (role === 'admin') {
     permissionsKeys = ['*'];
@@ -1810,7 +1811,8 @@ if (btnElectronicApprove) {
       electronic_signature: true,
       notes: ''
     };
-    const tokenPayload = JSON.parse(atob(token.split('.')[1] || '{}'));
+    const tokenPayload = await safeGetUserInfo(token);
+    if (!tokenPayload) return;
     const myLog = Array.isArray(approvalLog) ? approvalLog.find(l => l.approver_id == tokenPayload.id) : null;
     console.log('[SIGN] approvalLog:', approvalLog);
     console.log('[SIGN] myLog:', myLog);
@@ -2003,7 +2005,8 @@ function setupSignatureModal() {
       signature: currentSignature,
       notes: ''
     };
-    const tokenPayload = JSON.parse(atob(token.split('.')[1] || '{}'));
+    const tokenPayload = await safeGetUserInfo(token);
+    if (!tokenPayload) return;
     const myLog = Array.isArray(approvalLog) ? approvalLog.find(l => l.approver_id == tokenPayload.id) : null;
     console.log('[SIGN] approvalLog:', approvalLog);
     console.log('[SIGN] myLog:', myLog);

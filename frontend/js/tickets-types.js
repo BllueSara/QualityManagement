@@ -3,14 +3,17 @@ const apiBase = 'http://localhost:3006/api';
 document.addEventListener('DOMContentLoaded', async () => {
   // دوال مساعدة
   const getToken = () => localStorage.getItem('token');
-  const parsePayload = () => {
+  const parsePayload = async () => {
     try {
-      return JSON.parse(atob(getToken().split('.')[1]));
+      const token = getToken();
+      if (!token) return {};
+      const payload = await safeGetUserInfo(token);
+      return payload || {};
     } catch {
       return {};
     }
   };
-  const payload  = parsePayload();
+  const payload  = await parsePayload();
   const userRole = payload.role;
 
   // 1) جلب مفاتيح الصلاحيات

@@ -69,9 +69,9 @@
           <label for="statusFilter" data-translate="status">الحالة</label>
           <select id="statusFilter">
             <option value="" data-translate="all-statuses">جميع الحالات</option>
-            <option value="active" data-translate="active">نشط</option>
-            <option value="completed" data-translate="completed">مكتمل</option>
-            <option value="overdue" data-translate="overdue">متأخر</option>
+            <option value="pending" data-translate="status-pending">في انتظار الاعتماد</option>
+            <option value="approved" data-translate="status-approved">معتمد</option>
+            <option value="rejected" data-translate="status-rejected">مرفوض</option>
           </select>
         </div>
         <div class="filter-group">
@@ -96,12 +96,12 @@
       <table class="protocol-table">
         <thead>
           <tr>
-            <th data-translate="protocol-title">عنوان المحضر</th>
-            <th data-translate="topics-count">عدد المواضيع</th>
-            <th data-translate="protocol-date">تاريخ المحضر</th>
-            <th data-translate="latest-end-date">آخر تاريخ انتهاء</th>
-            <th data-translate="status">الحالة</th>
-            <th data-translate="actions">الإجراءات</th>
+            <th data-translate="protocol-title" style="text-align: center;">عنوان المحضر</th>
+            <th data-translate="topics-count" style="text-align: center;">عدد المواضيع</th>
+            <th data-translate="protocol-date" style="text-align: center;">تاريخ المحضر</th>
+            <th data-translate="latest-end-date" style="text-align: center;">آخر تاريخ انتهاء</th>
+            <th data-translate="status" style="text-align: center;">الحالة</th>
+            <th data-translate="actions" style="text-align: center;">الإجراءات</th>
           </tr>
         </thead>
         <tbody id="protocolTableBody">
@@ -145,6 +145,8 @@
   <!-- Scripts -->
   <script src="../js/language.js"></script>
   <script src="../js/protocol-list.js"></script>
+  <script src="../js/check-status.js"></script>
+<script src="../js/utils.js"></script>
 </body>
 </html>
 

@@ -160,7 +160,9 @@ async function fetchPermissions() {
   }
   
   try {
-    const userId = JSON.parse(atob(token.split('.')[1])).id;
+    const payload = await safeGetUserInfo(token);
+    if (!payload) return;
+    const userId = payload.id;
     const headers = { 'Authorization': `Bearer ${token}` };
     
     const userRes = await fetch(`${apiBase}/api/users/${userId}`, { headers });
@@ -703,7 +705,8 @@ async function fetchFolderContents(folderId, folderName) {
     const contents = Array.isArray(responseJson.data)
       ? responseJson.data
       : (Array.isArray(responseJson) ? responseJson : []);
-    const decodedToken = JSON.parse(atob(token.split('.')[1]));
+    const decodedToken = await safeGetUserInfo(token);
+    if (!decodedToken) return [];
     const isAdmin = decodedToken.role === 'admin';
     const filteredContents = isAdmin ? contents : contents.filter(content => content.approval_status === 'approved');
     allContents = filteredContents;
@@ -1203,7 +1206,9 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
   // منطق إظهار الزر حسب الصلاحية
   if (addApprovedContentBtn) {
-    if (permissions.canAddApprovedContent || (window.localStorage.getItem('token') && JSON.parse(atob(window.localStorage.getItem('token').split('.')[1])).role === 'admin')) {
+    const token = window.localStorage.getItem('token');
+    const tokenPayload = token ? await safeGetUserInfo(token) : null;
+    if (permissions.canAddApprovedContent || (tokenPayload && tokenPayload.role === 'admin')) {
       addApprovedContentBtn.style.display = 'inline-block';
     } else {
       addApprovedContentBtn.style.display = 'none';

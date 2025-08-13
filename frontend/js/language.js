@@ -139,6 +139,17 @@ const translations = {
         'placeholder-topic-end-date': 'yyyy/mm/dd',
         'file-types-allowed': 'الملفات المسموحة: PDF, DOC, DOCX, JPG, JPEG, PNG',
         
+        // المناقشات الجانبية في فورم المحضر
+        'side-discussions': 'المناقشات الجانبية',
+        'add-side-discussion': 'إضافة مناقشة جانبية',
+        'side-discussion-number': 'مناقشة جانبية',
+        'side-discussion-content': 'محتوى المناقشة الجانبية',
+        'side-discussion-duration': 'مدة',
+        'side-discussion-end-date': 'تاريخ انتهاء',
+        'placeholder-side-discussion-content': 'أدخل محتوى المناقشة الجانبية',
+        'placeholder-side-discussion-duration': 'مثال: 15 يوم',
+        'remove-side-discussion': 'حذف المناقشة الجانبية',
+        
         // قائمة المحاضر
         'protocol-list-page-title': 'نظام إدارة الجودة والسلامة - قائمة المحاضر',
         'protocol-list': 'قائمة المحاضر',
@@ -155,6 +166,9 @@ const translations = {
         'protocols': 'المحاضر',
         'topics-count': 'عدد المواضيع',
         'latest-end-date': 'آخر تاريخ انتهاء',
+        'status-pending': 'في انتظار الاعتماد',
+        'status-approved': 'معتمد',
+        'status-rejected': 'مرفوض',
         'committees-dashboard-title': 'نظام إدارة الجودة والسلامة - لوحة اللجان',
         'committees-dashboard': 'لوحة اللجان',
         'committees-dashboard-subtitle': 'إدارة اللجان والمحاضر الخاصة بك',
@@ -339,6 +353,11 @@ const translations = {
         'request-approval': 'طلب اعتماد',
         'sequence': 'التسلسل',
         'sequential': 'تسلسلي',
+        'internal-transfer': 'داخلي',
+        'external-transfer': 'خارجي',
+        'internal': 'داخلي',
+        'external': 'خارجي',
+        'internal-first-external-second': 'داخلي أولاً، ثم خارجي',
         'current-approver': 'المعتمد الحالي',
         'waiting-turn': 'في انتظار دوره',
         'you-can-approve-now': 'يمكنك التوقيع الآن',
@@ -709,6 +728,14 @@ const translations = {
         'search-person': 'ابحث الشخص...',
         'sent': 'تم الإرسال',
         'waiting-send': 'بانتظار الإرسال',
+        'department-reports': 'تقارير الأقسام',
+        'committee-reports': 'تقارير اللجان',
+        'protocol-reports': 'المحاضر',
+        'no-pending-approvals': 'لا توجد ملفات بانتظار الاعتماد',
+        'remove-approver': 'حذف المعتمد',
+        'confirm-remove-approver': 'هل أنت متأكد من حذف هذا المعتمد من قائمة المعتمدين؟',
+        'approver-removed-success': 'تم حذف المعتمد بنجاح',
+        'remove-approver-failed': 'فشل في حذف المعتمد',
         'send': 'إرسال',
         'view': 'عرض',
         'please-select-users': 'الرجاء اختيار مستخدمين أولاً.',
@@ -1150,6 +1177,14 @@ const translations = {
         'closed-tickets': 'الاحداث العارضة المغلقة',
         'inprogress-tickets': 'الاحداث العارضة الجارية',
         'closed-last-7days': 'الاحداث العارضة المغلقة خلال آخر 7 أيام',
+        
+        // Protocol Statistics
+        'total-protocols': 'إجمالي المحاضر',
+        'pending-protocols': 'محاضر بانتظار الاعتماد',
+        'approved-protocols': 'المحاضر المعتمدة',
+        'rejected-protocols': 'المحاضر المرفوضة',
+        'protocol-statistics': 'إحصائيات المحاضر',
+        'protocol-status-distribution': 'توزيع حالات المحاضر',
 
         'notes-bulk': 'ملاحظات (تعمل على جميع الملفات)',
         // Dashboard Stats Cards
@@ -1750,6 +1785,11 @@ const translations = {
         'request-approval': 'Request Approval',
         'sequence': 'Sequence',
         'sequential': 'Sequential',
+        'internal-transfer': 'Internal',
+        'external-transfer': 'External',
+        'internal': 'Internal',
+        'external': 'External',
+        'internal-first-external-second': 'Internal first, then external',
         'current-approver': 'Current Approver',
         'waiting-turn': 'Waiting Turn',
         'you-can-approve-now': 'You can approve now',
@@ -2003,6 +2043,17 @@ const translations = {
     'placeholder-topic-end-date': 'yyyy/mm/dd',
     'file-types-allowed': 'Allowed files: PDF, DOC, DOCX, JPG, JPEG, PNG',
     
+    // Side Discussions in Protocol Form
+    'side-discussions': 'Side Discussions',
+    'add-side-discussion': 'Add Side Discussion',
+    'side-discussion-number': 'Side Discussion',
+    'side-discussion-content': 'Side Discussion Content',
+    'side-discussion-duration': 'Duration',
+    'side-discussion-end-date': 'End Date',
+    'placeholder-side-discussion-content': 'Enter side discussion content',
+    'placeholder-side-discussion-duration': 'Example: 15 days',
+    'remove-side-discussion': 'Delete side discussion',
+    
     // Protocol List
     'protocol-list-page-title': 'Quality and Safety Management System - Protocol List',
     'protocol-list': 'Protocol List',
@@ -2019,6 +2070,9 @@ const translations = {
     'protocols': 'Protocols',
     'topics-count': 'Topics Count',
     'latest-end-date': 'Latest End Date',
+    'status-pending': 'Pending Approval',
+    'status-approved': 'Approved',
+    'status-rejected': 'Rejected',
     'committees-dashboard-title': 'Quality and Safety Management System - Committees Dashboard',
     'committees-dashboard': 'Committees Dashboard',
     'committees-dashboard-subtitle': 'Manage your committees and protocols',
@@ -2251,6 +2305,14 @@ const translations = {
         'search-person': 'Search person...',
         'sent': 'Sent',
         'waiting-send': 'Waiting to Send',
+        'department-reports': 'Department Reports',
+        'committee-reports': 'Committee Reports', 
+        'protocol-reports': 'Protocols',
+        'no-pending-approvals': 'No pending approvals',
+        'remove-approver': 'Remove Approver',
+        'confirm-remove-approver': 'Are you sure you want to remove this approver from the list?',
+        'approver-removed-success': 'Approver removed successfully',
+        'remove-approver-failed': 'Failed to remove approver',
         'send': 'Send',
         'view': 'View',
         'please-select-users': 'Please select users first.',
@@ -2671,6 +2733,14 @@ const translations = {
         'closed-tickets': 'Closed OVR',
         'inprogress-tickets': 'In Progress OVR',
         'closed-last-7days': 'Closed OVR in Last 7 Days',
+        
+        // Protocol Statistics
+        'total-protocols': 'Total Protocols',
+        'pending-protocols': 'Pending Protocols',
+        'approved-protocols': 'Approved Protocols',
+        'rejected-protocols': 'Rejected Protocols',
+        'protocol-statistics': 'Protocol Statistics',
+        'protocol-status-distribution': 'Protocol Status Distribution',
         // Dashboard Stats Cards
         'new-tickets': 'New OVR',
         'total-users': 'Total Users',
@@ -3196,5 +3266,21 @@ function getTranslation(key) {
     return window.translations[lang][key];
   }
   return key;
-} 
+}
+
+// دالة لتطبيق الترجمات على العناصر الجديدة
+function applyTranslations() {
+  const lang = localStorage.getItem('language') || 'ar';
+  if (window.translations && window.translations[lang]) {
+    applyLanguageUI(lang);
+  }
+}
+
+// تصدير الدالة للاستخدام العام
+window.applyTranslations = applyTranslations;
+
+// Initialize language switcher when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+  initializeLanguageSwitcher();
+});
 

@@ -87,15 +87,24 @@ const apiBaseDept = 'http://localhost:3006/api/approvals/proxy';
 const apiBaseComm = 'http://localhost:3006/api/committee-approvals/proxy';
 const token = localStorage.getItem('token');
 let currentUserId = null;
-if (token) {
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    currentUserId = payload.id;
-    console.log('JWT payload:', payload);
-  } catch (e) {
-    console.error('فشل استخراج userId من التوكن', e);
+
+// دالة لتهيئة معلومات المستخدم
+async function initUserInfo() {
+  if (token) {
+    try {
+      const payload = await safeGetUserInfo(token);
+      if (payload) {
+        currentUserId = payload.id;
+        console.log('User payload:', payload);
+      }
+    } catch (e) {
+      console.error('فشل استخراج userId من التوكن', e);
+    }
   }
 }
+
+// تهيئة معلومات المستخدم عند تحميل الصفحة
+initUserInfo();
 // const currentLang = localStorage.getItem('language') || 'ar'; // تم إزالة التصريح المكرر - موجود في language.js
 
 // متغير عام لتخزين بيانات التفويض الحالي للمفوض له

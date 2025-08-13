@@ -104,13 +104,23 @@ const getStats = async (req, res) => {
         (SELECT COUNT(*) FROM committee_contents WHERE approval_status = 'pending') AS committee_contents_pending
     `);
 
+    const [[protocolStats]] = await db.execute(`
+      SELECT
+        COUNT(*) AS total_protocols,
+        SUM(CASE WHEN approval_status = 'pending' THEN 1 ELSE 0 END) AS pending_protocols,
+        SUM(CASE WHEN approval_status = 'approved' THEN 1 ELSE 0 END) AS approved_protocols,
+        SUM(CASE WHEN approval_status = 'rejected' THEN 1 ELSE 0 END) AS rejected_protocols
+      FROM protocols WHERE status = 'active'
+    `);
+
     return res.status(200).json({
       status: 'success',
       data: {
         ...rows[0],
         ...userStats,
         ...contentStats,
-        ...committeeStats
+        ...committeeStats,
+        ...protocolStats
       }
     });
 
@@ -257,6 +267,16 @@ const exportDashboardExcel = async (req, res) => {
       SELECT
         (SELECT COUNT(*) FROM committees) AS committees,
         (SELECT COUNT(*) FROM committee_contents WHERE approval_status = 'pending') AS committee_contents_pending
+    `);
+
+    // جلب إحصائيات المحاضر
+    const [[protocolStatsExcel]] = await db.execute(`
+      SELECT
+        COUNT(*) AS total_protocols,
+        SUM(CASE WHEN approval_status = 'pending' THEN 1 ELSE 0 END) AS pending_protocols,
+        SUM(CASE WHEN approval_status = 'approved' THEN 1 ELSE 0 END) AS approved_protocols,
+        SUM(CASE WHEN approval_status = 'rejected' THEN 1 ELSE 0 END) AS rejected_protocols
+      FROM protocols WHERE status = 'active'
     `);
 
     // جلب إحصائيات الأقسام
@@ -554,6 +574,37 @@ const exportDashboardExcel = async (req, res) => {
     ]);
     committeeData.font = { size: 14, bold: true };
     committeeData.alignment = { horizontal: 'center' };
+    
+    // إضافة مسافة
+    statsSheet.addRow([]);
+    statsSheet.addRow([]);
+    
+    // إحصائيات المحاضر
+    const protocolTitleRow = statsSheet.addRow(['إحصائيات المحاضر']);
+    protocolTitleRow.font = { bold: true, size: 16, color: { argb: 'FF2E86AB' } };
+    protocolTitleRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE8F4FD' }
+    };
+    statsSheet.mergeCells('A23:D23');
+    
+    const protocolHeaders = statsSheet.addRow(['إجمالي المحاضر', 'محاضر بانتظار الاعتماد', 'المحاضر المعتمدة', 'المحاضر المرفوضة']);
+    protocolHeaders.font = { bold: true, size: 12 };
+    protocolHeaders.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFF0F8FF' }
+    };
+    
+    const protocolData = statsSheet.addRow([
+      protocolStatsExcel.total_protocols || 0,
+      protocolStatsExcel.pending_protocols || 0,
+      protocolStatsExcel.approved_protocols || 0,
+      protocolStatsExcel.rejected_protocols || 0
+    ]);
+    protocolData.font = { size: 14, bold: true };
+    protocolData.alignment = { horizontal: 'center' };
     
     // ضبط عرض الأعمدة - زيادة العرض لحل مشكلة النص العربي
     statsSheet.columns.forEach(column => {
@@ -1126,4 +1177,88 @@ const getMonthlyPerformance = async (req, res) => {
   }
 };
 
-module.exports = { getStats, getClosedWeek, exportDashboardExcel, getDepartmentStats, getCommitteeStats, getMonthlyPerformance };
+const getProtocolStats = async (req, res) => {
+  try {
+    const auth = req.headers.authorization;
+    if (!auth?.startsWith('Bearer ')) {
+      return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+    }
+    const token = auth.slice(7);
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = payload.id;
+    const userRole = payload.role;
+
+    const permsSet = await getUserPerms(userId);
+    const canViewAll = (userRole === 'admin') || permsSet.has('view_dashboard');
+
+    let sql, params = [];
+    if (canViewAll) {
+      sql = `
+        SELECT
+          COUNT(*) AS total_protocols,
+          SUM(CASE WHEN approval_status = 'pending' THEN 1 ELSE 0 END) AS pending_protocols,
+          SUM(CASE WHEN approval_status = 'approved' THEN 1 ELSE 0 END) AS approved_protocols,
+          SUM(CASE WHEN approval_status = 'rejected' THEN 1 ELSE 0 END) AS rejected_protocols,
+          DATE_FORMAT(created_at, '%Y-%m') AS month,
+          COUNT(CASE WHEN DATE(created_at) = CURDATE() THEN 1 END) AS today_protocols,
+          COUNT(CASE WHEN created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 END) AS week_protocols
+        FROM protocols 
+        WHERE status = 'active'
+        GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+        ORDER BY month DESC
+        LIMIT 6
+      `;
+    } else {
+      sql = `
+        SELECT
+          COUNT(*) AS total_protocols,
+          SUM(CASE WHEN approval_status = 'pending' THEN 1 ELSE 0 END) AS pending_protocols,
+          SUM(CASE WHEN approval_status = 'approved' THEN 1 ELSE 0 END) AS approved_protocols,
+          SUM(CASE WHEN approval_status = 'rejected' THEN 1 ELSE 0 END) AS rejected_protocols,
+          DATE_FORMAT(created_at, '%Y-%m') AS month,
+          COUNT(CASE WHEN DATE(created_at) = CURDATE() THEN 1 END) AS today_protocols,
+          COUNT(CASE WHEN created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 END) AS week_protocols
+        FROM protocols 
+        WHERE status = 'active' AND created_by = ?
+        GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+        ORDER BY month DESC
+        LIMIT 6
+      `;
+      params.push(userId);
+    }
+
+    const [rows] = await db.execute(sql, params);
+    
+    // إضافة إحصائيات إجمالية
+    const totalSql = canViewAll ? 
+      `SELECT 
+        COUNT(*) AS total_protocols,
+        SUM(CASE WHEN approval_status = 'pending' THEN 1 ELSE 0 END) AS pending_protocols,
+        SUM(CASE WHEN approval_status = 'approved' THEN 1 ELSE 0 END) AS approved_protocols,
+        SUM(CASE WHEN approval_status = 'rejected' THEN 1 ELSE 0 END) AS rejected_protocols
+       FROM protocols WHERE status = 'active'` :
+      `SELECT 
+        COUNT(*) AS total_protocols,
+        SUM(CASE WHEN approval_status = 'pending' THEN 1 ELSE 0 END) AS pending_protocols,
+        SUM(CASE WHEN approval_status = 'approved' THEN 1 ELSE 0 END) AS approved_protocols,
+        SUM(CASE WHEN approval_status = 'rejected' THEN 1 ELSE 0 END) AS rejected_protocols
+       FROM protocols WHERE status = 'active' AND created_by = ?`;
+    
+    const totalParams = canViewAll ? [] : [userId];
+    const [[totalStats]] = await db.execute(totalSql, totalParams);
+
+    return res.status(200).json({ 
+      status: 'success', 
+      data: {
+        monthlyData: rows,
+        totalStats: totalStats
+      }
+    });
+
+  } catch (err) {
+    console.error('getProtocolStats error:', err);
+    res.status(500).json({ message: 'Error getting protocol statistics.' });
+  }
+};
+
+module.exports = { getStats, getClosedWeek, exportDashboardExcel, getDepartmentStats, getCommitteeStats, getMonthlyPerformance, getProtocolStats };

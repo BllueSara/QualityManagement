@@ -371,6 +371,72 @@ exports.sendApprovalRequest = async (req, res) => {
   }
 };
 
+exports.updateApprovers = async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith('Bearer ')) {
+    return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+  }
+
+  let payload;
+  try {
+    payload = jwt.verify(auth.slice(7), process.env.JWT_SECRET);
+  } catch (err) {
+    return res.status(401).json({ status: 'error', message: 'Invalid token' });
+  }
+
+  let { contentId, approvers } = req.body;
+
+  if (typeof contentId === 'string' && contentId.includes('-')) {
+    contentId = parseInt(contentId.split('-')[1], 10);
+  }
+
+  if (!contentId || !Array.isArray(approvers)) {
+    return res.status(400).json({ status: 'error', message: 'البيانات غير صالحة' });
+  }
+
+  const pool = mysql.createPool({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    waitForConnections: true,
+    connectionLimit: 10
+  });
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // حذف جميع المعتمدين الحاليين
+    await conn.execute(
+      'DELETE FROM content_approvers WHERE content_id = ?',
+      [contentId]
+    );
+
+    // إضافة المعتمدين الجدد
+    if (approvers.length > 0) {
+      const values = approvers.map(approverId => [contentId, approverId]);
+      await conn.query(
+        'INSERT INTO content_approvers (content_id, user_id) VALUES ?',
+        [values]
+      );
+
+      // ملاحظة: assigned_approvers يتم حسابه ديناميكياً في الاستعلامات باستخدام GROUP_CONCAT
+      // لذلك لا نحتاج لتحديثه هنا
+    }
+
+    await conn.commit();
+    pool.end();
+
+    res.json({ status: 'success', message: 'تم تحديث قائمة المعتمدين بنجاح' });
+  } catch (error) {
+    await conn.rollback();
+    pool.end();
+    console.error('Error updating approvers:', error);
+    res.status(500).json({ status: 'error', message: 'خطأ في تحديث المعتمدين' });
+  }
+};
+
 exports.delegateApproval = async (req, res) => {
   const auth = req.headers.authorization;
   if (!auth?.startsWith('Bearer ')) {

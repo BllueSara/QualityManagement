@@ -101,7 +101,11 @@ if (btnClearCache) {
   btnClearCache.onclick = async () => {
     // تحقق من أن المستخدم admin
     const authToken = localStorage.getItem('token') || '';
-    const payload = JSON.parse(atob(authToken.split('.')[1] || '{}'));
+    const payload = await safeGetUserInfo(authToken);
+    if (!payload) {
+      showToast('خطأ في جلب معلومات المستخدم', 'error');
+      return;
+    }
     const myRole = payload.role;
     
     if (myRole !== 'admin') {
@@ -346,7 +350,8 @@ async function fetchJSON(url, opts = {}) {
 async function loadMyPermissions() {
   if (!authToken) return;
   try {
-    const payload = JSON.parse(atob(authToken.split('.')[1] || '{}'));
+    const payload = await safeGetUserInfo(authToken);
+    if (!payload) return;
     const myId = payload.id;
     const perms = await fetchJSON(`${apiBase}/users/${myId}/permissions`);
     myPermsSet = new Set(perms);
@@ -469,7 +474,11 @@ async function loadUsers() {
 // =====================
 async function selectUser(id) {
   const authToken = localStorage.getItem('token') || '';
-  const jwtPayload = JSON.parse(atob(authToken.split('.')[1] || '{}'));
+  const jwtPayload = await safeGetUserInfo(authToken);
+  if (!jwtPayload) {
+    showToast('خطأ في جلب معلومات المستخدم', 'error');
+    return;
+  }
 
   // 2) فعل العرض للمستخدم المحدد
   selectedUserId = id;
@@ -507,7 +516,8 @@ profileStatus.onclick = async () => {
     return;
   }
   // تحقق: فقط admin أو من لديه change_status يمكنه التغيير
-  const payload = JSON.parse(atob(authToken.split('.')[1] || '{}'));
+  const payload = await safeGetUserInfo(authToken);
+  if (!payload) return;
   const myRole = payload.role;
   if (!(myRole === 'admin' || myPermsSet.has('change_status'))) {
     return;
@@ -568,7 +578,8 @@ try {
 document.querySelector('.user-profile-header')?.classList.add('active');
 
   // دور المستخدم الحالي
-  const payload = JSON.parse(atob(authToken.split('.')[1] || '{}'));
+  const payload = await safeGetUserInfo(authToken);
+  if (!payload) return;
   const myRole = payload.role;
   const isAdmin = myRole === 'admin';
 
@@ -1195,7 +1206,8 @@ document.addEventListener('change', (e) => {
 // إظهار الزر حسب الصلاحية عند اختيار المستخدم
 async function showEditUserInfoButton(u) {
   const authToken = localStorage.getItem('token') || '';
-  const payload = JSON.parse(atob(authToken.split('.')[1] || '{}'));
+  const payload = await safeGetUserInfo(authToken);
+  if (!payload) return;
   const myRole = payload.role;
   const myId = payload.id;
   
@@ -1226,7 +1238,8 @@ if (btnEditUserInfo) {
     // جلب بيانات المستخدم الحالي
     const u = await fetchJSON(`${apiBase}/users/${selectedUserId}`);
     const authToken = localStorage.getItem('token') || '';
-    const payload = JSON.parse(atob(authToken.split('.')[1] || '{}'));
+    const payload = await safeGetUserInfo(authToken);
+    if (!payload) return;
     
     // تحقق: إذا كان المستهدف admin، فقط admin نفسه يمكنه التعديل
     if (u.role === 'admin' && !(payload.role === 'admin' && Number(u.id) === Number(payload.id))) {
@@ -2481,9 +2494,11 @@ async function openDelegationConfirmationsModal() {
     // إظهار دور المستخدم الحالي للـ debugging
     if (authToken) {
       try {
-        const payload = JSON.parse(atob(authToken.split('.')[1] || '{}'));
-        console.log('Current user role:', payload.role);
-        console.log('Current user ID:', payload.id);
+        const payload = await safeGetUserInfo(authToken);
+        if (payload) {
+          console.log('Current user role:', payload.role);
+          console.log('Current user ID:', payload.id);
+        }
       } catch (e) {
         console.error('Error parsing JWT payload:', e);
       }
@@ -2782,13 +2797,13 @@ function renderDelegationConfirmations(confirmations) {
 }
 
 // دالة مساعدة للحصول على معرف المستخدم الحالي
-function getCurrentUserId() {
+async function getCurrentUserId() {
   if (!authToken) return null;
   try {
-    const payload = JSON.parse(atob(authToken.split('.')[1] || '{}'));
-    return payload.id;
+    const payload = await safeGetUserInfo(authToken);
+    return payload ? payload.id : null;
   } catch (e) {
-    console.error('Error parsing JWT payload:', e);
+    console.error('Error getting user info:', e);
     return null;
   }
 }

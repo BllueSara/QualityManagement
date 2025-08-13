@@ -4,7 +4,8 @@ apiBase = 'http://localhost:3006/api';
 async function fetchPermissions() {
     const token = localStorage.getItem('token');
     if (!token) return;
-    const payload = JSON.parse(atob(token.split('.')[1] || '{}'));
+    const payload = await safeGetUserInfo(token);
+    if (!payload) return;
     const role = payload.role;
     if (role === 'admin') {
         permissionsKeys = ['*'];

@@ -75,13 +75,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         return localStorage.getItem('token'); 
     }
 
-    function getUserId() {
+    async function getUserId() {
         const token = getToken();
         if (!token) return null;
         try {
-            const payload = token.split('.')[1];
-            const decoded = JSON.parse(atob(payload));
-            return decoded.id || decoded.userId || decoded.sub || null;
+            const decoded = await safeGetUserInfo(token);
+            return decoded ? (decoded.id || decoded.userId || decoded.sub || null) : null;
         } catch (e) {
             console.warn('Failed to decode token for user ID:', e);
             return null;
@@ -106,7 +105,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Fetch user permissions
     async function fetchPermissions() {
-        const userId = getUserId();
+        const userId = await getUserId();
         if (!userId) return;
 
         const headers = { 'Authorization': `Bearer ${getToken()}` };

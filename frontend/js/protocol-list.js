@@ -116,47 +116,57 @@ function createProtocolRow(protocol) {
     const topicsCount = protocol.topicsCount || 0;
     const latestEndDate = protocol.latestEndDate ? formatDate(protocol.latestEndDate) : '-';
 
-    // تحديد حالة المحضر
+    // تحديد حالة المحضر مع الترجمة
     let statusText, statusClass;
+    const lang = localStorage.getItem('language') || 'ar';
+    
     if (protocol.isApproved) {
-        statusText = 'معتمد';
+        statusText = lang === 'ar' ? 'معتمد' : 'Approved';
         statusClass = 'status-approved';
     } else if (protocol.approvalStatus === 'rejected') {
-        statusText = 'مرفوض';
+        statusText = lang === 'ar' ? 'مرفوض' : 'Rejected';
         statusClass = 'status-rejected';
     } else {
-        statusText = 'في انتظار الاعتماد';
+        statusText = lang === 'ar' ? 'في انتظار الاعتماد' : 'Pending Approval';
         statusClass = 'status-pending';
     }
 
     const allowEdit = (!protocol.isApproved) && (protocol.approvalStatus === 'pending' || protocol.approvalStatus === 'rejected');
 
+    // النصوص المترجمة للأزرار
+    const viewTitle = lang === 'ar' ? 'عرض PDF' : 'View PDF';
+    const editTitle = lang === 'ar' ? 'تعديل' : 'Edit';
+    const downloadTitle = lang === 'ar' ? 'تحميل PDF' : 'Download PDF';
+    const deleteTitle = lang === 'ar' ? 'حذف' : 'Delete';
+    const noTitle = lang === 'ar' ? 'بدون عنوان' : 'No Title';
+    const topicsText = lang === 'ar' ? 'موضوع/مواضيع' : 'topic(s)';
+
     row.innerHTML = `
-        <td>${protocol.title || 'بدون عنوان'}</td>
-        <td>${topicsCount} موضوع/مواضيع</td>
-        <td>${formatDate(protocol.protocolDate)}</td>
-        <td>${latestEndDate}</td>
-        <td>
+        <td style="text-align: center;">${protocol.title || noTitle}</td>
+        <td style="text-align: center;">${topicsCount} ${topicsText}</td>
+        <td style="text-align: center;">${formatDate(protocol.protocolDate)}</td>
+        <td style="text-align: center;">${latestEndDate}</td>
+        <td style="text-align: center;">
             <span class="status-badge ${statusClass}">
                 <i class="fas ${getStatusIcon(protocol.approvalStatus, protocol.isApproved)}"></i>
                 ${statusText}
             </span>
         </td>
-        <td class="actions-cell">
-            <button class="action-btn btn-view" onclick="viewProtocol('${protocol.id}')" title="عرض PDF">
+        <td class="actions-cell" style="text-align: center;">
+            <button class="action-btn btn-view" onclick="viewProtocol('${protocol.id}')" title="${viewTitle}">
                 <i class="fas fa-file-pdf"></i>
             </button>
             ${allowEdit ? `
-            <button class="action-btn btn-edit" onclick="editProtocol('${protocol.id}')" title="تعديل">
+            <button class="action-btn btn-edit" onclick="editProtocol('${protocol.id}')" title="${editTitle}">
                 <i class="fas fa-edit"></i>
             </button>
             ` : ''}
             ${protocol.isApproved ? `
-                <button class="action-btn btn-download" onclick="downloadPDF('${protocol.id}')" title="تحميل PDF">
+                <button class="action-btn btn-download" onclick="downloadPDF('${protocol.id}')" title="${downloadTitle}">
                     <i class="fas fa-download"></i>
                 </button>
             ` : ''}
-            <button class="action-btn btn-delete" onclick="deleteProtocol('${protocol.id}')" title="حذف">
+            <button class="action-btn btn-delete" onclick="deleteProtocol('${protocol.id}')" title="${deleteTitle}">
                 <i class="fas fa-trash"></i>
             </button>
         </td>
@@ -292,8 +302,19 @@ function applyFilters() {
         let matches = true;
         
         // فلتر الحالة
-        if (statusFilter && protocol.status !== statusFilter) {
-            matches = false;
+        if (statusFilter) {
+            let protocolStatus;
+            if (protocol.isApproved) {
+                protocolStatus = 'approved';
+            } else if (protocol.approvalStatus === 'rejected') {
+                protocolStatus = 'rejected';
+            } else {
+                protocolStatus = 'pending';
+            }
+            
+            if (protocolStatus !== statusFilter) {
+                matches = false;
+            }
         }
         
         // فلتر التاريخ
@@ -534,6 +555,11 @@ function debounce(func, wait) {
     };
 }
 
+// إعادة تحديث الجدول عند تغيير اللغة
+function refreshProtocolsDisplay() {
+    renderProtocols();
+}
+
 // تصدير الدوال للاستخدام العام
 window.clearFilters = clearFilters;
 window.applyFilters = applyFilters;
@@ -542,4 +568,12 @@ window.nextPage = nextPage;
 window.viewProtocol = viewProtocol;
 window.editProtocol = editProtocol;
 window.deleteProtocol = deleteProtocol;
+window.refreshProtocolsDisplay = refreshProtocolsDisplay;
+
+// إعادة تحديث عند تغيير اللغة
+window.addEventListener('storage', function(e) {
+    if (e.key === 'language') {
+        refreshProtocolsDisplay();
+    }
+});
 

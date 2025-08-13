@@ -180,9 +180,400 @@ body {
   color: #4b5563; /* رمادي متوسط */
 }
 
-/* ===== بطاقة ملف بانتظار الاعتماد ===== */
+/* ===== البطاقات الثلاث الجديدة ===== */
+.cards-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+  gap: 40px;
+  margin-bottom: 30px;
+}
+
+.approval-card {
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background-color: #ffffff;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.approval-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+}
+
+.card-header {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 20px 25px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.card-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.card-icon::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, rgba(255,255,255,0.2), transparent);
+  z-index: 1;
+}
+
+.card-icon i {
+  position: relative;
+  z-index: 2;
+}
+
+#departmentCard .card-icon {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+}
+
+#committeeCard .card-icon {
+  background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+}
+
+#protocolCard .card-icon {
+  background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+}
+
+.card-title {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-title h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #1f2937;
+  font-family: 'Tajawal', sans-serif;
+}
+
+.card-count {
+  background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  min-width: 30px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
+}
+
+.card-content {
+  padding: 30px;
+  max-height: 800px;
+  overflow-y: auto;
+}
+
+.items-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* عنصر واحد داخل البطاقة */
+.approval-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 25px;
+  background: #ffffff;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  min-height: 400px;
+}
+
+.approval-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #007bff, #28a745, #ffc107);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.approval-item:hover {
+  border-color: #007bff;
+  box-shadow: 0 4px 15px rgba(0, 123, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.approval-item:hover::before {
+  transform: scaleX(1);
+}
+
+.item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 15px;
+}
+
+.item-title {
+  flex: 1;
+  margin-right: 10px;
+}
+
+.item-title h3 {
+  margin: 0 0 5px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+  line-height: 1.4;
+}
+
+.item-meta {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.item-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+
+.status-badge {
+  padding: 6px 12px;
+  border-radius: 15px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: center;
+  min-width: 80px;
+}
+
+.badge-pending {
+  background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+  color: #212529;
+}
+
+.badge-sent {
+  background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+  color: white;
+}
+
+.item-content {
+  margin-bottom: 15px;
+}
+
+.approval-controls {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.dropdown-group {
+  flex: 1;
+  min-width: 180px;
+}
+
+.dropdown-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.9rem;
+  font-family: 'Tajawal', sans-serif;
+}
+
+.dropdown-custom {
+  position: relative;
+}
+
+.dropdown-btn {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f8f9fa;
+  font-size: 0.95rem;
+  text-align: right;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #495057;
+}
+
+.dropdown-btn:hover {
+  border-color: #007bff;
+  background: #ffffff;
+}
+
+.dropdown-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.dropdown-content {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  z-index: 1500;
+  max-height: 300px;
+  overflow-y: auto;
+  display: none;
+  margin-top: 5px;
+}
+
+.dropdown-content.active {
+  display: block;
+}
+
+.dropdown-search {
+  width: 100%;
+  padding: 10px 15px;
+  border: none;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.dropdown-item {
+  padding: 10px 15px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s ease;
+}
+
+.dropdown-item:hover {
+  background: #f8f9fa;
+}
+
+.dropdown-item.selected {
+  background: #e3f2fd;
+  color: #1565c0;
+  font-weight: 600;
+  border-left: 3px solid #007bff;
+}
+
+.dropdown-divider {
+  padding: 8px 15px;
+  background: #e9ecef;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #495057;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.selected-approvers {
+  margin-bottom: 15px;
+}
+
+.selected-approvers .badge {
+  display: inline-block;
+  padding: 6px 12px;
+  margin: 3px;
+  border-radius: 15px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: white;
+}
+
+.item-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-send, .btn-view, .btn-deadline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  min-width: 100px;
+  justify-content: center;
+}
+
+.btn-send {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+}
+
+.btn-send:hover {
+  background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
+}
+
+.btn-view {
+  background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+.btn-view:hover {
+  background: linear-gradient(135deg, #1e7e34 0%, #155724 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+}
+
+.btn-deadline {
+  background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+  color: #212529;
+  box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
+}
+
+.btn-deadline:hover {
+  background: linear-gradient(135deg, #e0a800 0%, #d39e00 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
+}
+
+/* رسالة عدم وجود عناصر */
+.no-items-message {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6b7280;
+  font-size: 1rem;
+}
+
+.no-items-message i {
+  font-size: 3rem;
+  margin-bottom: 15px;
+  color: #d1d5db;
+}
+
+/* ===== بطاقة ملف بانتظار الاعتماد القديمة (للتوافق) ===== */
 .file-card {
-  margin-bottom: 24px; /* تقليل المسافة بين البطاقات قليلًا */
+  margin-bottom: 24px;
   border-radius: 8px;
   border: 1px solid #e5e7eb;
   background-color: #ffffff;
@@ -649,6 +1040,83 @@ body[lang="en"] .toast-container,
     background-color: #6c757d !important;
     color: white !important;
     border: 1px solid #545b62;
+}
+
+/* تنسيق badges القابلة للحذف */
+.removable-badge {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px 6px 35px !important;
+    margin: 3px;
+    border-radius: 15px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.removable-badge:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* زر حذف المعتمد */
+.remove-approver-btn {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid white;
+    background: #dc3545;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    transition: all 0.3s ease;
+    z-index: 10;
+}
+
+.remove-approver-btn:hover {
+    background: #c82333;
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.4);
+}
+
+.remove-approver-btn i {
+    font-size: 8px;
+    line-height: 1;
+}
+
+/* تأثير عند المرور على الـ badge */
+.removable-badge:hover .remove-approver-btn {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* إخفاء زر الحذف افتراضياً في الشاشات الصغيرة */
+@media (max-width: 768px) {
+    .remove-approver-btn {
+        opacity: 1;
+        visibility: visible;
+    }
+    
+    .removable-badge {
+        padding: 8px 12px 8px 40px !important;
+        margin: 5px 2px;
+    }
+    
+    .remove-approver-btn {
+        top: -5px;
+        right: -5px;
+        width: 24px;
+        height: 24px;
+        font-size: 12px;
+    }
 }
 
 /* تنسيق زر الإرسال مع إشارة التسلسل */
@@ -1197,5 +1665,71 @@ body[lang="en"] .toast-container,
   
   .deadline-time-inputs {
     gap: 15px;
+  }
+}
+
+/* تنسيقات البطاقات للشاشات الصغيرة */
+@media (max-width: 1400px) {
+  .cards-container {
+    grid-template-columns: 1fr;
+    gap: 25px;
+  }
+}
+
+@media (max-width: 768px) {
+  .approval-controls {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .dropdown-group {
+    min-width: 100%;
+  }
+  
+  .item-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .btn-send, .btn-view, .btn-deadline {
+    width: 100%;
+    min-width: auto;
+  }
+  
+  .card-header {
+    padding: 15px 20px;
+  }
+  
+  .card-content {
+    padding: 20px;
+    max-height: 600px;
+  }
+  
+  .approval-item {
+    padding: 20px;
+    min-height: 350px;
+  }
+}
+
+@media (max-width: 480px) {
+  .card-header {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+  
+  .card-title {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .card-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+  }
+  
+  .card-title h2 {
+    font-size: 1.1rem;
   }
 }

@@ -62,27 +62,63 @@
       <p class="page-subtitle" data-translate="pending-approvals-subtitle">الملفات التي تحتاج إلى مراجعة واعتماد من قبلك</p>
     </div>
 
-    <!-- ===== بطاقة التقارير بانتظار الاعتماد ===== -->
-    <div class="file-card">
-      <div class="file-card-header">
-        <h2 class="file-name" data-translate="pending-approvals">ملفات بانتظار الاعتماد</h2>
+    <!-- ===== البطاقات الثلاث ===== -->
+    <div class="cards-container">
+      
+      <!-- ===== بطاقة الأقسام ===== -->
+      <div class="approval-card" id="departmentCard">
+        <div class="card-header">
+          <div class="card-icon">
+            <i class="fas fa-building"></i>
+          </div>
+          <div class="card-title">
+            <h2 data-translate="department-reports">تقارير الأقسام</h2>
+            <span class="card-count" id="departmentCount">0</span>
+          </div>
+        </div>
+        <div class="card-content">
+          <div class="items-container" id="departmentItems">
+            <!-- سيتم إدراج عناصر الأقسام هنا -->
+          </div>
+        </div>
       </div>
-      <div class="table-container">
-        <table class="approvals-table">
-          <thead>
-            <tr>
-              <th data-translate="report">التقرير</th>
-              <th data-translate="department">القسم</th>
-              <th data-translate="selected">المُختارون</th>
-              <th data-translate="will-be-sent-to">سيتم الارسال الى</th>
-              <th data-translate="action">الإجراء</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- البيانات يتم إدراجها هنا من الجافاسكربت -->
-          </tbody>
-        </table>
+
+      <!-- ===== بطاقة اللجان ===== -->
+      <div class="approval-card" id="committeeCard">
+        <div class="card-header">
+          <div class="card-icon">
+            <i class="fas fa-users"></i>
+          </div>
+          <div class="card-title">
+            <h2 data-translate="committee-reports">تقارير اللجان</h2>
+            <span class="card-count" id="committeeCount">0</span>
+          </div>
+        </div>
+        <div class="card-content">
+          <div class="items-container" id="committeeItems">
+            <!-- سيتم إدراج عناصر اللجان هنا -->
+          </div>
+        </div>
       </div>
+
+      <!-- ===== بطاقة المحاضر ===== -->
+      <div class="approval-card" id="protocolCard">
+        <div class="card-header">
+          <div class="card-icon">
+            <i class="fas fa-file-alt"></i>
+          </div>
+          <div class="card-title">
+            <h2 data-translate="protocol-reports">المحاضر</h2>
+            <span class="card-count" id="protocolCount">0</span>
+          </div>
+        </div>
+        <div class="card-content">
+          <div class="items-container" id="protocolItems">
+            <!-- سيتم إدراج عناصر المحاضر هنا -->
+          </div>
+        </div>
+      </div>
+
     </div>
   </main>
   <div id="toast-container" class="toast-container"></div>
@@ -113,8 +149,8 @@
 
   <script src="/frontend/js/language.js"></script>
   <script src="/frontend/js/pending-approvals.js"></script>
-  <script src="/frontend/js/check-status.js"></script>
-  <script>
+<script src="../js/check-status.js"></script>
+<script src="../js/utils.js"></script>  <script>
     document.addEventListener("DOMContentLoaded", () => {
       // إظهار المحتوى بعد تحميل اللغة
       setTimeout(() => {
