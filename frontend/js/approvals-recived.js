@@ -38,6 +38,12 @@ let isDrawing = false;
 let lastX = 0;
 let lastY = 0;
 
+// متغيرات جديدة لحماية من النقر المتكرر
+let isProcessingApproval = false;
+let isProcessingSignature = false;
+let isProcessingDelegation = false;
+let processingTimeout = null;
+
 // دالة عرض بوب أب اقرار التفويض
 function showDelegationConfirmationPopup(delegatorInfo, delegateInfo, files, isBulk = false, delegationData = null) {
   // تخزين بيانات التفويض الحالي
@@ -247,6 +253,19 @@ function closeDelegationConfirmationPopup() {
   activeCanvas = null;
   activeCtx = null;
   console.log('🔍 Delegation confirmation popup closed, activeCanvas reset');
+  
+  // إعادة تفعيل أزرار الصف إذا كان هناك contentId محدد
+  if (selectedContentId) {
+    const row = document.querySelector(`tr[data-id="${selectedContentId}"]`);
+    if (row && row.dataset.status === 'pending') {
+      enableRowActions(selectedContentId);
+    }
+  }
+  
+  // إعادة تفعيل أزرار الصف إذا كان هناك contentId في بيانات التفويض
+  if (pendingDelegationData && pendingDelegationData.contentId) {
+    enableRowActions(pendingDelegationData.contentId);
+  }
 }
 
 // دالة تهيئة التوقيع
@@ -534,6 +553,17 @@ function confirmDelegation() {
     return;
   }
   
+  // حماية من النقر المتكرر
+  const confirmButton = document.querySelector('#delegationConfirmationPopup .btn-primary');
+  if (!protectFromDoubleClick(confirmButton, 'جاري معالجة التفويض...')) {
+    return;
+  }
+  
+  // تعطيل جميع أزرار الصف إذا كان هناك contentId
+  if (pendingDelegationData.contentId) {
+    disableRowActions(pendingDelegationData.contentId);
+  }
+  
   // إضافة توقيع المرسل إلى بيانات التفويض
   pendingDelegationData.senderSignature = senderSignature;
   console.log('🔍 Updated pendingDelegationData with signature');
@@ -560,6 +590,17 @@ function rejectDelegation() {
   if (!pendingDelegationData) {
     showToast('خطأ: لا توجد بيانات تفويض', 'error');
     return;
+  }
+  
+  // إعادة تفعيل أزرار الصف عند رفض التفويض
+  if (pendingDelegationData.contentId) {
+    enableRowActions(pendingDelegationData.contentId);
+  }
+  
+  // إعادة تفعيل زر التأكيد إذا كان معطلاً
+  const confirmButton = document.querySelector('#delegationConfirmationPopup .btn-primary');
+  if (confirmButton && confirmButton.disabled) {
+    setButtonProcessingState(confirmButton, false);
   }
   
   // إغلاق البوب أب
@@ -1147,6 +1188,7 @@ function getLocalizedName(name) {
   }
 }
 function closeModal(modalId) {
+  console.log('🔍 closeModal called with modalId:', modalId);
   const modal = getCachedElement(modalId);
   if (modal) {
     // إغلاق فوري بدون تأخير
@@ -1156,6 +1198,18 @@ function closeModal(modalId) {
     
     // تنظيف الذاكرة المؤقتة
     modalCache.delete(modalId);
+    
+    // إعادة تفعيل أزرار الصف إذا كان المودال هو مودال الرفض أو التوقيع الإلكتروني أو التفويض
+    if ((modalId === 'rejectModal' || modalId === 'qrModal' || modalId === 'delegateModal') && selectedContentId) {
+      const row = document.querySelector(`tr[data-id="${selectedContentId}"]`);
+      if (row && row.dataset.status === 'pending') {
+        enableRowActions(selectedContentId);
+      }
+    }
+    
+    console.log('🔍 Modal closed successfully');
+  } else {
+    console.error('🔍 Modal not found:', modalId);
   }
 }
 
@@ -1304,6 +1358,15 @@ document.getElementById("nextPage").addEventListener("click", () => {
     btnSendReason.addEventListener('click', async () => {
       const reason = document.getElementById('rejectReason').value.trim();
       if (!reason) return showToast(getTranslation('please-enter-reason'), 'warning');
+      
+      // حماية من النقر المتكرر
+      if (!protectFromDoubleClick(btnSendReason, 'جاري إرسال الرفض...')) {
+        return;
+      }
+      
+      // تعطيل جميع أزرار الصف
+      disableRowActions(selectedContentId);
+      
       const type     = document.querySelector(`tr[data-id="${selectedContentId}"]`).dataset.type;
       let endpoint;
       switch (type) {
@@ -1328,7 +1391,29 @@ document.getElementById("nextPage").addEventListener("click", () => {
       } catch (e) {
         console.error('Failed to send rejection:', e);
         showToast(getTranslation('error-sending'), 'error');
+        // إعادة تفعيل الزر في حالة الخطأ
+        setButtonProcessingState(btnSendReason, false);
+        enableRowActions(selectedContentId);
       }
+    });
+  }
+
+  // إضافة معالجة للإلغاء في مودال الرفض
+  const btnCancelReject = document.getElementById('btnCancelReject');
+  if (btnCancelReject) {
+    btnCancelReject.addEventListener('click', () => {
+      // إعادة تفعيل أزرار الصف عند الإلغاء
+      if (selectedContentId) {
+        enableRowActions(selectedContentId);
+      }
+      
+      // إعادة تفعيل زر الإرسال إذا كان معطلاً
+      const btnSendReason = document.getElementById('btnSendReason');
+      if (btnSendReason && btnSendReason.disabled) {
+        setButtonProcessingState(btnSendReason, false);
+      }
+      
+      closeModal('rejectModal');
     });
   }
 
@@ -1585,6 +1670,10 @@ function initActions() {
         const id = row.dataset.id;
         selectedContentType = row.dataset.type;
         console.log('🔍 Opening signature modal for id:', id);
+        
+        // تعطيل جميع أزرار الصف فوراً
+        disableRowActions(id);
+        
         openSignatureModal(id);
         return;
       }
@@ -1592,8 +1681,14 @@ function initActions() {
       // زر التفويض
       if (target.closest('.btn-delegate')) {
         console.log('🔍 Delegation button clicked!');
+        const row = target.closest('tr');
+        const id = row.dataset.id;
+        
+        // تعطيل جميع أزرار الصف فوراً
+        disableRowActions(id);
+        
         isBulkDelegation = false;
-        selectedContentId = target.closest('tr').dataset.id;
+        selectedContentId = id;
         console.log('🔍 selectedContentId set to:', selectedContentId);
         openModal('delegateModal');
         loadDepartments();
@@ -1610,7 +1705,12 @@ function initActions() {
       // زر التوقيع الإلكتروني
       if (target.closest('.btn-qr')) {
         const row = target.closest('tr');
-        selectedContentId = row.dataset.id;
+        const id = row.dataset.id;
+        
+        // تعطيل جميع أزرار الصف فوراً
+        disableRowActions(id);
+        
+        selectedContentId = id;
         selectedContentType = row.dataset.type;
         openModal('qrModal');
         return;
@@ -1619,7 +1719,12 @@ function initActions() {
       // زر الرفض
       if (target.closest('.btn-reject')) {
         const row = target.closest('tr');
-        selectedContentId = row.dataset.id;
+        const id = row.dataset.id;
+        
+        // تعطيل جميع أزرار الصف فوراً
+        disableRowActions(id);
+        
+        selectedContentId = id;
         selectedContentType = row.dataset.type;
         openModal('rejectModal');
         return;
@@ -1791,6 +1896,15 @@ const btnElectronicApprove = document.getElementById('btnElectronicApprove');
 if (btnElectronicApprove) {
   btnElectronicApprove.addEventListener('click', async () => {
     if (!selectedContentId) return showToast(getTranslation('please-select-user'), 'warning');
+    
+    // حماية من النقر المتكرر
+    if (!protectFromDoubleClick(btnElectronicApprove, 'جاري التوقيع...')) {
+      return;
+    }
+    
+    // تعطيل جميع أزرار الصف
+    disableRowActions(selectedContentId);
+    
     const contentType = document.querySelector(`tr[data-id="${selectedContentId}"]`).dataset.type;
     let endpoint;
     switch (contentType) {
@@ -1812,7 +1926,11 @@ if (btnElectronicApprove) {
       notes: ''
     };
     const tokenPayload = await safeGetUserInfo(token);
-    if (!tokenPayload) return;
+    if (!tokenPayload) {
+      setButtonProcessingState(btnElectronicApprove, false);
+      enableRowActions(selectedContentId);
+      return;
+    }
     const myLog = Array.isArray(approvalLog) ? approvalLog.find(l => l.approver_id == tokenPayload.id) : null;
     console.log('[SIGN] approvalLog:', approvalLog);
     console.log('[SIGN] myLog:', myLog);
@@ -1834,7 +1952,29 @@ if (btnElectronicApprove) {
     } catch (err) {
       console.error('Failed to electronically approve:', err);
       showToast(getTranslation('error-sending'), 'error');
+      // إعادة تفعيل الزر في حالة الخطأ
+      setButtonProcessingState(btnElectronicApprove, false);
+      enableRowActions(selectedContentId);
     }
+  });
+}
+
+// إضافة معالجة للإلغاء في مودال التوقيع الإلكتروني
+const btnCancelQr = document.getElementById('btnCancelQr');
+if (btnCancelQr) {
+  btnCancelQr.addEventListener('click', () => {
+    // إعادة تفعيل أزرار الصف عند الإلغاء
+    if (selectedContentId) {
+      enableRowActions(selectedContentId);
+    }
+    
+    // إعادة تفعيل زر التوقيع إذا كان معطلاً
+    const btnElectronicApprove = document.getElementById('btnElectronicApprove');
+    if (btnElectronicApprove && btnElectronicApprove.disabled) {
+      setButtonProcessingState(btnElectronicApprove, false);
+    }
+    
+    closeModal('qrModal');
   });
 }
 
@@ -1976,6 +2116,11 @@ function setupSignatureModal() {
   }
   
   function handleCancelClick() {
+    // إعادة تفعيل أزرار الصف عند الإلغاء
+    if (selectedContentId) {
+      enableRowActions(selectedContentId);
+    }
+    
     closeSignatureModal();
   }
   
@@ -1985,6 +2130,15 @@ function setupSignatureModal() {
       showToast(getTranslation('no-signature') || 'يرجى إضافة توقيع أولاً', 'error');
       return;
     }
+    
+    // حماية من النقر المتكرر
+    const confirmButton = document.getElementById('btnConfirmSignature');
+    if (!protectFromDoubleClick(confirmButton, 'جاري إرسال التوقيع...')) {
+      return;
+    }
+    
+    // تعطيل جميع أزرار الصف
+    disableRowActions(selectedContentId);
     
     const contentType = document.querySelector(`tr[data-id="${selectedContentId}"]`).dataset.type;
     let endpoint;
@@ -2006,7 +2160,11 @@ function setupSignatureModal() {
       notes: ''
     };
     const tokenPayload = await safeGetUserInfo(token);
-    if (!tokenPayload) return;
+    if (!tokenPayload) {
+      setButtonProcessingState(confirmButton, false);
+      enableRowActions(selectedContentId);
+      return;
+    }
     const myLog = Array.isArray(approvalLog) ? approvalLog.find(l => l.approver_id == tokenPayload.id) : null;
     console.log('[SIGN] approvalLog:', approvalLog);
     console.log('[SIGN] myLog:', myLog);
@@ -2028,6 +2186,9 @@ function setupSignatureModal() {
     } catch (err) {
       console.error('Failed to send signature:', err);
       showToast(getTranslation('error-sending'), 'error');
+      // إعادة تفعيل الزر في حالة الخطأ
+      setButtonProcessingState(confirmButton, false);
+      enableRowActions(selectedContentId);
     }
   }
   
@@ -2352,9 +2513,23 @@ function setupDelegationEventListener() {
     console.log('🔍 Adding click event listener to btnDelegateConfirm');
     btnDelegateConfirm.addEventListener('click', async () => {
       console.log('🔍 btnDelegateConfirm clicked!');
+      
+      // حماية من النقر المتكرر
+      if (!protectFromDoubleClick(btnDelegateConfirm, 'جاري معالجة التفويض...')) {
+        return;
+      }
+      
       const userId = document.getElementById('delegateUser').value;
       const notes = document.getElementById('delegateNotes').value;
-      if (!userId) return showToast(getTranslation('please-select-user'), 'warning');
+      if (!userId) {
+        setButtonProcessingState(btnDelegateConfirm, false);
+        return showToast(getTranslation('please-select-user'), 'warning');
+      }
+      
+      // تعطيل جميع أزرار الصف إذا كان هناك contentId محدد
+      if (selectedContentId) {
+        disableRowActions(selectedContentId);
+      }
       
       if (isBulkDelegation) {
         // تفويض شامل - عرض بوب أب الإقرار أولاً
@@ -2368,6 +2543,12 @@ function setupDelegationEventListener() {
         } catch (err) {
           console.error('Failed to show bulk delegation confirmation:', err);
           showToast(getTranslation('error-sending') || 'حدث خطأ أثناء عرض اقرار التفويض الشامل', 'error');
+          // إعادة تفعيل الزر في حالة الخطأ
+          setButtonProcessingState(btnDelegateConfirm, false);
+          // إعادة تفعيل أزرار الصف في حالة الخطأ
+          if (selectedContentId) {
+            enableRowActions(selectedContentId);
+          }
         }
       } else {
         // تفويض فردي - عرض بوب أب الإقرار أولاً
@@ -2382,6 +2563,11 @@ function setupDelegationEventListener() {
         if (!row) {
           console.error('🔍 Row not found for selectedContentId:', selectedContentId);
           showToast('خطأ: لم يتم العثور على الملف المحدد', 'error');
+          setButtonProcessingState(btnDelegateConfirm, false);
+          // إعادة تفعيل أزرار الصف في حالة الخطأ
+          if (selectedContentId) {
+            enableRowActions(selectedContentId);
+          }
           return;
         }
         
@@ -2393,12 +2579,22 @@ function setupDelegationEventListener() {
         if (!contentType) {
           console.error('🔍 contentType is missing or undefined');
           showToast('خطأ: نوع المحتوى غير محدد', 'error');
+          setButtonProcessingState(btnDelegateConfirm, false);
+          // إعادة تفعيل أزرار الصف في حالة الخطأ
+          if (selectedContentId) {
+            enableRowActions(selectedContentId);
+          }
           return;
         }
         
         if (!selectedContentId) {
           console.error('🔍 selectedContentId is missing or undefined');
           showToast('خطأ: معرف الملف غير محدد', 'error');
+          setButtonProcessingState(btnDelegateConfirm, false);
+          // إعادة تفعيل أزرار الصف في حالة الخطأ
+          if (selectedContentId) {
+            enableRowActions(selectedContentId);
+          }
           return;
         }
         
@@ -2424,9 +2620,34 @@ function setupDelegationEventListener() {
         } catch (err) {
           console.error('Failed to show delegation confirmation:', err);
           showToast(getTranslation('error-sending') || 'حدث خطأ أثناء عرض اقرار التفويض', 'error');
+          // إعادة تفعيل الزر في حالة الخطأ
+          setButtonProcessingState(btnDelegateConfirm, false);
+          // إعادة تفعيل أزرار الصف في حالة الخطأ
+          if (selectedContentId) {
+            enableRowActions(selectedContentId);
+          }
         }
       }
       isBulkDelegation = false;
+    });
+  }
+  
+  // إضافة معالجة للإلغاء في مودال التفويض
+  const btnCancelDelegate = document.getElementById('btnCancelDelegate');
+  if (btnCancelDelegate) {
+    btnCancelDelegate.addEventListener('click', () => {
+      // إعادة تفعيل أزرار الصف عند الإلغاء
+      if (selectedContentId) {
+        enableRowActions(selectedContentId);
+      }
+      
+      // إعادة تفعيل زر التأكيد إذا كان معطلاً
+      const btnDelegateConfirm = document.getElementById('btnDelegateConfirm');
+      if (btnDelegateConfirm && btnDelegateConfirm.disabled) {
+        setButtonProcessingState(btnDelegateConfirm, false);
+      }
+      
+      closeModal('delegateModal');
     });
   }
 }
@@ -2786,6 +3007,14 @@ function closeSignatureModal() {
       btnConfirmSignature.removeEventListener('click', handleConfirmClick);
     }
     
+    // إعادة تفعيل أزرار الصف إذا لم يتم الاعتماد
+    if (selectedContentId) {
+      const row = document.querySelector(`tr[data-id="${selectedContentId}"]`);
+      if (row && row.dataset.status === 'pending') {
+        enableRowActions(selectedContentId);
+      }
+    }
+    
     // إعادة تعيين متغيرات الكانفاس النشط
     activeCanvas = null;
     activeCtx = null;
@@ -2975,19 +3204,7 @@ function getCachedElement(id) {
   return elementCache.get(id);
 }
 
-// دالة محسنة لإغلاق المودال
-function closeModal(modalId) {
-  const modal = getCachedElement(modalId);
-  if (modal) {
-    // إغلاق فوري بدون تأخير
-    modal.style.display = 'none';
-    modal.style.opacity = '1';
-    modal.style.transition = '';
-    
-    // تنظيف الذاكرة المؤقتة
-    modalCache.delete(modalId);
-  }
-}
+
 
 // دالة محسنة لفتح المودال
 function openModal(modalId) {
@@ -3090,10 +3307,24 @@ async function processSingleDelegation(data) {
       }, 1500);
     } else {
       showToast(result.message || 'فشل إرسال طلب التفويض', 'error');
+      // إعادة تفعيل أزرار الصف في حالة الفشل
+      if (data.contentId) {
+        enableRowActions(data.contentId);
+      }
     }
   } catch (error) {
     console.error('🔍 Error processing single delegation:', error);
     showToast('خطأ في إرسال طلب التفويض', 'error');
+    // إعادة تفعيل أزرار الصف في حالة الخطأ
+    if (data.contentId) {
+      enableRowActions(data.contentId);
+    }
+  } finally {
+    // إعادة تفعيل جميع الأزرار في حالة النجاح أو الفشل
+    const confirmButton = document.querySelector('#delegationConfirmationPopup .btn-primary');
+    if (confirmButton) {
+      setButtonProcessingState(confirmButton, false);
+    }
   }
 }
 
@@ -3154,9 +3385,143 @@ async function processBulkDelegation(data) {
       }, 1500);
     } else {
       showToast(result.message || 'فشل إرسال طلب التفويض الشامل', 'error');
+      // إعادة تفعيل أزرار الصف في حالة الفشل
+      if (data.contentId) {
+        enableRowActions(data.contentId);
+      }
     }
   } catch (error) {
     console.error('🔍 Error processing bulk delegation:', error);
     showToast('خطأ في إرسال طلب التفويض الشامل', 'error');
+    // إعادة تفعيل أزرار الصف في حالة الخطأ
+    if (data.contentId) {
+      enableRowActions(data.contentId);
+    }
+  } finally {
+    // إعادة تفعيل جميع الأزرار في حالة النجاح أو الفشل
+    const confirmButton = document.querySelector('#delegationConfirmationPopup .btn-primary');
+    if (confirmButton) {
+      setButtonProcessingState(confirmButton, false);
+    }
   }
+}
+
+// دالة جديدة لحماية الأزرار من النقر المتكرر
+function setButtonProcessingState(button, isProcessing, processingText = 'جاري المعالجة...', originalText = null) {
+  if (!button) return;
+  
+  if (isProcessing) {
+    // حفظ النص الأصلي إذا لم يتم حفظه من قبل
+    if (!originalText) {
+      button.dataset.originalText = button.innerHTML;
+    }
+    
+    // تعطيل الزر وإظهار حالة المعالجة
+    button.disabled = true;
+    button.style.opacity = '0.6';
+    button.style.cursor = 'not-allowed';
+    button.style.pointerEvents = 'none';
+    button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${processingText}`;
+    
+    // إضافة مؤشر بصري
+    button.classList.add('processing');
+    
+    // إضافة CSS إضافي لتحسين المظهر
+    button.style.transition = 'all 0.3s ease';
+    button.style.transform = 'scale(0.98)';
+    button.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+  } else {
+    // إعادة تفعيل الزر وإعادة النص الأصلي
+    button.disabled = false;
+    button.style.opacity = '1';
+    button.style.cursor = 'pointer';
+    button.style.pointerEvents = 'auto';
+    button.innerHTML = button.dataset.originalText || originalText || button.innerHTML;
+    
+    // إزالة المؤشر البصري
+    button.classList.remove('processing');
+    
+    // إعادة تعيين CSS
+    button.style.transform = 'scale(1)';
+    button.style.boxShadow = '';
+  }
+}
+
+// دالة لحماية من النقر المتكرر مع timeout
+function protectFromDoubleClick(button, processingText = 'جاري المعالجة...') {
+  if (!button || button.disabled) return false;
+  
+  // تعطيل الزر فوراً
+  setButtonProcessingState(button, true, processingText);
+  
+  // إعادة تفعيل الزر بعد 5 ثواني كحد أقصى
+  if (processingTimeout) {
+    clearTimeout(processingTimeout);
+  }
+  
+  processingTimeout = setTimeout(() => {
+    if (button) {
+      setButtonProcessingState(button, false);
+    }
+  }, 5000);
+  
+  return true;
+}
+
+// دالة لتعطيل جميع أزرار الصف
+function disableRowActions(contentId) {
+  const row = document.querySelector(`tr[data-id="${contentId}"]`);
+  if (!row) return;
+  
+  const actionButtons = row.querySelectorAll('button');
+  actionButtons.forEach(button => {
+    button.disabled = true;
+    button.style.opacity = '0.5';
+    button.style.cursor = 'not-allowed';
+    button.style.pointerEvents = 'none';
+    
+    // إضافة مؤشر بصري
+    button.classList.add('processing');
+    
+    // حفظ النص الأصلي
+    if (!button.dataset.originalText) {
+      button.dataset.originalText = button.innerHTML;
+    }
+    
+    // إضافة نص المعالجة
+    button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> جاري المعالجة...`;
+    
+    // إضافة CSS إضافي لتحسين المظهر
+    button.style.transition = 'all 0.3s ease';
+    button.style.transform = 'scale(0.95)';
+    button.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+    button.style.filter = 'grayscale(30%)';
+  });
+}
+
+// دالة لإعادة تفعيل جميع أزرار الصف
+function enableRowActions(contentId) {
+  const row = document.querySelector(`tr[data-id="${contentId}"]`);
+  if (!row) return;
+  
+  const actionButtons = row.querySelectorAll('button');
+  actionButtons.forEach(button => {
+    button.disabled = false;
+    button.style.opacity = '1';
+    button.style.cursor = 'pointer';
+    button.style.pointerEvents = 'auto';
+    
+    // إزالة المؤشر البصري
+    button.classList.remove('processing');
+    
+    // إعادة النص الأصلي
+    if (button.dataset.originalText) {
+      button.innerHTML = button.dataset.originalText;
+    }
+    
+    // إعادة تعيين CSS
+    button.style.transform = 'scale(1)';
+    button.style.boxShadow = '';
+    button.style.filter = '';
+  });
 }

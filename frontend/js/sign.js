@@ -41,13 +41,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ترك قائمة التفويضات المعالجة كما هي حتى لا تتكرر البوب أب بعد القبول/الرفض
   localStorage.removeItem('lastDelegationCheck');
 
-  // التأكد من أن currentUserId تم تعيينه
-  if (!currentUserId) {
-    console.error('❌ currentUserId is not set');
-    showToast('خطأ في تحديد هوية المستخدم', 'error');
-    return;
-  }
-
   // Test backend connectivity first
   try {
     const healthRes = await fetch('http://localhost:3006/health');
@@ -59,6 +52,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (err) {
     console.error('❌ Backend server is not reachable:', err);
     showToast('الخادم غير متاح', 'error');
+    return;
+  }
+
+  // تهيئة معلومات المستخدم بعد التأكد من تحميل جميع الملفات
+  await initUserInfo();
+
+  // التأكد من أن currentUserId تم تعيينه بعد التهيئة
+  if (!currentUserId) {
+    console.error('❌ currentUserId is not set after initialization');
+    showToast('خطأ في تحديد هوية المستخدم', 'error');
     return;
   }
 
@@ -103,8 +106,6 @@ async function initUserInfo() {
   }
 }
 
-// تهيئة معلومات المستخدم عند تحميل الصفحة
-initUserInfo();
 // const currentLang = localStorage.getItem('language') || 'ar'; // تم إزالة التصريح المكرر - موجود في language.js
 
 // متغير عام لتخزين بيانات التفويض الحالي للمفوض له

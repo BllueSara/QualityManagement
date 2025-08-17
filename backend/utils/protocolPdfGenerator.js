@@ -207,11 +207,7 @@ async function generateProtocolPDF(protocolData, db) {
             });
         }
 
-
-
-        // (تم نقل عنوان المحضر ليظهر فوق جدول المواضيع)
-
-                          // معلومات المحضر الأساسية في جدول منظم
+        // معلومات المحضر الأساسية في جدول منظم
          const infoTableBody = [
              [
                  { text: formatDate(protocolData.created_at), style: 'infoCell', alignment: 'center' },
@@ -354,6 +350,201 @@ async function generateProtocolPDF(protocolData, db) {
                     headerRows: 1,
                     widths: ['15%', '15%', '45%', '25%'],
                     body: topicsTableBody
+                },
+                layout: {
+                    hLineWidth: function(i, node) {
+                        return 1;
+                    },
+                    vLineWidth: function(i, node) {
+                        return 1;
+                    },
+                    hLineColor: function(i, node) {
+                        return '#000000';
+                    },
+                    vLineColor: function(i, node) {
+                        return '#000000';
+                    },
+                    fillColor: function(rowIndex, node, columnIndex) {
+                        return (rowIndex === 0) ? '#e6e6e6' : null;
+                    }
+                },
+                margin: [0, 0, 0, 20]
+            });
+        }
+
+        // إضافة صفحة الاعتمادات مع البيانات الفعلية أو الفارغة
+        if (protocolData.approvers && protocolData.approvers.length > 0) {
+            // إنشاء جدول الاعتمادات
+            const approvalTableBody = [];
+            
+            // إضافة رأس الجدول باللغة الإنجليزية
+            approvalTableBody.push([
+                { text: 'Approvals', style: 'tableHeader' },
+                { text: 'Name', style: 'tableHeader' },
+                { text: 'Position', style: 'tableHeader' },
+                { text: 'Approval Method', style: 'tableHeader' },
+                { text: 'Signature', style: 'tableHeader' },
+                { text: 'Date', style: 'tableHeader' }
+            ]);
+
+            // جلب بيانات الاعتمادات الفعلية إذا كانت موجودة
+            let approvalLogs = [];
+            try {
+                const [logs] = await db.pool.execute(`
+                    SELECT
+                        pal.signed_as_proxy,
+                        pal.approver_id,
+                        pal.signature,
+                        pal.electronic_signature,
+                        pal.created_at,
+                        pal.delegated_by,
+                        u.first_name,
+                        u.last_name,
+                        jt.title as job_title,
+                        jn.name as job_name
+                    FROM protocol_approval_logs pal
+                    JOIN users u ON pal.approver_id = u.id
+                    LEFT JOIN job_titles jt ON u.job_title_id = jt.id
+                    LEFT JOIN job_names jn ON u.job_name_id = jn.id
+                    WHERE pal.protocol_id = ? AND pal.status = 'approved'
+                    ORDER BY pal.created_at
+                `, [protocolData.id]);
+                approvalLogs = logs;
+            } catch (error) {
+                console.log('⚠️ Could not fetch approval logs:', error);
+            }
+            
+            console.log(`🔍 Fetched ${approvalLogs.length} approval logs`);
+            approvalLogs.forEach((log, index) => {
+                console.log(`🔍 Log ${index + 1}: approver_id=${log.approver_id}, signed_as_proxy=${log.signed_as_proxy}, delegated_by=${log.delegated_by}`);
+            });
+
+            // إضافة صفوف لكل معتمد
+            for (let index = 0; index < protocolData.approvers.length; index++) {
+                const approver = protocolData.approvers[index];
+                // استخدام buildJobNameFirstLast لبناء الاسم
+                const approverName = buildJobNameFirstLast(
+                    approver.job_name,
+                    approver.first_name,
+                    approver.last_name
+                ) || approver.approver_name || 'N/A';
+
+                const approvalType = index === 0 ? 'Reviewed' : 
+                                    index === protocolData.approvers.length - 1 ? 'Approver' : 'Reviewed';
+
+                // البحث عن بيانات الاعتماد الفعلية - نبحث أولاً عن التوقيع بالنيابة
+                let actualApproval = approvalLogs.find(log => log.approver_id === approver.user_id && log.signed_as_proxy === 1);
+                
+                // إذا لم نجد توقيع بالنيابة، نبحث عن التوقيع الشخصي
+                if (!actualApproval) {
+                    actualApproval = approvalLogs.find(log => log.approver_id === approver.user_id && log.signed_as_proxy === 0);
+                }
+                
+                console.log(`🔍 Selected approval for approver ${approver.user_id}: signed_as_proxy=${actualApproval ? actualApproval.signed_as_proxy : 'N/A'}, delegated_by=${actualApproval ? actualApproval.delegated_by : 'N/A'}`);
+                
+                let approvalMethod = '';
+                let signature = '';
+                let approvalDate = '';
+
+                if (actualApproval) {
+                    // إذا كان هناك اعتماد فعلي
+                    approvalMethod = actualApproval.signature ? 'Hand Signature' : 
+                                    actualApproval.electronic_signature ? 'Electronic Signature' : 'Not Specified';
+                    
+                    if (actualApproval.signature && actualApproval.signature.startsWith('data:image')) {
+                        signature = { image: actualApproval.signature, width: 40, height: 20, alignment: 'center' };
+                    } else if (actualApproval.electronic_signature) {
+                        // قراءة ختم الاعتماد الإلكتروني
+                        try {
+                            const electronicSealBase64 = fs.readFileSync(path.join(__dirname, '../e3teamdelc.png')).toString('base64');
+                            const electronicSealDataUrl = 'data:image/png;base64,' + electronicSealBase64;
+                            signature = { image: electronicSealDataUrl, width: 40, height: 20, alignment: 'center' };
+                        } catch (e) {
+                            signature = { text: '✓', style: 'tableCell' };
+                        }
+                    } else {
+                        signature = { text: '✓', style: 'tableCell' };
+                    }
+                    
+                    approvalDate = new Date(actualApproval.created_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit'
+                    });
+                } else {
+                    // إذا لم يكن هناك اعتماد فعلي، اترك الحقول فارغة
+                    signature = { text: '', style: 'tableCell' };
+                }
+
+                // تحديد نوع الاعتماد بناءً على ما إذا كان التوقيع بالنيابة أم لا
+                let finalApprovalType = approvalType;
+                console.log(`🔍 Approver ${approver.user_id}: signed_as_proxy = ${actualApproval ? actualApproval.signed_as_proxy : 'N/A'}`);
+                if (actualApproval && actualApproval.signed_as_proxy === 1) {
+                    finalApprovalType = approvalType + ' (Proxy)';
+                    console.log(`✅ Setting ${finalApprovalType} for proxy signature`);
+                }
+                
+                approvalTableBody.push([
+                    { text: finalApprovalType, style: 'tableCell' },
+                    { text: approverName, style: 'tableCell' },
+                    { text: approver.job_title || 'Not Specified', style: 'tableCell' },
+                    { text: approvalMethod, style: 'tableCell' },
+                    signature,
+                    { text: approvalDate, style: 'tableCell' }
+                ]);
+
+                // إذا كان هناك توقيع بالنيابة، أضف صف "Proxy for" يوضح من هو المفوض الأصلي
+                if (actualApproval && actualApproval.signed_as_proxy === 1 && actualApproval.delegated_by) {
+                    // جلب اسم المفوض الأصلي
+                    let originalUser = null;
+                    try {
+                        const [originalUserRows] = await db.pool.execute(`
+                            SELECT 
+                                u.first_name,
+                                u.last_name,
+                                jt.title as job_title,
+                                jn.name as job_name
+                            FROM users u
+                            LEFT JOIN job_titles jt ON u.job_title_id = jt.id
+                            LEFT JOIN job_names jn ON u.job_name_id = jn.id
+                            WHERE u.id = ?
+                        `, [actualApproval.delegated_by]);
+                        
+                        if (originalUserRows.length > 0) {
+                            originalUser = originalUserRows[0];
+                        }
+                    } catch (error) {
+                        console.log('⚠️ Could not fetch original user data:', error);
+                    }
+
+                    if (originalUser) {
+                        // بناء اسم المفوض الأصلي
+                        const originalUserName = buildJobNameFirstLast(
+                            originalUser.job_name,
+                            originalUser.first_name,
+                            originalUser.last_name
+                        ) || 'N/A';
+
+                        // إضافة صف "Proxy for"
+                        approvalTableBody.push([
+                            { text: '(Proxy for)', style: 'proxyCell' },
+                            { text: originalUserName, style: 'proxyCell' },
+                            { text: originalUser.job_title || 'Not Specified', style: 'proxyCell' },
+                            { text: 'Delegated', style: 'proxyCell' },
+                            { text: '', style: 'proxyCell' },
+                            { text: '', style: 'proxyCell' }
+                        ]);
+                    }
+                }
+            }
+
+            // إضافة جدول الاعتمادات
+            content.push({
+                pageBreak: 'before', // بدء صفحة جديدة
+                table: {
+                    headerRows: 1,
+                    widths: ['15%', '20%', '20%', '20%', '10%', '15%'],
+                    body: approvalTableBody
                 },
                 layout: {
                     hLineWidth: function(i, node) {
@@ -544,7 +735,7 @@ async function updateProtocolPDFAfterApproval(protocolId, db) {
                 CONCAT(
                     COALESCE(u_original.first_name, ''),
                     CASE WHEN u_original.second_name IS NOT NULL AND u_original.second_name != '' THEN CONCAT(' ', u_original.second_name) ELSE '' END,
-                    CASE WHEN u_original.third_name IS NOT NULL AND u_original.third_name != '' THEN CONCAT(' ', u_original.third_name) ELSE '' END,
+                    CASE WHEN u_original.third_name IS NOT NULL AND u_original.third_name != '' THEN CONCAT(' ', u_actual.third_name) ELSE '' END,
                     CASE WHEN u_original.last_name IS NOT NULL AND u_original.last_name != '' THEN CONCAT(' ', u_original.last_name) ELSE '' END
                 ) AS original_user,
                 u_actual.first_name AS actual_first_name,
@@ -584,6 +775,11 @@ async function updateProtocolPDFAfterApproval(protocolId, db) {
             console.warn('⚠️ No approved signatures found for protocol', protocolId);
             return;
         }
+        
+        console.log(`🔍 Fetched ${logs.length} approval logs for updateProtocolPDFAfterApproval`);
+        logs.forEach((log, index) => {
+            console.log(`🔍 Log ${index + 1}: signed_as_proxy=${log.signed_as_proxy}, delegated_by=${log.delegated_by}`);
+        });
 
         // 4) إعداد pdfmake
         const PdfPrinter = require('pdfmake/src/printer');
@@ -612,7 +808,7 @@ async function updateProtocolPDFAfterApproval(protocolId, db) {
             printer = new PdfPrinter();
         }
 
-        // 5) إنشاء محتوى صفحة الاعتمادات باستخدام pdfmake
+        // 5) إنشاء محتوى صفحة الاعتمادات المحدثة باستخدام pdfmake
         const approvalTableBody = [];
         
         // إضافة رأس الجدول
@@ -682,11 +878,19 @@ async function updateProtocolPDFAfterApproval(protocolId, db) {
                 mainLog.actual_last_name
             ) || mainLog.actual_signer || 'N/A';
 
+            // تحديد نوع الاعتماد بناءً على ما إذا كان التوقيع بالنيابة أم لا
+            let finalApprovalType = approvalType;
+            console.log(`🔍 MainLog signed_as_proxy = ${mainLog.signed_as_proxy}`);
+            if (mainLog.signed_as_proxy === 1) {
+                finalApprovalType = approvalType + ' (Proxy)';
+                console.log(`✅ Setting ${finalApprovalType} for proxy signature in updateProtocolPDFAfterApproval`);
+            }
+            
             // إضافة صف الموقّع الرئيسي
             approvalTableBody.push([
-                { text: approvalType, style: 'tableCell' },
-                { text: fixArabicOrder(actualSignerFullNameWithJobName), style: 'tableCell' },
-                { text: fixArabicOrder(mainLog.signer_job_title || 'Not Specified'), style: 'tableCell' },
+                { text: finalApprovalType, style: 'tableCell' },
+                { text: actualSignerFullNameWithJobName, style: 'tableCell' },
+                { text: mainLog.signer_job_title || 'Not Specified', style: 'tableCell' },
                 { text: approvalMethod, style: 'tableCell' },
                 getSignatureCell(mainLog),
                 { text: approvalDate, style: 'tableCell' }
@@ -703,8 +907,8 @@ async function updateProtocolPDFAfterApproval(protocolId, db) {
 
                 approvalTableBody.push([
                     { text: '(Proxy for)', style: 'proxyCell' },
-                    { text: fixArabicOrder(originalUserFullNameWithJobName), style: 'proxyCell' },
-                    { text: fixArabicOrder(group.proxyLog.original_job_title || 'Not Specified'), style: 'proxyCell' },
+                    { text: originalUserFullNameWithJobName, style: 'proxyCell' },
+                    { text: group.proxyLog.original_job_title || 'Not Specified', style: 'proxyCell' },
                     { text: 'Delegated', style: 'proxyCell' },
                     { text: '', style: 'proxyCell' },
                     { text: '', style: 'proxyCell' }
@@ -761,10 +965,10 @@ async function updateProtocolPDFAfterApproval(protocolId, db) {
                         vLineWidth: function(i, node) {
                             return 1;
                         },
-                        hLineColor: function(i, node) {
+                        vLineColor: function(i, node) {
                             return '#000000';
                         },
-                        vLineColor: function(i, node) {
+                        hLineColor: function(i, node) {
                             return '#000000';
                         }
                     }
@@ -772,7 +976,7 @@ async function updateProtocolPDFAfterApproval(protocolId, db) {
             ]
         };
 
-        // 8) إنشاء PDF جديد باستخدام pdfmake
+        // 7) إنشاء PDF جديد باستخدام pdfmake
         const approvalPdfDoc = printer.createPdfKitDocument(docDefinition);
         const approvalPdfChunks = [];
         
@@ -784,45 +988,34 @@ async function updateProtocolPDFAfterApproval(protocolId, db) {
             try {
                 const approvalPdfBuffer = Buffer.concat(approvalPdfChunks);
                 
-                // 9) دمج صفحة الاعتمادات مع PDF الأصلي
-                const { PDFDocument } = require('pdf-lib');
-                const mergedPdf = await PDFDocument.create();
-                
-                // إضافة صفحات PDF الأصلي أولاً (بدون صفحة الاعتمادات السابقة)
-                const originalPdfDoc = await PDFDocument.load(originalPdfBytes);
-                const originalPageCount = originalPdfDoc.getPageCount();
-                
-                // نسخ جميع صفحات PDF الأصلي ما عدا الصفحة الأخيرة إذا كانت صفحة اعتمادات
-                const pagesToCopy = [];
-                for (let i = 0; i < originalPageCount; i++) {
-                    pagesToCopy.push(i);
-                }
-                
-                // إذا كان PDF يحتوي على أكثر من صفحة واحدة، نتجاهل الصفحة الأخيرة
-                // لأنها قد تكون صفحة اعتمادات سابقة
-                if (originalPageCount > 1) {
-                    pagesToCopy.pop(); // إزالة الصفحة الأخيرة
-                }
-                
-                const originalPages = await mergedPdf.copyPages(originalPdfDoc, pagesToCopy);
-                originalPages.forEach((page) => mergedPdf.addPage(page));
-                
-                // إضافة صفحة الاعتمادات المحدثة في النهاية
-                const approvalPdfDoc = await PDFDocument.load(approvalPdfBuffer);
-                const approvalPages = await mergedPdf.copyPages(approvalPdfDoc, approvalPdfDoc.getPageIndices());
-                approvalPages.forEach((page) => mergedPdf.addPage(page));
-                
-                // حفظ PDF المدمج
-                const finalPdfBytes = await mergedPdf.save();
-                fs.writeFileSync(fullPath, finalPdfBytes);
-                console.log(`✅ Protocol PDF updated with approval table after each approval: ${fullPath}`);
-            } catch (mergeError) {
-                console.error('❌ Error merging PDFs:', mergeError);
+                // 8) إنشاء PDF جديد كامل مع البيانات المحدثة
                 try {
-                    fs.writeFileSync(fullPath, approvalPdfBuffer);
-                    console.log(`✅ Saved approval page only: ${fullPath}`);
+                    // نحتاج إلى جلب بيانات المحضر الكاملة مع المعتمدين الحاليين
+                    const protocol = await db.getProtocolById(protocolId, 1); // استخدام admin ID = 1
+                    if (protocol) {
+                        // إنشاء PDF جديد يحتوي على جدول الاعتمادات المحدث
+                        const newPdfBuffer = await generateProtocolPDF(protocol, db);
+                        fs.writeFileSync(fullPath, newPdfBuffer);
+                        console.log(`✅ Protocol PDF completely regenerated with updated approval data: ${fullPath}`);
+                    } else {
+                        // إذا لم نتمكن من جلب البيانات، نحفظ PDF الأصلي كما هو
+                        fs.writeFileSync(fullPath, originalPdfBytes);
+                        console.log(`✅ Preserved original PDF (could not regenerate): ${fullPath}`);
+                    }
+                } catch (regenerateError) {
+                    console.error('❌ Error regenerating PDF:', regenerateError);
+                    // في حالة الفشل، نحفظ PDF الأصلي كما هو
+                    fs.writeFileSync(fullPath, originalPdfBytes);
+                    console.log(`✅ Preserved original PDF due to regeneration error: ${fullPath}`);
+                }
+            } catch (mergeError) {
+                console.error('❌ Error updating PDF:', mergeError);
+                try {
+                    // في حالة الفشل، نحفظ PDF الأصلي كما هو
+                    fs.writeFileSync(fullPath, originalPdfBytes);
+                    console.log(`✅ Preserved original PDF due to update error: ${fullPath}`);
                 } catch (saveError) {
-                    console.error('❌ Error saving approval page:', saveError);
+                    console.error('❌ Error preserving original PDF:', saveError);
                 }
             }
         });

@@ -681,6 +681,13 @@ async function initDropdowns() {
     const sendBtn  = approvalItem.querySelector('.btn-send');
 
     if (!sendBtn) return;
+    
+    // التحقق من وجود العناصر المطلوبة قبل المتابعة
+    if (!internalDeptDrop || !internalUserDrop) {
+      console.warn('Missing required dropdown elements for approval item:', approvalItem.dataset.id);
+      return;
+    }
+    
     let selectedInternalDepts = [];
     let selectedExternalDepts = [];
     let selectedInternalUsers = [];
@@ -691,12 +698,19 @@ async function initDropdowns() {
     // إعداد القسم الداخلي
     const internalDeptBtn = internalDeptDrop.querySelector('.dropdown-btn');
     const internalDeptList = internalDeptDrop.querySelector('.dropdown-content');
-    internalDeptList.innerHTML = `<input type="text" class="dropdown-search" placeholder="${getTranslation('search-department')}">`;
+    if (internalDeptBtn && internalDeptList) {
+      internalDeptList.innerHTML = `<input type="text" class="dropdown-search" placeholder="${getTranslation('search-department')}">`;
+    }
 
-    // إعداد القسم الخارجي
-    const externalDeptBtn = externalDeptDrop.querySelector('.dropdown-btn');
-    const externalDeptList = externalDeptDrop.querySelector('.dropdown-content');
-    externalDeptList.innerHTML = `<input type="text" class="dropdown-search" placeholder="${getTranslation('search-department')}">`;
+    // إعداد القسم الخارجي (إذا كان موجوداً)
+    let externalDeptBtn, externalDeptList;
+    if (externalDeptDrop) {
+      externalDeptBtn = externalDeptDrop.querySelector('.dropdown-btn');
+      externalDeptList = externalDeptDrop.querySelector('.dropdown-content');
+      if (externalDeptBtn && externalDeptList) {
+        externalDeptList.innerHTML = `<input type="text" class="dropdown-search" placeholder="${getTranslation('search-department')}">`;
+      }
+    }
     
          // للأقسام: ترتيب الأقسام بحسب نوع التحويل
      if (contentType === 'department') {
@@ -734,7 +748,7 @@ async function initDropdowns() {
        const externalDepartments = departments.filter(d => !internalDepartments.includes(d));
        
        // إعداد القسم الداخلي
-       if (internalDepartments.length > 0) {
+       if (internalDepartments.length > 0 && internalDeptList) {
          internalDepartments.forEach(d => {
            const itm = document.createElement('div');
            itm.className = 'dropdown-item internal-dept';
@@ -753,7 +767,7 @@ async function initDropdowns() {
        }
        
        // إعداد القسم الخارجي
-       if (externalDepartments.length > 0) {
+       if (externalDepartments.length > 0 && externalDeptList) {
          externalDepartments.forEach(d => {
            const itm = document.createElement('div');
            itm.className = 'dropdown-item external-dept';
@@ -772,21 +786,23 @@ async function initDropdowns() {
        }
            } else {
         // للجان والمحاضر: جميع الأقسام في قسم واحد (داخلي)
-        departments.forEach(d => {
-          const itm = document.createElement('div');
-          itm.className = 'dropdown-item internal-dept';
-          itm.dataset.value = d.id;
-          itm.dataset.transferType = 'internal';
-          let name = d.name;
-          const lang = localStorage.getItem('language') || 'ar';
-          try {
-            const parsed = typeof name === 'string' ? JSON.parse(name) : name;
-            name = parsed[lang] || parsed.ar || parsed.en || '';
-          } catch {}
-          itm.textContent = name;
-          itm.dataset.label = name;
-          internalDeptList.appendChild(itm);
-        });
+        if (internalDeptList) {
+          departments.forEach(d => {
+            const itm = document.createElement('div');
+            itm.className = 'dropdown-item internal-dept';
+            itm.dataset.value = d.id;
+            itm.dataset.transferType = 'internal';
+            let name = d.name;
+            const lang = localStorage.getItem('language') || 'ar';
+            try {
+              const parsed = typeof name === 'string' ? JSON.parse(name) : name;
+              name = parsed[lang] || parsed.ar || parsed.en || '';
+            } catch {}
+            itm.textContent = name;
+            itm.dataset.label = name;
+            internalDeptList.appendChild(itm);
+          });
+        }
         
         // إخفاء قسم التحويل الخارجي للجان والمحاضر
         const externalTransferSection = approvalItem.querySelector('.external-transfer');
@@ -797,7 +813,11 @@ async function initDropdowns() {
 
     // إعداد القسم الداخلي
     (function setupInternalDeptDropdown() {
+      if (!internalDeptList || !internalDeptBtn) return;
+      
       const search = internalDeptList.querySelector('.dropdown-search');
+      if (!search) return;
+      
       internalDeptBtn.addEventListener('click', e => {
         e.stopPropagation();
         internalDeptList.classList.toggle('active');
@@ -831,41 +851,45 @@ async function initDropdowns() {
       });
     })();
 
-    // إعداد القسم الخارجي
-    (function setupExternalDeptDropdown() {
-      const search = externalDeptList.querySelector('.dropdown-search');
-      externalDeptBtn.addEventListener('click', e => {
-        e.stopPropagation();
-        externalDeptList.classList.toggle('active');
-      });
-      document.addEventListener('click', () => externalDeptList.classList.remove('active'));
-      externalDeptList.addEventListener('click', e => e.stopPropagation());
-      search.addEventListener('input', () => {
-        const v = search.value.trim();
-        externalDeptList.querySelectorAll('.dropdown-item').forEach(i => {
-          i.style.display = i.textContent.includes(v) ? 'block' : 'none';
+    // إعداد القسم الخارجي (فقط إذا كان موجوداً)
+    if (externalDeptDrop && externalDeptList && externalDeptBtn) {
+      (function setupExternalDeptDropdown() {
+        const search = externalDeptList.querySelector('.dropdown-search');
+        if (!search) return;
+        
+        externalDeptBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          externalDeptList.classList.toggle('active');
         });
-      });
-      externalDeptList.addEventListener('click', async e => {
-        if (!e.target.classList.contains('dropdown-item')) return;
-        const item = e.target;
-        item.classList.toggle('selected');
-        selectedExternalDepts = Array.from(externalDeptList.querySelectorAll('.dropdown-item.selected'))
-                              .map(i => ({ 
-                                id: i.dataset.value, 
-                                name: i.textContent.trim(),
-                                transferType: 'external'
-                              }));
-        if (selectedExternalDepts.length === 0) {
-          externalDeptBtn.textContent = getTranslation('select-department');
-        } else if (selectedExternalDepts.length === 1) {
-          externalDeptBtn.textContent = selectedExternalDepts[0].name;
-        } else {
-          externalDeptBtn.textContent = `${selectedExternalDepts.length} ${getTranslation('departments-count')}`;
-        }
-        await rebuildExternalUsersList();
-      });
-    })();
+        document.addEventListener('click', () => externalDeptList.classList.remove('active'));
+        externalDeptList.addEventListener('click', e => e.stopPropagation());
+        search.addEventListener('input', () => {
+          const v = search.value.trim();
+          externalDeptList.querySelectorAll('.dropdown-item').forEach(i => {
+            i.style.display = i.textContent.includes(v) ? 'block' : 'none';
+          });
+        });
+        externalDeptList.addEventListener('click', async e => {
+          if (!e.target.classList.contains('dropdown-item')) return;
+          const item = e.target;
+          item.classList.toggle('selected');
+          selectedExternalDepts = Array.from(externalDeptList.querySelectorAll('.dropdown-item.selected'))
+                                .map(i => ({ 
+                                  id: i.dataset.value, 
+                                  name: i.textContent.trim(),
+                                  transferType: 'external'
+                                }));
+          if (selectedExternalDepts.length === 0) {
+            externalDeptBtn.textContent = getTranslation('select-department');
+          } else if (selectedExternalDepts.length === 1) {
+            externalDeptBtn.textContent = selectedExternalDepts[0].name;
+          } else {
+            externalDeptBtn.textContent = `${selectedExternalDepts.length} ${getTranslation('departments-count')}`;
+          }
+          await rebuildExternalUsersList();
+        });
+      })();
+    }
 
     async function rebuildInternalUsersList() {
       // تغذية المستخدمين للقسم الداخلي
@@ -1006,9 +1030,13 @@ async function initDropdowns() {
     }
 
     async function rebuildExternalUsersList() {
-      // تغذية المستخدمين للقسم الخارجي
+      // تغذية المستخدمين للقسم الخارجي (فقط إذا كان موجوداً)
+      if (!externalUserDrop) return;
+      
       const uBtn = externalUserDrop.querySelector('.dropdown-btn');
       const uList = externalUserDrop.querySelector('.dropdown-content');
+      if (!uBtn || !uList) return;
+      
       uList.innerHTML = `<input type="text" class="dropdown-search" placeholder="${getTranslation('search-person')}">`;
       const existingAssignedNames = JSON.parse(approvalItem.dataset.assignedNames || '[]');
 
@@ -1135,12 +1163,14 @@ async function initDropdowns() {
       }
 
       const search = uList.querySelector('.dropdown-search');
-      search.addEventListener('input', () => {
-        const v = search.value.trim();
-        uList.querySelectorAll('.dropdown-item').forEach(i => {
-          i.style.display = i.textContent.includes(v) ? 'block' : 'none';
+      if (search) {
+        search.addEventListener('input', () => {
+          const v = search.value.trim();
+          uList.querySelectorAll('.dropdown-item').forEach(i => {
+            i.style.display = i.textContent.includes(v) ? 'block' : 'none';
+          });
         });
-      });
+      }
     }
 
     // إعداد القسم الداخلي للمستخدمين
@@ -1180,42 +1210,46 @@ async function initDropdowns() {
       });
     })();
 
-    // إعداد القسم الخارجي للمستخدمين
-    (function setupExternalUsersDropdown() {
-      const btn = externalUserDrop.querySelector('.dropdown-btn');
-      const list = externalUserDrop.querySelector('.dropdown-content');
-      btn.addEventListener('click', e => {
-        e.stopPropagation();
-        list.classList.toggle('active');
-      });
-      document.addEventListener('click', () => list.classList.remove('active'));
-      list.addEventListener('click', e => e.stopPropagation());
-      list.addEventListener('click', e => {
-        if (!e.target.classList.contains('dropdown-item')) return;
-        const item = e.target;
-        const name = item.textContent;
-        const deptId = item.dataset.deptId;
-        const userId = item.dataset.userId;
+    // إعداد القسم الخارجي للمستخدمين (فقط إذا كان موجوداً)
+    if (externalUserDrop) {
+      (function setupExternalUsersDropdown() {
+        const btn = externalUserDrop.querySelector('.dropdown-btn');
+        const list = externalUserDrop.querySelector('.dropdown-content');
+        if (!btn || !list) return;
+        
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          list.classList.toggle('active');
+        });
+        document.addEventListener('click', () => list.classList.remove('active'));
+        list.addEventListener('click', e => e.stopPropagation());
+        list.addEventListener('click', e => {
+          if (!e.target.classList.contains('dropdown-item')) return;
+          const item = e.target;
+          const name = item.textContent;
+          const deptId = item.dataset.deptId;
+          const userId = item.dataset.userId;
 
-        if (item.classList.toggle('selected')) {
-          // إضافة المعتمد مع حفظ ترتيب الاختيار ونوع التحويل
-          selectionCounter++;
-          selectedExternalUsers.push({ 
-            id: userId, 
-            name, 
-            deptId, 
-            selectedAt: selectionCounter,
-            transferType: 'external'
-          });
-        } else {
-          // إزالة المعتمد
-          selectedExternalUsers = selectedExternalUsers.filter(x => x.id !== userId);
-        }
+          if (item.classList.toggle('selected')) {
+            // إضافة المعتمد مع حفظ ترتيب الاختيار ونوع التحويل
+            selectionCounter++;
+            selectedExternalUsers.push({ 
+              id: userId, 
+              name, 
+              deptId, 
+              selectedAt: selectionCounter,
+              transferType: 'external'
+            });
+          } else {
+            // إزالة المعتمد
+            selectedExternalUsers = selectedExternalUsers.filter(x => x.id !== userId);
+          }
 
-        btn.textContent = selectedExternalUsers.length ? `${selectedExternalUsers.length} ${getTranslation('selected-count')}` : getTranslation('select-people');
-        updateSelectedApproversDisplay();
-      });
-    })();
+          btn.textContent = selectedExternalUsers.length ? `${selectedExternalUsers.length} ${getTranslation('selected-count')}` : getTranslation('select-people');
+          updateSelectedApproversDisplay();
+        });
+      })();
+    }
 
     // دالة لتحديث عرض المعتمدين المختارين
     function updateSelectedApproversDisplay() {
@@ -1225,7 +1259,10 @@ async function initDropdowns() {
       selCell.innerHTML = '';
       
       // دمج المعتمدين الداخليين والخارجيين مع الحفاظ على الترتيب
-      const allUsers = [...selectedInternalUsers, ...selectedExternalUsers];
+      const allUsers = [...selectedInternalUsers];
+      if (selectedExternalUsers) {
+        allUsers.push(...selectedExternalUsers);
+      }
       const sortedUsers = allUsers.sort((a, b) => a.selectedAt - b.selectedAt);
       
       sortedUsers.forEach((u, index) => {
@@ -1235,9 +1272,12 @@ async function initDropdowns() {
         badge.dataset.approverName = u.name;
         
         const lang = localStorage.getItem('language') || 'ar';
-        const dept = u.transferType === 'internal' 
-          ? selectedInternalDepts.find(d => d.id === u.deptId)
-          : selectedExternalDepts.find(d => d.id === u.deptId);
+        let dept = null;
+        if (u.transferType === 'internal') {
+          dept = selectedInternalDepts.find(d => d.id === u.deptId);
+        } else if (u.transferType === 'external' && selectedExternalDepts) {
+          dept = selectedExternalDepts.find(d => d.id === u.deptId);
+        }
         let deptName = dept?.name || '';
 
         try {
@@ -1323,7 +1363,10 @@ async function initDropdowns() {
 
              // 2) جلب اللي اختارهم المستخدم
        const internalUserItems = approvalItem.querySelectorAll('[data-type="internal-users"] .dropdown-item.selected');
-       const externalUserItems = approvalItem.querySelectorAll('[data-type="external-users"] .dropdown-item.selected');
+       let externalUserItems = [];
+       if (externalUserDrop) {
+         externalUserItems = approvalItem.querySelectorAll('[data-type="external-users"] .dropdown-item.selected');
+       }
        
        const internalUsers = Array.from(internalUserItems)
          .map(el => ({ id: +el.dataset.userId, name: el.textContent.trim(), transferType: 'internal' }))
@@ -1367,15 +1410,23 @@ async function initDropdowns() {
              if (a.transferType === 'external' && b.transferType === 'internal') return 1;
              
              // إذا كان نفس النوع، ترتيب بحسب وقت الاختيار
-             const aSelected = [...selectedInternalUsers, ...selectedExternalUsers].find(u => u.id === a.id);
-             const bSelected = [...selectedInternalUsers, ...selectedExternalUsers].find(u => u.id === b.id);
+             const allSelectedUsers = [...selectedInternalUsers];
+             if (selectedExternalUsers) {
+               allSelectedUsers.push(...selectedExternalUsers);
+             }
+             const aSelected = allSelectedUsers.find(u => u.id === a.id);
+             const bSelected = allSelectedUsers.find(u => u.id === b.id);
              return (aSelected?.selectedAt || 0) - (bSelected?.selectedAt || 0);
            });
          } else {
            // للجان والمحاضر: ترتيب عادي بحسب وقت الاختيار
            sortedNewUsers = newUsers.sort((a, b) => {
-             const aSelected = [...selectedInternalUsers, ...selectedExternalUsers].find(u => u.id === a.id);
-             const bSelected = [...selectedInternalUsers, ...selectedExternalUsers].find(u => u.id === b.id);
+             const allSelectedUsers = [...selectedInternalUsers];
+             if (selectedExternalUsers) {
+               allSelectedUsers.push(...selectedExternalUsers);
+             }
+             const aSelected = allSelectedUsers.find(u => u.id === a.id);
+             const bSelected = allSelectedUsers.find(u => u.id === b.id);
              return (aSelected?.selectedAt || 0) - (bSelected?.selectedAt || 0);
            });
          }

@@ -1263,7 +1263,7 @@ class ProtocolController {
                 if (sequenceNumber == null) {
                     // لو ما انحدد sequenceNumber نحسب أول معتمد من الجدول
                     const [firstRows] = await protocolModel.pool.execute(
-                        'SELECT user_id FROM protocol_approvers WHERE protocol_id = ? ORDER BY sequence_number ASC LIMIT 1',
+                        'SELECT sequence_number FROM protocol_approvers WHERE protocol_id = ? ORDER BY sequence_number ASC LIMIT 1',
                         [id]
                     );
                     if (firstRows.length) firstApproverId = firstRows[0].user_id;
@@ -1278,6 +1278,18 @@ class ProtocolController {
                 }
             } catch (e) {
                 console.warn('addApprover: failed to insert pending log for protocol approver', e);
+            }
+
+            // تحديث PDF المحضر بعد إضافة المعتمد الجديد
+            try {
+                const protocol = await protocolModel.getProtocolById(id, currentUserId);
+                if (protocol) {
+                    await saveProtocolPDF(id, protocol, protocolModel);
+                    console.log(`Protocol PDF updated successfully after adding approver for protocol ${id}`);
+                }
+            } catch (pdfError) {
+                console.error('Error updating protocol PDF after adding approver:', pdfError);
+                // لا نوقف العملية إذا فشل تحديث PDF
             }
 
             console.log(`Approver added to protocol by user ${currentUserId}`, {
@@ -1441,6 +1453,18 @@ class ProtocolController {
                     );
                 } catch (_) {}
 
+                // تحديث PDF المحضر بعد قبول التفويض
+                try {
+                    const protocol = await protocolModel.getProtocolById(protocolId, currentUserId);
+                    if (protocol) {
+                        await saveProtocolPDF(protocolId, protocol, protocolModel);
+                        console.log(`Protocol PDF updated successfully after accepting delegation for protocol ${protocolId}`);
+                    }
+                } catch (pdfError) {
+                    console.error('Error updating protocol PDF after accepting delegation:', pdfError);
+                    // لا نوقف العملية إذا فشل تحديث PDF
+                }
+
                 console.log(`✅ Protocol delegation accepted: ${delegationId} by user ${currentUserId}`);
                 res.json({ 
                     status: 'success', 
@@ -1470,6 +1494,18 @@ class ProtocolController {
                         })
                     );
                 } catch (_) {}
+
+                // تحديث PDF المحضر بعد رفض التفويض
+                try {
+                    const protocol = await protocolModel.getProtocolById(protocolId, currentUserId);
+                    if (protocol) {
+                        await saveProtocolPDF(protocolId, protocol, protocolModel);
+                        console.log(`Protocol PDF updated successfully after rejecting delegation for protocol ${protocolId}`);
+                    }
+                } catch (pdfError) {
+                    console.error('Error updating protocol PDF after rejecting delegation:', pdfError);
+                    // لا نوقف العملية إذا فشل تحديث PDF
+                }
 
                 console.log(`❌ Protocol delegation rejected: ${delegationId} by user ${currentUserId}`);
                 res.json({ 
@@ -1651,6 +1687,18 @@ class ProtocolController {
                 ) VALUES (?, ?, ?, 1, 'pending', ?, ?, NOW())
             `, [contentId, delegateTo, delegatorId, signature || null, notes || '']);
 
+            // تحديث PDF المحضر بعد التفويض
+            try {
+                const protocol = await protocolModel.getProtocolById(contentId, delegatorId);
+                if (protocol) {
+                    await saveProtocolPDF(contentId, protocol, protocolModel);
+                    console.log(`Protocol PDF updated successfully after delegation for protocol ${contentId}`);
+                }
+            } catch (pdfError) {
+                console.error('Error updating protocol PDF after delegation:', pdfError);
+                // لا نوقف العملية إذا فشل تحديث PDF
+            }
+
             // لا نحتاج لإنشاء سجل منفصل لتوقيع المرسل للمحاضر
             // سيتم التعامل مع التوقيع في وقت التوقيع الفعلي
 
@@ -1728,6 +1776,18 @@ class ProtocolController {
                         protocol_id, approver_id, delegated_by, signed_as_proxy, status, signature, comments, created_at
                     ) VALUES (?, ?, ?, 1, 'pending', ?, ?, NOW())
                 `, [protocol.id, delegateTo, delegatorId, signature || null, notes || '']);
+
+                // تحديث PDF المحضر بعد التفويض
+                try {
+                    const protocolData = await protocolModel.getProtocolById(protocol.id, delegatorId);
+                    if (protocolData) {
+                        await saveProtocolPDF(protocol.id, protocolData, protocolModel);
+                        console.log(`Protocol PDF updated successfully after bulk delegation for protocol ${protocol.id}`);
+                    }
+                } catch (pdfError) {
+                    console.error(`Error updating protocol PDF after bulk delegation for protocol ${protocol.id}:`, pdfError);
+                    // لا نوقف العملية إذا فشل تحديث PDF
+                }
 
                 // لا نحتاج لإنشاء سجل منفصل لتوقيع المرسل للمحاضر
                 // سيتم التعامل مع التوقيع في وقت التوقيع الفعلي

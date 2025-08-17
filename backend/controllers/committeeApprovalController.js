@@ -986,12 +986,12 @@ async function generateFinalSignedCommitteePDF(contentId) {
     return console.error('❌ Failed to load original PDF or electronic seal:', err);
   }
 
-  // 3) جلب سجلات الاعتماد بما فيها التفويض مع معلومات إضافية
+    // 3) جلب سجلات الاعتماد بما فيها التفويض مع معلومات إضافية
   const [logs] = await db.execute(`
     SELECT
       al.signed_as_proxy,
-      ${getFullNameWithJobNameSQLWithAliasAndFallback('u_actual')}   AS actual_signer,
-      ${getFullNameWithJobNameSQLWithAliasAndFallback('u_original')} AS original_user,
+      ${getFullNameWithJobNameSQLWithAliasAndFallback('u_actual', 'jn_actual')}   AS actual_signer,
+      ${getFullNameWithJobNameSQLWithAliasAndFallback('u_original', 'jn_original')} AS original_user,
       u_actual.first_name AS actual_first_name,
       u_actual.second_name AS actual_second_name,
       u_actual.third_name AS actual_third_name,
@@ -1322,8 +1322,8 @@ async function updateCommitteePDFAfterApproval(contentId) {
     const [logs] = await db.execute(`
       SELECT
         al.signed_as_proxy,
-              ${getFullNameSQLWithAliasAndFallback('u_actual')}   AS actual_signer,
-      ${getFullNameSQLWithAliasAndFallback('u_original')} AS original_user,
+        ${getFullNameSQLWithAliasAndFallback('u_actual')}   AS actual_signer,
+        ${getFullNameSQLWithAliasAndFallback('u_original')} AS original_user,
         u_actual.first_name AS actual_first_name,
         u_actual.second_name AS actual_second_name,
         u_actual.third_name AS actual_third_name,
@@ -1337,16 +1337,22 @@ async function updateCommitteePDFAfterApproval(contentId) {
         al.comments,
         al.created_at,
         jt_actual.title AS signer_job_title,
-        jt_original.title AS original_job_title
+        jt_original.title AS original_job_title,
+        jn_actual.name AS signer_job_name,
+        jn_original.name AS original_job_name
       FROM committee_approval_logs al
       JOIN users u_actual
         ON al.approver_id = u_actual.id
       LEFT JOIN job_titles jt_actual
         ON u_actual.job_title_id = jt_actual.id
+      LEFT JOIN job_names jn_actual
+        ON u_actual.job_name_id = jn_actual.id
       LEFT JOIN users u_original
         ON al.delegated_by = u_original.id
       LEFT JOIN job_titles jt_original
         ON u_original.job_title_id = jt_original.id
+      LEFT JOIN job_names jn_original
+        ON u_original.job_name_id = jn_original.id
       WHERE al.content_id = ? AND al.status = 'approved'
       ORDER BY al.created_at
     `, [contentId]);

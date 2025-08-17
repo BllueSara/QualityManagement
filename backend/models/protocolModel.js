@@ -347,9 +347,17 @@ class ProtocolModel {
                         CASE WHEN u.second_name IS NOT NULL AND u.second_name != '' THEN CONCAT(' ', u.second_name) ELSE '' END,
                         CASE WHEN u.third_name IS NOT NULL AND u.third_name != '' THEN CONCAT(' ', u.third_name) ELSE '' END,
                         CASE WHEN u.last_name IS NOT NULL AND u.last_name != '' THEN CONCAT(' ', u.last_name) ELSE '' END
-                    ) as approver_name
+                    ) as approver_name,
+                    u.first_name,
+                    u.second_name,
+                    u.third_name,
+                    u.last_name,
+                    jt.title as job_title,
+                    jn.name as job_name
                 FROM protocol_approvers pa
                 LEFT JOIN users u ON pa.user_id = u.id
+                LEFT JOIN job_titles jt ON u.job_title_id = jt.id
+                LEFT JOIN job_names jn ON u.job_name_id = jn.id
                 WHERE pa.protocol_id = ? ORDER BY pa.sequence_number
                 `,
                 [protocolId]

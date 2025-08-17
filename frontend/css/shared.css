@@ -997,8 +997,7 @@ Page Header */
 }
 
 .modal-header {
-    background: #1D4ED8;
-    color: white;
+
     padding: 20px 25px;
     border-radius: 12px 12px 0 0;
     display: flex;
@@ -1015,7 +1014,6 @@ Page Header */
 .modal-close {
     background: none;
     border: none;
-    background: #1D4ED8;
     font-size: 1.5rem;
     cursor: pointer;
     padding: 5px;
