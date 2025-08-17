@@ -56,6 +56,8 @@ const translations = {
         'download': 'تحميل',
         'category': 'التصنيف',
         'loading': 'جاري التحميل...',
+        'load-data': 'تحميل البيانات',
+        'data-loaded': 'تم التحميل',
         'error-loading-data': 'حدث خطأ أثناء جلب البيانات',
         'error-downloading': 'حدث خطأ أثناء التحميل',
         'transfer-tickets-desc' : 'ادارة وتحويل الاحداث العارضة الحالية بسلاسة',
@@ -99,6 +101,13 @@ const translations = {
         'deadline-invalid-data': 'بيانات غير صحيحة',
         'deadline-select-time': 'يرجى تحديد وقت لمعتمد واحد على الأقل',
         'deadline-expired': 'انتهت مهلة الاعتماد',
+        
+        // العناصر المحذوفة
+        'deleted-items': 'ما تم حذفه',
+        'deleted-by': 'تم الحذف بواسطة',
+        'committee-content': 'محتوى اللجنة',
+        'no-deleted-items': 'لا توجد عناصر محذوفة',
+        'error-loading': 'حدث خطأ أثناء تحميل البيانات',
         
         // فورم المحضر
         'protocol-form-page-title': 'نظام إدارة الجودة والسلامة - فورم المحضر',
@@ -1444,8 +1453,21 @@ const translations = {
         'department-type-administration': 'إدارة',
         'department-type-executive_administration': 'إدارة تنفيذية',
         'created': 'تاريخ الإنشاء',
+        'deleted-items': 'ما تم حذفه',
+
     },
     en: {
+      'loading': 'Loading...',
+      'close': 'Close',
+      'department': 'Department',
+      'committee': 'Committee',
+      'protocol': 'Protocol',
+      'file': 'File',
+      'item': 'Item',
+      'deleted-by': 'Deleted by',
+      'committee-content': 'Committee Content',
+      'no-deleted-items': 'No deleted items',
+      'error-loading': 'Error occurred while loading data',
               // Names fields
                       // Pagination translations
                               'executive-administration-type-text': 'Executive Administration',
@@ -1520,6 +1542,14 @@ const translations = {
       'add_approved_content_committee': 'Add Approved Content to Committees',
       'add-approved-content': 'Add Approved Content',
       'department-or-committee': 'Department or Committee',
+      
+      // Deleted Items
+      'deleted-items': 'Deleted Items',
+      'deleted-by': 'Deleted by',
+      'committee-content': 'Committee Content',
+      'no-deleted-items': 'No deleted items',
+      'error-loading': 'Error occurred while loading data',
+      
               'select-files-to-revoke': 'Select files to revoke',
         'clear-cache': 'Clear Cache Memory',
         'select-section': 'Select Section',
@@ -2881,6 +2911,33 @@ const translations = {
         'department-type-administration': 'Administration',
         'department-type-executive_administration': 'Executive Administration',
         'created': 'Created Date',
+        'deleted-items': 'Deleted Items',
+        'loading': 'Loading...',
+        'close': 'Close',
+        'department': 'Department',
+        'committee': 'Committee',
+        'protocol': 'Protocol',
+        'file': 'File',
+        'item': 'Item',
+        'deleted-by': 'Deleted by',
+        'restore': 'Restore',
+        'permanently-delete': 'Permanently Delete',
+        'confirm-restore': 'Are you sure you want to restore this item?',
+        'confirm-permanent-delete': 'Are you sure you want to permanently delete this item? This action cannot be undone.',
+        'item-restored': 'Item restored successfully',
+        'item-permanently-deleted': 'Item permanently deleted',
+        'restore-error': 'Error occurred while restoring',
+        'delete-error': 'Error occurred while deleting',
+        'no-deleted-items': 'No deleted items',
+        'error-loading': 'Error occurred while loading data',
+      
+      // Load Data Buttons
+      'load-data': 'Load Data',
+      'data-loaded': 'Data Loaded',
+      'loading': 'Loading...',
+      'error': 'Error',
+      
+              'select-files-to-revoke': 'Select files to revoke',
     }
 };
 window.translations = translations;

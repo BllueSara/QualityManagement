@@ -40,6 +40,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const prevPageBtn = document.getElementById('prevPage');
     const nextPageBtn = document.getElementById('nextPage');
     const pageNumbers = Array.from(document.querySelectorAll('.page-number'));
+    
+    // تهيئة modal العناصر المحذوفة
+    console.log('🔍 DeletedItemsModal class available:', !!window.DeletedItemsModal);
+    if (window.DeletedItemsModal) {
+        window.deletedItemsModal = new window.DeletedItemsModal();
+        console.log('🔍 DeletedItemsModal instance created:', !!window.deletedItemsModal);
+    } else {
+        console.error('❌ DeletedItemsModal class not found!');
+    }
+    
+    // إضافة زر العناصر المحذوفة
+    initializeDeletedItemsButton();
   
     let currentPage = 1;
     const rowsPerPage = 5;
@@ -292,3 +304,33 @@ function getStatusText(status) {
 
     await fetchTickets();
 });
+
+// دالة إضافة زر العناصر المحذوفة
+function initializeDeletedItemsButton() {
+    // البحث عن page-header
+    const pageHeader = document.querySelector('.page-header');
+    if (pageHeader) {
+        // إنشاء زر العناصر المحذوفة
+        const deletedItemsBtn = document.createElement('button');
+        deletedItemsBtn.className = 'deleted-items-btn';
+        deletedItemsBtn.innerHTML = `
+            <i class="fas fa-trash"></i>
+            <span data-translate="deleted-items">العناصر المحذوفة</span>
+        `;
+        
+        // إضافة حدث النقر
+        deletedItemsBtn.addEventListener('click', () => {
+            if (window.deletedItemsModal) {
+                window.deletedItemsModal.show('tickets');
+            } else {
+                console.error('DeletedItemsModal not initialized');
+            }
+        });
+        
+        // إدراج الزر في page-header
+        pageHeader.appendChild(deletedItemsBtn);
+        console.log('Deleted items button inserted successfully for tickets page');
+    } else {
+        console.log('Page header not found for tickets page');
+    }
+}

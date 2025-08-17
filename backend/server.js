@@ -39,6 +39,7 @@ const jobNamesRoutes = require('./routes/jobNames');
 const deadlineRoutes = require('./routes/deadlineRoutes');
 const protocolRoutes = require('./routes/protocolRoutes');
 const protocolModel = require('./models/protocolModel');
+const deletedItemsRoutes = require('./routes/deletedItemsRoutes');
 const { setupSoftDelete } = require('./setup-soft-delete');
 
  
@@ -94,6 +95,7 @@ app.use('/api/job-titles', jobTitlesRoutes);
 app.use('/api/job-names', jobNamesRoutes);
 app.use('/api/deadlines', deadlineRoutes);
 app.use('/api/protocols', protocolRoutes);
+app.use('/api/deleted-items', deletedItemsRoutes);
 app.use('/api/super-admin', require('./routes/superAdmin.routes'));
 app.use('/api', globalContentRouter); // 👈 هذا يعطيك: /api/content-names
 

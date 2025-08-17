@@ -199,7 +199,7 @@
 
 
             <h2 data-translate="closed-last-7days">التذاكر المغلقة خلال آخر 7 أيام</h2>
-            <div class="chart-container">
+            <div class="chart-container" data-section="tickets">
                 <canvas id="ticketsChart"></canvas>
             </div>
 
@@ -207,7 +207,7 @@
             <div class="charts-section">
                 <h2 data-translate="department-statistics">إحصائيات الأقسام</h2>
                 <div class="charts-grid">
-                    <div class="chart-container">
+                    <div class="chart-container" data-section="departments">
                         <h3 data-translate="department-approval-rate">معدل اعتماد الأقسام</h3>
                         <canvas id="departmentChart"></canvas>
                     </div>
@@ -222,7 +222,7 @@
             <div class="charts-section">
                 <h2 data-translate="committee-statistics">إحصائيات اللجان</h2>
                 <div class="charts-grid">
-                    <div class="chart-container">
+                    <div class="chart-container" data-section="committees">
                         <h3 data-translate="committee-approval-status">حالة اعتماد اللجان</h3>
                         <canvas id="committeeChart"></canvas>
                     </div>
@@ -236,7 +236,7 @@
             <!-- قسم إحصائيات المحاضر -->
             <div class="charts-section">
                 <h2 data-translate="protocol-statistics">إحصائيات المحاضر</h2>
-                <div class="chart-container">
+                <div class="chart-container" data-section="protocols">
                     <h3 data-translate="protocol-status-distribution">توزيع حالات المحاضر</h3>
                     <canvas id="protocolChart"></canvas>
                 </div>
@@ -245,7 +245,7 @@
             <!-- قسم التحليل الشهري -->
             <div class="charts-section">
                 <h2 data-translate="monthly-analysis">التحليل الشهري</h2>
-                <div class="chart-container full-width">
+                <div class="chart-container full-width" data-section="monthly">
                     <h3 data-translate="monthly-trends">الاتجاهات الشهرية للمحتويات</h3>
                     <canvas id="monthlyTrendsChart"></canvas>
                 </div>

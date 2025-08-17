@@ -1213,6 +1213,196 @@ function renderProtocolChart(protocolData) {
   }
 }
 
+// دالة إضافة أزرار التحميل لكل قسم
+function addLoadButtons() {
+  // إضافة زر تحميل بيانات التذاكر
+  const ticketsSection = document.querySelector('[data-section="tickets"]');
+  if (ticketsSection) {
+    const loadButton = document.createElement('button');
+    loadButton.className = 'load-data-btn';
+    loadButton.innerHTML = '<i class="fas fa-download"></i> ' + getTranslation('load-data');
+    loadButton.onclick = () => loadTicketsData();
+    ticketsSection.appendChild(loadButton);
+  }
+
+  // إضافة زر تحميل بيانات الأقسام
+  const departmentSection = document.querySelector('[data-section="departments"]');
+  if (departmentSection) {
+    const loadButton = document.createElement('button');
+    loadButton.className = 'load-data-btn';
+    loadButton.innerHTML = '<i class="fas fa-download"></i> ' + getTranslation('load-data');
+    loadButton.onclick = () => loadDepartmentData();
+    departmentSection.appendChild(loadButton);
+  }
+
+  // إضافة زر تحميل بيانات اللجان
+  const committeeSection = document.querySelector('[data-section="committees"]');
+  if (committeeSection) {
+    const loadButton = document.createElement('button');
+    loadButton.className = 'load-data-btn';
+    loadButton.innerHTML = '<i class="fas fa-download"></i> ' + getTranslation('load-data');
+    loadButton.onclick = () => loadCommitteeData();
+    committeeSection.appendChild(loadButton);
+  }
+
+  // إضافة زر تحميل البيانات الشهرية
+  const monthlySection = document.querySelector('[data-section="monthly"]');
+  if (monthlySection) {
+    const loadButton = document.createElement('button');
+    loadButton.className = 'load-data-btn';
+    loadButton.innerHTML = '<i class="fas fa-download"></i> ' + getTranslation('load-data');
+    loadButton.onclick = () => loadMonthlyData();
+    monthlySection.appendChild(loadButton);
+  }
+
+  // إضافة زر تحميل بيانات المحاضر
+  const protocolSection = document.querySelector('[data-section="protocols"]');
+  if (protocolSection) {
+    const loadButton = document.createElement('button');
+    loadButton.className = 'load-data-btn';
+    loadButton.innerHTML = '<i class="fas fa-download"></i> ' + getTranslation('load-data');
+    loadButton.onclick = () => loadProtocolData();
+    protocolSection.appendChild(loadButton);
+  }
+}
+
+// دالة تحميل بيانات التذاكر
+async function loadTicketsData() {
+  try {
+    const button = event.target;
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + getTranslation('loading');
+    
+    const closed7d = await fetchClosedWeek();
+    renderChart(closed7d);
+    
+    button.innerHTML = '<i class="fas fa-check"></i> ' + getTranslation('data-loaded');
+    setTimeout(() => {
+      button.innerHTML = '<i class="fas fa-download"></i> ' + getTranslation('load-data');
+      button.disabled = false;
+    }, 2000);
+  } catch (error) {
+    console.error('Error loading tickets data:', error);
+    const button = event.target;
+    button.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + getTranslation('error');
+    button.disabled = false;
+    setTimeout(() => {
+      button.innerHTML = '<i class="fas fa-download"></i> ' + getTranslation('load-data');
+      button.disabled = false;
+    }, 3000);
+  }
+}
+
+// دالة تحميل بيانات الأقسام
+async function loadDepartmentData() {
+  try {
+    const button = event.target;
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + getTranslation('loading');
+    
+    const departmentStats = await fetchDepartmentStats();
+    renderDepartmentChart(departmentStats);
+    renderDepartmentPerformanceChart(departmentStats);
+    
+    button.innerHTML = '<i class="fas fa-check"></i> ' + getTranslation('data-loaded');
+    setTimeout(() => {
+      button.innerHTML = '<i class="fas fa-download"></i> ' + getTranslation('load-data');
+      button.disabled = false;
+    }, 2000);
+  } catch (error) {
+    console.error('Error loading department data:', error);
+    const button = event.target;
+    button.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + getTranslation('error');
+    button.disabled = false;
+    setTimeout(() => {
+      button.innerHTML = '<i class="fas fa-download"></i> ' + getTranslation('load-data');
+      button.disabled = false;
+    }, 3000);
+  }
+}
+
+// دالة تحميل بيانات اللجان
+async function loadCommitteeData() {
+  try {
+    const button = event.target;
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + getTranslation('loading');
+    
+    const committeeStats = await fetchCommitteeStats();
+    renderCommitteeChart(committeeStats);
+    renderCommitteePerformanceChart(committeeStats);
+    
+    button.innerHTML = '<i class="fas fa-check"></i> ' + getTranslation('data-loaded');
+    setTimeout(() => {
+      button.innerHTML = '<i class="fas fa-download"></i> ' + getTranslation('load-data');
+      button.disabled = false;
+    }, 2000);
+  } catch (error) {
+    console.error('Error loading committee data:', error);
+    const button = event.target;
+    button.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + getTranslation('error');
+    button.disabled = false;
+    setTimeout(() => {
+      button.innerHTML = '<i class="fas fa-download"></i> ' + getTranslation('load-data');
+      button.disabled = false;
+    }, 3000);
+  }
+}
+
+// دالة تحميل البيانات الشهرية
+async function loadMonthlyData() {
+  try {
+    const button = event.target;
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + getTranslation('loading');
+    
+    const monthlyPerformance = await fetchMonthlyPerformance();
+    renderMonthlyTrendsChart(monthlyPerformance);
+    
+    button.innerHTML = '<i class="fas fa-check"></i> ' + getTranslation('data-loaded');
+    setTimeout(() => {
+      button.innerHTML = '<i class="fas fa-download"></i> ' + getTranslation('load-data');
+      button.disabled = false;
+    }, 2000);
+  } catch (error) {
+    console.error('Error loading monthly data:', error);
+    const button = event.target;
+    button.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + getTranslation('error');
+    button.disabled = false;
+    setTimeout(() => {
+      button.innerHTML = '<i class="fas fa-download"></i> ' + getTranslation('load-data');
+      button.disabled = false;
+    }, 3000);
+  }
+}
+
+// دالة تحميل بيانات المحاضر
+async function loadProtocolData() {
+  try {
+    const button = event.target;
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + getTranslation('loading');
+    
+    const protocolStats = await fetchProtocolStats();
+    renderProtocolChart(protocolStats);
+    
+    button.innerHTML = '<i class="fas fa-check"></i> ' + getTranslation('data-loaded');
+    setTimeout(() => {
+      button.innerHTML = '<i class="fas fa-download"></i> ' + getTranslation('load-data');
+      button.disabled = false;
+    }, 2000);
+  } catch (error) {
+    console.error('Error loading protocol data:', error);
+    const button = event.target;
+    button.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + getTranslation('error');
+    button.disabled = false;
+    setTimeout(() => {
+      button.innerHTML = '<i class="fas fa-download"></i> ' + getTranslation('load-data');
+      button.disabled = false;
+    }, 3000);
+  }
+}
+
 (async () => {
   try {
     // إظهار حالة التحميل
@@ -1221,25 +1411,14 @@ function renderProtocolChart(protocolData) {
     // تنظيف الرسوم البيانية الموجودة
     destroyExistingCharts();
     
-    // جلب جميع البيانات
-    const [stats, closed7d, departmentStats, committeeStats, monthlyPerformance, protocolStats] = await Promise.all([
-      fetchStats(),
-      fetchClosedWeek(),
-      fetchDepartmentStats(),
-      fetchCommitteeStats(),
-      fetchMonthlyPerformance(),
-      fetchProtocolStats()
-    ]);
+    // جلب البيانات الأساسية فقط (الإحصائيات العامة)
+    const stats = await fetchStats();
     
-    // عرض البيانات
+    // عرض البيانات الأساسية
     renderStats(stats);
-    renderChart(closed7d);
-    renderDepartmentChart(departmentStats);
-    renderDepartmentPerformanceChart(departmentStats);
-    renderCommitteeChart(committeeStats);
-    renderCommitteePerformanceChart(committeeStats);
-    renderMonthlyTrendsChart(monthlyPerformance);
-    renderProtocolChart(protocolStats);
+    
+    // إضافة أزرار التحميل لكل قسم
+    addLoadButtons();
     
     // جعل البطاقات قابلة للنقر
     makeCardsClickable();

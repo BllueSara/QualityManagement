@@ -6,6 +6,49 @@ let filteredProtocols = [];
 const itemsPerPage = 10;
 
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded in protocol-list.js');
+    
+    // Initialize deleted items modal
+    let deletedItemsModal;
+    if (typeof DeletedItemsModal !== 'undefined') {
+        deletedItemsModal = new DeletedItemsModal();
+    }
+    
+    // Add deleted items button
+    const pageHeader = document.querySelector('.page-header');
+    console.log('Page header found:', pageHeader);
+    
+    if (pageHeader) {
+        const deletedItemsBtn = document.createElement('button');
+        deletedItemsBtn.className = 'btn-primary deleted-items-btn';
+        deletedItemsBtn.innerHTML = `
+            <i class="fas fa-trash-restore"></i>
+            <span data-translate="deleted-items">ما تم حذفه</span>
+        `;
+        
+        const title = pageHeader.querySelector('h1');
+        console.log('Title element found:', title);
+        
+        if (title) {
+            title.parentNode.insertBefore(deletedItemsBtn, title.nextSibling);
+            console.log('Deleted items button inserted successfully');
+        } else {
+            console.log('Title element not found, inserting at end of page-header');
+            pageHeader.appendChild(deletedItemsBtn);
+        }
+        
+        // Add click event to open modal
+        deletedItemsBtn.addEventListener('click', () => {
+            if (deletedItemsModal) {
+                deletedItemsModal.show('protocols');
+            } else {
+                console.error('DeletedItemsModal not initialized');
+            }
+        });
+    } else {
+        console.log('Page header not found');
+    }
+
     // إظهار المحتوى بعد تحميل اللغة
     const hiddenElements = document.querySelectorAll('.content-hidden');
     hiddenElements.forEach(element => {
