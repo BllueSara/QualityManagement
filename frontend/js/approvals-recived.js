@@ -1390,7 +1390,6 @@ document.getElementById("nextPage").addEventListener("click", () => {
         updateApprovalStatusInUI(selectedContentId, 'rejected');
       } catch (e) {
         console.error('Failed to send rejection:', e);
-        showToast(getTranslation('error-sending'), 'error');
         // إعادة تفعيل الزر في حالة الخطأ
         setButtonProcessingState(btnSendReason, false);
         enableRowActions(selectedContentId);
@@ -1951,7 +1950,6 @@ if (btnElectronicApprove) {
       disableActionsFor(selectedContentId);
     } catch (err) {
       console.error('Failed to electronically approve:', err);
-      showToast(getTranslation('error-sending'), 'error');
       // إعادة تفعيل الزر في حالة الخطأ
       setButtonProcessingState(btnElectronicApprove, false);
       enableRowActions(selectedContentId);
@@ -2185,7 +2183,6 @@ function setupSignatureModal() {
       disableActionsFor(selectedContentId);
     } catch (err) {
       console.error('Failed to send signature:', err);
-      showToast(getTranslation('error-sending'), 'error');
       // إعادة تفعيل الزر في حالة الخطأ
       setButtonProcessingState(confirmButton, false);
       enableRowActions(selectedContentId);
