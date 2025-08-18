@@ -114,7 +114,7 @@ function getFullNameSQLWithFallback() {
       CASE WHEN second_name IS NOT NULL AND second_name != '' THEN CONCAT(' ', second_name) ELSE '' END,
       CASE WHEN third_name IS NOT NULL AND third_name != '' THEN CONCAT(' ', third_name) ELSE '' END,
       CASE WHEN last_name IS NOT NULL AND last_name != '' THEN CONCAT(' ', last_name) ELSE '' END
-    )), ''),
+    ) COLLATE utf8mb4_unicode_ci), ''),
     username
   )`;
 }
@@ -132,7 +132,7 @@ function getFullNameWithJobNameSQLWithFallback() {
       CASE WHEN second_name IS NOT NULL AND second_name != '' THEN CONCAT(' ', second_name) ELSE '' END,
       CASE WHEN third_name IS NOT NULL AND third_name != '' THEN CONCAT(' ', third_name) ELSE '' END,
       CASE WHEN last_name IS NOT NULL AND last_name != '' THEN CONCAT(' ', last_name) ELSE '' END
-    )), ''),
+    ) COLLATE utf8mb4_unicode_ci), ''),
     username
   )`;
 }
@@ -149,7 +149,7 @@ function getFullNameSQLWithAliasAndFallback(tableAlias) {
       CASE WHEN ${tableAlias}.second_name IS NOT NULL AND ${tableAlias}.second_name != '' THEN CONCAT(' ', ${tableAlias}.second_name) ELSE '' END,
       CASE WHEN ${tableAlias}.third_name IS NOT NULL AND ${tableAlias}.third_name != '' THEN CONCAT(' ', ${tableAlias}.third_name) ELSE '' END,
       CASE WHEN ${tableAlias}.last_name IS NOT NULL AND ${tableAlias}.last_name != '' THEN CONCAT(' ', ${tableAlias}.last_name) ELSE '' END
-    )), ''),
+    ) COLLATE utf8mb4_unicode_ci), ''),
     ${tableAlias}.username
   )`;
 }
@@ -169,7 +169,7 @@ function getFullNameWithJobNameSQLWithAliasAndFallback(tableAlias, jobNameAlias 
       CASE WHEN ${tableAlias}.second_name IS NOT NULL AND ${tableAlias}.second_name != '' THEN CONCAT(' ', ${tableAlias}.second_name) ELSE '' END,
       CASE WHEN ${tableAlias}.third_name IS NOT NULL AND ${tableAlias}.third_name != '' THEN CONCAT(' ', ${tableAlias}.third_name) ELSE '' END,
       CASE WHEN ${tableAlias}.last_name IS NOT NULL AND ${tableAlias}.last_name != '' THEN CONCAT(' ', ${tableAlias}.last_name) ELSE '' END
-    )), ''),
+    ) COLLATE utf8mb4_unicode_ci), ''),
     ${tableAlias}.username
   )`;
 }

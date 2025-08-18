@@ -788,6 +788,7 @@ async function generateFinalSignedPDF(contentId) {
   const [logs] = await db.execute(`
     SELECT
       al.signed_as_proxy,
+      al.approval_role,
       CONCAT(
         COALESCE(u_actual.first_name, ''),
         CASE WHEN u_actual.second_name IS NOT NULL AND u_actual.second_name != '' THEN CONCAT(' ', u_actual.second_name) ELSE '' END,
@@ -913,8 +914,15 @@ async function generateFinalSignedPDF(contentId) {
   };
   for (const log of logs) {
     // نوع الاعتماد
-    const approvalType = rowIndex === 1 ? 'Reviewed' : 
-                        rowIndex === logs.length ? 'Approver' : 'Reviewed';
+    // استخدام الدور المحدد من قاعدة البيانات إذا كان موجوداً
+    let approvalType;
+    if (log.approval_role) {
+      approvalType = log.approval_role;
+    } else {
+      // استخدام المنطق القديم كاحتياطي
+      approvalType = rowIndex === 1 ? 'Reviewed' : 
+                    rowIndex === logs.length ? 'Approver' : 'Reviewed';
+    }
     
     // طريقة الاعتماد
     const approvalMethod = log.signature ? 'Hand Signature' : 
@@ -1130,6 +1138,7 @@ async function updatePDFAfterApproval(contentId) {
     const [logs] = await db.execute(`
       SELECT
         al.signed_as_proxy,
+        al.approval_role,
         CONCAT(
           COALESCE(u_actual.first_name, ''),
           CASE WHEN u_actual.second_name IS NOT NULL AND u_actual.second_name != '' THEN CONCAT(' ', u_actual.second_name) ELSE '' END,
@@ -1138,9 +1147,9 @@ async function updatePDFAfterApproval(contentId) {
         ) AS actual_signer,
         CONCAT(
           COALESCE(u_original.first_name, ''),
-          CASE WHEN u_original.second_name IS NOT NULL AND u_original.second_name != '' THEN CONCAT(' ', u_original.second_name) ELSE '' END,
-          CASE WHEN u_original.third_name IS NOT NULL AND u_original.third_name != '' THEN CONCAT(' ', u_original.third_name) ELSE '' END,
-          CASE WHEN u_original.last_name IS NOT NULL AND u_original.last_name != '' THEN CONCAT(' ', u_original.last_name) ELSE '' END
+          CASE WHEN u_actual.second_name IS NOT NULL AND u_actual.second_name != '' THEN CONCAT(' ', u_original.second_name) ELSE '' END,
+          CASE WHEN u_actual.third_name IS NOT NULL AND u_actual.third_name != '' THEN CONCAT(' ', u_original.third_name) ELSE '' END,
+          CASE WHEN u_actual.last_name IS NOT NULL AND u_actual.last_name != '' THEN CONCAT(' ', u_original.last_name) ELSE '' END
         ) AS original_user,
         u_actual.first_name AS actual_first_name,
         u_actual.second_name AS actual_second_name,
@@ -1248,8 +1257,15 @@ async function updatePDFAfterApproval(contentId) {
     };
 
     for (const log of logs) {
-      const approvalType = rowIndex === 1 ? 'Reviewed' : 
-                          rowIndex === logs.length ? 'Approver' : 'Reviewed';
+      // استخدام الدور المحدد من قاعدة البيانات إذا كان موجوداً
+      let approvalType;
+      if (log.approval_role) {
+        approvalType = log.approval_role;
+      } else {
+        // استخدام المنطق القديم كاحتياطي
+        approvalType = rowIndex === 1 ? 'Reviewed' : 
+                      rowIndex === logs.length ? 'Approver' : 'Reviewed';
+      }
       
       const approvalMethod = log.signature ? 'Hand Signature' : 
                             log.electronic_signature ? 'Electronic Signature' : 'Not Specified';

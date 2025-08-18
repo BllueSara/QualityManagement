@@ -1232,82 +1232,7 @@ body[lang="en"] .toast-container,
     border: 1px solid #545b62;
 }
 
-/* تنسيق badges القابلة للحذف */
-.removable-badge {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 12px 6px 35px !important;
-    margin: 3px;
-    border-radius: 15px;
-    font-size: 0.85rem;
-    font-weight: 500;
-    transition: all 0.3s ease;
-}
-
-.removable-badge:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-/* زر حذف المعتمد */
-.remove-approver-btn {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    border: 2px solid white;
-    background: #dc3545;
-    color: white;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 10px;
-    transition: all 0.3s ease;
-    z-index: 10;
-}
-
-.remove-approver-btn:hover {
-    background: #c82333;
-    transform: scale(1.1);
-    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.4);
-}
-
-.remove-approver-btn i {
-    font-size: 8px;
-    line-height: 1;
-}
-
-/* تأثير عند المرور على الـ badge */
-.removable-badge:hover .remove-approver-btn {
-    opacity: 1;
-    visibility: visible;
-}
-
-/* إخفاء زر الحذف افتراضياً في الشاشات الصغيرة */
-@media (max-width: 768px) {
-    .remove-approver-btn {
-        opacity: 1;
-        visibility: visible;
-    }
-    
-    .removable-badge {
-        padding: 8px 12px 8px 40px !important;
-        margin: 5px 2px;
-    }
-    
-    .remove-approver-btn {
-        top: -5px;
-        right: -5px;
-        width: 24px;
-        height: 24px;
-        font-size: 12px;
-    }
-}
+/* تم إزالة التصميمات القديمة للـ badges */
 
 /* تنسيق زر الإرسال مع إشارة التسلسل */
 .btn-send span {
@@ -2195,4 +2120,689 @@ body[lang="en"] .toast-container,
     padding: 10px 20px;
     font-size: 0.9rem;
   }
+}
+
+/* تنسيقات الأدوار */
+.role-badge {
+  background-color: #007bff !important;
+  color: white !important;
+  padding: 2px 6px !important;
+  border-radius: 3px !important;
+  font-size: 10px !important;
+  margin-left: 5px !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+}
+
+/* تنسيقات اختيار الأدوار لكل شخص */
+.role-selector {
+  display: inline-block;
+  margin-left: 8px;
+}
+
+.role-dropdown {
+  font-size: 10px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  border: 1px solid #ccc;
+  background-color: white;
+  cursor: pointer;
+}
+
+.role-dropdown:hover {
+  border-color: #007bff;
+}
+
+.role-dropdown:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* تنسيقات معلومات الأدوار */
+.role-info-text {
+  font-size: 11px;
+  color: #6c757d;
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* تنسيقات إضافية للأدوار */
+.role-prepared {
+  background-color: #28a745 !important;
+}
+
+.role-updated {
+  background-color: #ffc107 !important;
+  color: #212529 !important;
+}
+
+.role-reviewed {
+  background-color: #17a2b8 !important;
+}
+
+.role-approved {
+  background-color: #007bff !important;
+}
+
+/* ===== تصميم جدول المعتمدين الجديد ===== */
+.approvers-table {
+  width: 100%;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  margin-top: 20px;
+}
+
+/* للأقسام: 6 أعمدة (التسلسل، الاسم، القسم، نوع التحويل، الدور، الإجراءات) */
+.approvers-table[data-type="department"] .table-header,
+.approvers-table[data-type="department"] .table-row {
+  grid-template-columns: 80px 2fr 1.5fr 1fr 1fr 80px;
+}
+
+/* للجان: 4 أعمدة (الاسم، القسم، الدور، الإجراءات) */
+.approvers-table[data-type="committee"] .table-header,
+.approvers-table[data-type="committee"] .table-row {
+  grid-template-columns: 2fr 1.5fr 1fr 80px;
+}
+
+/* للمحاضر: 3 أعمدة (الاسم، القسم، الإجراءات) */
+.approvers-table[data-type="protocol"] .table-header,
+.approvers-table[data-type="protocol"] .table-row {
+  grid-template-columns: 2fr 1.5fr 80px;
+}
+
+.table-header {
+  display: grid;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-bottom: 2px solid #dee2e6;
+  font-weight: 700;
+  color: #495057;
+  font-size: 0.9rem;
+}
+
+.table-row {
+  display: grid;
+  border-bottom: 1px solid #e9ecef;
+  transition: all 0.3s ease;
+  align-items: center;
+}
+
+.table-row:hover {
+  background: #f8f9fa;
+  transform: translateX(2px);
+}
+
+.table-row:last-child {
+  border-bottom: none;
+}
+
+.header-cell,
+.table-cell {
+  padding: 15px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 0.9rem;
+  min-height: 50px;
+}
+
+.header-cell {
+  font-weight: 700;
+  color: #495057;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-right: 1px solid #dee2e6;
+}
+
+.header-cell:last-child {
+  border-right: none;
+}
+
+.table-cell {
+  color: #374151;
+  border-right: 1px solid #f1f3f4;
+  font-weight: 500;
+}
+
+.table-cell:last-child {
+  border-right: none;
+}
+
+/* تخصيص خلايا معينة */
+.table-cell.sequence {
+  justify-content: center;
+}
+
+.table-cell.name {
+  justify-content: flex-start;
+  text-align: left;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.table-cell.department {
+  justify-content: center;
+  color: #6c757d;
+}
+
+.table-cell.type {
+  justify-content: center;
+}
+
+.table-cell.role {
+  justify-content: center;
+}
+
+.table-cell.actions {
+  justify-content: center;
+}
+
+/* تصميم أرقام التسلسل */
+.sequence-number {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+  color: white;
+  background: #6c757d;
+  border: 2px solid #dee2e6;
+  transition: all 0.3s ease;
+}
+
+.sequence-number.first {
+  background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+  border-color: #1e7e34;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+.sequence-number.first:hover {
+  transform: scale(1.2);
+  box-shadow: 0 6px 16px rgba(40, 167, 69, 0.4);
+}
+
+/* تصميم نوع التحويل */
+.transfer-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.transfer-type.internal {
+  background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%);
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.transfer-type.external {
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+/* تصميم اختيار الدور */
+.role-selector {
+  width: 100%;
+  max-width: 140px;
+}
+
+.role-dropdown {
+  width: 100%;
+  padding: 8px 12px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #495057;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.role-dropdown:hover {
+  border-color: #007bff;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.15);
+}
+
+.role-dropdown:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+.role-dropdown option {
+  padding: 8px;
+  font-size: 0.85rem;
+}
+
+/* تصميم زر الحذف */
+.remove-approver-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid #dc3545;
+  background: #dc3545;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.remove-approver-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.remove-approver-btn:hover::before {
+  left: 100%;
+}
+
+.remove-approver-btn:hover {
+  background: #c82333;
+  border-color: #c82333;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+}
+
+.remove-approver-btn:active {
+  transform: scale(0.95);
+}
+
+.remove-approver-btn i {
+  font-size: 10px;
+  line-height: 1;
+}
+
+/* تصميم حالة عدم وجود دور */
+.no-role {
+  color: #6c757d;
+  font-style: italic;
+  font-size: 0.85rem;
+}
+
+/* تحسينات للشاشات الصغيرة */
+@media (max-width: 1200px) {
+  /* للأقسام */
+  .approvers-table[data-type="department"] .table-header,
+  .approvers-table[data-type="department"] .table-row {
+    grid-template-columns: 70px 1.5fr 1fr 1fr 1fr 70px;
+  }
+  
+  /* للجان */
+  .approvers-table[data-type="committee"] .table-header,
+  .approvers-table[data-type="committee"] .table-row {
+    grid-template-columns: 1.5fr 1fr 1fr 70px;
+  }
+  
+  /* للمحاضر */
+  .approvers-table[data-type="protocol"] .table-header,
+  .approvers-table[data-type="protocol"] .table-row {
+    grid-template-columns: 1.5fr 1fr 70px;
+  }
+  
+  .header-cell,
+  .table-cell {
+    padding: 12px 8px;
+    font-size: 0.85rem;
+  }
+  
+  .role-dropdown {
+    max-width: 120px;
+    padding: 6px 8px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 768px) {
+  /* للأقسام */
+  .approvers-table[data-type="department"] .table-header,
+  .approvers-table[data-type="department"] .table-row {
+    grid-template-columns: 60px 1fr 1fr 1fr 80px;
+  }
+  
+  /* للجان */
+  .approvers-table[data-type="committee"] .table-header,
+  .approvers-table[data-type="committee"] .table-row {
+    grid-template-columns: 1fr 1fr 80px;
+  }
+  
+  /* للمحاضر */
+  .approvers-table[data-type="protocol"] .table-header,
+  .approvers-table[data-type="protocol"] .table-row {
+    grid-template-columns: 1fr 80px;
+  }
+  
+  /* إخفاء عمود نوع التحويل في الشاشات الصغيرة للأقسام */
+  .approvers-table[data-type="department"] .header-cell.type,
+  .approvers-table[data-type="department"] .table-cell.type {
+    display: none;
+  }
+  
+  .header-cell,
+  .table-cell {
+    padding: 10px 6px;
+    font-size: 0.8rem;
+    min-height: 40px;
+  }
+  
+  .sequence-number {
+    width: 30px;
+    height: 30px;
+    font-size: 0.9rem;
+  }
+  
+  .transfer-type {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+  }
+  
+  .role-dropdown {
+    max-width: 100px;
+    padding: 4px 6px;
+    font-size: 0.75rem;
+  }
+  
+  .remove-approver-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* للأقسام */
+  .approvers-table[data-type="department"] .table-header,
+  .approvers-table[data-type="department"] .table-row {
+    grid-template-columns: 50px 1fr 80px;
+  }
+  
+  /* للجان */
+  .approvers-table[data-type="committee"] .table-header,
+  .approvers-table[data-type="committee"] .table-row {
+    grid-template-columns: 1fr 80px;
+  }
+  
+  /* للمحاضر */
+  .approvers-table[data-type="protocol"] .table-header,
+  .approvers-table[data-type="protocol"] .table-row {
+    grid-template-columns: 1fr 80px;
+  }
+  
+  /* إخفاء عمود القسم في الشاشات الصغيرة جداً */
+  .approvers-table .header-cell.department,
+  .approvers-table .table-cell.department {
+    display: none;
+  }
+  
+  /* إخفاء عمود الدور في الشاشات الصغيرة جداً */
+  .approvers-table .header-cell.role,
+  .approvers-table .table-cell.role {
+    display: none;
+  }
+  
+  .header-cell,
+  .table-cell {
+    padding: 8px 4px;
+    font-size: 0.75rem;
+    min-height: 35px;
+  }
+  
+  .sequence-number {
+    width: 25px;
+    height: 25px;
+    font-size: 0.8rem;
+  }
+  
+  .transfer-type {
+    padding: 3px 6px;
+    font-size: 0.7rem;
+  }
+  
+  .remove-approver-btn {
+    width: 24px;
+    height: 24px;
+    font-size: 8px;
+  }
+}
+
+/* تحسينات للغة العربية */
+[dir="rtl"] .table-cell.name {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+[dir="rtl"] .table-header {
+  direction: rtl;
+}
+
+[dir="rtl"] .table-row {
+  direction: rtl;
+}
+
+/* تأثيرات إضافية */
+.approvers-table {
+  animation: slideInUp 0.5s ease-out;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* تحسين مظهر الجدول عند التمرير */
+.approvers-table:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+/* تصميم خاص للصفوف الفردية */
+.table-row:nth-child(even) {
+  background: #fafbfc;
+}
+
+.table-row:nth-child(even):hover {
+  background: #f1f3f4;
+}
+
+/* تحسين مظهر الأيقونات */
+.transfer-type i {
+  font-size: 0.9rem;
+}
+
+/* تصميم خاص للصف الأول */
+.table-row:first-child {
+  border-top: 2px solid #dee2e6;
+}
+
+/* تحسين مظهر الخلايا الفارغة */
+.table-cell:empty::before {
+  content: '-';
+  color: #adb5bd;
+  font-style: italic;
+}
+
+/* ===== تصميم زر التصغير ===== */
+.collapse-btn {
+  background: none;
+  border: none;
+  color: #6c757d;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-left: auto;
+}
+
+.collapse-btn:hover {
+  background: #f8f9fa;
+  color: #495057;
+  transform: scale(1.1);
+}
+
+.collapse-btn:active {
+  transform: scale(0.95);
+}
+
+.collapse-btn i {
+  font-size: 14px;
+  transition: transform 0.3s ease;
+}
+
+.collapse-btn.collapsed i {
+  transform: rotate(180deg);
+}
+
+/* تحديث تصميم header الكارد */
+.item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e9ecef;
+  background: #ffffff;
+  border-radius: 8px 8px 0 0;
+}
+
+.item-title {
+  flex: 1;
+}
+
+.item-status {
+  margin: 0 16px;
+}
+
+/* تحسين تصميم الكارد عند التصغير */
+.approval-item.collapsed .item-content,
+.approval-item.collapsed .item-actions {
+  display: none !important;
+}
+
+.approval-item.collapsed {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  max-height: 40px;
+  overflow: hidden;
+}
+
+.approval-item.collapsed .item-header {
+  padding: 6px 10px;
+  min-height: 34px;
+}
+
+.approval-item.collapsed .item-title h3 {
+  font-size: 1.1rem;
+  margin: 0;
+  line-height: 1.3;
+  font-weight: 600;
+}
+
+.approval-item.collapsed .item-meta {
+  font-size: 0.85rem;
+  margin-top: 2px;
+  opacity: 0.8;
+}
+
+.approval-item.collapsed .status-badge {
+  font-size: 0.8rem;
+  padding: 3px 6px;
+}
+
+/* إضافة عرض الأشخاص المرسل لهم في الكارد المصغر */
+.approval-item.collapsed .sent-approvers-mini {
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  background: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+  font-size: 0.8rem;
+  color: #495057;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.approval-item.collapsed .sent-approvers-mini .mini-label {
+  font-weight: 600;
+  color: #6c757d;
+  min-width: fit-content;
+}
+
+.approval-item.collapsed .sent-approvers-mini .mini-approvers {
+  display: flex;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+
+.approval-item.collapsed .sent-approvers-mini .mini-approver {
+  background: #e9ecef;
+  color: #495057;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  border: 1px solid #dee2e6;
+}
+
+.approval-item.collapsed .sent-approvers-mini .mini-approver:first-child {
+  background: #28a745;
+  color: white;
+  border-color: #28a745;
+}
+
+/* تحسين التصغير - إخفاء المزيد من العناصر */
+.approval-item.collapsed .transfer-section,
+.approval-item.collapsed .department-transfer-note,
+.approval-item.collapsed .selected-approvers {
+  display: none !important;
+}
+
+/* تصغير إضافي للكارد */
+.approval-item.collapsed {
+  transform: scale(0.9);
+  margin: 3px 0;
+}
+
+/* تحسين المظهر عند التصغير */
+.approval-item.collapsed .item-header {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-bottom: 1px solid #dee2e6;
+}
+
+/* إخفاء الأشخاص المرسل لهم في الكارد المصغر */
+.approval-item:not(.collapsed) .sent-approvers-mini {
+  display: none !important;
 }

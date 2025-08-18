@@ -1307,13 +1307,13 @@ function showDelegationConfirmationPopup(delegatorInfo, delegateInfo, files, isB
   // تحضير قائمة الملفات
   let filesList = '';
   if (isBulk) {
-    filesList = '<p class="files-summary">تفويض شامل لجميع الملفات المعلقة</p>';
+    filesList = `<p class="files-summary">${getTranslation('bulk-delegation-all-pending')}</p>`;
   } else if (files && files.length > 0) {
-    filesList = '<div class="files-list">';
+    filesList = `<div class="files-list">`;
     files.forEach(file => {
-      const fileTypeText = file.type === 'department' ? 'قسم' :
-        file.type === 'committee' ? 'لجنة' :
-          file.type === 'protocol' ? 'محضر' : 'ملف';
+      const fileTypeText = file.type === 'department' ? getTranslation('department') :
+        file.type === 'committee' ? getTranslation('committee') :
+          file.type === 'protocol' ? getTranslation('protocol') : getTranslation('file');
       filesList += `<div class="file-item">
       <span class="file-name">${file.title || file.name}</span>
       <span class="file-type">${fileTypeText}</span>
@@ -1322,62 +1322,62 @@ function showDelegationConfirmationPopup(delegatorInfo, delegateInfo, files, isB
     filesList += '</div>';
   } else {
     // إذا لم تكن هناك ملفات، اعرض رسالة مناسبة
-    filesList = '<p class="files-summary">تفويض فردي - لا توجد ملفات محددة</p>';
+    filesList = `<p class="files-summary">${getTranslation('individual-delegation-no-files')}</p>`;
   }
 
   popup.innerHTML = `
   <div class="delegation-confirmation-content" style="background: white; border-radius: 8px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);">
     <div class="delegation-header">
-      <h3>اقرار التفويض</h3>
+      <h3>${getTranslation('delegation-confirmation-title')}</h3>
       <button class="close-btn" onclick="closeDelegationConfirmationPopup()">&times;</button>
     </div>
     
     <div class="delegation-body">
       <div class="delegator-info">
-        <h4>معلومات الموظف المفوض</h4>
+        <h4>${getTranslation('delegator-info')}</h4>
         <div class="info-row">
-          <span class="label">الاسم الكامل:</span>
+          <span class="label">${getTranslation('full-name')}:</span>
           <span class="value">${delegatorInfo.fullName}</span>
         </div>
         <div class="info-row">
-          <span class="label">رقم الهوية:</span>
+          <span class="label">${getTranslation('id-number')}:</span>
           <span class="value">${delegatorInfo.idNumber}</span>
         </div>
       </div>
       
       <div class="delegate-info">
-        <h4>معلومات الموظف المفوض له</h4>
+        <h4>${getTranslation('delegate-info')}</h4>
         <div class="info-row">
-          <span class="label">الاسم الكامل:</span>
+          <span class="label">${getTranslation('full-name')}:</span>
           <span class="value">${delegateInfo.fullName}</span>
         </div>
         <div class="info-row">
-          <span class="label">رقم الهوية:</span>
+          <span class="label">${getTranslation('id-number')}:</span>
           <span class="value">${delegateInfo.idNumber}</span>
         </div>
       </div>
       
       <div class="delegation-details">
-        <h4>تفاصيل التفويض</h4>
+        <h4>${getTranslation('delegation-details')}</h4>
         <div class="delegation-type">
-          <span class="label">نوع التفويض:</span>
-          <span class="value">${isBulk ? 'تفويض شامل' : 'تفويض فردي'}</span>
+          <span class="label">${getTranslation('delegation-type')}:</span>
+          <span class="value">${isBulk ? getTranslation('delegation-type-bulk') : getTranslation('delegation-type-individual')}</span>
         </div>
         ${filesList}
       </div>
       
     <div class="delegation-statement">
   <p class="statement-text">
-    أقر بأنني أقبل التفويض للموظف <strong>${delegateInfo.fullName}</strong> 
-    ذو رقم الهوية <strong>${delegateInfo.idNumber}</strong> 
-    بالتوقيع بالنيابة عنه ${isBulk ? 'لجميع الملفات المعلقة' : (files && files.length > 0 ? 'للملفات المحددة' : 'للملف المحدد')}.
+    ${getTranslation('delegation-statement-text')} <strong>${delegateInfo.fullName}</strong> 
+    ${getTranslation('delegation-statement-id')} <strong>${delegateInfo.idNumber}</strong> 
+    ${getTranslation('delegation-statement-sign')} ${isBulk ? getTranslation('delegation-statement-all-files') : (files && files.length > 0 ? getTranslation('delegation-statement-selected-files') : getTranslation('delegation-statement-single-file'))}.
   </p>
 </div>
     
     <div class="delegation-footer">
-      <button class="btn btn-danger" onclick="rejectDelegation()">رفض التفويض</button>
-      <button class="btn btn-secondary" onclick="closeDelegationConfirmationPopup()">إلغاء</button>
-      <button class="btn btn-primary" onclick="confirmDelegation()">قبول التفويض</button>
+      <button class="btn btn-danger" onclick="rejectDelegation()">${getTranslation('reject-delegation')}</button>
+      <button class="btn btn-secondary" onclick="closeDelegationConfirmationPopup()">${getTranslation('cancel-delegation')}</button>
+      <button class="btn btn-primary" onclick="confirmDelegation()">${getTranslation('accept-delegation')}</button>
     </div>
   </div>
 `;

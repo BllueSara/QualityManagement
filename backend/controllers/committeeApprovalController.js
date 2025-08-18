@@ -990,6 +990,7 @@ async function generateFinalSignedCommitteePDF(contentId) {
   const [logs] = await db.execute(`
     SELECT
       al.signed_as_proxy,
+      al.approval_role,
       ${getFullNameWithJobNameSQLWithAliasAndFallback('u_actual', 'jn_actual')}   AS actual_signer,
       ${getFullNameWithJobNameSQLWithAliasAndFallback('u_original', 'jn_original')} AS original_user,
       u_actual.first_name AS actual_first_name,
@@ -1105,8 +1106,14 @@ async function generateFinalSignedCommitteePDF(contentId) {
   
   for (const log of logs) {
     // نوع الاعتماد
-    const approvalType = rowIndex === 1 ? 'Reviewed' : 
-                        rowIndex === logs.length ? 'Approver' : 'Reviewed';
+    let approvalType;
+    if (log.approval_role) {
+      approvalType = log.approval_role;
+    } else {
+      // استخدام المنطق القديم كاحتياطي
+      approvalType = rowIndex === 1 ? 'Reviewed' : 
+                    rowIndex === logs.length ? 'Approver' : 'Reviewed';
+    }
     
     // طريقة الاعتماد
     const approvalMethod = log.signature ? 'Hand Signature' : 
@@ -1322,6 +1329,7 @@ async function updateCommitteePDFAfterApproval(contentId) {
     const [logs] = await db.execute(`
       SELECT
         al.signed_as_proxy,
+        al.approval_role,
         ${getFullNameSQLWithAliasAndFallback('u_actual')}   AS actual_signer,
         ${getFullNameSQLWithAliasAndFallback('u_original')} AS original_user,
         u_actual.first_name AS actual_first_name,
@@ -1430,8 +1438,15 @@ async function updateCommitteePDFAfterApproval(contentId) {
     };
 
     for (const log of logs) {
-      const approvalType = rowIndex === 1 ? 'Reviewed' : 
-                          rowIndex === logs.length ? 'Approver' : 'Reviewed';
+      // استخدام الدور المحدد من قاعدة البيانات إذا كان موجوداً
+      let approvalType;
+      if (log.approval_role) {
+        approvalType = log.approval_role;
+      } else {
+        // استخدام المنطق القديم كاحتياطي
+        approvalType = rowIndex === 1 ? 'Reviewed' : 
+                      rowIndex === logs.length ? 'Approver' : 'Reviewed';
+      }
       
       const approvalMethod = log.signature ? 'Hand Signature' : 
                             log.electronic_signature ? 'Electronic Signature' : 'Not Specified';

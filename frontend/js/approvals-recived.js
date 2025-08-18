@@ -89,13 +89,13 @@ function showDelegationConfirmationPopup(delegatorInfo, delegateInfo, files, isB
   // تحضير قائمة الملفات
   let filesList = '';
   if (isBulk) {
-    filesList = '<p class="files-summary">تفويض شامل لجميع الملفات المعلقة</p>';
+    filesList = `<p class="files-summary">${getTranslation('comprehensive-delegation')}</p>`;
   } else {
     filesList = '<div class="files-list">';
     files.forEach(file => {
       filesList += `<div class="file-item">
         <span class="file-name">${file.title || file.name}</span>
-        <span class="file-type">${file.type === 'department' ? 'قسم' : file.type === 'committee' ? 'لجنة' : file.type === 'protocol' ? 'محضر' : 'ملف'}</span>
+        <span class="file-type">${file.type === 'department' ? getTranslation('department-report') : file.type === 'committee' ? getTranslation('committee-file') : file.type === 'protocol' ? getTranslation('protocol-file') : getTranslation('file')}</span>
       </div>`;
     });
     filesList += '</div>';
@@ -110,7 +110,7 @@ function showDelegationConfirmationPopup(delegatorInfo, delegateInfo, files, isB
   const header = document.createElement('div');
   header.className = 'delegation-header';
   header.innerHTML = `
-    <h3>اقرار التفويض</h3>
+    <h3>${getTranslation('delegation-confirmation')}</h3>
     <button class="close-btn" onclick="closeDelegationConfirmationPopup()">&times;</button>
   `;
   
@@ -122,13 +122,13 @@ function showDelegationConfirmationPopup(delegatorInfo, delegateInfo, files, isB
   const delegatorInfoDiv = document.createElement('div');
   delegatorInfoDiv.className = 'delegator-info';
   delegatorInfoDiv.innerHTML = `
-    <h4>معلومات الموظف المفوض</h4>
+    <h4>${getTranslation('delegator-info')}</h4>
     <div class="info-row">
-      <span class="label">الاسم الكامل:</span>
+      <span class="label">${getTranslation('full-name')}:</span>
       <span class="value">${delegatorInfo.fullName}</span>
     </div>
     <div class="info-row">
-      <span class="label">رقم الهوية:</span>
+      <span class="label">${getTranslation('id-number')}:</span>
       <span class="value">${delegatorInfo.idNumber}</span>
     </div>
   `;
@@ -137,13 +137,13 @@ function showDelegationConfirmationPopup(delegatorInfo, delegateInfo, files, isB
   const delegateInfoDiv = document.createElement('div');
   delegateInfoDiv.className = 'delegate-info';
   delegateInfoDiv.innerHTML = `
-    <h4>معلومات الموظف المفوض له</h4>
+    <h4>${getTranslation('delegate-info')}</h4>
     <div class="info-row">
-      <span class="label">الاسم الكامل:</span>
+      <span class="label">${getTranslation('full-name')}:</span>
       <span class="value">${delegateInfo.fullName}</span>
     </div>
     <div class="info-row">
-      <span class="label">رقم الهوية:</span>
+      <span class="label">${getTranslation('id-number')}:</span>
       <span class="value">${delegateInfo.idNumber}</span>
     </div>
   `;
@@ -152,10 +152,10 @@ function showDelegationConfirmationPopup(delegatorInfo, delegateInfo, files, isB
   const detailsDiv = document.createElement('div');
   detailsDiv.className = 'delegation-details';
   detailsDiv.innerHTML = `
-    <h4>تفاصيل التفويض</h4>
+    <h4>${getTranslation('delegation-details')}</h4>
     <div class="delegation-type">
-      <span class="label">نوع التفويض:</span>
-      <span class="value">${isBulk ? 'تفويض شامل' : 'تفويض فردي'}</span>
+      <span class="label">${getTranslation('delegation-type')}:</span>
+      <span class="value">${isBulk ? getTranslation('comprehensive-delegation') : getTranslation('single-delegation')}</span>
     </div>
     ${filesList}
   `;
@@ -165,9 +165,9 @@ function showDelegationConfirmationPopup(delegatorInfo, delegateInfo, files, isB
   statementDiv.className = 'delegation-statement';
   statementDiv.innerHTML = `
     <p class="statement-text">
-      أقر بأنني أفوض الموظف <strong>${delegateInfo.fullName}</strong> 
-      ذو رقم الهوية <strong>${delegateInfo.idNumber}</strong> 
-      بالتوقيع بالنيابة عني على ${isBulk ? 'جميع الملفات المعلقة' : 'الملفات المحددة'}.
+      ${getTranslation('delegation-confirmation-message')} <strong>${delegateInfo.fullName}</strong> 
+      ${getTranslation('delegation-confirmation-message-2')} <strong>${delegateInfo.idNumber}</strong> 
+      ${getTranslation('delegation-confirmation-message-3')} ${isBulk ? getTranslation('delegation-confirmation-message-5') : getTranslation('delegation-confirmation-message-4')}.
     </p>
   `;
   
@@ -175,11 +175,11 @@ function showDelegationConfirmationPopup(delegatorInfo, delegateInfo, files, isB
   const signatureSection = document.createElement('div');
   signatureSection.className = 'delegation-signature-section';
   signatureSection.innerHTML = `
-    <h4>توقيع المرسل</h4>
+    <h4>${getTranslation('delegation-signature-section')}</h4>
     <div class="signature-canvas-container">
       <div class="signature-controls" style="margin-top: 10px;">
         <button type="button" onclick="clearSignatureCanvas()" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; margin-right: 5px; cursor: pointer;">
-          مسح التوقيع
+          ${getTranslation('clear')}
         </button>
       </div>
     </div>
@@ -189,9 +189,9 @@ function showDelegationConfirmationPopup(delegatorInfo, delegateInfo, files, isB
   const footer = document.createElement('div');
   footer.className = 'delegation-footer';
   footer.innerHTML = `
-    <button class="btn btn-danger" onclick="rejectDelegation()">رفض التفويض</button>
-    <button class="btn btn-secondary" onclick="closeDelegationConfirmationPopup()">إلغاء</button>
-    <button class="btn btn-primary" onclick="confirmDelegation()">قبول التفويض</button>
+    <button class="btn btn-danger" onclick="rejectDelegation()">${getTranslation('reject-delegation')}</button>
+    <button class="btn btn-secondary" onclick="closeDelegationConfirmationPopup()">${getTranslation('cancel-delegation')}</button>
+    <button class="btn btn-primary" onclick="confirmDelegation()">${getTranslation('confirm-delegation')}</button>
   `;
   
   // Assembly
@@ -540,7 +540,7 @@ function confirmDelegation() {
   console.log('🔍 pendingDelegationData:', pendingDelegationData);
   
   if (!pendingDelegationData) {
-    showToast('خطأ: لا توجد بيانات تفويض', 'error');
+    showToast(getTranslation('error-no-delegation-data'), 'error');
     return;
   }
   
@@ -549,13 +549,13 @@ function confirmDelegation() {
   console.log('🔍 senderSignature obtained:', senderSignature ? 'YES' : 'NO');
   
   if (!senderSignature) {
-    showToast('يرجى التوقيع أولاً كمرسل للتفويض', 'error');
+    showToast(getTranslation('delegation-error-no-signature'), 'error');
     return;
   }
   
   // حماية من النقر المتكرر
   const confirmButton = document.querySelector('#delegationConfirmationPopup .btn-primary');
-  if (!protectFromDoubleClick(confirmButton, 'جاري معالجة التفويض...')) {
+      if (!protectFromDoubleClick(confirmButton, getTranslation('processing-delegation'))) {
     return;
   }
   
@@ -588,7 +588,7 @@ function confirmDelegation() {
 
 function rejectDelegation() {
   if (!pendingDelegationData) {
-    showToast('خطأ: لا توجد بيانات تفويض', 'error');
+    showToast(getTranslation('error-no-delegation-data'), 'error');
     return;
   }
   
@@ -609,7 +609,7 @@ function rejectDelegation() {
   // مسح البيانات المؤقتة
   pendingDelegationData = null;
   
-  showToast('تم رفض التفويض', 'info');
+        showToast(getTranslation('delegation-rejected'), 'info');
 }
 
 // دوال معالجة التفويضات المختلفة
@@ -629,17 +629,17 @@ async function processSingleDepartmentDelegationAcceptance(delegationId) {
     
     const result = await response.json();
     if (result.status === 'success') {
-      showToast('تم قبول التفويض بنجاح', 'success');
+      showToast(getTranslation('delegation-sent-success'), 'success');
       closeDelegationConfirmationPopup();
       setTimeout(() => {
         window.location.reload();
       }, 1000);
     } else {
-      showToast(result.message || 'فشل في قبول التفويض', 'error');
+      showToast(result.message || getTranslation('delegation-failed'), 'error');
     }
   } catch (error) {
     console.error('Error accepting single department delegation:', error);
-    showToast('خطأ في قبول التفويض', 'error');
+    showToast(getTranslation('delegation-error-processing'), 'error');
   }
 }
 
@@ -659,17 +659,17 @@ async function processSingleCommitteeDelegationAcceptance(delegationId) {
     
     const result = await response.json();
     if (result.status === 'success') {
-      showToast('تم قبول التفويض بنجاح', 'success');
+      showToast(getTranslation('delegation-sent-success'), 'success');
       closeDelegationConfirmationPopup();
       setTimeout(() => {
         window.location.reload();
       }, 200);
     } else {
-      showToast(result.message || 'فشل في قبول التفويض', 'error');
+      showToast(result.message || getTranslation('delegation-failed'), 'error');
     }
   } catch (error) {
     console.error('Error accepting single committee delegation:', error);
-    showToast('خطأ في قبول التفويض', 'error');
+    showToast(getTranslation('delegation-error-processing'), 'error');
   }
 }
 
@@ -689,17 +689,17 @@ async function processBulkDelegationAcceptance(delegationId) {
     
     const result = await response.json();
     if (result.status === 'success') {
-      showToast('تم قبول التفويض الشامل بنجاح', 'success');
+      showToast(getTranslation('delegation-bulk-sent'), 'success');
       closeDelegationConfirmationPopup();
       setTimeout(() => {
         window.location.reload();
       }, 200);
     } else {
-      showToast(result.message || 'فشل في قبول التفويض الشامل', 'error');
+      showToast(result.message || getTranslation('delegation-failed'), 'error');
     }
   } catch (error) {
     console.error('Error accepting bulk delegation:', error);
-    showToast('خطأ في قبول التفويض الشامل', 'error');
+    showToast(getTranslation('delegation-error-processing'), 'error');
   }
 }
 
@@ -719,17 +719,17 @@ async function processSingleDepartmentDelegationRejection(delegationId) {
     
     const result = await response.json();
     if (result.status === 'success') {
-      showToast('تم رفض التفويض بنجاح', 'success');
+      showToast(getTranslation('delegation-rejected'), 'success');
       closeDelegationConfirmationPopup();
       setTimeout(() => {
         window.location.reload();
       }, 200);
     } else {
-      showToast(result.message || 'فشل في رفض التفويض', 'error');
+      showToast(result.message || getTranslation('delegation-failed'), 'error');
     }
   } catch (error) {
     console.error('Error rejecting single department delegation:', error);
-    showToast('خطأ في رفض التفويض', 'error');
+    showToast(getTranslation('delegation-error-processing'), 'error');
   }
 }
 
@@ -749,17 +749,17 @@ async function processSingleCommitteeDelegationRejection(delegationId) {
     
     const result = await response.json();
     if (result.status === 'success') {
-      showToast('تم رفض التفويض بنجاح', 'success');
+      showToast(getTranslation('delegation-rejected-success'), 'success');
       closeDelegationConfirmationPopup();
       setTimeout(() => {
         window.location.reload();
       }, 200);
     } else {
-      showToast(result.message || 'فشل في رفض التفويض', 'error');
+      showToast(result.message || getTranslation('delegation-rejection-failed'), 'error');
     }
   } catch (error) {
     console.error('Error rejecting single committee delegation:', error);
-    showToast('خطأ في رفض التفويض', 'error');
+    showToast(getTranslation('delegation-rejection-error'), 'error');
   }
 }
 
@@ -779,17 +779,17 @@ async function processBulkDelegationRejection(delegationId) {
     
     const result = await response.json();
     if (result.status === 'success') {
-      showToast('تم رفض التفويض الشامل بنجاح', 'success');
+      showToast(getTranslation('bulk-delegation-rejected-success'), 'success');
       closeDelegationConfirmationPopup();
       setTimeout(() => {
         window.location.reload();
       }, 200);
     } else {
-      showToast(result.message || 'فشل في رفض التفويض الشامل', 'error');
+      showToast(result.message || getTranslation('bulk-delegation-rejection-failed'), 'error');
     }
   } catch (error) {
     console.error('Error rejecting bulk delegation:', error);
-    showToast('خطأ في رفض التفويض الشامل', 'error');
+    showToast(getTranslation('bulk-delegation-rejection-error'), 'error');
   }
 }
 
@@ -810,7 +810,7 @@ async function processDirectDelegationUnified(delegatorId, action) {
       window.location.reload();
     }, 200);
   } catch (err) {
-    console.error('خطأ في معالجة التفويض المباشر الموحد:', err);
+    console.error(getTranslation('direct-delegation-processing-error'), err);
     throw err;
   }
 }
@@ -820,17 +820,17 @@ async function showSingleDelegationConfirmation(delegateTo, contentId, contentTy
   try {
     // التحقق من صحة البيانات قبل الإرسال
     if (!delegateTo) {
-      showToast('خطأ: المستخدم المفوض له غير محدد', 'error');
+      showToast(getTranslation('error-delegate-not-specified'), 'error');
       return;
     }
     
     if (!contentId) {
-      showToast('خطأ: معرف الملف غير محدد', 'error');
+      showToast(getTranslation('error-content-id-not-specified'), 'error');
       return;
     }
     
     if (!contentType) {
-      showToast('خطأ: نوع المحتوى غير محدد', 'error');
+      showToast(getTranslation('error-content-type-not-specified'), 'error');
       return;
     }
     
@@ -868,11 +868,11 @@ async function showSingleDelegationConfirmation(delegateTo, contentId, contentTy
       // عرض البوب أب
       showDelegationConfirmationPopup(delegator, delegate, files, false);
     } else {
-      showToast(result.message || 'فشل في جلب بيانات التفويض', 'error');
+      showToast(result.message || getTranslation('failed-to-fetch-delegation-data'), 'error');
     }
   } catch (error) {
     console.error('Error showing single delegation confirmation:', error);
-    showToast('خطأ في عرض اقرار التفويض', 'error');
+    showToast(getTranslation('error-showing-delegation-confirmation'), 'error');
   }
 }
 
@@ -906,11 +906,11 @@ async function showBulkDelegationConfirmation(delegateTo, notes = '') {
       // عرض البوب أب
       showDelegationConfirmationPopup(delegator, delegate, files, true);
     } else {
-      showToast(result.message || 'فشل في جلب بيانات التفويض الشامل', 'error');
+      showToast(result.message || getTranslation('failed-to-fetch-bulk-delegation-data'), 'error');
     }
   } catch (error) {
     console.error('Error showing bulk delegation confirmation:', error);
-    showToast('خطأ في عرض اقرار التفويض الشامل', 'error');
+    showToast(getTranslation('error-showing-bulk-delegation-confirmation'), 'error');
   }
 }
 
@@ -918,17 +918,17 @@ async function showSingleCommitteeDelegationConfirmation(delegateTo, contentId, 
   try {
     // التحقق من صحة البيانات قبل الإرسال
     if (!delegateTo) {
-      showToast('خطأ: المستخدم المفوض له غير محدد', 'error');
+      showToast(getTranslation('error-delegate-not-specified'), 'error');
       return;
     }
     
     if (!contentId) {
-      showToast('خطأ: معرف الملف غير محدد', 'error');
+      showToast(getTranslation('error-content-id-not-specified'), 'error');
       return;
     }
     
     if (!contentType) {
-      showToast('خطأ: نوع المحتوى غير محدد', 'error');
+      showToast(getTranslation('error-content-type-not-specified'), 'error');
       return;
     }
     
@@ -966,11 +966,11 @@ async function showSingleCommitteeDelegationConfirmation(delegateTo, contentId, 
     
       showDelegationConfirmationPopup(delegator, delegate, files, false);
     } else {
-      showToast(result.message || 'فشل في جلب بيانات التفويض', 'error');
+      showToast(result.message || getTranslation('failed-to-fetch-delegation-data'), 'error');
     }
   } catch (error) {
     console.error('Error showing single committee delegation confirmation:', error);
-    showToast('خطأ في عرض اقرار التفويض', 'error');
+    showToast(getTranslation('error-showing-delegation-confirmation'), 'error');
   }
 }
 
@@ -1005,11 +1005,11 @@ async function showBulkProtocolDelegationConfirmation(delegateTo, notes = '') {
       // عرض البوب أب
       showDelegationConfirmationPopup(delegator, delegate, files, true);
     } else {
-      showToast(result.message || 'فشل في جلب بيانات التفويض الشامل للمحاضر', 'error');
+      showToast(result.message || getTranslation('failed-to-fetch-bulk-protocol-delegation-data'), 'error');
     }
   } catch (error) {
     console.error('Error showing bulk protocol delegation confirmation:', error);
-    showToast('خطأ في عرض اقرار التفويض الشامل للمحاضر', 'error');
+    showToast(getTranslation('error-showing-bulk-protocol-delegation-confirmation'), 'error');
   }
 }
 
@@ -1017,17 +1017,17 @@ async function showSingleProtocolDelegationConfirmation(delegateTo, contentId, c
   try {
     // التحقق من صحة البيانات قبل الإرسال
     if (!delegateTo) {
-      showToast('خطأ: المستخدم المفوض له غير محدد', 'error');
+      showToast(getTranslation('error-delegate-not-specified'), 'error');
       return;
     }
     
     if (!contentId) {
-      showToast('خطأ: معرف المحضر غير محدد', 'error');
+      showToast(getTranslation('error-protocol-id-not-specified'), 'error');
       return;
     }
     
     if (!contentType) {
-      showToast('خطأ: نوع المحتوى غير محدد', 'error');
+      showToast(getTranslation('error-content-type-not-specified'), 'error');
       return;
     }
     
@@ -1065,11 +1065,11 @@ async function showSingleProtocolDelegationConfirmation(delegateTo, contentId, c
     
       showDelegationConfirmationPopup(delegator, delegate, files, false);
     } else {
-      showToast(result.message || 'فشل في جلب بيانات التفويض', 'error');
+      showToast(result.message || getTranslation('failed-to-fetch-delegation-data'), 'error');
     }
   } catch (error) {
     console.error('Error showing single protocol delegation confirmation:', error);
-    showToast('خطأ في عرض اقرار التفويض', 'error');
+    showToast(getTranslation('error-showing-delegation-confirmation'), 'error');
   }
 }
 
@@ -1104,11 +1104,11 @@ async function showBulkCommitteeDelegationConfirmation(delegateTo, notes = '') {
       // عرض البوب أب
       showDelegationConfirmationPopup(delegator, delegate, files, true);
     } else {
-      showToast(result.message || 'فشل في جلب بيانات التفويض الشامل للجان', 'error');
+      showToast(result.message || getTranslation('failed-to-fetch-bulk-committee-delegation-data'), 'error');
     }
   } catch (error) {
     console.error('Error showing bulk committee delegation confirmation:', error);
-    showToast('خطأ في عرض اقرار التفويض الشامل للجان', 'error');
+    showToast(getTranslation('error-showing-bulk-committee-delegation-confirmation'), 'error');
   }
 }
 // دالة إظهار التوست - خارج DOMContentLoaded لتكون متاحة في كل مكان
@@ -1261,7 +1261,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnAll.id = 'delegateAllBtn';
     btnAll.className = 'btn-delegate-all';
     btnAll.type = 'button';
-    btnAll.innerHTML = `<i class="fas fa-user-friends"></i> ${getTranslation('delegate-all') || 'تفويض جميع الملفات بالنيابة'}`;
+            btnAll.innerHTML = `<i class="fas fa-user-friends"></i> ${getTranslation('delegate-all')}`;
     btnAll.style = 'background: #2563eb; color: #fff; padding: 8px 18px; border-radius: 6px; border: none; font-size: 1rem; margin-right: 8px; cursor: pointer; vertical-align: middle;';
     const deptFilter = document.getElementById('deptFilter');
     if (deptFilter && deptFilter.parentNode) {
@@ -1272,11 +1272,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       isBulkDelegation = true;
       selectedContentId = null;
       document.getElementById('delegateDept').value = '';
-      document.getElementById('delegateUser').innerHTML = '<option value="" disabled selected>' + (getTranslation('select-user') || 'اختر المستخدم') + '</option>';
+      document.getElementById('delegateUser').innerHTML = '<option value="" disabled selected>' + getTranslation('select-user') + '</option>';
       document.getElementById('delegateNotes').value = '';
       openModal('delegateModal');
       loadDepartments();
-      document.getElementById('delegateNotes').placeholder = getTranslation('notes-bulk') || 'ملاحظات (تنطبق على جميع الملفات)';
+      document.getElementById('delegateNotes').placeholder = getTranslation('notes-bulk');
     };
   }
 
@@ -1360,7 +1360,7 @@ document.getElementById("nextPage").addEventListener("click", () => {
       if (!reason) return showToast(getTranslation('please-enter-reason'), 'warning');
       
       // حماية من النقر المتكرر
-      if (!protectFromDoubleClick(btnSendReason, 'جاري إرسال الرفض...')) {
+      if (!protectFromDoubleClick(btnSendReason, getTranslation('sending-rejection'))) {
         return;
       }
       
@@ -1898,7 +1898,7 @@ if (btnElectronicApprove) {
     if (!selectedContentId) return showToast(getTranslation('please-select-user'), 'warning');
     
     // حماية من النقر المتكرر
-    if (!protectFromDoubleClick(btnElectronicApprove, 'جاري التوقيع...')) {
+    if (!protectFromDoubleClick(btnElectronicApprove, getTranslation('signing'))) {
       return;
     }
     
@@ -2133,7 +2133,7 @@ function setupSignatureModal() {
     
     // حماية من النقر المتكرر
     const confirmButton = document.getElementById('btnConfirmSignature');
-    if (!protectFromDoubleClick(confirmButton, 'جاري إرسال التوقيع...')) {
+    if (!protectFromDoubleClick(confirmButton, getTranslation('sending-signature'))) {
       return;
     }
     
@@ -2515,7 +2515,7 @@ function setupDelegationEventListener() {
       console.log('🔍 btnDelegateConfirm clicked!');
       
       // حماية من النقر المتكرر
-      if (!protectFromDoubleClick(btnDelegateConfirm, 'جاري معالجة التفويض...')) {
+      if (!protectFromDoubleClick(btnDelegateConfirm, getTranslation('processing-delegation'))) {
         return;
       }
       
@@ -2542,7 +2542,7 @@ function setupDelegationEventListener() {
           await showBulkDelegationConfirmation(userId, notes);
         } catch (err) {
           console.error('Failed to show bulk delegation confirmation:', err);
-          showToast(getTranslation('error-sending') || 'حدث خطأ أثناء عرض اقرار التفويض الشامل', 'error');
+          showToast(getTranslation('error-showing-bulk-delegation-confirmation'), 'error');
           // إعادة تفعيل الزر في حالة الخطأ
           setButtonProcessingState(btnDelegateConfirm, false);
           // إعادة تفعيل أزرار الصف في حالة الخطأ
@@ -2562,7 +2562,7 @@ function setupDelegationEventListener() {
         
         if (!row) {
           console.error('🔍 Row not found for selectedContentId:', selectedContentId);
-          showToast('خطأ: لم يتم العثور على الملف المحدد', 'error');
+          showToast(getTranslation('error-file-not-found'), 'error');
           setButtonProcessingState(btnDelegateConfirm, false);
           // إعادة تفعيل أزرار الصف في حالة الخطأ
           if (selectedContentId) {
@@ -2578,7 +2578,7 @@ function setupDelegationEventListener() {
         // التحقق من صحة البيانات
         if (!contentType) {
           console.error('🔍 contentType is missing or undefined');
-          showToast('خطأ: نوع المحتوى غير محدد', 'error');
+          showToast(getTranslation('error-content-type-not-specified'), 'error');
           setButtonProcessingState(btnDelegateConfirm, false);
           // إعادة تفعيل أزرار الصف في حالة الخطأ
           if (selectedContentId) {
@@ -2589,7 +2589,7 @@ function setupDelegationEventListener() {
         
         if (!selectedContentId) {
           console.error('🔍 selectedContentId is missing or undefined');
-          showToast('خطأ: معرف الملف غير محدد', 'error');
+          showToast(getTranslation('error-content-id-not-specified'), 'error');
           setButtonProcessingState(btnDelegateConfirm, false);
           // إعادة تفعيل أزرار الصف في حالة الخطأ
           if (selectedContentId) {
@@ -2619,7 +2619,7 @@ function setupDelegationEventListener() {
           }
         } catch (err) {
           console.error('Failed to show delegation confirmation:', err);
-          showToast(getTranslation('error-sending') || 'حدث خطأ أثناء عرض اقرار التفويض', 'error');
+          showToast(getTranslation('error-showing-delegation-confirmation'), 'error');
           // إعادة تفعيل الزر في حالة الخطأ
           setButtonProcessingState(btnDelegateConfirm, false);
           // إعادة تفعيل أزرار الصف في حالة الخطأ
@@ -2684,12 +2684,12 @@ function showApprovalsProxyPopup() {
             const message = `${result.message}\nملفات الأقسام: ${stats.departmentFiles || 0}\nملفات اللجان: ${stats.committeeFiles || 0}`;
             showToast(message, 'success');
           } else {
-            showToast(result.message || getTranslation('accept-all-proxy-error') || 'حدث خطأ أثناء قبول جميع التفويضات', 'error');
+            showToast(result.message || getTranslation('accept-all-proxy-error'), 'error');
           }
           refreshApprovalsData();
         } catch (err) {
           console.error('Accept all delegations error:', err);
-          showToast(getTranslation('accept-all-proxy-error') || 'حدث خطأ أثناء قبول جميع التفويضات', 'error');
+          showToast(getTranslation('accept-all-proxy-error'), 'error');
         }
       }
     );
@@ -2705,12 +2705,12 @@ function showApprovalsProxyPopup() {
           const message = `${result.message}\nملفات الأقسام: ${stats.departmentFiles || 0}\nملفات اللجان: ${stats.committeeFiles || 0}`;
           showToast(message, 'success');
         } else {
-          showToast(result.message || getTranslation('accept-all-proxy-error') || 'حدث خطأ أثناء قبول جميع التفويضات', 'error');
+          showToast(result.message || getTranslation('accept-all-proxy-error'), 'error');
         }
         refreshApprovalsData();
       }).catch((err) => {
         console.error('Accept all delegations error:', err);
-        showToast(getTranslation('accept-all-proxy-error') || 'حدث خطأ أثناء قبول جميع التفويضات', 'error');
+        showToast(getTranslation('accept-all-proxy-error'), 'error');
       });
     }
   }
@@ -3163,7 +3163,7 @@ async function refreshApprovalsData() {
     
   } catch (err) {
     console.error("Error refreshing approvals:", err);
-    showToast(getTranslation('error-refreshing') || 'حدث خطأ أثناء تحديث البيانات', 'error');
+            showToast(getTranslation('error-refreshing'), 'error');
   }
 }
 
@@ -3292,9 +3292,9 @@ async function processSingleDelegation(data) {
     if (result.status === 'success') {
       let message;
       if (data.isProtocol) {
-        message = 'تم إرسال طلب التفويض للمحضر بنجاح';
+        message = getTranslation('protocol-delegation-request-sent-success');
       } else {
-        message = 'تم إرسال طلب التفويض بنجاح';
+        message = getTranslation('delegation-request-sent-success');
       }
       showToast(message, 'success');
       // تحديث الصفحة أو إعادة تحميل البيانات
@@ -3306,7 +3306,7 @@ async function processSingleDelegation(data) {
         }
       }, 1500);
     } else {
-      showToast(result.message || 'فشل إرسال طلب التفويض', 'error');
+      showToast(result.message || getTranslation('delegation-request-failed'), 'error');
       // إعادة تفعيل أزرار الصف في حالة الفشل
       if (data.contentId) {
         enableRowActions(data.contentId);
@@ -3314,7 +3314,7 @@ async function processSingleDelegation(data) {
     }
   } catch (error) {
     console.error('🔍 Error processing single delegation:', error);
-    showToast('خطأ في إرسال طلب التفويض', 'error');
+    showToast(getTranslation('delegation-request-error'), 'error');
     // إعادة تفعيل أزرار الصف في حالة الخطأ
     if (data.contentId) {
       enableRowActions(data.contentId);
@@ -3368,11 +3368,11 @@ async function processBulkDelegation(data) {
     if (result.status === 'success') {
       let message;
       if (data.isCommittee) {
-        message = 'تم إرسال طلب التفويض الشامل للجان بنجاح';
+        message = getTranslation('bulk-committee-delegation-request-sent-success');
       } else if (data.isProtocol) {
-        message = 'تم إرسال طلب التفويض الشامل للمحاضر بنجاح';
+        message = getTranslation('bulk-protocol-delegation-request-sent-success');
       } else {
-        message = 'تم إرسال طلب التفويض الشامل بنجاح';
+        message = getTranslation('bulk-delegation-request-sent-success');
       }
       showToast(message, 'success');
       // تحديث الصفحة أو إعادة تحميل البيانات
@@ -3384,7 +3384,7 @@ async function processBulkDelegation(data) {
         }
       }, 1500);
     } else {
-      showToast(result.message || 'فشل إرسال طلب التفويض الشامل', 'error');
+      showToast(result.message || getTranslation('bulk-delegation-request-failed'), 'error');
       // إعادة تفعيل أزرار الصف في حالة الفشل
       if (data.contentId) {
         enableRowActions(data.contentId);
@@ -3392,7 +3392,7 @@ async function processBulkDelegation(data) {
     }
   } catch (error) {
     console.error('🔍 Error processing bulk delegation:', error);
-    showToast('خطأ في إرسال طلب التفويض الشامل', 'error');
+    showToast(getTranslation('bulk-delegation-request-error'), 'error');
     // إعادة تفعيل أزرار الصف في حالة الخطأ
     if (data.contentId) {
       enableRowActions(data.contentId);
@@ -3407,7 +3407,7 @@ async function processBulkDelegation(data) {
 }
 
 // دالة جديدة لحماية الأزرار من النقر المتكرر
-function setButtonProcessingState(button, isProcessing, processingText = 'جاري المعالجة...', originalText = null) {
+function setButtonProcessingState(button, isProcessing, processingText = null, originalText = null) {
   if (!button) return;
   
   if (isProcessing) {
@@ -3448,7 +3448,7 @@ function setButtonProcessingState(button, isProcessing, processingText = 'جار
 }
 
 // دالة لحماية من النقر المتكرر مع timeout
-function protectFromDoubleClick(button, processingText = 'جاري المعالجة...') {
+function protectFromDoubleClick(button, processingText = null) {
   if (!button || button.disabled) return false;
   
   // تعطيل الزر فوراً
@@ -3489,7 +3489,7 @@ function disableRowActions(contentId) {
     }
     
     // إضافة نص المعالجة
-    button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> جاري المعالجة...`;
+    button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${getTranslation('processing')}`;
     
     // إضافة CSS إضافي لتحسين المظهر
     button.style.transition = 'all 0.3s ease';

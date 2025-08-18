@@ -249,7 +249,24 @@ function createApprovalItem(item) {
           ${hasApprovers ? getTranslation('sent') : getTranslation('waiting-send')}
         </span>
       </div>
+      <button class="collapse-btn" title="${getTranslation('collapse-card') || 'تصغير الكارد'}">
+        <i class="fas fa-chevron-up"></i>
+      </button>
     </div>
+    
+    <!-- عرض الأشخاص المرسل لهم في الكارد المصغر -->
+    ${hasApprovers ? `
+      <div class="sent-approvers-mini">
+        <span class="mini-label">${getTranslation('sent-to') || 'مرسل إلى'}:</span>
+        <div class="mini-approvers">
+          ${assignedApproverNames.map((name, index) => `
+            <span class="mini-approver" title="${name}">
+              ${index === 0 ? '1.' : ''} ${name}
+            </span>
+          `).join('')}
+        </div>
+      </div>
+    ` : ''}
     
     <div class="item-content">
       ${hasApprovers ? `
@@ -261,7 +278,7 @@ function createApprovalItem(item) {
              ${item.type === 'department' ? `
          <div class="department-transfer-note" style="margin-bottom: 8px;">
            <span style="font-size: 11px; color: #6c757d; background: #f8f9fa; padding: 4px 8px; border-radius: 4px; border: 1px solid #e9ecef; display: inline-block;">
-             💡 ${getTranslation('internal-first-external-second') || 'داخلي أولاً، ثم خارجي'}
+             ${getTranslation('internal-first-external-second') || 'داخلي أولاً، ثم خارجي'}
            </span>
          </div>
        ` : ''}
@@ -270,12 +287,12 @@ function createApprovalItem(item) {
          <!-- قسم التحويل الداخلي -->
          <div class="transfer-section internal-transfer">
            <div class="section-header" style="background: #e8f5e8; color: #155724; padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; font-weight: 600; font-size: 0.9rem; text-align: center;">
-             ${item.type === 'department' ? '🏢 ' + (getTranslation('internal-transfer') || 'التحويل الداخلي') : '📋 ' + (getTranslation('select-department') || 'اختر القسم')}
+             ${item.type === 'department' ? (getTranslation('internal-transfer') || 'التحويل الداخلي') : (getTranslation('select-department') || 'اختر القسم')}
            </div>
            <div class="section-content" style="display: flex; gap: 12px; flex-wrap: wrap;">
              <div class="dropdown-group" style="flex: 1; min-width: 180px;">
                <label class="dropdown-label" style="display: block; margin-bottom: 8px; font-weight: 600; color: #155724; font-size: 0.9rem; text-align: center;">
-                 ${item.type === 'department' ? '📋 ' + (getTranslation('select-internal-department') || 'اختر القسم الداخلي') : '📋 ' + (getTranslation('select-department') || 'اختر القسم')}
+                 ${item.type === 'department' ? (getTranslation('select-internal-department') || 'اختر القسم الداخلي') : (getTranslation('select-department') || 'اختر القسم')}
                </label>
                <div class="dropdown-custom" data-type="internal-dept">
                  <button class="dropdown-btn">${getTranslation('select-department')}</button>
@@ -286,7 +303,7 @@ function createApprovalItem(item) {
              </div>
              <div class="dropdown-group" style="flex: 1; min-width: 180px;">
                <label class="dropdown-label" style="display: block; margin-bottom: 8px; font-weight: 600; color: #155724; font-size: 0.9rem; text-align: center;">
-                 ${item.type === 'department' ? '👥 ' + (getTranslation('select-internal-people') || 'اختر الأشخاص الداخليين') : '👥 ' + (getTranslation('select-people') || 'اختر الأشخاص')}
+                 ${item.type === 'department' ? (getTranslation('select-internal-people') || 'اختر الأشخاص الداخليين') : (getTranslation('select-people') || 'اختر الأشخاص')}
                </label>
                <div class="dropdown-custom" data-type="internal-users">
                  <button class="dropdown-btn" disabled>${getTranslation('select-department-first')}</button>
@@ -295,6 +312,16 @@ function createApprovalItem(item) {
                  </div>
                </div>
              </div>
+             ${item.type !== 'protocol' ? `
+               <div class="dropdown-group" style="flex: 1; min-width: 180px;">
+                 <label class="dropdown-label" style="display: block; margin-bottom: 8px; font-weight: 600; color: #155724; font-size: 0.9rem; text-align: center;">
+                   ${getTranslation('role-info') || 'سيتم تحديد الدور لكل شخص'}
+                 </label>
+                 <div class="role-info-text" style="font-size: 11px; color: #6c757d; text-align: center;">
+                   ${getTranslation('role-per-person') || 'يمكنك تحديد دور مختلف لكل معتمد'}
+                 </div>
+               </div>
+             ` : ''}
            </div>
          </div>
 
@@ -302,12 +329,12 @@ function createApprovalItem(item) {
          ${item.type === 'department' ? `
          <div class="transfer-section external-transfer">
            <div class="section-header" style="background: #fff3cd; color: #856404; padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; font-weight: 600; font-size: 0.9rem; text-align: center;">
-             🔄 ${getTranslation('external-transfer') || 'التحويل الخارجي'}
+             ${getTranslation('external-transfer') || 'التحويل الخارجي'}
            </div>
            <div class="section-content" style="display: flex; gap: 12px; flex-wrap: wrap;">
              <div class="dropdown-group" style="flex: 1; min-width: 180px;">
                <label class="dropdown-label" style="display: block; margin-bottom: 8px; font-weight: 600; color: #856404; font-size: 0.9rem; text-align: center;">
-                 📋 ${getTranslation('select-external-department') || 'اختر القسم الخارجي'}
+                 ${getTranslation('select-external-department') || 'اختر القسم الخارجي'}
                </label>
                <div class="dropdown-custom" data-type="external-dept">
                  <button class="dropdown-btn">${getTranslation('select-department')}</button>
@@ -318,7 +345,7 @@ function createApprovalItem(item) {
              </div>
              <div class="dropdown-group" style="flex: 1; min-width: 180px;">
                <label class="dropdown-label" style="display: block; margin-bottom: 8px; font-weight: 600; color: #856404; font-size: 0.9rem; text-align: center;">
-                 👥 ${getTranslation('select-external-people') || 'اختر الأشخاص الخارجيين'}
+                 ${getTranslation('select-external-people') || 'اختر الأشخاص الخارجيين'}
                </label>
                <div class="dropdown-custom" data-type="external-users">
                  <button class="dropdown-btn" disabled>${getTranslation('select-department-first')}</button>
@@ -327,6 +354,16 @@ function createApprovalItem(item) {
                  </div>
                </div>
              </div>
+             ${item.type !== 'protocol' ? `
+               <div class="dropdown-group" style="flex: 1; min-width: 180px;">
+                 <label class="dropdown-label" style="display: block; margin-bottom: 8px; font-weight: 600; color: #856404; font-size: 0.9rem; text-align: center;">
+                   ${getTranslation('role-info') || 'سيتم تحديد الدور لكل شخص'}
+                 </label>
+                 <div class="role-info-text" style="font-size: 11px; color: #6c757d; text-align: center;">
+                   ${getTranslation('role-per-person') || 'يمكنك تحديد دور مختلف لكل معتمد'}
+                 </div>
+               </div>
+             ` : ''}
            </div>
          </div>
          ` : ''}
@@ -363,6 +400,41 @@ function createApprovalItem(item) {
 }
 
 function addItemEventListeners(approvalItem, item) {
+  // زر التصغير
+  const collapseButton = approvalItem.querySelector('.collapse-btn');
+  if (collapseButton) {
+    collapseButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      const itemContent = approvalItem.querySelector('.item-content');
+      const itemActions = approvalItem.querySelector('.item-actions');
+      const icon = collapseButton.querySelector('i');
+      
+      if (approvalItem.classList.contains('collapsed')) {
+        // إظهار المحتوى
+        approvalItem.classList.remove('collapsed');
+        itemContent.style.display = 'block';
+        itemActions.style.display = 'flex';
+        icon.className = 'fas fa-chevron-up';
+        collapseButton.title = getTranslation('collapse-card') || 'تصغير الكارد';
+        
+        // إعادة تعيين الارتفاع
+        approvalItem.style.maxHeight = 'none';
+        approvalItem.style.overflow = 'visible';
+      } else {
+        // إخفاء المحتوى
+        approvalItem.classList.add('collapsed');
+        itemContent.style.display = 'none';
+        itemActions.style.display = 'none';
+        icon.className = 'fas fa-chevron-down';
+        collapseButton.title = getTranslation('expand-card') || 'تكبير الكارد';
+        
+        // تصغير إضافي
+        approvalItem.style.maxHeight = '40px';
+        approvalItem.style.overflow = 'hidden';
+      }
+    });
+  }
+
   // زر العرض
   const viewButton = approvalItem.querySelector('.btn-view');
     if (viewButton) {
@@ -564,7 +636,7 @@ function updateApprovalItemUI(approvalItem, updatedNames, updatedIds) {
   const selectedApproversDiv = approvalItem.querySelector('.selected-approvers');
   if (!selectedApproversDiv) return;
   
-  // إعادة بناء badges المعتمدين
+  // إعادة بناء جدول المعتمدين
   selectedApproversDiv.innerHTML = '';
   
   if (updatedNames.length === 0) {
@@ -589,34 +661,170 @@ function updateApprovalItemUI(approvalItem, updatedNames, updatedIds) {
       `;
     }
   } else {
-    // إعادة بناء badges
+    // إعادة بناء الجدول
+    const contentType = approvalItem.dataset.type;
+    const isDepartment = contentType === 'department';
+    
+    const approversTable = document.createElement('div');
+    approversTable.className = 'approvers-table';
+    approversTable.dataset.type = contentType;
+    
+    // إنشاء رأس الجدول - يختلف حسب نوع المحتوى
+    const tableHeader = document.createElement('div');
+    tableHeader.className = 'table-header';
+    
+    if (isDepartment) {
+      // للأقسام: عرض التسلسل ونوع التحويل
+      tableHeader.innerHTML = `
+        <div class="header-cell sequence">${getTranslation('sequence') || 'التسلسل'}</div>
+        <div class="header-cell name">${getTranslation('name') || 'الاسم'}</div>
+        <div class="header-cell department">${getTranslation('department') || 'القسم'}</div>
+        <div class="header-cell type">${getTranslation('transfer-type') || 'نوع التحويل'}</div>
+        <div class="header-cell role">${getTranslation('role') || 'الدور'}</div>
+        <div class="header-cell actions">${getTranslation('actions') || 'الإجراءات'}</div>
+      `;
+    } else {
+      // للجان والمحاضر: بدون تسلسل وبدون نوع تحويل
+      tableHeader.innerHTML = `
+        <div class="header-cell name">${getTranslation('name') || 'الاسم'}</div>
+        <div class="header-cell department">${getTranslation('department') || 'القسم'}</div>
+        ${contentType !== 'protocol' ? `<div class="header-cell role">${getTranslation('role') || 'الدور'}</div>` : ''}
+        <div class="header-cell actions">${getTranslation('actions') || 'الإجراءات'}</div>
+      `;
+    }
+    approversTable.appendChild(tableHeader);
+    
+    // إنشاء صفوف المعتمدين
     updatedNames.forEach((name, index) => {
-      const sequenceNumber = index + 1;
-      const isFirst = sequenceNumber === 1;
-      const badgeColor = isFirst ? '#28a745' : '#6c757d';
+      const tableRow = document.createElement('div');
+      tableRow.className = 'table-row';
+      tableRow.dataset.userName = name;
       
-      const badge = document.createElement('span');
-      badge.className = 'badge removable-badge';
-      badge.style.backgroundColor = badgeColor;
-      badge.style.color = 'white';
-      badge.dataset.sequence = sequenceNumber;
-      badge.dataset.approverName = name;
+      if (isDepartment) {
+        // للأقسام: عرض التسلسل ونوع التحويل
+        
+        // خلية التسلسل
+        const sequenceCell = document.createElement('div');
+        sequenceCell.className = 'table-cell sequence';
+        sequenceCell.innerHTML = `
+          <div class="sequence-number ${index === 0 ? 'first' : ''}">
+            ${index + 1}
+          </div>
+        `;
+        tableRow.appendChild(sequenceCell);
+        
+        // خلية الاسم
+        const nameCell = document.createElement('div');
+        nameCell.className = 'table-cell name';
+        nameCell.textContent = name;
+        tableRow.appendChild(nameCell);
+        
+        // خلية القسم
+        const deptCell = document.createElement('div');
+        deptCell.className = 'table-cell department';
+        deptCell.textContent = '-';
+        tableRow.appendChild(deptCell);
+        
+        // خلية نوع التحويل
+        const typeCell = document.createElement('div');
+        typeCell.className = 'table-cell type';
+        typeCell.innerHTML = `
+          <span class="transfer-type internal">
+            ${getTranslation('internal') || 'داخلي'}
+          </span>
+        `;
+        tableRow.appendChild(typeCell);
+        
+        // خلية الدور
+        const roleCell = document.createElement('div');
+        roleCell.className = 'table-cell role';
+        roleCell.innerHTML = `
+          <div class="role-selector">
+            <select class="role-dropdown" data-user-name="${name}">
+              <option value="prepared">${getTranslation('prepared') || 'Prepared'}</option>
+              <option value="updated">${getTranslation('updated') || 'Updated'}</option>
+              <option value="reviewed">${getTranslation('reviewed') || 'Reviewed'}</option>
+              <option value="approved" selected>${getTranslation('approved') || 'Approved'}</option>
+            </select>
+          </div>
+        `;
+        tableRow.appendChild(roleCell);
+        
+      } else {
+        // للجان والمحاضر: بدون تسلسل وبدون نوع تحويل
+        
+        // خلية الاسم
+        const nameCell = document.createElement('div');
+        nameCell.className = 'table-cell name';
+        nameCell.textContent = name;
+        tableRow.appendChild(nameCell);
+        
+        // خلية القسم
+        const deptCell = document.createElement('div');
+        deptCell.className = 'table-cell department';
+        deptCell.textContent = '-';
+        tableRow.appendChild(deptCell);
+        
+        // خلية الدور (فقط للجان، وليس للمحاضر)
+        if (contentType !== 'protocol') {
+          const roleCell = document.createElement('div');
+          roleCell.className = 'table-cell role';
+          roleCell.innerHTML = `
+            <div class="role-selector">
+              <select class="role-dropdown" data-user-name="${name}">
+                <option value="prepared">${getTranslation('prepared') || 'Prepared'}</option>
+                <option value="updated">${getTranslation('updated') || 'Updated'}</option>
+                <option value="reviewed">${getTranslation('reviewed') || 'Reviewed'}</option>
+                <option value="approved" selected>${getTranslation('approved') || 'Approved'}</option>
+              </select>
+            </div>
+          `;
+          tableRow.appendChild(roleCell);
+        }
+      }
       
-      // إضافة الأرقام للأقسام فقط، بدون أرقام للجان والمحاضر
-      const contentType = approvalItem.dataset.type;
-      const displayText = contentType === 'department' 
-        ? `${sequenceNumber}. ${name}` 
-        : name;
-      
-      badge.innerHTML = `
-        ${displayText}
+      // خلية الإجراءات (مشتركة لجميع الأنواع)
+      const actionsCell = document.createElement('div');
+      actionsCell.className = 'table-cell actions';
+      actionsCell.innerHTML = `
         <button class="remove-approver-btn" data-approver-name="${name}" title="${getTranslation('remove-approver') || 'حذف المعتمد'}">
           <i class="fas fa-times"></i>
         </button>
       `;
+      tableRow.appendChild(actionsCell);
       
-      selectedApproversDiv.appendChild(badge);
+      // إضافة event listener لزر الحذف
+      const removeBtn = actionsCell.querySelector('.remove-approver-btn');
+      removeBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      
+        const approverName = name;
+      const contentId = approvalItem.dataset.id;
+      const contentType = approvalItem.dataset.type;
+      
+      // التحقق من حالة الإرسال
+      const statusBadge = approvalItem.querySelector('.status-badge');
+      const isSent = statusBadge && statusBadge.classList.contains('badge-sent');
+      
+      if (isSent) {
+        // إذا تم الإرسال: طلب تأكيد
+        const confirmMessage = getTranslation('confirm-remove-approver') || 
+          `هل أنت متأكد من حذف "${approverName}" من قائمة المعتمدين؟`;
+        
+        if (!confirm(confirmMessage)) {
+          return; // إلغاء العملية
+        }
+      }
+      
+      // تنفيذ الحذف (مع أو بدون تأكيد حسب الحالة)
+      await handleRemoveApprover(approvalItem, approverName, contentId, contentType, isSent);
     });
+      
+      approversTable.appendChild(tableRow);
+    });
+    
+    selectedApproversDiv.appendChild(approversTable);
     
     // تحديث حالة الإرسال
     const statusBadge = approvalItem.querySelector('.status-badge');
@@ -639,36 +847,6 @@ function updateApprovalItemUI(approvalItem, updatedNames, updatedIds) {
       `;
     }
   }
-  
-  // إعادة ربط event listeners لأزرار الحذف الجديدة
-  const newRemoveButtons = selectedApproversDiv.querySelectorAll('.remove-approver-btn');
-  newRemoveButtons.forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      e.preventDefault();
-      
-      const approverName = btn.dataset.approverName;
-      const contentId = approvalItem.dataset.id;
-      const contentType = approvalItem.dataset.type;
-      
-      // التحقق من حالة الإرسال
-      const statusBadge = approvalItem.querySelector('.status-badge');
-      const isSent = statusBadge && statusBadge.classList.contains('badge-sent');
-      
-      if (isSent) {
-        // إذا تم الإرسال: طلب تأكيد
-        const confirmMessage = getTranslation('confirm-remove-approver') || 
-          `هل أنت متأكد من حذف "${approverName}" من قائمة المعتمدين؟`;
-        
-        if (!confirm(confirmMessage)) {
-          return; // إلغاء العملية
-        }
-      }
-      
-      // تنفيذ الحذف (مع أو بدون تأكيد حسب الحالة)
-      await handleRemoveApprover(approvalItem, approverName, contentId, contentType, isSent);
-    });
-   });
  }
 
 async function initDropdowns() {
@@ -679,6 +857,7 @@ async function initDropdowns() {
     const externalDeptDrop = approvalItem.querySelector('[data-type=external-dept]');
     const externalUserDrop = approvalItem.querySelector('[data-type=external-users]');
     const sendBtn  = approvalItem.querySelector('.btn-send');
+    const contentType = approvalItem.dataset.type; // نقل إلى الأعلى
 
     if (!sendBtn) return;
     
@@ -688,12 +867,16 @@ async function initDropdowns() {
       return;
     }
     
+    // إضافة console.log للتشخيص
+    console.log('Approval item type:', contentType);
+    console.log('External dept drop found:', !!externalDeptDrop);
+    console.log('External user drop found:', !!externalUserDrop);
+    
     let selectedInternalDepts = [];
     let selectedExternalDepts = [];
     let selectedInternalUsers = [];
     let selectedExternalUsers = [];
     let selectionCounter = 0; // عداد لترتيب الاختيار
-    const contentType = approvalItem.dataset.type;
 
     // إعداد القسم الداخلي
     const internalDeptBtn = internalDeptDrop.querySelector('.dropdown-btn');
@@ -711,6 +894,8 @@ async function initDropdowns() {
         externalDeptList.innerHTML = `<input type="text" class="dropdown-search" placeholder="${getTranslation('search-department')}">`;
       }
     }
+
+    // تم إزالة dropdowns الأدوار العامة - الآن كل شخص يحدد دوره على حدة
     
          // للأقسام: ترتيب الأقسام بحسب نوع التحويل
      if (contentType === 'department') {
@@ -912,6 +1097,39 @@ async function initDropdowns() {
       if (selCell && selectedInternalUsers.length > 0) {
         selCell.innerHTML = '';
         
+        const contentType = approvalItem.dataset.type;
+        const isDepartment = contentType === 'department';
+        
+        // إنشاء جدول منظم للمعتمدين
+        const approversTable = document.createElement('div');
+        approversTable.className = 'approvers-table';
+        approversTable.dataset.type = contentType;
+        
+        // إنشاء رأس الجدول - يختلف حسب نوع المحتوى
+        const tableHeader = document.createElement('div');
+        tableHeader.className = 'table-header';
+        
+        if (isDepartment) {
+          // للأقسام: عرض التسلسل ونوع التحويل
+          tableHeader.innerHTML = `
+            <div class="header-cell sequence">${getTranslation('sequence') || 'التسلسل'}</div>
+            <div class="header-cell name">${getTranslation('name') || 'الاسم'}</div>
+            <div class="header-cell department">${getTranslation('department') || 'القسم'}</div>
+            <div class="header-cell type">${getTranslation('transfer-type') || 'نوع التحويل'}</div>
+            <div class="header-cell role">${getTranslation('role') || 'الدور'}</div>
+            <div class="header-cell actions">${getTranslation('actions') || 'الإجراءات'}</div>
+          `;
+        } else {
+          // للجان والمحاضر: بدون تسلسل وبدون نوع تحويل
+          tableHeader.innerHTML = `
+            <div class="header-cell name">${getTranslation('name') || 'الاسم'}</div>
+            <div class="header-cell department">${getTranslation('department') || 'القسم'}</div>
+            ${contentType !== 'protocol' ? `<div class="header-cell role">${getTranslation('role') || 'الدور'}</div>` : ''}
+            <div class="header-cell actions">${getTranslation('actions') || 'الإجراءات'}</div>
+          `;
+        }
+        approversTable.appendChild(tableHeader);
+        
         // ترتيب المعتمدين حسب وقت الاختيار
         const sortedUsers = selectedInternalUsers.sort((a, b) => a.selectedAt - b.selectedAt);
         
@@ -920,10 +1138,10 @@ async function initDropdowns() {
         selectionCounter = maxSelectedAt;
         
         sortedUsers.forEach((u, index) => {
-          const badge = document.createElement('span');
-          badge.className = 'badge removable-badge internal-badge';
-          badge.dataset.sequence = index + 1;
-          badge.dataset.approverName = u.name;
+          const tableRow = document.createElement('div');
+          tableRow.className = 'table-row';
+          tableRow.dataset.userId = u.id;
+          tableRow.dataset.userName = u.name;
           
           const lang = localStorage.getItem('language') || 'ar';
           const dept = selectedInternalDepts.find(d => d.id === u.deptId);
@@ -934,39 +1152,136 @@ async function initDropdowns() {
             deptName = parsed?.[lang] || parsed?.ar || parsed?.en || '';
           } catch {}
 
-          // إضافة الأرقام للأقسام فقط، بدون أرقام للجان والمحاضر
-          const contentType = approvalItem.dataset.type;
-          const displayText = contentType === 'department' 
-            ? `${index + 1}. ${u.name} (${deptName}) 🏢` 
-            : `${u.name} (${deptName}) 🏢`;
-
-          badge.innerHTML = `
-            ${displayText}
+          if (isDepartment) {
+            // للأقسام: عرض التسلسل ونوع التحويل
+            
+            // خلية التسلسل
+            const sequenceCell = document.createElement('div');
+            sequenceCell.className = 'table-cell sequence';
+            sequenceCell.innerHTML = `
+              <div class="sequence-number ${index === 0 ? 'first' : ''}">
+                ${index + 1}
+              </div>
+            `;
+            tableRow.appendChild(sequenceCell);
+            
+            // خلية الاسم
+            const nameCell = document.createElement('div');
+            nameCell.className = 'table-cell name';
+            nameCell.textContent = u.name;
+            tableRow.appendChild(nameCell);
+            
+            // خلية القسم
+            const deptCell = document.createElement('div');
+            deptCell.className = 'table-cell department';
+            deptCell.textContent = deptName;
+            tableRow.appendChild(deptCell);
+            
+            // خلية نوع التحويل
+            const typeCell = document.createElement('div');
+            typeCell.className = 'table-cell type';
+            typeCell.innerHTML = `
+              <span class="transfer-type internal">
+                ${getTranslation('internal') || 'داخلي'}
+              </span>
+            `;
+            tableRow.appendChild(typeCell);
+            
+            // خلية الدور
+            const roleCell = document.createElement('div');
+            roleCell.className = 'table-cell role';
+            roleCell.innerHTML = `
+              <div class="role-selector">
+                <select class="role-dropdown" data-user-name="${u.name}" data-user-id="${u.id}">
+                  <option value="prepared" ${u.role === 'prepared' ? 'selected' : ''}>📝 ${getTranslation('prepared') || 'Prepared'}</option>
+                  <option value="updated" ${u.role === 'updated' ? 'selected' : ''}>✏️ ${getTranslation('updated') || 'Updated'}</option>
+                  <option value="reviewed" ${u.role === 'reviewed' ? 'selected' : ''}>🔍 ${getTranslation('reviewed') || 'Reviewed'}</option>
+                  <option value="approved" ${u.role === 'approved' ? 'selected' : ''}>✅ ${getTranslation('approved') || 'Approved'}</option>
+                </select>
+              </div>
+            `;
+            
+            // إضافة event listener لتغيير الدور
+            const roleDropdown = roleCell.querySelector('.role-dropdown');
+            roleDropdown.addEventListener('change', (e) => {
+              const newRole = e.target.value;
+              const userName = e.target.dataset.userName;
+              
+              // تحديث الدور في البيانات المحلية
+              const approvers = JSON.parse(approvalItem.dataset.assignedNames || '[]');
+              const approver = approvers.find(a => a.name === userName);
+              if (approver) {
+                approver.role = newRole;
+                approvalItem.dataset.assignedNames = JSON.stringify(approvers);
+              }
+            });
+            tableRow.appendChild(roleCell);
+            
+          } else {
+            // للجان والمحاضر: بدون تسلسل وبدون نوع تحويل
+            
+            // خلية الاسم
+            const nameCell = document.createElement('div');
+            nameCell.className = 'table-cell name';
+            nameCell.textContent = u.name;
+            tableRow.appendChild(nameCell);
+            
+            // خلية القسم
+            const deptCell = document.createElement('div');
+            deptCell.className = 'table-cell department';
+            deptCell.textContent = deptName;
+            tableRow.appendChild(deptCell);
+            
+            // خلية الدور (فقط للجان، وليس للمحاضر)
+            if (contentType !== 'protocol') {
+              const roleCell = document.createElement('div');
+              roleCell.className = 'table-cell role';
+              roleCell.innerHTML = `
+                <div class="role-selector">
+                  <select class="role-dropdown" data-user-name="${u.name}" data-user-id="${u.id}">
+                    <option value="prepared" ${u.role === 'prepared' ? 'selected' : ''}> ${getTranslation('prepared') || 'Prepared'}</option>
+                    <option value="updated" ${u.role === 'updated' ? 'selected' : ''}> ${getTranslation('updated') || 'Updated'}</option>
+                    <option value="reviewed" ${u.role === 'reviewed' ? 'selected' : ''}> ${getTranslation('reviewed') || 'Reviewed'}</option>
+                    <option value="approved" ${u.role === 'approved' ? 'selected' : ''}>${getTranslation('approved') || 'Approved'}</option>
+                  </select>
+                </div>
+              `;
+              
+              // إضافة event listener لتغيير الدور
+              const roleDropdown = roleCell.querySelector('.role-dropdown');
+              roleDropdown.addEventListener('change', (e) => {
+                const newRole = e.target.value;
+                const userName = e.target.dataset.userName;
+                
+                // تحديث الدور في البيانات المحلية
+                const approvers = JSON.parse(approvalItem.dataset.assignedNames || '[]');
+                const approver = approvers.find(a => a.name === userName);
+                if (approver) {
+                  approver.role = newRole;
+                  approvalItem.dataset.assignedNames = JSON.stringify(approvers);
+                }
+              });
+              tableRow.appendChild(roleCell);
+            }
+          }
+          
+          // خلية الإجراءات (مشتركة لجميع الأنواع)
+          const actionsCell = document.createElement('div');
+          actionsCell.className = 'table-cell actions';
+          actionsCell.innerHTML = `
             <button class="remove-approver-btn" data-approver-name="${u.name}" title="${getTranslation('remove-approver') || 'حذف المعتمد'}">
               <i class="fas fa-times"></i>
             </button>
           `;
+          tableRow.appendChild(actionsCell);
           
-          // إضافة لون مختلف للمعتمد الأول
-          if (index === 0) {
-            badge.style.backgroundColor = '#28a745'; // أخضر للمعتمد الأول
-            badge.style.color = 'white';
-          } else {
-            badge.style.backgroundColor = '#6c757d'; // رمادي للمعتمدين الآخرين
-            badge.style.color = 'white';
-          }
-          
-          selCell.appendChild(badge);
-        });
-        
-        // إضافة event listeners لأزرار الحذف
-        const removeButtons = selCell.querySelectorAll('.remove-approver-btn');
-        removeButtons.forEach(btn => {
-          btn.addEventListener('click', async (e) => {
+          // إضافة event listener لزر الحذف
+          const removeBtn = actionsCell.querySelector('.remove-approver-btn');
+          removeBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
             e.preventDefault();
             
-            const approverName = btn.dataset.approverName;
+            const approverName = u.name;
             const contentId = approvalItem.dataset.id;
             const contentType = approvalItem.dataset.type;
             
@@ -987,7 +1302,11 @@ async function initDropdowns() {
             // تنفيذ الحذف (مع أو بدون تأكيد حسب الحالة)
             await handleRemoveApprover(approvalItem, approverName, contentId, contentType, isSent);
           });
+          
+          approversTable.appendChild(tableRow);
         });
+        
+        selCell.appendChild(approversTable);
       }
 
       for (const dept of selectedInternalDepts) {
@@ -1031,11 +1350,23 @@ async function initDropdowns() {
 
     async function rebuildExternalUsersList() {
       // تغذية المستخدمين للقسم الخارجي (فقط إذا كان موجوداً)
-      if (!externalUserDrop) return;
+      console.log('rebuildExternalUsersList called');
+      console.log('externalUserDrop exists:', !!externalUserDrop);
+      
+      if (!externalUserDrop) {
+        console.warn('externalUserDrop not found');
+        return;
+      }
       
       const uBtn = externalUserDrop.querySelector('.dropdown-btn');
       const uList = externalUserDrop.querySelector('.dropdown-content');
-      if (!uBtn || !uList) return;
+      console.log('uBtn found:', !!uBtn);
+      console.log('uList found:', !!uList);
+      
+      if (!uBtn || !uList) {
+        console.warn('uBtn or uList not found');
+        return;
+      }
       
       uList.innerHTML = `<input type="text" class="dropdown-search" placeholder="${getTranslation('search-person')}">`;
       const existingAssignedNames = JSON.parse(approvalItem.dataset.assignedNames || '[]');
@@ -1054,6 +1385,39 @@ async function initDropdowns() {
       if (selCell && selectedExternalUsers.length > 0) {
         selCell.innerHTML = '';
         
+        const contentType = approvalItem.dataset.type;
+        const isDepartment = contentType === 'department';
+        
+        // إنشاء جدول منظم للمعتمدين
+        const approversTable = document.createElement('div');
+        approversTable.className = 'approvers-table';
+        approversTable.dataset.type = contentType;
+        
+        // إنشاء رأس الجدول - يختلف حسب نوع المحتوى
+        const tableHeader = document.createElement('div');
+        tableHeader.className = 'table-header';
+        
+        if (isDepartment) {
+          // للأقسام: عرض التسلسل ونوع التحويل
+          tableHeader.innerHTML = `
+            <div class="header-cell sequence">${getTranslation('sequence') || 'التسلسل'}</div>
+            <div class="header-cell name">${getTranslation('name') || 'الاسم'}</div>
+            <div class="header-cell department">${getTranslation('department') || 'القسم'}</div>
+            <div class="header-cell type">${getTranslation('transfer-type') || 'نوع التحويل'}</div>
+            <div class="header-cell role">${getTranslation('role') || 'الدور'}</div>
+            <div class="header-cell actions">${getTranslation('actions') || 'الإجراءات'}</div>
+          `;
+        } else {
+          // للجان والمحاضر: بدون تسلسل وبدون نوع تحويل
+          tableHeader.innerHTML = `
+            <div class="header-cell name">${getTranslation('name') || 'الاسم'}</div>
+            <div class="header-cell department">${getTranslation('department') || 'القسم'}</div>
+            ${contentType !== 'protocol' ? `<div class="header-cell role">${getTranslation('role') || 'الدور'}</div>` : ''}
+            <div class="header-cell actions">${getTranslation('actions') || 'الإجراءات'}</div>
+          `;
+        }
+        approversTable.appendChild(tableHeader);
+        
         // ترتيب المعتمدين حسب وقت الاختيار
         const sortedUsers = selectedExternalUsers.sort((a, b) => a.selectedAt - b.selectedAt);
         
@@ -1062,10 +1426,10 @@ async function initDropdowns() {
         selectionCounter = maxSelectedAt;
         
         sortedUsers.forEach((u, index) => {
-          const badge = document.createElement('span');
-          badge.className = 'badge removable-badge external-badge';
-          badge.dataset.sequence = index + 1;
-          badge.dataset.approverName = u.name;
+          const tableRow = document.createElement('div');
+          tableRow.className = 'table-row';
+          tableRow.dataset.userId = u.id;
+          tableRow.dataset.userName = u.name;
           
           const lang = localStorage.getItem('language') || 'ar';
           const dept = selectedExternalDepts.find(d => d.id === u.deptId);
@@ -1076,39 +1440,136 @@ async function initDropdowns() {
             deptName = parsed?.[lang] || parsed?.ar || parsed?.en || '';
           } catch {}
 
-          // إضافة الأرقام للأقسام فقط، بدون أرقام للجان والمحاضر
-          const contentType = approvalItem.dataset.type;
-          const displayText = contentType === 'department' 
-            ? `${index + 1}. ${u.name} (${deptName}) 🔄` 
-            : `${u.name} (${deptName}) 🔄`;
-
-          badge.innerHTML = `
-            ${displayText}
+          if (isDepartment) {
+            // للأقسام: عرض التسلسل ونوع التحويل
+            
+            // خلية التسلسل
+            const sequenceCell = document.createElement('div');
+            sequenceCell.className = 'table-cell sequence';
+            sequenceCell.innerHTML = `
+              <div class="sequence-number ${index === 0 ? 'first' : ''}">
+                ${index + 1}
+              </div>
+            `;
+            tableRow.appendChild(sequenceCell);
+            
+            // خلية الاسم
+            const nameCell = document.createElement('div');
+            nameCell.className = 'table-cell name';
+            nameCell.textContent = u.name;
+            tableRow.appendChild(nameCell);
+            
+            // خلية القسم
+            const deptCell = document.createElement('div');
+            deptCell.className = 'table-cell department';
+            deptCell.textContent = deptName;
+            tableRow.appendChild(deptCell);
+            
+            // خلية نوع التحويل
+            const typeCell = document.createElement('div');
+            typeCell.className = 'table-cell type';
+            typeCell.innerHTML = `
+              <span class="transfer-type external">
+                 ${getTranslation('external') || 'خارجي'}
+              </span>
+            `;
+            tableRow.appendChild(typeCell);
+            
+            // خلية الدور
+            const roleCell = document.createElement('div');
+            roleCell.className = 'table-cell role';
+            roleCell.innerHTML = `
+              <div class="role-selector">
+                <select class="role-dropdown" data-user-name="${u.name}" data-user-id="${u.id}">
+                  <option value="prepared" ${u.role === 'prepared' ? 'selected' : ''}>📝 ${getTranslation('prepared') || 'Prepared'}</option>
+                  <option value="updated" ${u.role === 'updated' ? 'selected' : ''}>✏️ ${getTranslation('updated') || 'Updated'}</option>
+                  <option value="reviewed" ${u.role === 'reviewed' ? 'selected' : ''}>🔍 ${getTranslation('reviewed') || 'Reviewed'}</option>
+                  <option value="approved" ${u.role === 'approved' ? 'selected' : ''}>✅ ${getTranslation('approved') || 'Approved'}</option>
+                </select>
+              </div>
+            `;
+            
+            // إضافة event listener لتغيير الدور
+            const roleDropdown = roleCell.querySelector('.role-dropdown');
+            roleDropdown.addEventListener('change', (e) => {
+              const newRole = e.target.value;
+              const userName = e.target.dataset.userName;
+              
+              // تحديث الدور في البيانات المحلية
+              const approvers = JSON.parse(approvalItem.dataset.assignedNames || '[]');
+              const approver = approvers.find(a => a.name === userName);
+              if (approver) {
+                approver.role = newRole;
+                approvalItem.dataset.assignedNames = JSON.stringify(approvers);
+              }
+            });
+            tableRow.appendChild(roleCell);
+            
+          } else {
+            // للجان والمحاضر: بدون تسلسل وبدون نوع تحويل
+            
+            // خلية الاسم
+            const nameCell = document.createElement('div');
+            nameCell.className = 'table-cell name';
+            nameCell.textContent = u.name;
+            tableRow.appendChild(nameCell);
+            
+            // خلية القسم
+            const deptCell = document.createElement('div');
+            deptCell.className = 'table-cell department';
+            deptCell.textContent = deptName;
+            tableRow.appendChild(deptCell);
+            
+            // خلية الدور (فقط للجان، وليس للمحاضر)
+            if (contentType !== 'protocol') {
+              const roleCell = document.createElement('div');
+              roleCell.className = 'table-cell role';
+              roleCell.innerHTML = `
+                <div class="role-selector">
+                  <select class="role-dropdown" data-user-name="${u.name}" data-user-id="${u.id}">
+                    <option value="prepared" ${u.role === 'prepared' ? 'selected' : ''}>📝 ${getTranslation('prepared') || 'Prepared'}</option>
+                    <option value="updated" ${u.role === 'updated' ? 'selected' : ''}>✏️ ${getTranslation('updated') || 'Updated'}</option>
+                    <option value="reviewed" ${u.role === 'reviewed' ? 'selected' : ''}>🔍 ${getTranslation('reviewed') || 'Reviewed'}</option>
+                    <option value="approved" ${u.role === 'approved' ? 'selected' : ''}>✅ ${getTranslation('approved') || 'Approved'}</option>
+                  </select>
+                </div>
+              `;
+              
+              // إضافة event listener لتغيير الدور
+              const roleDropdown = roleCell.querySelector('.role-dropdown');
+              roleDropdown.addEventListener('change', (e) => {
+                const newRole = e.target.value;
+                const userName = e.target.dataset.userName;
+                
+                // تحديث الدور في البيانات المحلية
+                const approvers = JSON.parse(approvalItem.dataset.assignedNames || '[]');
+                const approver = approvers.find(a => a.name === userName);
+                if (approver) {
+                  approver.role = newRole;
+                  approvalItem.dataset.assignedNames = JSON.stringify(approvers);
+                }
+              });
+              tableRow.appendChild(roleCell);
+            }
+          }
+          
+          // خلية الإجراءات (مشتركة لجميع الأنواع)
+          const actionsCell = document.createElement('div');
+          actionsCell.className = 'table-cell actions';
+          actionsCell.innerHTML = `
             <button class="remove-approver-btn" data-approver-name="${u.name}" title="${getTranslation('remove-approver') || 'حذف المعتمد'}">
               <i class="fas fa-times"></i>
             </button>
           `;
+          tableRow.appendChild(actionsCell);
           
-          // إضافة لون مختلف للمعتمد الأول
-          if (index === 0) {
-            badge.style.backgroundColor = '#28a745'; // أخضر للمعتمد الأول
-            badge.style.color = 'white';
-          } else {
-            badge.style.backgroundColor = '#6c757d'; // رمادي للمعتمدين الآخرين
-            badge.style.color = 'white';
-          }
-          
-          selCell.appendChild(badge);
-        });
-        
-        // إضافة event listeners لأزرار الحذف
-        const removeButtons = selCell.querySelectorAll('.remove-approver-btn');
-        removeButtons.forEach(btn => {
-          btn.addEventListener('click', async (e) => {
+          // إضافة event listener لزر الحذف
+          const removeBtn = actionsCell.querySelector('.remove-approver-btn');
+          removeBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
             e.preventDefault();
             
-            const approverName = btn.dataset.approverName;
+            const approverName = u.name;
             const contentId = approvalItem.dataset.id;
             const contentType = approvalItem.dataset.type;
             
@@ -1129,7 +1590,11 @@ async function initDropdowns() {
             // تنفيذ الحذف (مع أو بدون تأكيد حسب الحالة)
             await handleRemoveApprover(approvalItem, approverName, contentId, contentType, isSent);
           });
+          
+          approversTable.appendChild(tableRow);
         });
+        
+        selCell.appendChild(approversTable);
       }
 
       for (const dept of selectedExternalDepts) {
@@ -1191,14 +1656,15 @@ async function initDropdowns() {
         const userId = item.dataset.userId;
 
         if (item.classList.toggle('selected')) {
-          // إضافة المعتمد مع حفظ ترتيب الاختيار ونوع التحويل
+          // إضافة المعتمد مع حفظ ترتيب الاختيار ونوع التحويل والدور
           selectionCounter++;
           selectedInternalUsers.push({ 
             id: userId, 
             name, 
             deptId, 
             selectedAt: selectionCounter,
-            transferType: 'internal'
+            transferType: 'internal',
+            role: 'approved' // الدور الافتراضي - سيتم تحديثه لاحقاً
           });
         } else {
           // إزالة المعتمد
@@ -1211,11 +1677,20 @@ async function initDropdowns() {
     })();
 
     // إعداد القسم الخارجي للمستخدمين (فقط إذا كان موجوداً)
+    console.log('Setting up external users dropdown');
+    console.log('externalUserDrop exists:', !!externalUserDrop);
+    
     if (externalUserDrop) {
       (function setupExternalUsersDropdown() {
         const btn = externalUserDrop.querySelector('.dropdown-btn');
         const list = externalUserDrop.querySelector('.dropdown-content');
-        if (!btn || !list) return;
+        console.log('btn found:', !!btn);
+        console.log('list found:', !!list);
+        
+        if (!btn || !list) {
+          console.warn('btn or list not found in external users dropdown');
+          return;
+        }
         
         btn.addEventListener('click', e => {
           e.stopPropagation();
@@ -1231,14 +1706,15 @@ async function initDropdowns() {
           const userId = item.dataset.userId;
 
           if (item.classList.toggle('selected')) {
-            // إضافة المعتمد مع حفظ ترتيب الاختيار ونوع التحويل
+            // إضافة المعتمد مع حفظ ترتيب الاختيار ونوع التحويل والدور
             selectionCounter++;
             selectedExternalUsers.push({ 
               id: userId, 
               name, 
               deptId, 
               selectedAt: selectionCounter,
-              transferType: 'external'
+              transferType: 'external',
+              role: 'approved' // الدور الافتراضي - سيتم تحديثه لاحقاً
             });
           } else {
             // إزالة المعتمد
@@ -1265,11 +1741,47 @@ async function initDropdowns() {
       }
       const sortedUsers = allUsers.sort((a, b) => a.selectedAt - b.selectedAt);
       
+      if (sortedUsers.length === 0) return;
+      
+      const contentType = approvalItem.dataset.type;
+      const isDepartment = contentType === 'department';
+      
+      // إنشاء جدول منظم للمعتمدين
+      const approversTable = document.createElement('div');
+      approversTable.className = 'approvers-table';
+      approversTable.dataset.type = contentType;
+      
+      // إنشاء رأس الجدول - يختلف حسب نوع المحتوى
+      const tableHeader = document.createElement('div');
+      tableHeader.className = 'table-header';
+      
+      if (isDepartment) {
+        // للأقسام: عرض التسلسل ونوع التحويل
+        tableHeader.innerHTML = `
+          <div class="header-cell sequence">${getTranslation('sequence') || 'التسلسل'}</div>
+          <div class="header-cell name">${getTranslation('name') || 'الاسم'}</div>
+          <div class="header-cell department">${getTranslation('department') || 'القسم'}</div>
+          <div class="header-cell type">${getTranslation('transfer-type') || 'نوع التحويل'}</div>
+          <div class="header-cell role">${getTranslation('role') || 'الدور'}</div>
+          <div class="header-cell actions">${getTranslation('actions') || 'الإجراءات'}</div>
+        `;
+      } else {
+        // للجان والمحاضر: بدون تسلسل وبدون نوع تحويل
+        tableHeader.innerHTML = `
+          <div class="header-cell name">${getTranslation('name') || 'الاسم'}</div>
+          <div class="header-cell department">${getTranslation('department') || 'القسم'}</div>
+          ${contentType !== 'protocol' ? `<div class="header-cell role">${getTranslation('role') || 'الدور'}</div>` : ''}
+          <div class="header-cell actions">${getTranslation('actions') || 'الإجراءات'}</div>
+        `;
+      }
+      approversTable.appendChild(tableHeader);
+      
+      // إنشاء صفوف المعتمدين
       sortedUsers.forEach((u, index) => {
-        const badge = document.createElement('span');
-        badge.className = 'badge removable-badge';
-        badge.dataset.sequence = index + 1;
-        badge.dataset.approverName = u.name;
+        const tableRow = document.createElement('div');
+        tableRow.className = 'table-row';
+        tableRow.dataset.userId = u.id;
+        tableRow.dataset.userName = u.name;
         
         const lang = localStorage.getItem('language') || 'ar';
         let dept = null;
@@ -1285,40 +1797,159 @@ async function initDropdowns() {
           deptName = parsed?.[lang] || parsed?.ar || parsed?.en || '';
         } catch {}
 
-        // إضافة الأرقام للأقسام فقط، بدون أرقام للجان والمحاضر
-        const contentType = approvalItem.dataset.type;
-        const icon = u.transferType === 'internal' ? '🏢' : '🔄';
-        const displayText = contentType === 'department' 
-          ? `${index + 1}. ${u.name} (${deptName}) ${icon}` 
-          : `${u.name} (${deptName}) ${icon}`;
-
-        badge.innerHTML = `
-          ${displayText}
+        const sequenceNumber = index + 1;
+        const icon = u.transferType === 'internal' ? '' : '';
+        const transferTypeText = u.transferType === 'internal' 
+          ? (getTranslation('internal') || 'داخلي') 
+          : (getTranslation('external') || 'خارجي');
+        
+        // إنشاء خلايا الجدول - يختلف حسب نوع المحتوى
+        if (isDepartment) {
+          // للأقسام: عرض التسلسل ونوع التحويل
+          
+          // خلية التسلسل
+          const sequenceCell = document.createElement('div');
+          sequenceCell.className = 'table-cell sequence';
+          sequenceCell.innerHTML = `
+            <div class="sequence-number ${sequenceNumber === 1 ? 'first' : ''}">
+              ${sequenceNumber}
+            </div>
+          `;
+          tableRow.appendChild(sequenceCell);
+          
+          // خلية الاسم
+          const nameCell = document.createElement('div');
+          nameCell.className = 'table-cell name';
+          nameCell.textContent = u.name;
+          tableRow.appendChild(nameCell);
+          
+          // خلية القسم
+          const deptCell = document.createElement('div');
+          deptCell.className = 'table-cell department';
+          deptCell.textContent = deptName;
+          tableRow.appendChild(deptCell);
+          
+          // خلية نوع التحويل
+          const typeCell = document.createElement('div');
+          typeCell.className = 'table-cell type';
+          typeCell.innerHTML = `
+            <span class="transfer-type ${u.transferType}">
+              ${icon} ${transferTypeText}
+            </span>
+          `;
+          tableRow.appendChild(typeCell);
+          
+          // خلية الدور
+          const roleCell = document.createElement('div');
+          roleCell.className = 'table-cell role';
+          roleCell.innerHTML = `
+            <div class="role-selector">
+              <select class="role-dropdown" data-user-name="${u.name}" data-user-id="${u.id}">
+                <option value="prepared" ${u.role === 'prepared' ? 'selected' : ''}>
+                   ${getTranslation('prepared') || 'Prepared'}
+                </option>
+                <option value="updated" ${u.role === 'updated' ? 'selected' : ''}>
+                   ${getTranslation('updated') || 'Updated'}
+                </option>
+                <option value="reviewed" ${u.role === 'reviewed' ? 'selected' : ''}>
+                   ${getTranslation('reviewed') || 'Reviewed'}
+                </option>
+                <option value="approved" ${u.role === 'approved' ? 'selected' : ''}>
+                  ${getTranslation('approved') || 'Approved'}
+                </option>
+              </select>
+            </div>
+          `;
+          
+          // إضافة event listener لتغيير الدور
+          const roleDropdown = roleCell.querySelector('.role-dropdown');
+          roleDropdown.addEventListener('change', (e) => {
+            const newRole = e.target.value;
+            const userName = e.target.dataset.userName;
+            
+            // تحديث الدور في البيانات المحلية
+            const approvers = JSON.parse(approvalItem.dataset.assignedNames || '[]');
+            const approver = approvers.find(a => a.name === userName);
+            if (approver) {
+              approver.role = newRole;
+              approvalItem.dataset.assignedNames = JSON.stringify(approvers);
+            }
+          });
+          tableRow.appendChild(roleCell);
+          
+        } else {
+          // للجان والمحاضر: بدون تسلسل وبدون نوع تحويل
+          
+          // خلية الاسم
+          const nameCell = document.createElement('div');
+          nameCell.className = 'table-cell name';
+          nameCell.textContent = u.name;
+          tableRow.appendChild(nameCell);
+          
+          // خلية القسم
+          const deptCell = document.createElement('div');
+          deptCell.className = 'table-cell department';
+          deptCell.textContent = deptName;
+          tableRow.appendChild(deptCell);
+          
+          // خلية الدور (فقط للجان، وليس للمحاضر)
+        if (contentType !== 'protocol') {
+            const roleCell = document.createElement('div');
+            roleCell.className = 'table-cell role';
+            roleCell.innerHTML = `
+              <div class="role-selector">
+                <select class="role-dropdown" data-user-name="${u.name}" data-user-id="${u.id}">
+                  <option value="prepared" ${u.role === 'prepared' ? 'selected' : ''}>
+                     ${getTranslation('prepared') || 'Prepared'}
+                  </option>
+                  <option value="updated" ${u.role === 'updated' ? 'selected' : ''}>
+                     ${getTranslation('updated') || 'Updated'}
+                  </option>
+                  <option value="reviewed" ${u.role === 'reviewed' ? 'selected' : ''}>
+                     ${getTranslation('reviewed') || 'Reviewed'}
+                  </option>
+                  <option value="approved" ${u.role === 'approved' ? 'selected' : ''}>
+                     ${getTranslation('approved') || 'Approved'}
+                  </option>
+                </select>
+              </div>
+            `;
+            
+            // إضافة event listener لتغيير الدور
+            const roleDropdown = roleCell.querySelector('.role-dropdown');
+          roleDropdown.addEventListener('change', (e) => {
+            const newRole = e.target.value;
+            const userName = e.target.dataset.userName;
+            
+            // تحديث الدور في البيانات المحلية
+            const approvers = JSON.parse(approvalItem.dataset.assignedNames || '[]');
+            const approver = approvers.find(a => a.name === userName);
+            if (approver) {
+              approver.role = newRole;
+              approvalItem.dataset.assignedNames = JSON.stringify(approvers);
+            }
+          });
+            tableRow.appendChild(roleCell);
+          }
+        }
+        
+        // خلية الإجراءات (مشتركة لجميع الأنواع)
+        const actionsCell = document.createElement('div');
+        actionsCell.className = 'table-cell actions';
+        actionsCell.innerHTML = `
           <button class="remove-approver-btn" data-approver-name="${u.name}" title="${getTranslation('remove-approver') || 'حذف المعتمد'}">
             <i class="fas fa-times"></i>
           </button>
         `;
+        tableRow.appendChild(actionsCell);
         
-        // إضافة لون مختلف للمعتمد الأول
-        if (index === 0) {
-          badge.style.backgroundColor = '#28a745'; // أخضر للمعتمد الأول
-          badge.style.color = 'white';
-        } else {
-          badge.style.backgroundColor = '#6c757d'; // رمادي للمعتمدين الآخرين
-          badge.style.color = 'white';
-        }
-        
-        selCell.appendChild(badge);
-      });
-      
-      // إضافة event listeners لأزرار الحذف
-      const removeButtons = selCell.querySelectorAll('.remove-approver-btn');
-      removeButtons.forEach(btn => {
-        btn.addEventListener('click', async (e) => {
+        // إضافة event listener لزر الحذف
+        const removeBtn = actionsCell.querySelector('.remove-approver-btn');
+        removeBtn.addEventListener('click', async (e) => {
           e.stopPropagation();
           e.preventDefault();
           
-          const approverName = btn.dataset.approverName;
+          const approverName = u.name;
           const contentId = approvalItem.dataset.id;
           const contentType = approvalItem.dataset.type;
           
@@ -1339,7 +1970,11 @@ async function initDropdowns() {
           // تنفيذ الحذف (مع أو بدون تأكيد حسب الحالة)
           await handleRemoveApprover(approvalItem, approverName, contentId, contentType, isSent);
         });
+        
+        approversTable.appendChild(tableRow);
       });
+      
+      selCell.appendChild(approversTable);
     }
 
     // داخل initDropdowns، بعد ربط الـ dropdowns وأيقونة Send
@@ -1369,11 +2004,21 @@ async function initDropdowns() {
        }
        
        const internalUsers = Array.from(internalUserItems)
-         .map(el => ({ id: +el.dataset.userId, name: el.textContent.trim(), transferType: 'internal' }))
+         .map(el => ({ 
+           id: +el.dataset.userId, 
+           name: el.textContent.trim(), 
+           transferType: 'internal',
+           role: 'approved' // الدور الافتراضي - سيتم تحديثه من الواجهة
+         }))
          .filter(u => !existingAssignedNames.includes(u.name));
          
        const externalUsers = Array.from(externalUserItems)
-         .map(el => ({ id: +el.dataset.userId, name: el.textContent.trim(), transferType: 'external' }))
+         .map(el => ({ 
+           id: +el.dataset.userId, 
+           name: el.textContent.trim(), 
+           transferType: 'external',
+           role: 'approved' // الدور الافتراضي - سيتم تحديثه من الواجهة
+         }))
          .filter(u => !existingAssignedNames.includes(u.name));
          
        const newUsers = [...internalUsers, ...externalUsers];
@@ -1464,10 +2109,38 @@ async function initDropdowns() {
           );
           resp = { status: 'success' };
         } else {
-          resp = await fetchJSON(`${apiBase}/${endpoint}`, {
-            method: 'POST',
-            body: JSON.stringify({ contentId, approvers: allIds })
-          });
+          // إرسال المعتمدين مع أدوارهم (فقط للجان والأقسام)
+          if (contentType === 'protocol') {
+            // للمحاضر: إرسال بدون أدوار
+            resp = await fetchJSON(`${apiBase}/${endpoint}`, {
+              method: 'POST',
+              body: JSON.stringify({ 
+                contentId, 
+                approvers: allIds
+              })
+            });
+          } else {
+            // للجان والأقسام: إرسال مع الأدوار
+            const approversWithRoles = sortedNewUsers.map(user => {
+              // البحث عن الدور المحدد لهذا المستخدم في الواجهة
+              const roleDropdown = approvalItem.querySelector(`.role-dropdown[data-user-name="${user.name}"]`);
+              const selectedRole = roleDropdown ? roleDropdown.value : 'approved';
+              
+              return {
+                userId: user.id,
+                role: selectedRole
+              };
+            });
+            
+            resp = await fetchJSON(`${apiBase}/${endpoint}`, {
+              method: 'POST',
+              body: JSON.stringify({ 
+                contentId, 
+                approvers: allIds,
+                approversWithRoles: approversWithRoles
+              })
+            });
+          }
         }
         if (resp.status === 'success') {
           // 5) حدّث الواجهة
@@ -2125,7 +2798,25 @@ function getTranslation(key) {
        'select-external-people': 'اختر الأشخاص الخارجيين',
       'departments-count': 'أقسام',
       'selected-count': 'مختار',
-      'file-link-unavailable': 'رابط الملف غير متوفر'
+      'file-link-unavailable': 'رابط الملف غير متوفر',
+      'select-role': 'اختر الدور',
+      'prepared': 'Prepared',
+      'updated': 'Updated',
+      'reviewed': 'Reviewed',
+      'approved': 'Approved',
+      'role-info': 'سيتم تحديد الدور لكل شخص',
+      'role-per-person': 'يمكنك تحديد دور مختلف لكل معتمد',
+      'sequence': 'التسلسل',
+      'name': 'الاسم',
+      'department': 'القسم',
+      'transfer-type': 'نوع التحويل',
+      'role': 'الدور',
+      'actions': 'الإجراءات',
+      'internal': 'داخلي',
+      'external': 'خارجي',
+      'collapse-card': 'تصغير الكارد',
+      'expand-card': 'تكبير الكارد',
+      'sent-to': 'مرسل إلى'
     },
     'en': {
       'departments': 'Departments',
@@ -2172,7 +2863,25 @@ function getTranslation(key) {
        'select-external-people': 'Select External People',
       'departments-count': 'departments',
       'selected-count': 'selected',
-      'file-link-unavailable': 'File link unavailable'
+      'file-link-unavailable': 'File link unavailable',
+      'select-role': 'Select Role',
+      'prepared': 'Prepared',
+      'updated': 'Updated',
+      'reviewed': 'Reviewed',
+      'approved': 'Approved',
+      'role-info': 'Role will be set for each person',
+      'role-per-person': 'You can set different role for each approver',
+      'sequence': 'Sequence',
+      'name': 'Name',
+      'department': 'Department',
+      'transfer-type': 'Transfer Type',
+      'role': 'Role',
+      'actions': 'Actions',
+      'internal': 'Internal',
+      'external': 'External',
+      'collapse-card': 'Collapse Card',
+      'expand-card': 'Expand Card',
+      'sent-to': 'Sent to'
     }
   };
 

@@ -149,9 +149,19 @@ exports.sendApprovalRequest = async (req, res) => {
   const userId = payload.id;
   const userLang = getUserLang(req);
 
-  const { contentId, approvers } = req.body;
+  const { contentId, approvers, approversWithRoles } = req.body;
   if (!contentId || !Array.isArray(approvers) || approvers.length === 0) {
     return res.status(400).json({ status: 'error', message: 'البيانات غير صالحة' });
+  }
+  
+  // إنشاء خريطة للأدوار إذا كانت موجودة
+  const roleMap = new Map();
+  if (approversWithRoles && Array.isArray(approversWithRoles)) {
+    approversWithRoles.forEach(item => {
+      if (item.userId && item.role) {
+        roleMap.set(item.userId, item.role);
+      }
+    });
   }
 
   const pool = mysql.createPool({
@@ -282,21 +292,24 @@ exports.sendApprovalRequest = async (req, res) => {
         [userId]
       );
       
+      // الحصول على الدور المحدد لهذا المستخدم
+      const userRole = roleMap.get(userId) || 'approved';
+      
       if (delegationRows.length) {
         // هذا مفوض له، أضف سجل بالنيابة فقط
         await conn.execute(
           `INSERT INTO approval_logs
-             (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, created_at)
-           VALUES (?, ?, 'pending', NULL, 1, ?, CURRENT_TIMESTAMP)`,
-          [contentId, userId, delegationRows[0].user_id]
+             (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, approval_role, created_at)
+           VALUES (?, ?, 'pending', NULL, 1, ?, ?, CURRENT_TIMESTAMP)`,
+          [contentId, userId, delegationRows[0].user_id, userRole]
         );
       } else {
         // هذا معتمد عادي، أضف سجل عادي
         await conn.execute(
           `INSERT INTO approval_logs
-             (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, created_at)
-           VALUES (?, ?, 'pending', NULL, 0, NULL, CURRENT_TIMESTAMP)`,
-          [contentId, userId]
+             (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, approval_role, created_at)
+           VALUES (?, ?, 'pending', NULL, 0, NULL, ?, CURRENT_TIMESTAMP)`,
+          [contentId, userId, userRole]
         );
       }
       

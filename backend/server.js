@@ -324,6 +324,80 @@ const initializeSoftDelete = async () => {
   }
 };
 
+// تهيئة حقل approval_role عند بدء التطبيق
+const initializeApprovalRoles = async () => {
+  try {
+    const pool = mysql.createPool({
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0
+    });
+
+    const conn = await pool.getConnection();
+    
+    try {
+      // التحقق من وجود حقل approval_role في جدول approval_logs
+      try {
+        await conn.execute(`
+          ALTER TABLE approval_logs 
+          ADD COLUMN approval_role VARCHAR(50) DEFAULT 'approved'
+        `);
+        console.log('✅ تم إضافة حقل approval_role لجدول approval_logs');
+      } catch (columnExistsError) {
+        if (columnExistsError.code === 'ER_DUP_FIELDNAME') {
+          console.log('ℹ️ حقل approval_role موجود بالفعل في جدول approval_logs');
+        } else {
+          throw columnExistsError;
+        }
+      }
+
+      // التحقق من وجود حقل approval_role في جدول committee_approval_logs
+      try {
+        await conn.execute(`
+          ALTER TABLE committee_approval_logs 
+          ADD COLUMN approval_role VARCHAR(50) DEFAULT 'approved'
+        `);
+        console.log('✅ تم إضافة حقل approval_role لجدول committee_approval_logs');
+      } catch (columnExistsError) {
+        if (columnExistsError.code === 'ER_DUP_FIELDNAME') {
+          console.log('ℹ️ حقل approval_role موجود بالفعل في جدول committee_approval_logs');
+        } else {
+          throw columnExistsError;
+        }
+      }
+
+      // تحديث الاعتمادات الموجودة
+      await conn.execute(`
+        UPDATE approval_logs 
+        SET approval_role = 'approved' 
+        WHERE approval_role IS NULL
+      `);
+      console.log('✅ تم تحديث الاعتمادات الموجودة في approval_logs');
+
+      await conn.execute(`
+        UPDATE committee_approval_logs 
+        SET approval_role = 'approved' 
+        WHERE approval_role IS NULL
+      `);
+      console.log('✅ تم تحديث الاعتمادات الموجودة في committee_approval_logs');
+
+    } finally {
+      conn.release();
+      await pool.end();
+    }
+    
+    console.log('✅ تم تهيئة حقل approval_role بنجاح');
+  } catch (error) {
+    console.error('❌ خطأ في تهيئة حقل approval_role:', error);
+    // لا نريد إيقاف الخادم بسبب خطأ في إضافة الحقل
+    console.log('سيستمر الخادم في العمل رغم خطأ إضافة حقل approval_role');
+  }
+};
+
 const PORT = process.env.PORT || 3006;
 app.listen(PORT, async () => {
   console.log(`Server running on http://localhost:${PORT}`);
@@ -356,6 +430,12 @@ app.listen(PORT, async () => {
     await initializeSoftDelete();
   } catch (error) {
     console.error('خطأ في تهيئة Soft Delete:', error);
+  }
+
+  try {
+    await initializeApprovalRoles();
+  } catch (error) {
+    console.error('خطأ في تهيئة حقل approval_role:', error);
   }
 
   try {

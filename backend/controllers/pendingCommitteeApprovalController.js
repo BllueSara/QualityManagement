@@ -160,7 +160,7 @@ exports.sendApprovalRequest = async (req, res) => {
   const userId = payload.id;
   const userLang = getUserLang(req);
 
-  let { contentId, approvers } = req.body;
+  let { contentId, approvers, approversWithRoles } = req.body;
 
   // إذا كان contentId يحتوي على بادئة (مثل 'comm-' أو 'dept-')، قم بإزالتها للحصول على الرقم الأصلي
   if (typeof contentId === 'string' && contentId.includes('-')) {
@@ -169,6 +169,16 @@ exports.sendApprovalRequest = async (req, res) => {
 
   if (!contentId || !Array.isArray(approvers) || approvers.length === 0) {
     return res.status(400).json({ status: 'error', message: 'البيانات غير صالحة' });
+  }
+  
+  // إنشاء خريطة للأدوار إذا كانت موجودة
+  const roleMap = new Map();
+  if (approversWithRoles && Array.isArray(approversWithRoles)) {
+    approversWithRoles.forEach(item => {
+      if (item.userId && item.role) {
+        roleMap.set(item.userId, item.role);
+      }
+    });
   }
 
   const pool = mysql.createPool({
@@ -298,21 +308,24 @@ exports.sendApprovalRequest = async (req, res) => {
         [userId]
       );
       
+      // الحصول على الدور المحدد لهذا المستخدم
+      const userRole = roleMap.get(userId) || 'approved';
+      
       if (delegationRows.length) {
         // هذا مفوض له، أضف سجل بالنيابة فقط
         await conn.execute(
           `INSERT INTO committee_approval_logs
-             (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, created_at)
-           VALUES (?, ?, 'pending', NULL, 1, ?, CURRENT_TIMESTAMP)`,
-          [contentId, userId, delegationRows[0].user_id]
+             (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, approval_role, created_at)
+           VALUES (?, ?, 'pending', NULL, 1, ?, ?, CURRENT_TIMESTAMP)`,
+          [contentId, userId, delegationRows[0].user_id, userRole]
         );
       } else {
         // هذا معتمد عادي، أضف سجل عادي
         await conn.execute(
           `INSERT INTO committee_approval_logs
-             (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, created_at)
-           VALUES (?, ?, 'pending', NULL, 0, NULL, CURRENT_TIMESTAMP)`,
-          [contentId, userId]
+             (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, approval_role, created_at)
+           VALUES (?, ?, 'pending', NULL, 0, NULL, ?, CURRENT_TIMESTAMP)`,
+          [contentId, userId, userRole]
         );
       }
       
@@ -342,11 +355,14 @@ exports.sendApprovalRequest = async (req, res) => {
         
         if (delegationRows.length && delegationRows[0].permanent_delegate_id) {
           // أضف سجل بالنيابة إضافي
+          // الحصول على الدور المحدد لهذا المستخدم
+          const userRole = roleMap.get(userId) || 'approved';
+          
           await conn.execute(
             `INSERT INTO committee_approval_logs
-               (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, created_at)
-             VALUES (?, ?, 'pending', NULL, 1, ?, CURRENT_TIMESTAMP)`,
-            [contentId, userId, delegationRows[0].permanent_delegate_id]
+               (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, approval_role, created_at)
+             VALUES (?, ?, 'pending', NULL, 1, ?, ?, CURRENT_TIMESTAMP)`,
+            [contentId, userId, delegationRows[0].permanent_delegate_id, userRole]
           );
         }
       }
@@ -461,9 +477,9 @@ exports.delegateCommitteeApproval = async (req, res) => {
 
         // Add a new pending approval log for the delegatee if not already there
         await conn.execute(
-            `INSERT INTO committee_approval_logs (content_id, approver_id, status, created_at)
-             VALUES (?, ?, 'pending', CURRENT_TIMESTAMP)
-             ON DUPLICATE KEY UPDATE status = 'pending', created_at = CURRENT_TIMESTAMP`,
+            `INSERT INTO committee_approval_logs (content_id, approver_id, status, approval_role, created_at)
+             VALUES (?, ?, 'pending', 'approved', CURRENT_TIMESTAMP)
+             ON DUPLICATE KEY UPDATE status = 'pending', approval_role = 'approved', created_at = CURRENT_TIMESTAMP`,
             [contentId, delegateTo]
         );
 
