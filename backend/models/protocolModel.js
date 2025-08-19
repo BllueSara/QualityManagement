@@ -19,6 +19,8 @@ class ProtocolModel {
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     title VARCHAR(500) NOT NULL,
                     protocol_date DATE NOT NULL,
+                    protocol_time TIME,
+                    room VARCHAR(200),
                     department_id INT,
                     folder_id INT,
                     committee_id INT,
@@ -47,6 +49,8 @@ class ProtocolModel {
                     discussion TEXT NOT NULL,
                     duration VARCHAR(100),
                     end_date DATE,
+                    recommendations TEXT,
+                    responsibility VARCHAR(200),
                     topic_order INT DEFAULT 0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -95,6 +99,8 @@ class ProtocolModel {
                     content TEXT NOT NULL,
                     duration VARCHAR(100),
                     end_date DATE,
+                    recommendations TEXT,
+                    responsibility VARCHAR(200),
                     discussion_order INT DEFAULT 0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -103,6 +109,82 @@ class ProtocolModel {
             `);
 
             console.log('Protocol tables initialized successfully');
+
+            // إضافة الأعمدة الجديدة للجداول الموجودة مسبقاً
+            try {
+                // إضافة الأعمدة الجديدة لجدول protocols إذا لم تكن موجودة
+                try {
+                    await this.pool.execute(`ALTER TABLE protocols ADD COLUMN protocol_time TIME`);
+                    console.log('Added protocol_time column to protocols table');
+                } catch (error) {
+                    if (error.code === 'ER_DUP_FIELDNAME') {
+                        console.log('protocol_time column already exists in protocols table');
+                    } else {
+                        throw error;
+                    }
+                }
+
+                try {
+                    await this.pool.execute(`ALTER TABLE protocols ADD COLUMN room VARCHAR(200)`);
+                    console.log('Added room column to protocols table');
+                } catch (error) {
+                    if (error.code === 'ER_DUP_FIELDNAME') {
+                        console.log('room column already exists in protocols table');
+                    } else {
+                        throw error;
+                    }
+                }
+
+                // إضافة الأعمدة الجديدة لجدول protocol_topics إذا لم تكن موجودة
+                try {
+                    await this.pool.execute(`ALTER TABLE protocol_topics ADD COLUMN recommendations TEXT`);
+                    console.log('Added recommendations column to protocol_topics table');
+                } catch (error) {
+                    if (error.code === 'ER_DUP_FIELDNAME') {
+                        console.log('recommendations column already exists in protocol_topics table');
+                    } else {
+                        throw error;
+                    }
+                }
+
+                try {
+                    await this.pool.execute(`ALTER TABLE protocol_topics ADD COLUMN responsibility VARCHAR(200)`);
+                    console.log('Added responsibility column to protocol_topics table');
+                } catch (error) {
+                    if (error.code === 'ER_DUP_FIELDNAME') {
+                        console.log('responsibility column already exists in protocol_topics table');
+                    } else {
+                        throw error;
+                    }
+                }
+
+                // إضافة الأعمدة الجديدة لجدول protocol_side_discussions إذا لم تكن موجودة
+                try {
+                    await this.pool.execute(`ALTER TABLE protocol_side_discussions ADD COLUMN recommendations TEXT`);
+                    console.log('Added recommendations column to protocol_side_discussions table');
+                } catch (error) {
+                    if (error.code === 'ER_DUP_FIELDNAME') {
+                        console.log('recommendations column already exists in protocol_side_discussions table');
+                    } else {
+                        throw error;
+                    }
+                }
+
+                try {
+                    await this.pool.execute(`ALTER TABLE protocol_side_discussions ADD COLUMN responsibility VARCHAR(200)`);
+                    console.log('Added responsibility column to protocol_side_discussions table');
+                } catch (error) {
+                    if (error.code === 'ER_DUP_FIELDNAME') {
+                        console.log('responsibility column already exists in protocol_side_discussions table');
+                    } else {
+                        throw error;
+                    }
+                }
+
+                console.log('New columns added to existing tables successfully');
+            } catch (alterError) {
+                console.log('Error adding new columns:', alterError.message);
+            }
         } catch (error) {
             console.error('Error initializing protocol tables:', error);
             throw error;
@@ -117,10 +199,12 @@ class ProtocolModel {
 
             // إدراج المحضر الرئيسي
             const [protocolResult] = await connection.execute(
-                'INSERT INTO protocols (title, protocol_date, department_id, folder_id, committee_id, created_by) VALUES (?, ?, ?, ?, ?, ?)',
+                'INSERT INTO protocols (title, protocol_date, protocol_time, room, department_id, folder_id, committee_id, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
                 [
                     protocolData.protocolTitle, 
-                    protocolData.protocolDate, 
+                    protocolData.protocolDate,
+                    protocolData.protocolTime || null,
+                    protocolData.room || null,
                     (protocolData.assignmentType === 'department' || protocolData.assignmentType === 'both') ? (protocolData.departmentId || null) : null,
                     protocolData.folderId || null,
                     (protocolData.assignmentType === 'committee' || protocolData.assignmentType === 'both') ? (protocolData.committeeId || null) : null,
@@ -135,13 +219,15 @@ class ProtocolModel {
                 for (let i = 0; i < protocolData.topics.length; i++) {
                     const topic = protocolData.topics[i];
                     const [topicResult] = await connection.execute(
-                        'INSERT INTO protocol_topics (protocol_id, subject, discussion, duration, end_date, topic_order) VALUES (?, ?, ?, ?, ?, ?)',
+                        'INSERT INTO protocol_topics (protocol_id, subject, discussion, duration, end_date, recommendations, responsibility, topic_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
                         [
                             protocolId,
                             topic.subject,
                             topic.discussion,
                             topic.duration || null,
                             topic.endDate || null,
+                            topic.recommendations || null,
+                            topic.responsibility || null,
                             i + 1
                         ]
                     );
@@ -154,12 +240,14 @@ class ProtocolModel {
                             const sideDiscussion = topic.sideDiscussions[j];
                             if (sideDiscussion.content && sideDiscussion.content.trim()) {
                                 await connection.execute(
-                                    'INSERT INTO protocol_side_discussions (topic_id, content, duration, end_date, discussion_order) VALUES (?, ?, ?, ?, ?)',
+                                    'INSERT INTO protocol_side_discussions (topic_id, content, duration, end_date, recommendations, responsibility, discussion_order) VALUES (?, ?, ?, ?, ?, ?, ?)',
                                     [
                                         topicId,
                                         sideDiscussion.content.trim(),
                                         sideDiscussion.duration || null,
                                         sideDiscussion.endDate || null,
+                                        sideDiscussion.recommendations || null,
+                                        sideDiscussion.responsibility || null,
                                         j + 1
                                     ]
                                 );
@@ -283,7 +371,15 @@ class ProtocolModel {
             // جلب بيانات المحضر
             let query = `
                 SELECT 
-                    p.*,
+                    p.id, p.title, 
+                    DATE_FORMAT(p.protocol_date, '%Y-%m-%d') as protocol_date,
+                    COALESCE(p.protocol_time, '') as protocol_time,
+                    COALESCE(p.room, '') as room,
+                    p.department_id,
+                    p.folder_id,
+                    p.committee_id,
+                    p.created_by, p.created_at, p.updated_at, p.status, p.approval_status,
+                    p.is_approved, p.approved_by, p.file_path,
                     d.name as department_name,
                     f.name as folder_name,
                     c.name as committee_name,
@@ -325,14 +421,24 @@ class ProtocolModel {
 
             // جلب مواضيع المحضر مع المناقشات الجانبية
             const [topics] = await this.pool.execute(
-                'SELECT * FROM protocol_topics WHERE protocol_id = ? ORDER BY topic_order',
+                `SELECT 
+                    id, protocol_id, subject, discussion, duration, end_date, 
+                    COALESCE(recommendations, '') as recommendations,
+                    COALESCE(responsibility, '') as responsibility,
+                    topic_order, created_at, updated_at
+                FROM protocol_topics WHERE protocol_id = ? ORDER BY topic_order`,
                 [protocolId]
             );
 
             // جلب المناقشات الجانبية لكل موضوع
             for (let topic of topics) {
                 const [sideDiscussions] = await this.pool.execute(
-                    'SELECT * FROM protocol_side_discussions WHERE topic_id = ? ORDER BY discussion_order',
+                    `SELECT 
+                        id, topic_id, content, duration, end_date,
+                        COALESCE(recommendations, '') as recommendations,
+                        COALESCE(responsibility, '') as responsibility,
+                        discussion_order, created_at, updated_at
+                    FROM protocol_side_discussions WHERE topic_id = ? ORDER BY discussion_order`,
                     [topic.id]
                 );
                 topic.sideDiscussions = sideDiscussions;
@@ -415,10 +521,12 @@ class ProtocolModel {
 
             // إعادة تعيين حالة المحضر ليعود لمرحلة الاعتماد من جديد
             await connection.execute(
-                'UPDATE protocols SET title = ?, protocol_date = ?, department_id = ?, folder_id = ?, committee_id = ?, is_approved = 0, approval_status = "pending", updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+                'UPDATE protocols SET title = ?, protocol_date = ?, protocol_time = ?, room = ?, department_id = ?, folder_id = ?, committee_id = ?, is_approved = 0, approval_status = "pending", updated_at = CURRENT_TIMESTAMP WHERE id = ?',
                 [
                     protocolData.protocolTitle, 
-                    protocolData.protocolDate, 
+                    protocolData.protocolDate,
+                    protocolData.protocolTime || null,
+                    protocolData.room || null,
                     (protocolData.assignmentType === 'department' || protocolData.assignmentType === 'both') ? (protocolData.departmentId || null) : null,
                     protocolData.folderId || null,
                     (protocolData.assignmentType === 'committee' || protocolData.assignmentType === 'both') ? (protocolData.committeeId || null) : null,
@@ -443,13 +551,15 @@ class ProtocolModel {
                 for (let i = 0; i < protocolData.topics.length; i++) {
                     const topic = protocolData.topics[i];
                     const [topicResult] = await connection.execute(
-                        'INSERT INTO protocol_topics (protocol_id, subject, discussion, duration, end_date, topic_order) VALUES (?, ?, ?, ?, ?, ?)',
+                        'INSERT INTO protocol_topics (protocol_id, subject, discussion, duration, end_date, recommendations, responsibility, topic_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
                         [
                             protocolId,
                             topic.subject,
                             topic.discussion,
                             topic.duration || null,
                             topic.endDate || null,
+                            topic.recommendations || null,
+                            topic.responsibility || null,
                             i + 1
                         ]
                     );
@@ -462,12 +572,14 @@ class ProtocolModel {
                             const sideDiscussion = topic.sideDiscussions[j];
                             if (sideDiscussion.content && sideDiscussion.content.trim()) {
                                 await connection.execute(
-                                    'INSERT INTO protocol_side_discussions (topic_id, content, duration, end_date, discussion_order) VALUES (?, ?, ?, ?, ?)',
+                                    'INSERT INTO protocol_side_discussions (topic_id, content, duration, end_date, recommendations, responsibility, discussion_order) VALUES (?, ?, ?, ?, ?, ?, ?)',
                                     [
                                         topicId,
                                         sideDiscussion.content.trim(),
                                         sideDiscussion.duration || null,
                                         sideDiscussion.endDate || null,
+                                        sideDiscussion.recommendations || null,
+                                        sideDiscussion.responsibility || null,
                                         j + 1
                                     ]
                                 );

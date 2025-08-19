@@ -61,6 +61,59 @@ const permissions = {
   canDeleteContentName:false,
   canAddOldContent: false
 };
+
+// Function to close the Add Content modal
+function closeAddContentModal() {
+    try {
+        const addContentModal = document.getElementById('addContentModal');
+        if (addContentModal) {
+            addContentModal.style.display = 'none';
+            
+            // مسح الحقول
+            const folderIdInput = document.getElementById('addContentFolderId');
+            if (folderIdInput) folderIdInput.value = '';
+            
+            const contentFileInput = document.getElementById('contentFile');
+            if (contentFileInput) contentFileInput.value = '';
+            
+            const startDateInput = document.getElementById('contentStartDate');
+            if (startDateInput) startDateInput.value = '';
+            
+            const endDateInput = document.getElementById('contentEndDate');
+            if (endDateInput) endDateInput.value = '';
+
+            // 🔴 إعادة تعيين حالة التحقق من التواريخ
+            if (startDateInput) startDateInput.style.borderColor = '';
+            if (endDateInput) {
+                endDateInput.style.borderColor = '';
+                endDateInput.title = '';
+            }
+
+            // إعادة منطقة رفع الملفات
+            const fileDropArea = addContentModal.querySelector('.file-drop-area');
+            if (fileDropArea) {
+                const fileUploadText = fileDropArea.querySelector('.file-upload-text');
+                if (fileUploadText) {
+                    fileUploadText.innerHTML = `
+                      <span 
+                        class="supported-files" 
+                        data-translate="supported-files"
+                      >
+                        ${getTranslation('supported-files')}
+                      </span>
+                    `;
+                }
+                fileDropArea.classList.remove('has-file');
+            }
+            
+            console.log('✅ Modal closed successfully');
+        } else {
+            console.warn('⚠️ addContentModal element not found');
+        }
+    } catch (error) {
+        console.error('❌ Error in closeAddContentModal:', error);
+    }
+}
     function getToken() {
         const token = localStorage.getItem('token');
         return token;
@@ -458,18 +511,16 @@ if (addContentModal) {
     const addContentCloseBtn = addContentModal ? addContentModal.querySelector('.close-button') : null;
     const cancelContentBtn = addContentModal ? addContentModal.querySelector('#cancelContentBtn') : null;
     const createContentBtn = addContentModal ? addContentModal.querySelector('#createContentBtn') : null;
-// ربط زر 'إنشاء المحتوى' بدالة handleCreateContent
+    // ربط زر 'إنشاء المحتوى' بدالة handleCreateContent
 if (createContentBtn) {
   createContentBtn.type = 'button';           // تأكد أنّه type="button"
-if (createContentBtn) {
-  createContentBtn.type = 'button';
   createContentBtn.addEventListener('click', function(event) {
     // هنا نمنع صعود الحدث للعناصر الأب (كالـ folder-card)
     event.stopPropagation();
     // بعدها نستدعي رفع المحتوى
     handleCreateContent();
   });
-}}
+}
 
 
 
@@ -1070,41 +1121,48 @@ fileUploadText.innerHTML = `
         handleFileSelection(this);
     });
 
-    // Function to close the Add Content modal
-function closeAddContentModal() {
-    if (addContentModal) {
-        addContentModal.style.display = 'none';
-        
-        // مسح الحقول
-        const folderIdInput = document.getElementById('addContentFolderId');
-        if (folderIdInput) folderIdInput.value = '';
-        
-        document.getElementById('contentFile').value = '';
-        
-        const startDateInput = document.getElementById('contentStartDate');
-        if (startDateInput) startDateInput.value = '';
-        
-        const endDateInput = document.getElementById('contentEndDate');
-        if (endDateInput) endDateInput.value = '';
+    // 🔴 إضافة مستمعي الأحداث للتحقق من صحة التواريخ في الوقت الفعلي
+    const contentStartDate = document.getElementById('contentStartDate');
+    const contentEndDate = document.getElementById('contentEndDate');
+    const editContentStartDate = document.getElementById('editContentStartDate');
+    const editContentEndDate = document.getElementById('editContentEndDate');
 
-        // إعادة منطقة رفع الملفات
-        const fileDropArea = document.querySelector('#addContentModal .file-drop-area');
-        if (fileDropArea) {
-            const fileUploadText = fileDropArea.querySelector('.file-upload-text');
-            if (fileUploadText) {
-                fileUploadText.innerHTML = `
-                  <span 
-                    class="supported-files" 
-                    data-translate="supported-files"
-                  >
-                    ${getTranslation('supported-files')}
-                  </span>
-                `;
+    // دالة للتحقق من صحة التواريخ
+    function validateDates(startInput, endInput) {
+        if (startInput && endInput && startInput.value && endInput.value) {
+            const start = new Date(startInput.value);
+            const end = new Date(endInput.value);
+            
+            if (end < start) {
+                endInput.style.borderColor = '#d9534f';
+                endInput.title = 'تاريخ النهاية لا يمكن أن يكون قبل تاريخ البداية!';
+                return false;
+            } else {
+                endInput.style.borderColor = '';
+                endInput.title = '';
+                return true;
             }
-            fileDropArea.classList.remove('has-file');
         }
+        return true;
     }
-}
+
+    // إضافة مستمعي الأحداث للنموذج الجديد
+    if (contentStartDate) {
+        contentStartDate.addEventListener('change', () => validateDates(contentStartDate, contentEndDate));
+    }
+    if (contentEndDate) {
+        contentEndDate.addEventListener('change', () => validateDates(contentStartDate, contentEndDate));
+    }
+
+    // إضافة مستمعي الأحداث لنموذج التعديل
+    if (editContentStartDate) {
+        editContentStartDate.addEventListener('change', () => validateDates(editContentStartDate, editContentEndDate));
+    }
+    if (editContentEndDate) {
+        editContentEndDate.addEventListener('change', () => validateDates(editContentStartDate, editContentEndDate));
+    }
+
+
 
 
     // --- Edit/Delete Modal Functions ---
@@ -1569,11 +1627,20 @@ function closeEditContentModal() {
     // مسح اختيار الملف
     editContentFileInput.value = '';
 
-    // إعادة نص منطقة الرفع
-    const fileDropArea = document.querySelector('#editContentModal .file-drop-area');
-    const fileUploadText = fileDropArea.querySelector('.file-upload-text');
-    fileUploadText.innerHTML = '<span class="supported-files">ملفات PDF فقط</span>';
-    fileDropArea.classList.remove('has-file');
+            // إعادة نص منطقة الرفع
+        const fileDropArea = document.querySelector('#editContentModal .file-drop-area');
+        const fileUploadText = fileDropArea.querySelector('.file-upload-text');
+        fileUploadText.innerHTML = '<span class="supported-files">ملفات PDF فقط</span>';
+        fileDropArea.classList.remove('has-file');
+
+        // 🔴 إعادة تعيين حالة التحقق من التواريخ
+        const editStartDateInput = document.getElementById('editContentStartDate');
+        const editEndDateInput = document.getElementById('editContentEndDate');
+        if (editStartDateInput) editStartDateInput.style.borderColor = '';
+        if (editEndDateInput) {
+            editEndDateInput.style.borderColor = '';
+            editEndDateInput.title = '';
+        }
   }
 }
 
@@ -1588,6 +1655,17 @@ function closeEditContentModal() {
         if (!contentId) {
           showToast(getTranslation('content-title-required'), 'error');
           return;
+        }
+
+        // 🔴 التحقق من صحة التواريخ
+        if (startDate && endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            
+            if (end < start) {
+                showToast('❌ تاريخ النهاية لا يمكن أن يكون قبل تاريخ البداية!', 'error');
+                return;
+            }
         }
         let fileName = '';
         if (contentFile) {
@@ -1753,24 +1831,40 @@ createFolderBtn.onclick = async () => {
 
     // Event listeners to close the Add Content modal
     if (addContentCloseBtn) {
-        addContentCloseBtn.addEventListener('click', closeAddContentModal);
+        addContentCloseBtn.addEventListener('click', function() {
+            try {
+                closeAddContentModal();
+            } catch (error) {
+                console.error('Error closing modal via close button:', error);
+            }
+        });
     }
 
     if (cancelContentBtn) {
-        cancelContentBtn.addEventListener('click', closeAddContentModal);
+        cancelContentBtn.addEventListener('click', function() {
+            try {
+                closeAddContentModal();
+            } catch (error) {
+                console.error('Error closing modal via cancel button:', error);
+            }
+        });
     }
 
     // Event listener to close the modal when clicking outside
     if (addContentModal) {
         addContentModal.addEventListener('click', function(event) {
             if (event.target === addContentModal) {
-                closeAddContentModal();
+                try {
+                    closeAddContentModal();
+                } catch (error) {
+                    console.error('Error closing modal via outside click:', error);
+                }
             }
         });
     }
 
     // Event listener for the Create Content Form Submission
-   
+    // تم ربط زر إنشاء المحتوى في الأعلى
 
     // --- Event Listeners for Edit/Delete Icons --- (Assuming icons are added in HTML)
 
@@ -2135,8 +2229,18 @@ async function handleCreateContent() {
   if (!folderIdToUpload || !contentFile) {
     showToast(getTranslation('select-content'), 'error');
     console.log('رفع محتوى:', {folderIdToUpload, contentFile});
-
     return;
+  }
+
+  // 🔴 التحقق من صحة التواريخ
+  if (startDate && endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    if (end < start) {
+      showToast('❌ تاريخ النهاية لا يمكن أن يكون قبل تاريخ البداية!', 'error');
+      return;
+    }
   }
 
   // Extract file name without extension
@@ -2165,7 +2269,11 @@ async function handleCreateContent() {
 
     if (response.ok) {
       showToast(result.message || '✅ تم رفع المحتوى بنجاح!', 'success');
-      closeAddContentModal();
+      try {
+        closeAddContentModal();
+      } catch (error) {
+        console.error('Error closing modal:', error);
+      }
       await fetchFolderContents(folderIdToUpload);
     } else {
       showToast(`❌ فشل إضافة المحتوى: ${result.message || 'خطأ'}`, 'error');
@@ -2432,31 +2540,48 @@ async function filterFoldersByType(folders, userRole, userDepartmentId) {
 
 // أضف الدالة بعد closeAddContentModal
 function openAddContentModal() {
-  if (addContentModal) {
-    document.getElementById('addContentFolderId').value = currentFolderId;
-    addContentModal.style.display = 'flex';
-    // إعادة تعيين الحقول الأساسية
-    document.getElementById('contentFile').value = '';
-    // مسح التواريخ أيضاً
-    const startDateInput = document.getElementById('contentStartDate');
-    if (startDateInput) startDateInput.value = '';
-    const endDateInput = document.getElementById('contentEndDate');
-    if (endDateInput) endDateInput.value = '';
+  try {
+    const addContentModal = document.getElementById('addContentModal');
+    if (addContentModal) {
+      document.getElementById('addContentFolderId').value = currentFolderId;
+      addContentModal.style.display = 'flex';
+      // إعادة تعيين الحقول الأساسية
+      const contentFileInput = document.getElementById('contentFile');
+      if (contentFileInput) contentFileInput.value = '';
+      
+      // مسح التواريخ أيضاً
+      const startDateInput = document.getElementById('contentStartDate');
+      if (startDateInput) startDateInput.value = '';
+      const endDateInput = document.getElementById('contentEndDate');
+      if (endDateInput) endDateInput.value = '';
 
-    const fileDropArea = document.querySelector('#addContentModal .file-drop-area');
-    if(fileDropArea) {
-        const fileUploadText = fileDropArea.querySelector('.file-upload-text');
-        if(fileUploadText) {
-            fileUploadText.innerHTML = `
-              <span 
-                class="supported-files" 
-                data-translate="supported-files"
-              >
-                ${getTranslation('supported-files')}
-              </span>
-            `;
-        }
-        fileDropArea.classList.remove('has-file');
+      // 🔴 إعادة تعيين حالة التحقق من التواريخ
+      if (startDateInput) startDateInput.style.borderColor = '';
+      if (endDateInput) {
+        endDateInput.style.borderColor = '';
+        endDateInput.title = '';
+      }
+
+      const fileDropArea = addContentModal.querySelector('.file-drop-area');
+      if(fileDropArea) {
+          const fileUploadText = fileDropArea.querySelector('.file-upload-text');
+          if(fileUploadText) {
+              fileUploadText.innerHTML = `
+                <span 
+                  class="supported-files" 
+                  data-translate="supported-files"
+                >
+                  ${getTranslation('supported-files')}
+                </span>
+              `;
+          }
+          fileDropArea.classList.remove('has-file');
+      }
+      console.log('✅ Modal opened successfully');
+    } else {
+      console.warn('⚠️ addContentModal element not found');
     }
+  } catch (error) {
+    console.error('❌ Error in openAddContentModal:', error);
   }
 }

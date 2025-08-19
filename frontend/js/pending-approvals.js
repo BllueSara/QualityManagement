@@ -741,10 +741,10 @@ function updateApprovalItemUI(approvalItem, updatedNames, updatedIds) {
         roleCell.innerHTML = `
           <div class="role-selector">
             <select class="role-dropdown" data-user-name="${name}">
-              <option value="prepared">${getTranslation('prepared') || 'Prepared'}</option>
-              <option value="updated">${getTranslation('updated') || 'Updated'}</option>
-              <option value="reviewed">${getTranslation('reviewed') || 'Reviewed'}</option>
-              <option value="approved" selected>${getTranslation('approved') || 'Approved'}</option>
+              <option value="prepared">${getTranslation('prepared')}</option>
+              <option value="updated">${getTranslation('updated')}</option>
+              <option value="reviewed">${getTranslation('reviewed')}</option>
+              <option value="approved" selected>${getTranslation('approved')}</option>
             </select>
           </div>
         `;
@@ -772,10 +772,10 @@ function updateApprovalItemUI(approvalItem, updatedNames, updatedIds) {
           roleCell.innerHTML = `
             <div class="role-selector">
               <select class="role-dropdown" data-user-name="${name}">
-                <option value="prepared">${getTranslation('prepared') || 'Prepared'}</option>
-                <option value="updated">${getTranslation('updated') || 'Updated'}</option>
-                <option value="reviewed">${getTranslation('reviewed') || 'Reviewed'}</option>
-                <option value="approved" selected>${getTranslation('approved') || 'Approved'}</option>
+                              <option value="prepared">${getTranslation('prepared')}</option>
+              <option value="updated">${getTranslation('updated')}</option>
+              <option value="reviewed">${getTranslation('reviewed')}</option>
+              <option value="approved" selected>${getTranslation('approved')}</option>
               </select>
             </div>
           `;
@@ -914,7 +914,7 @@ async function initDropdowns() {
          }
        });
        
-               // الأقسام الداخلية: نفس القسم + الأقسام التابعة له فقط
+               // الأقسام الداخلية: نفس القسم + الأقسام التابعة له + القسم الرئيسي
         const internalDepartments = departments.filter(d => {
           if (!currentDepartment) return false;
           
@@ -923,6 +923,11 @@ async function initDropdowns() {
           
           // 2. الأقسام التابعة (parent_id = currentDepartment.id)
           if (d.parent_id === currentDepartment.id) {
+            return true;
+          }
+          
+          // 3. القسم الرئيسي (إذا كان القسم الحالي قسم تابع)
+          if (currentDepartment.parent_id && d.id === currentDepartment.parent_id) {
             return true;
           }
           
@@ -1193,10 +1198,10 @@ async function initDropdowns() {
             roleCell.innerHTML = `
               <div class="role-selector">
                 <select class="role-dropdown" data-user-name="${u.name}" data-user-id="${u.id}">
-                  <option value="prepared" ${u.role === 'prepared' ? 'selected' : ''}>📝 ${getTranslation('prepared') || 'Prepared'}</option>
-                  <option value="updated" ${u.role === 'updated' ? 'selected' : ''}>✏️ ${getTranslation('updated') || 'Updated'}</option>
-                  <option value="reviewed" ${u.role === 'reviewed' ? 'selected' : ''}>🔍 ${getTranslation('reviewed') || 'Reviewed'}</option>
-                  <option value="approved" ${u.role === 'approved' ? 'selected' : ''}>✅ ${getTranslation('approved') || 'Approved'}</option>
+                  <option value="prepared" ${u.role === 'prepared' ? 'selected' : ''}>📝 ${getTranslation('prepared')}</option>
+                  <option value="updated" ${u.role === 'updated' ? 'selected' : ''}>✏️ ${getTranslation('updated')}</option>
+                  <option value="reviewed" ${u.role === 'reviewed' ? 'selected' : ''}>🔍 ${getTranslation('reviewed')}</option>
+                  <option value="approved" ${u.role === 'approved' ? 'selected' : ''}>✅ ${getTranslation('approved')}</option>
                 </select>
               </div>
             `;
@@ -1239,10 +1244,10 @@ async function initDropdowns() {
               roleCell.innerHTML = `
                 <div class="role-selector">
                   <select class="role-dropdown" data-user-name="${u.name}" data-user-id="${u.id}">
-                    <option value="prepared" ${u.role === 'prepared' ? 'selected' : ''}> ${getTranslation('prepared') || 'Prepared'}</option>
-                    <option value="updated" ${u.role === 'updated' ? 'selected' : ''}> ${getTranslation('updated') || 'Updated'}</option>
-                    <option value="reviewed" ${u.role === 'reviewed' ? 'selected' : ''}> ${getTranslation('reviewed') || 'Reviewed'}</option>
-                    <option value="approved" ${u.role === 'approved' ? 'selected' : ''}>${getTranslation('approved') || 'Approved'}</option>
+                    <option value="prepared" ${u.role === 'prepared' ? 'selected' : ''}> ${getTranslation('prepared')}</option>
+                    <option value="updated" ${u.role === 'updated' ? 'selected' : ''}> ${getTranslation('updated')}</option>
+                    <option value="reviewed" ${u.role === 'reviewed' ? 'selected' : ''}> ${getTranslation('reviewed')}</option>
+                    <option value="approved" ${u.role === 'approved' ? 'selected' : ''}>${getTranslation('approved')}</option>
                   </select>
                 </div>
               `;
@@ -1481,10 +1486,10 @@ async function initDropdowns() {
             roleCell.innerHTML = `
               <div class="role-selector">
                 <select class="role-dropdown" data-user-name="${u.name}" data-user-id="${u.id}">
-                  <option value="prepared" ${u.role === 'prepared' ? 'selected' : ''}>📝 ${getTranslation('prepared') || 'Prepared'}</option>
-                  <option value="updated" ${u.role === 'updated' ? 'selected' : ''}>✏️ ${getTranslation('updated') || 'Updated'}</option>
-                  <option value="reviewed" ${u.role === 'reviewed' ? 'selected' : ''}>🔍 ${getTranslation('reviewed') || 'Reviewed'}</option>
-                  <option value="approved" ${u.role === 'approved' ? 'selected' : ''}>✅ ${getTranslation('approved') || 'Approved'}</option>
+                  <option value="prepared" ${u.role === 'prepared' ? 'selected' : ''}>📝 ${getTranslation('prepared')}</option>
+                  <option value="updated" ${u.role === 'updated' ? 'selected' : ''}>✏️ ${getTranslation('updated')}</option>
+                  <option value="reviewed" ${u.role === 'reviewed' ? 'selected' : ''}>🔍 ${getTranslation('reviewed')}</option>
+                  <option value="approved" ${u.role === 'approved' ? 'selected' : ''}>✅ ${getTranslation('approved')}</option>
                 </select>
               </div>
             `;
@@ -1527,10 +1532,10 @@ async function initDropdowns() {
               roleCell.innerHTML = `
                 <div class="role-selector">
                   <select class="role-dropdown" data-user-name="${u.name}" data-user-id="${u.id}">
-                    <option value="prepared" ${u.role === 'prepared' ? 'selected' : ''}>📝 ${getTranslation('prepared') || 'Prepared'}</option>
-                    <option value="updated" ${u.role === 'updated' ? 'selected' : ''}>✏️ ${getTranslation('updated') || 'Updated'}</option>
-                    <option value="reviewed" ${u.role === 'reviewed' ? 'selected' : ''}>🔍 ${getTranslation('reviewed') || 'Reviewed'}</option>
-                    <option value="approved" ${u.role === 'approved' ? 'selected' : ''}>✅ ${getTranslation('approved') || 'Approved'}</option>
+                    <option value="prepared" ${u.role === 'prepared' ? 'selected' : ''}>📝 ${getTranslation('prepared')}</option>
+                    <option value="updated" ${u.role === 'updated' ? 'selected' : ''}>✏️ ${getTranslation('updated')}</option>
+                    <option value="reviewed" ${u.role === 'reviewed' ? 'selected' : ''}>🔍 ${getTranslation('reviewed')}</option>
+                    <option value="approved" ${u.role === 'approved' ? 'selected' : ''}>✅ ${getTranslation('approved')}</option>
                   </select>
                 </div>
               `;
@@ -1846,16 +1851,16 @@ async function initDropdowns() {
             <div class="role-selector">
               <select class="role-dropdown" data-user-name="${u.name}" data-user-id="${u.id}">
                 <option value="prepared" ${u.role === 'prepared' ? 'selected' : ''}>
-                   ${getTranslation('prepared') || 'Prepared'}
+                   ${getTranslation('prepared')}
                 </option>
                 <option value="updated" ${u.role === 'updated' ? 'selected' : ''}>
-                   ${getTranslation('updated') || 'Updated'}
+                   ${getTranslation('updated')}
                 </option>
                 <option value="reviewed" ${u.role === 'reviewed' ? 'selected' : ''}>
-                   ${getTranslation('reviewed') || 'Reviewed'}
+                   ${getTranslation('reviewed')}
                 </option>
                 <option value="approved" ${u.role === 'approved' ? 'selected' : ''}>
-                  ${getTranslation('approved') || 'Approved'}
+                  ${getTranslation('approved')}
                 </option>
               </select>
             </div>
@@ -1900,16 +1905,16 @@ async function initDropdowns() {
               <div class="role-selector">
                 <select class="role-dropdown" data-user-name="${u.name}" data-user-id="${u.id}">
                   <option value="prepared" ${u.role === 'prepared' ? 'selected' : ''}>
-                     ${getTranslation('prepared') || 'Prepared'}
+                     ${getTranslation('prepared')}
                   </option>
                   <option value="updated" ${u.role === 'updated' ? 'selected' : ''}>
-                     ${getTranslation('updated') || 'Updated'}
+                     ${getTranslation('updated')}
                   </option>
                   <option value="reviewed" ${u.role === 'reviewed' ? 'selected' : ''}>
-                     ${getTranslation('reviewed') || 'Reviewed'}
+                     ${getTranslation('reviewed')}
                   </option>
                   <option value="approved" ${u.role === 'approved' ? 'selected' : ''}>
-                     ${getTranslation('approved') || 'Approved'}
+                     ${getTranslation('approved')}
                   </option>
                 </select>
               </div>
@@ -2800,10 +2805,10 @@ function getTranslation(key) {
       'selected-count': 'مختار',
       'file-link-unavailable': 'رابط الملف غير متوفر',
       'select-role': 'اختر الدور',
-      'prepared': 'Prepared',
-      'updated': 'Updated',
-      'reviewed': 'Reviewed',
-      'approved': 'Approved',
+      'prepared': 'معد',
+      'updated': 'محدث',
+      'reviewed': 'مراجع',
+      'approved': 'معتمد',
       'role-info': 'سيتم تحديد الدور لكل شخص',
       'role-per-person': 'يمكنك تحديد دور مختلف لكل معتمد',
       'sequence': 'التسلسل',

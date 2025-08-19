@@ -4,6 +4,46 @@ let filteredItems = [];
 const apiBase = 'http://localhost:3006/api';
 const token = localStorage.getItem('token');
 let permissionsKeys = [];
+
+// دالة إظهار التوست - تعريفها في البداية لتكون متاحة في كل مكان
+function showToast(message, type = 'info', duration = 3000) {
+    try {
+        let toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toast-container';
+            document.body.appendChild(toastContainer);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+
+        toastContainer.appendChild(toast);
+
+        // Force reflow to ensure animation plays from start
+        toast.offsetWidth; 
+
+        // تفعيل التوست
+        setTimeout(() => {
+            toast.classList.add('show');
+        }, 10);
+
+        // Set a timeout to remove the toast
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, 500);
+        }, duration);
+        
+        console.log('✅ Toast shown successfully:', message);
+    } catch (error) {
+        console.error('❌ Error showing toast:', error);
+    }
+}
 // تم إزالة التصريحات المكررة للمتغيرات العامة لأنها موجودة في sign.js
 const currentLang = localStorage.getItem('language') || 'ar'; // تم إزالة التصريح المكرر
 let currentPage   = 1;
@@ -244,27 +284,40 @@ function showDelegationConfirmationPopup(delegatorInfo, delegateInfo, files, isB
 }
 
 function closeDelegationConfirmationPopup() {
-  const popup = document.getElementById('delegationConfirmationPopup');
-  if (popup) {
-    popup.remove();
-  }
-  
-  // إعادة تعيين متغيرات الكانفاس النشط
-  activeCanvas = null;
-  activeCtx = null;
-  console.log('🔍 Delegation confirmation popup closed, activeCanvas reset');
-  
-  // إعادة تفعيل أزرار الصف إذا كان هناك contentId محدد
-  if (selectedContentId) {
-    const row = document.querySelector(`tr[data-id="${selectedContentId}"]`);
-    if (row && row.dataset.status === 'pending') {
-      enableRowActions(selectedContentId);
+  try {
+    const popup = document.getElementById('delegationConfirmationPopup');
+    if (popup) {
+      popup.remove();
+      console.log('🔍 Delegation confirmation popup removed');
     }
-  }
-  
-  // إعادة تفعيل أزرار الصف إذا كان هناك contentId في بيانات التفويض
-  if (pendingDelegationData && pendingDelegationData.contentId) {
-    enableRowActions(pendingDelegationData.contentId);
+    
+    // إعادة تعيين متغيرات الكانفاس النشط
+    activeCanvas = null;
+    activeCtx = null;
+    console.log('🔍 Delegation confirmation popup closed, activeCanvas reset');
+    
+    // إعادة تفعيل أزرار الصف إذا كان هناك contentId محدد
+    if (selectedContentId) {
+      const row = document.querySelector(`tr[data-id="${selectedContentId}"]`);
+      if (row && row.dataset.status === 'pending') {
+        enableRowActions(selectedContentId);
+      }
+    }
+    
+    // إعادة تفعيل أزرار الصف إذا كان هناك contentId في بيانات التفويض
+    if (pendingDelegationData && pendingDelegationData.contentId) {
+      enableRowActions(pendingDelegationData.contentId);
+    }
+    
+    // إعادة تفعيل زر التأكيد إذا كان معطلاً
+    const confirmButton = document.querySelector('#delegationConfirmationPopup .btn-primary');
+    if (confirmButton && confirmButton.disabled) {
+      setButtonProcessingState(confirmButton, false);
+    }
+    
+    console.log('🔍 Delegation confirmation popup cleanup completed');
+  } catch (error) {
+    console.error('🔍 Error closing delegation confirmation popup:', error);
   }
 }
 
@@ -539,51 +592,68 @@ function confirmDelegation() {
   console.log('🔍 confirmDelegation called');
   console.log('🔍 pendingDelegationData:', pendingDelegationData);
   
-  if (!pendingDelegationData) {
-    showToast(getTranslation('error-no-delegation-data'), 'error');
-    return;
-  }
-  
-  // الحصول على توقيع المرسل من الكانفاس
-  const senderSignature = getSignatureFromCanvas();
-  console.log('🔍 senderSignature obtained:', senderSignature ? 'YES' : 'NO');
-  
-  if (!senderSignature) {
+  try {
+    if (!pendingDelegationData) {
+       showToast(getTranslation('error-no-delegation-data'), 'error');
+
+      return;
+    }
+    
+    // الحصول على توقيع المرسل من الكانفاس
+    const senderSignature = getSignatureFromCanvas();
+    console.log('🔍 senderSignature obtained:', senderSignature ? 'YES' : 'NO');
+    
+    if (!senderSignature) {
     showToast(getTranslation('delegation-error-no-signature'), 'error');
-    return;
-  }
-  
-  // حماية من النقر المتكرر
-  const confirmButton = document.querySelector('#delegationConfirmationPopup .btn-primary');
+
+      return;
+    }
+    
+    // حماية من النقر المتكرر
+    const confirmButton = document.querySelector('#delegationConfirmationPopup .btn-primary');
       if (!protectFromDoubleClick(confirmButton, getTranslation('processing-delegation'))) {
-    return;
+      return;
+    }
+    
+    // تعطيل جميع أزرار الصف إذا كان هناك contentId
+    if (pendingDelegationData.contentId) {
+      disableRowActions(pendingDelegationData.contentId);
+    }
+    
+    // إضافة توقيع المرسل إلى بيانات التفويض
+    pendingDelegationData.senderSignature = senderSignature;
+    console.log('🔍 Updated pendingDelegationData with signature');
+    
+    // معالجة قبول التفويض حسب النوع
+    if (pendingDelegationData.isBulk) {
+      // قبول تفويض شامل
+      console.log('🔍 Processing bulk delegation');
+      processBulkDelegation(pendingDelegationData);
+    } else {
+      // قبول تفويض فردي
+      console.log('🔍 Processing single delegation');
+      processSingleDelegation(pendingDelegationData);
+    }
+    
+    // إغلاق البوب أب
+    closeDelegationConfirmationPopup();
+    
+    // مسح البيانات المؤقتة
+    pendingDelegationData = null;
+  } catch (error) {
+    console.error('🔍 Error in confirmDelegation:', error);
+    showToast('حدث خطأ أثناء معالجة التفويض', 'error');
+    
+    // إعادة تفعيل الأزرار في حالة الخطأ
+    if (pendingDelegationData && pendingDelegationData.contentId) {
+      enableRowActions(pendingDelegationData.contentId);
+    }
+    
+    const confirmButton = document.querySelector('#delegationConfirmationPopup .btn-primary');
+    if (confirmButton) {
+      setButtonProcessingState(confirmButton, false);
+    }
   }
-  
-  // تعطيل جميع أزرار الصف إذا كان هناك contentId
-  if (pendingDelegationData.contentId) {
-    disableRowActions(pendingDelegationData.contentId);
-  }
-  
-  // إضافة توقيع المرسل إلى بيانات التفويض
-  pendingDelegationData.senderSignature = senderSignature;
-  console.log('🔍 Updated pendingDelegationData with signature');
-  
-  // معالجة قبول التفويض حسب النوع
-  if (pendingDelegationData.isBulk) {
-    // قبول تفويض شامل
-    console.log('🔍 Processing bulk delegation');
-    processBulkDelegation(pendingDelegationData);
-  } else {
-    // قبول تفويض فردي
-    console.log('🔍 Processing single delegation');
-    processSingleDelegation(pendingDelegationData);
-  }
-  
-  // إغلاق البوب أب
-  closeDelegationConfirmationPopup();
-  
-  // مسح البيانات المؤقتة
-  pendingDelegationData = null;
 }
 
 function rejectDelegation() {
@@ -1111,39 +1181,6 @@ async function showBulkCommitteeDelegationConfirmation(delegateTo, notes = '') {
     showToast(getTranslation('error-showing-bulk-committee-delegation-confirmation'), 'error');
   }
 }
-// دالة إظهار التوست - خارج DOMContentLoaded لتكون متاحة في كل مكان
-function showToast(message, type = 'info', duration = 3000) {
-    let toastContainer = document.getElementById('toast-container');
-    if (!toastContainer) {
-        toastContainer = document.createElement('div');
-        toastContainer.id = 'toast-container';
-        document.body.appendChild(toastContainer);
-    }
-
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    toast.textContent = message;
-
-    toastContainer.appendChild(toast);
-
-    // Force reflow to ensure animation plays from start
-    toast.offsetWidth; 
-
-    // تفعيل التوست
-    setTimeout(() => {
-        toast.classList.add('show');
-    }, 10);
-
-    // Set a timeout to remove the toast
-    setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.remove();
-            }
-        }, 500);
-    }, duration);
-}
 
 // جلب صلاحيات المستخدم
 async function fetchPermissions() {
@@ -1189,27 +1226,31 @@ function getLocalizedName(name) {
 }
 function closeModal(modalId) {
   console.log('🔍 closeModal called with modalId:', modalId);
-  const modal = getCachedElement(modalId);
-  if (modal) {
-    // إغلاق فوري بدون تأخير
-    modal.style.display = 'none';
-    modal.style.opacity = '1';
-    modal.style.transition = '';
-    
-    // تنظيف الذاكرة المؤقتة
-    modalCache.delete(modalId);
-    
-    // إعادة تفعيل أزرار الصف إذا كان المودال هو مودال الرفض أو التوقيع الإلكتروني أو التفويض
-    if ((modalId === 'rejectModal' || modalId === 'qrModal' || modalId === 'delegateModal') && selectedContentId) {
-      const row = document.querySelector(`tr[data-id="${selectedContentId}"]`);
-      if (row && row.dataset.status === 'pending') {
-        enableRowActions(selectedContentId);
+  try {
+    const modal = getCachedElement(modalId);
+    if (modal) {
+      // إغلاق فوري بدون تأخير
+      modal.style.display = 'none';
+      modal.style.opacity = '1';
+      modal.style.transition = '';
+      
+      // تنظيف الذاكرة المؤقتة
+      modalCache.delete(modalId);
+      
+      // إعادة تفعيل أزرار الصف إذا كان المودال هو مودال الرفض أو التوقيع الإلكتروني أو التفويض
+      if ((modalId === 'rejectModal' || modalId === 'qrModal' || modalId === 'delegateModal') && selectedContentId) {
+        const row = document.querySelector(`tr[data-id="${selectedContentId}"]`);
+        if (row && row.dataset.status === 'pending') {
+          enableRowActions(selectedContentId);
+        }
       }
+      
+      console.log('🔍 Modal closed successfully');
+    } else {
+      console.error('🔍 Modal not found:', modalId);
     }
-    
-    console.log('🔍 Modal closed successfully');
-  } else {
-    console.error('🔍 Modal not found:', modalId);
+  } catch (error) {
+    console.error('🔍 Error closing modal:', error);
   }
 }
 
@@ -3195,10 +3236,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // دالة محسنة للحصول على العناصر مع التخزين المؤقت
 function getCachedElement(id) {
-  if (!elementCache.has(id)) {
-    elementCache.set(id, document.getElementById(id));
+  try {
+    if (!id) {
+      console.warn('🔍 Element ID is null or undefined');
+      return null;
+    }
+    
+    if (!elementCache.has(id)) {
+      const element = document.getElementById(id);
+      elementCache.set(id, element);
+      if (!element) {
+        console.warn('🔍 Element not found:', id);
+      }
+    }
+    return elementCache.get(id);
+  } catch (error) {
+    console.error('🔍 Error getting cached element:', error);
+    return null;
   }
-  return elementCache.get(id);
 }
 
 
@@ -3206,19 +3261,23 @@ function getCachedElement(id) {
 // دالة محسنة لفتح المودال
 function openModal(modalId) {
   console.log('🔍 openModal called with modalId:', modalId);
-  const modal = getCachedElement(modalId);
-  console.log('🔍 Modal element found:', modal);
-  if (modal) {
-    // فتح فوري بدون تأخير
-    modal.style.display = 'flex';
-    modal.style.opacity = '1';
-    modal.style.transition = '';
-    
-    // تخزين في الذاكرة المؤقتة
-    modalCache.set(modalId, modal);
-    console.log('🔍 Modal opened successfully');
-  } else {
-    console.error('🔍 Modal not found:', modalId);
+  try {
+    const modal = getCachedElement(modalId);
+    console.log('🔍 Modal element found:', modal);
+    if (modal) {
+      // فتح فوري بدون تأخير
+      modal.style.display = 'flex';
+      modal.style.opacity = '1';
+      modal.style.transition = '';
+      
+      // تخزين في الذاكرة المؤقتة
+      modalCache.set(modalId, modal);
+      console.log('🔍 Modal opened successfully');
+    } else {
+      console.error('🔍 Modal not found:', modalId);
+    }
+  } catch (error) {
+    console.error('🔍 Error opening modal:', error);
   }
 }
 
@@ -3405,120 +3464,178 @@ async function processBulkDelegation(data) {
 
 // دالة جديدة لحماية الأزرار من النقر المتكرر
 function setButtonProcessingState(button, isProcessing, processingText = null, originalText = null) {
-  if (!button) return;
-  
-  if (isProcessing) {
-    // حفظ النص الأصلي إذا لم يتم حفظه من قبل
-    if (!originalText) {
-      button.dataset.originalText = button.innerHTML;
+  try {
+    if (!button) {
+      console.warn('🔍 Button is null in setButtonProcessingState');
+      return;
     }
     
-    // تعطيل الزر وإظهار حالة المعالجة
-    button.disabled = true;
-    button.style.opacity = '0.6';
-    button.style.cursor = 'not-allowed';
-    button.style.pointerEvents = 'none';
-    button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${processingText}`;
-    
-    // إضافة مؤشر بصري
-    button.classList.add('processing');
-    
-    // إضافة CSS إضافي لتحسين المظهر
-    button.style.transition = 'all 0.3s ease';
-    button.style.transform = 'scale(0.98)';
-    button.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-  } else {
-    // إعادة تفعيل الزر وإعادة النص الأصلي
-    button.disabled = false;
-    button.style.opacity = '1';
-    button.style.cursor = 'pointer';
-    button.style.pointerEvents = 'auto';
-    button.innerHTML = button.dataset.originalText || originalText || button.innerHTML;
-    
-    // إزالة المؤشر البصري
-    button.classList.remove('processing');
-    
-    // إعادة تعيين CSS
-    button.style.transform = 'scale(1)';
-    button.style.boxShadow = '';
+    if (isProcessing) {
+      // حفظ النص الأصلي إذا لم يتم حفظه من قبل
+      if (!originalText && !button.dataset.originalText) {
+        button.dataset.originalText = button.innerHTML;
+      }
+      
+      // تعطيل الزر وإظهار حالة المعالجة
+      button.disabled = true;
+      button.style.opacity = '0.6';
+      button.style.cursor = 'not-allowed';
+      button.style.pointerEvents = 'none';
+      button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${processingText || 'جاري المعالجة...'}`;
+      
+      // إضافة مؤشر بصري
+      button.classList.add('processing');
+      
+      // إضافة CSS إضافي لتحسين المظهر
+      button.style.transition = 'all 0.3s ease';
+      button.style.transform = 'scale(0.98)';
+      button.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+      
+      console.log('🔍 Button set to processing state');
+    } else {
+      // إعادة تفعيل الزر وإعادة النص الأصلي
+      button.disabled = false;
+      button.style.opacity = '1';
+      button.style.cursor = 'pointer';
+      button.style.pointerEvents = 'auto';
+      button.innerHTML = button.dataset.originalText || originalText || button.innerHTML.replace(/<i[^>]*><\/i>\s*/, '');
+      
+      // إزالة المؤشر البصري
+      button.classList.remove('processing');
+      
+      // إعادة تعيين CSS
+      button.style.transform = 'scale(1)';
+      button.style.boxShadow = '';
+      
+      console.log('🔍 Button returned to normal state');
+    }
+  } catch (error) {
+    console.error('🔍 Error in setButtonProcessingState:', error);
   }
 }
 
 // دالة لحماية من النقر المتكرر مع timeout
 function protectFromDoubleClick(button, processingText = null) {
-  if (!button || button.disabled) return false;
-  
-  // تعطيل الزر فوراً
-  setButtonProcessingState(button, true, processingText);
-  
-  // إعادة تفعيل الزر بعد 5 ثواني كحد أقصى
-  if (processingTimeout) {
-    clearTimeout(processingTimeout);
-  }
-  
-  processingTimeout = setTimeout(() => {
-    if (button) {
-      setButtonProcessingState(button, false);
+  try {
+    if (!button || button.disabled) {
+      console.warn('🔍 Button is null or already disabled');
+      return false;
     }
-  }, 5000);
-  
-  return true;
+    
+    // تعطيل الزر فوراً
+    setButtonProcessingState(button, true, processingText);
+    
+    // إعادة تفعيل الزر بعد 10 ثواني كحد أقصى (زيادة الوقت للسيرفر البطيء)
+    if (processingTimeout) {
+      clearTimeout(processingTimeout);
+    }
+    
+    processingTimeout = setTimeout(() => {
+      if (button) {
+        setButtonProcessingState(button, false);
+        console.log('🔍 Button re-enabled after timeout');
+      }
+    }, 10000);
+    
+    console.log('🔍 Button protected from double click');
+    return true;
+  } catch (error) {
+    console.error('🔍 Error in protectFromDoubleClick:', error);
+    return false;
+  }
 }
 
 // دالة لتعطيل جميع أزرار الصف
 function disableRowActions(contentId) {
-  const row = document.querySelector(`tr[data-id="${contentId}"]`);
-  if (!row) return;
-  
-  const actionButtons = row.querySelectorAll('button');
-  actionButtons.forEach(button => {
-    button.disabled = true;
-    button.style.opacity = '0.5';
-    button.style.cursor = 'not-allowed';
-    button.style.pointerEvents = 'none';
-    
-    // إضافة مؤشر بصري
-    button.classList.add('processing');
-    
-    // حفظ النص الأصلي
-    if (!button.dataset.originalText) {
-      button.dataset.originalText = button.innerHTML;
+  try {
+    const row = document.querySelector(`tr[data-id="${contentId}"]`);
+    if (!row) {
+      console.warn('🔍 Row not found for contentId:', contentId);
+      return;
     }
     
-    // إضافة نص المعالجة
-    button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${getTranslation('processing')}`;
+    const actionButtons = row.querySelectorAll('button');
+    if (actionButtons.length === 0) {
+      console.warn('🔍 No action buttons found in row');
+      return;
+    }
     
-    // إضافة CSS إضافي لتحسين المظهر
-    button.style.transition = 'all 0.3s ease';
-    button.style.transform = 'scale(0.95)';
-    button.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
-    button.style.filter = 'grayscale(30%)';
-  });
+    actionButtons.forEach(button => {
+      try {
+        button.disabled = true;
+        button.style.opacity = '0.5';
+        button.style.cursor = 'not-allowed';
+        button.style.pointerEvents = 'none';
+        
+        // إضافة مؤشر بصري
+        button.classList.add('processing');
+        
+        // حفظ النص الأصلي
+        if (!button.dataset.originalText) {
+          button.dataset.originalText = button.innerHTML;
+        }
+        
+        // إضافة نص المعالجة
+         button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${getTranslation('processing')}`;
+
+        
+        // إضافة CSS إضافي لتحسين المظهر
+        button.style.transition = 'all 0.3s ease';
+        button.style.transform = 'scale(0.95)';
+        button.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+        button.style.filter = 'grayscale(30%)';
+      } catch (buttonError) {
+        console.error('🔍 Error disabling button:', buttonError);
+      }
+    });
+    
+    console.log('🔍 Row actions disabled for contentId:', contentId);
+  } catch (error) {
+    console.error('🔍 Error in disableRowActions:', error);
+  }
 }
 
 // دالة لإعادة تفعيل جميع أزرار الصف
 function enableRowActions(contentId) {
-  const row = document.querySelector(`tr[data-id="${contentId}"]`);
-  if (!row) return;
-  
-  const actionButtons = row.querySelectorAll('button');
-  actionButtons.forEach(button => {
-    button.disabled = false;
-    button.style.opacity = '1';
-    button.style.cursor = 'pointer';
-    button.style.pointerEvents = 'auto';
-    
-    // إزالة المؤشر البصري
-    button.classList.remove('processing');
-    
-    // إعادة النص الأصلي
-    if (button.dataset.originalText) {
-      button.innerHTML = button.dataset.originalText;
+  try {
+    const row = document.querySelector(`tr[data-id="${contentId}"]`);
+    if (!row) {
+      console.warn('🔍 Row not found for contentId:', contentId);
+      return;
     }
     
-    // إعادة تعيين CSS
-    button.style.transform = 'scale(1)';
-    button.style.boxShadow = '';
-    button.style.filter = '';
-  });
+    const actionButtons = row.querySelectorAll('button');
+    if (actionButtons.length === 0) {
+      console.warn('🔍 No action buttons found in row');
+      return;
+    }
+    
+    actionButtons.forEach(button => {
+      try {
+        button.disabled = false;
+        button.style.opacity = '1';
+        button.style.cursor = 'pointer';
+        button.style.pointerEvents = 'auto';
+        
+        // إزالة المؤشر البصري
+        button.classList.remove('processing');
+        
+        // إعادة النص الأصلي
+        if (button.dataset.originalText) {
+          button.innerHTML = button.dataset.originalText;
+        }
+        
+        // إعادة تعيين CSS
+        button.style.transform = 'scale(1)';
+        button.style.boxShadow = '';
+        button.style.filter = '';
+      } catch (buttonError) {
+        console.error('🔍 Error enabling button:', buttonError);
+      }
+    });
+    
+    console.log('🔍 Row actions enabled for contentId:', contentId);
+  } catch (error) {
+    console.error('🔍 Error in enableRowActions:', error);
+  }
 }

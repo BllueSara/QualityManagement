@@ -19,6 +19,8 @@ class ProtocolController {
             const { 
                 protocolTitle, 
                 protocolDate, 
+                protocolTime,
+                room,
                 topics, 
                 assignmentType, 
                 departmentId, 
@@ -67,6 +69,8 @@ class ProtocolController {
             const protocolData = {
                 protocolTitle,
                 protocolDate,
+                protocolTime,
+                room,
                 topics,
                 assignmentType,
                 departmentId,
@@ -185,6 +189,11 @@ class ProtocolController {
                 id: protocol.id,
                 title: protocol.title,
                 protocolDate: protocol.protocol_date,
+                protocolTime: protocol.protocol_time,
+                room: protocol.room,
+                department_id: protocol.department_id,
+                folder_id: protocol.folder_id,
+                committee_id: protocol.committee_id,
                 createdAt: protocol.created_at,
                 updatedAt: protocol.updated_at,
                 status: protocol.status,
@@ -198,12 +207,16 @@ class ProtocolController {
                     discussion: topic.discussion,
                     duration: topic.duration,
                     endDate: topic.end_date,
+                    recommendations: topic.recommendations,
+                    responsibility: topic.responsibility,
                     topicOrder: topic.topic_order,
                     sideDiscussions: (topic.sideDiscussions || []).map(sideDiscussion => ({
                         id: sideDiscussion.id,
                         content: sideDiscussion.content,
                         duration: sideDiscussion.duration,
                         endDate: sideDiscussion.end_date,
+                        recommendations: sideDiscussion.recommendations,
+                        responsibility: sideDiscussion.responsibility,
                         discussionOrder: sideDiscussion.discussion_order
                     }))
                 })),
@@ -249,6 +262,8 @@ class ProtocolController {
             const { 
                 protocolTitle, 
                 protocolDate, 
+                protocolTime,
+                room,
                 topics, 
                 assignmentType, 
                 departmentId, 
@@ -297,6 +312,8 @@ class ProtocolController {
             const protocolData = {
                 protocolTitle,
                 protocolDate,
+                protocolTime,
+                room,
                 topics,
                 assignmentType,
                 departmentId,
@@ -797,6 +814,17 @@ class ProtocolController {
                 }
 
                 protocolData = protocolRows[0];
+                
+                // للأدمن: إضافة نفسه كمعتمد في protocol_approvers إذا لم يكن موجوداً
+                try {
+                    await protocolModel.pool.execute(`
+                        INSERT IGNORE INTO protocol_approvers (protocol_id, user_id, sequence_number) 
+                        VALUES (?, ?, 1)
+                    `, [protocolId, currentUserId]);
+                } catch (e) {
+                    console.log('Admin already exists as approver or error adding:', e);
+                }
+                
                 // للأدمن: تعيين sequence_number = 1 للسماح بالاعتماد
                 allData = [{
                     sequence_number: 1,

@@ -207,23 +207,67 @@ async function generateProtocolPDF(protocolData, db) {
             });
         }
 
-        // معلومات المحضر الأساسية في جدول منظم
-         const infoTableBody = [
-             [
-                 { text: formatDate(protocolData.created_at), style: 'infoCell', alignment: 'center' },
-                 { text: fixArabicOrder('تاريخ المحضر'), style: 'infoHeader', alignment: 'center' },
-             ],
-             [
-                 { text: fixArabicOrder(prepareArabic(protocolData.createdByName || protocolData.created_by_name || ' ')), style: 'infoCell', alignment: 'center' },
-                 { text: fixArabicOrder('صاحب المحضر'), style: 'infoHeader', alignment: 'center' },
-             ]
-         ];
+        // إضافة عنوان المحضر الرئيسي أولاً
+        content.push({
+            text: fixArabicOrder('محضر الاجتماع\nMeeting Minutes'),
+            style: 'mainTitle',
+            alignment: 'center',
+            margin: [0, 0, 0, 20]
+        });
 
+                // معلومات المحضر الأساسية في جدول منظم ومتصل
+        const infoTableBody = [
+            [
+                { text: fixArabicOrder(prepareArabic(protocolData.title || ' ')), style: 'infoCell', alignment: 'center' },
+                { text: fixArabicOrder('Title Meeting\nعنوان الاجتماع'), style: 'infoHeader', alignment: 'center' }
+            ],
+            [
+                { text: fixArabicOrder(prepareArabic(protocolData.createdByName || protocolData.created_by_name || ' ')), style: 'infoCell', alignment: 'center' },
+                { text: fixArabicOrder(' by recorded was Meeting \nتم تسجيل الاجتماع بواسطة'), style: 'infoHeader', alignment: 'center' }
+            ],
+            [
+                { text: fixArabicOrder(prepareArabic(protocolData.room || 'ICU meeting room')), style: 'infoCell', alignment: 'center' },
+                { text: fixArabicOrder('Venue\nالقاعة'), style: 'infoHeader', alignment: 'center' },
+                { text: fixArabicOrder(String((protocolData.protocolTime || protocolData.protocol_time || '')).slice(0,5)), style: 'infoCell', alignment: 'center' },
+                { text: fixArabicOrder('Time\nالوقت'), style: 'infoHeader', alignment: 'center' },
+                { text: formatDate(protocolData.protocolDate || protocolData.protocol_date || protocolData.created_at), style: 'infoCell', alignment: 'center' },
+                { text: fixArabicOrder('Date\nالتاريخ'), style: 'infoHeader', alignment: 'center' },
+            ]
+        ];
+
+        // إضافة الجدول الأول (الصفين الأولين)
         content.push({
             table: {
                 headerRows: 0,
-                widths: ['50%', '50%'],
-                body: infoTableBody
+                widths: ['75%', '25%'],
+                body: [
+                    infoTableBody[0],
+                    infoTableBody[1]
+                ]
+            },
+            layout: {
+                hLineWidth: function(i, node) {
+                    return 1;
+                },
+                vLineWidth: function(i, node) {
+                    return 1;
+                },
+                hLineColor: function(i, node) {
+                    return '#000000';
+                },
+                vLineColor: function(i, node) {
+                    return '#000000';
+                }
+            },
+            margin: [0, 0, 0, 10]
+        });
+
+        // إضافة الجدول الثاني (الصف الثالث)
+        content.push({
+            table: {
+                headerRows: 0,
+                widths: ['16.67%', '16.67%', '16.67%', '16.67%', '16.67%', '16.67%'],
+                body: [infoTableBody[2]]
             },
             layout: {
                 hLineWidth: function(i, node) {
@@ -242,35 +286,196 @@ async function generateProtocolPDF(protocolData, db) {
             margin: [0, 0, 0, 30]
         });
 
+        // جدول الحضور والغياب
+        // يتم تحديث هذا الجدول تلقائياً بناءً على حالة الاعتماد:
+        // - عمود "الحضور": يعرض الأشخاص الذين اعتمدوا المحضر
+        // - عمود "لم يحضر": يعرض الأشخاص المطلوب منهم الاعتماد ولكن لم يعتمدوا بعد
+        // يتم تحديث الجدول تلقائياً عند كل اعتماد جديد
+        const attendeesTableBody = [];
+        
+        // إضافة رأس الجدول
+        attendeesTableBody.push([
+            { text: fixArabicOrder('لم يحضر\nPresent Not'), style: 'tableHeader', alignment: 'center' },
+            { text: fixArabicOrder('الحضور\nMembers / Attendees'), style: 'tableHeader', alignment: 'center' }
+        ]);
+
+        // جلب بيانات المعتمدين والمستخدمين
+        let allUsers = [];
+        let approvedUsers = [];
+        let pendingApprovers = [];
+        
+        console.log('🔍 PDF Generator - protocolData.approvers:', protocolData.approvers);
+        console.log('🔍 PDF Generator - protocolData.id:', protocolData.id);
+        
+        try {
+            // جلب جميع المعتمدين
+            if (protocolData.approvers && protocolData.approvers.length > 0) {
+                const approverIds = protocolData.approvers.map(a => a.user_id || a.userId);
+                console.log('🔍 PDF Generator - approverIds:', approverIds);
+                
+                // جلب بيانات المعتمدين
+                const [users] = await db.pool.execute(`
+                    SELECT 
+                        u.id,
+                        u.first_name,
+                        u.last_name,
+                        u.second_name,
+                        u.third_name,
+                        jt.title as job_title,
+                        jn.name as job_name,
+                        CASE WHEN u.id IN (?) THEN 1 ELSE 0 END as is_approver
+                    FROM users u
+                    LEFT JOIN job_titles jt ON u.job_title_id = jt.id
+                    LEFT JOIN job_names jn ON u.job_name_id = jn.id
+                    WHERE u.deleted_at IS NULL
+                    ORDER BY u.first_name, u.last_name
+                `, [approverIds]);
+                
+                allUsers = users;
+                console.log('🔍 PDF Generator - fetched users:', users.length);
+                
+                // جلب سجلات الاعتماد الفعلية
+                const [approvalLogs] = await db.pool.execute(`
+                    SELECT 
+                        pal.approver_id,
+                        pal.status,
+                        pal.created_at
+                    FROM protocol_approval_logs pal
+                    WHERE pal.protocol_id = ? AND pal.status = 'approved'
+                `, [protocolData.id]);
+                
+                console.log('🔍 PDF Generator - approval logs:', approvalLogs.length);
+                
+                // تصنيف المعتمدين إلى معتمدين ومعلقين
+                const approvedIds = new Set(approvalLogs.map(log => log.approver_id));
+                
+                protocolData.approvers.forEach(approver => {
+                    const userId = approver.user_id || approver.userId;
+                    const user = users.find(u => u.id === userId);
+                    if (user) {
+                        if (approvedIds.has(userId)) {
+                            // المستخدم اعتمد
+                            approvedUsers.push(user);
+                            console.log('✅ PDF Generator - User approved:', user.first_name, user.last_name);
+                        } else {
+                            // المستخدم لم يعتمد بعد
+                            pendingApprovers.push(user);
+                            console.log('⏳ PDF Generator - User pending:', user.first_name, user.last_name);
+                        }
+                    } else {
+                        console.log('⚠️ PDF Generator - User not found for approver:', approver);
+                    }
+                });
+                
+                console.log('🔍 PDF Generator - approvedUsers:', approvedUsers.length);
+                console.log('🔍 PDF Generator - pendingApprovers:', pendingApprovers.length);
+            } else {
+                console.log('⚠️ PDF Generator - No approvers found in protocolData');
+            }
+        } catch (error) {
+            console.log('⚠️ Could not fetch users data:', error);
+        }
+
+        // إضافة المعتمدين في عمود الحضور
+        const presentUsers = [];
+        const absentUsers = [];
+
+        // إضافة المعتمدين في الحضور
+        approvedUsers.forEach(user => {
+            const fullName = buildJobNameFirstLast(
+                user.job_name,
+                user.first_name,
+                user.last_name
+            ) || `${user.first_name} ${user.last_name}`;
+            
+            presentUsers.push(fullName);
+        });
+
+        // إضافة المعلقين في عمود الغياب
+        pendingApprovers.forEach(user => {
+            const fullName = buildJobNameFirstLast(
+                user.job_name,
+                user.first_name,
+                user.last_name
+            ) || `${user.first_name} ${user.last_name}`;
+            
+            absentUsers.push(fullName);
+        });
+
+        // إضافة صفوف الحضور والغياب
+        const maxRows = Math.max(presentUsers.length, absentUsers.length);
+        for (let i = 0; i < maxRows; i++) {
+            attendeesTableBody.push([
+                { 
+                    text: absentUsers[i] || '', 
+                    style: 'tableCell', 
+                    alignment: 'center' 
+                },
+                { 
+                    text: presentUsers[i] || '', 
+                    style: 'tableCell', 
+                    alignment: 'center' 
+                }
+            ]);
+        }
+
+        // إضافة جدول الحضور
+            content.push({
+            table: {
+                headerRows: 0,
+                widths: ['50%', '50%'],
+                body: attendeesTableBody,
+                dontBreakRows: true
+            },
+            layout: {
+                hLineWidth: function(i, node) {
+                    return 1;
+                },
+                vLineWidth: function(i, node) {
+                    return 1;
+                },
+                hLineColor: function(i, node) {
+                    return '#000000';
+                },
+                vLineColor: function(i, node) {
+                    return '#000000';
+                },
+                fillColor: function(rowIndex, node, columnIndex) {
+                    return (rowIndex === 0) ? '#428499' : null;
+                }
+            },
+            margin: [0, 0, 0, 30]
+        });
+
         // مواضيع المحضر في جدول منظم
         if (protocolData.topics && protocolData.topics.length > 0) {
-
-            // عنوان المحضر يوضع فوق جدول المواضيع
-            content.push({
-                text: fixArabicOrder(prepareArabic(protocolData.title)),
-                style: 'title',
-                alignment: 'center',
-                margin: [0, 0, 0, 20]
-            });
 
             // إنشاء جدول منظم للمواضيع
             const topicsTableBody = [];
             
                          // إضافة رأس الجدول (من اليمين لليسار)
              topicsTableBody.push([
-                 { text: fixArabicOrder('تاريخ الانتهاء'), style: 'tableHeader', alignment: 'center' },
-                 { text: fixArabicOrder('المدة'), style: 'tableHeader', alignment: 'center' },
-                 { text: fixArabicOrder('المناقشة'), style: 'tableHeader', alignment: 'center' },
-                 { text: fixArabicOrder('الموضوع'), style: 'tableHeader', alignment: 'center' }
+                { text: fixArabicOrder('الحالة\nStatus'), style: 'tableHeader', alignment: 'center' },
+                { text: fixArabicOrder('المدة المحددة\nDuration'), style: 'tableHeader', alignment: 'center' },
+                { text: fixArabicOrder('المسؤولية\nResponsibility'), style: 'tableHeader', alignment: 'center' },
+                { text: fixArabicOrder('التوصيات\nRecommendations'), style: 'tableHeader', alignment: 'center' },
+                { text: fixArabicOrder('المناقشة / متابعة\nProceeding / Discussion'), style: 'tableHeader', alignment: 'center' },
+                { text: fixArabicOrder('الموضوع\nTopic'), style: 'tableHeader', alignment: 'center' },
+                { text: fixArabicOrder('م.\nNo.'), style: 'tableHeader', alignment: 'center' },
              ]);
 
                         // إضافة بيانات المواضيع (من اليمين لليسار)
             protocolData.topics.forEach((topic, index) => {
-                // تقسيم المناقشة والموضوع إلى أسطر كما أُدخلت (تشخيص للترتيب)
+                                // تقسيم المناقشة إلى أسطر كما أُدخلت
                 const discussionLines = splitArabicIntoLinesByWords(String(topic.discussion || ' '));
-                const subjectLines = splitArabicIntoLinesByWords(String(topic.subject || ''));
-                console.log('🧪 Topic #'+(index+1)+' discussion lines (top→bottom):', discussionLines);
-                console.log('🧪 Topic #'+(index+1)+' subject lines (top→bottom):', subjectLines);
+                // تقسيم الموضوع إلى أسطر منطقية أيضاً (مثل المناقشة)
+                const subjectLines = splitArabicIntoLinesByWords(String(topic.subject || ' '), 3);
+                // تقسيم المسؤولية إلى أسطر منطقية
+                const responsibilityLines = splitArabicIntoLinesByWords(String(topic.responsibility || ' '), 4);
+                // تقسيم التوصيات إلى أسطر منطقية
+                const recommendationsLines = splitArabicIntoLinesByWords(String(topic.recommendations || ' '), 5);
+
+
 
                 // حساب عدد المناقشات الجانبية الصالحة
                 const validSideDiscussions = topic.sideDiscussions && Array.isArray(topic.sideDiscussions) 
@@ -281,15 +486,28 @@ async function generateProtocolPDF(protocolData, db) {
                 // إضافة صف الموضوع الرئيسي
                 topicsTableBody.push([
                     { 
-                        text: topic.end_date ? formatDate(topic.end_date) : ' ', 
+                        text: fixArabicOrder(topic.status || 'حالا'),
                         style: 'tableCell',
                         alignment: 'center'
                     },
                     { 
-                        text: normalizeDuration(topic.duration), 
+                        text: fixArabicOrder(topic.duration || ''),
                         style: 'tableCell',
-                        alignment: 'center',
-                        bidi: false
+                        alignment: 'center'
+                    },
+                    {
+                        // عرض المسؤولية كسطور منفصلة والحفاظ على ترتيب الأسطر، مع عكس الكلمات داخل السطر للعربية
+                        stack: responsibilityLines.map(line => fixArabicOrder(prepareArabic(line))),
+                        style: 'rtlCell',
+                        alignment: 'right',
+                        lineHeight: 1.2
+                    },
+                    {
+                        // عرض التوصيات كسطور منفصلة والحفاظ على ترتيب الأسطر، مع عكس الكلمات داخل السطر للعربية
+                        stack: recommendationsLines.map(line => fixArabicOrder(prepareArabic(line))),
+                        style: 'rtlCell',
+                        alignment: 'right',
+                        lineHeight: 1.2
                     },
                     {
                         // عرض المناقشة الرئيسية كسطور منفصلة والحفاظ على ترتيب الأسطر، مع عكس الكلمات داخل السطر للعربية
@@ -299,14 +517,18 @@ async function generateProtocolPDF(protocolData, db) {
                         lineHeight: 1.2
                     },
                     {
-                        // دعم أسطر متعددة في الموضوع مع عكس الكلمات داخل السطر والحفاظ على ترتيب الأسطر
-                        // دمج الصفوف لتشمل جميع المناقشات الجانبية
+                        // عرض الموضوع كسطور منفصلة والحفاظ على ترتيب الأسطر، مع عكس الكلمات داخل السطر للعربية
                         stack: subjectLines.map(line => fixArabicOrder(prepareArabic(line))),
+                        style: 'rtlCell',
+                        alignment: 'right',
+                        lineHeight: 1.2
+                    },
+        
+                    { 
+                        text: (index + 1).toString(), 
                         style: 'tableCell',
-                        alignment: 'center',
-                        lineHeight: 1.2,
-                        rowSpan: totalRows
-                    }
+                        alignment: 'center'
+                    },
                 ]);
 
                 // إضافة المناقشات الجانبية كصفوف منفصلة
@@ -319,17 +541,34 @@ async function generateProtocolPDF(protocolData, db) {
                         numberedDiscussion.push(sideDiscussionLines[i]);
                     }
                     
+                    // تقسيم المسؤولية والتوصيات للمناقشات الجانبية
+                    const sideResponsibilityLines = splitArabicIntoLinesByWords(String(sideDiscussion.responsibility || ' '), 4);
+                    const sideRecommendationsLines = splitArabicIntoLinesByWords(String(sideDiscussion.recommendations || ' '), 5);
+                    
                     topicsTableBody.push([
-                        { 
-                            text: sideDiscussion.end_date ? formatDate(sideDiscussion.end_date) : ' ', 
+                        {
+                            text: fixArabicOrder(sideDiscussion.status || 'حالا'),
                             style: 'tableCell',
                             alignment: 'center'
                         },
-                        { 
-                            text: normalizeDuration(sideDiscussion.duration) || ' ', 
+                        {
+                            text: fixArabicOrder(sideDiscussion.duration || ''),
                             style: 'tableCell',
-                            alignment: 'center',
-                            bidi: false
+                            alignment: 'center'
+                        },
+                        {
+                            // عرض المسؤولية للمناقشة الجانبية كسطور منفصلة
+                            stack: sideResponsibilityLines.map(line => fixArabicOrder(prepareArabic(line))),
+                            style: 'rtlCell',
+                            alignment: 'right',
+                            lineHeight: 1.2
+                        },
+                        {
+                            // عرض التوصيات للمناقشة الجانبية كسطور منفصلة
+                            stack: sideRecommendationsLines.map(line => fixArabicOrder(prepareArabic(line))),
+                            style: 'rtlCell',
+                            alignment: 'right',
+                            lineHeight: 1.2
                         },
                         {
                             // عرض المناقشة الجانبية مع الرقم كسطور منفصلة
@@ -339,6 +578,8 @@ async function generateProtocolPDF(protocolData, db) {
                             lineHeight: 1.2
                         },
                         // لا نضيف خانة الموضوع هنا لأنها مدمجة في الصف الأول
+                        {},
+                        // لا نضيف خانة الرقم هنا لأنها مدمجة في الصف الأول
                         {}
                     ]);
                 });
@@ -347,9 +588,9 @@ async function generateProtocolPDF(protocolData, db) {
             // إضافة جدول المواضيع
             content.push({
                 table: {
-                    headerRows: 1,
-                    widths: ['15%', '15%', '45%', '25%'],
-                    body: topicsTableBody
+                    headerRows: 0,
+                    widths: ['10%', '18%', '12%', '15%', '30%', '10%', '5%'],
+                    body: topicsTableBody,
                 },
                 layout: {
                     hLineWidth: function(i, node) {
@@ -365,7 +606,7 @@ async function generateProtocolPDF(protocolData, db) {
                         return '#000000';
                     },
                     fillColor: function(rowIndex, node, columnIndex) {
-                        return (rowIndex === 0) ? '#e6e6e6' : null;
+                        return (rowIndex === 0) ? '#428499' : null;
                     }
                 },
                 margin: [0, 0, 0, 20]
@@ -432,7 +673,6 @@ async function generateProtocolPDF(protocolData, db) {
                 const approvalType = index === 0 ? 'Reviewed' : 
                                     index === protocolData.approvers.length - 1 ? 'Approver' : 'Reviewed';
 
-                // البحث عن بيانات الاعتماد الفعلية - نبحث أولاً عن التوقيع بالنيابة
                 let actualApproval = approvalLogs.find(log => log.approver_id === approver.user_id && log.signed_as_proxy === 1);
                 
                 // إذا لم نجد توقيع بالنيابة، نبحث عن التوقيع الشخصي
@@ -542,9 +782,9 @@ async function generateProtocolPDF(protocolData, db) {
             content.push({
                 pageBreak: 'before', // بدء صفحة جديدة
                 table: {
-                    headerRows: 1,
-                    widths: ['15%', '20%', '20%', '20%', '10%', '15%'],
-                    body: approvalTableBody
+                    headerRows: 0,
+                    widths: ['15%', '25%', '20%', '20%', '10%', '10%'],
+                    body: approvalTableBody,
                 },
                 layout: {
                     hLineWidth: function(i, node) {
@@ -560,7 +800,7 @@ async function generateProtocolPDF(protocolData, db) {
                         return '#000000';
                     },
                     fillColor: function(rowIndex, node, columnIndex) {
-                        return (rowIndex === 0) ? '#e6e6e6' : null;
+                        return (rowIndex === 0) ? '#428499' : null;
                     }
                 },
                 margin: [0, 0, 0, 20]
@@ -569,62 +809,75 @@ async function generateProtocolPDF(protocolData, db) {
 
         // إنشاء تعريف المستند
         const docDefinition = {
-            pageSize: 'A4',
-            pageMargins: [40, 60, 40, 60],
+            pageSize: 'A3',
+            pageOrientation: 'landscape',
+            pageMargins: [30, 40, 30, 40],
             
             defaultStyle: {
                 font: 'Amiri',
-                fontSize: 12
+                fontSize: 14
             },
             styles: {
                 title: {
+                    fontSize: 26,
+                    bold: true,
+                    alignment: 'center',
+                    margin: [0, 0, 0, 25]
+                },
+                sectionTitle: {
                     fontSize: 22,
                     bold: true,
                     alignment: 'center',
-                    margin: [0, 0, 0, 20]
-                },
-                sectionTitle: {
-                    fontSize: 18,
-                    bold: true,
-                    alignment: 'center',
-                    margin: [0, 20, 0, 15]
+                    margin: [0, 25, 0, 20]
                 },
                 topicTitle: {
-                    fontSize: 14,
+                    fontSize: 18,
                     bold: true,
-                    margin: [0, 10, 0, 5]
+                    margin: [0, 15, 0, 8]
                 },
                 infoHeader: {
                     bold: true,
-                    fontSize: 12,
-                    color: 'black',
+                    fontSize: 16,
+                    color: 'white',
                     alignment: 'center',
-                    fillColor: '#f0f0f0'
+                    fillColor: '#428499'
                 },
                 infoCell: {
-                    fontSize: 11,
+                    fontSize: 15,
                     alignment: 'center'
                 },
                 tableHeader: {
                     bold: true,
-                    fontSize: 11,
-                    color: 'black',
+                    fontSize: 15,
+                    color: 'white',
                     alignment: 'center',
-                    fillColor: '#e6e6e6'
+                    fillColor: '#428499'
                 },
                 tableCell: {
-                    fontSize: 10,
+                    fontSize: 14,
                     alignment: 'center'
                 },
                 rtlCell: {
-                    fontSize: 10,
+                    fontSize: 14,
                     alignment: 'right'
                 },
                 proxyCell: {
-                    fontSize: 9,
+                    fontSize: 12,
                     alignment: 'center',
                     color: '#666666',
                     fillColor: '#f9f9f9'
+                },
+                mainTitle: {
+                    fontSize: 24,
+                    bold: true,
+                    alignment: 'center',
+                    margin: [0, 0, 0, 25]
+                },
+                meetingTitle: {
+                    fontSize: 22,
+                    bold: true,
+                    alignment: 'center',
+                    margin: [0, 0, 0, 35]
                 }
             },
             content: content
@@ -920,32 +1173,33 @@ async function updateProtocolPDFAfterApproval(protocolId, db) {
 
         // 6) إنشاء تعريف المستند باستخدام pdfmake
         const docDefinition = {
-            pageSize: 'A4',
-            pageMargins: [40, 60, 40, 60],
+            pageSize: 'A3',
+            pageOrientation: 'landscape',
+            pageMargins: [30, 40, 30, 40],
             defaultStyle: {
                 font: 'Amiri',
-                fontSize: 10
+                fontSize: 12
             },
             styles: {
                 title: {
-                    fontSize: 18,
+                    fontSize: 20,
                     bold: true,
                     alignment: 'center',
-                    margin: [0, 0, 0, 20]
+                    margin: [0, 0, 0, 25]
                 },
                 tableHeader: {
                     bold: true,
-                    fontSize: 9,
+                    fontSize: 12,
                     color: 'black',
                     alignment: 'center',
                     fillColor: '#e6e6e6'
                 },
                 tableCell: {
-                    fontSize: 8,
+                    fontSize: 11,
                     alignment: 'center'
                 },
                 proxyCell: {
-                    fontSize: 8,
+                    fontSize: 10,
                     alignment: 'center',
                     color: '#666666',
                     fillColor: '#f9f9f9'
@@ -993,10 +1247,10 @@ async function updateProtocolPDFAfterApproval(protocolId, db) {
                     // نحتاج إلى جلب بيانات المحضر الكاملة مع المعتمدين الحاليين
                     const protocol = await db.getProtocolById(protocolId, 1); // استخدام admin ID = 1
                     if (protocol) {
-                        // إنشاء PDF جديد يحتوي على جدول الاعتمادات المحدث
+                        // إنشاء PDF جديد يحتوي على جدول الاعتمادات المحدث وجدول الحضور المحدث
                         const newPdfBuffer = await generateProtocolPDF(protocol, db);
                         fs.writeFileSync(fullPath, newPdfBuffer);
-                        console.log(`✅ Protocol PDF completely regenerated with updated approval data: ${fullPath}`);
+                        console.log(`✅ Protocol PDF completely regenerated with updated approval data and attendance table: ${fullPath}`);
                     } else {
                         // إذا لم نتمكن من جلب البيانات، نحفظ PDF الأصلي كما هو
                         fs.writeFileSync(fullPath, originalPdfBytes);

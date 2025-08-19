@@ -26,6 +26,15 @@ function initializeForm() {
         protocolDateInput.value = today;
     }
     
+    // تعيين الوقت الحالي كوقت افتراضي
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const protocolTimeInput = document.getElementById('protocolTime');
+    if (protocolTimeInput) {
+        protocolTimeInput.value = `${hours}:${minutes}`;
+    }
+    
     // تحميل الأقسام واللجان
     loadDepartments();
     loadCommittees();
@@ -51,8 +60,82 @@ async function maybeLoadProtocolForEdit() {
         // تعبئة الحقول الأساسية
         const titleInput = document.getElementById('protocolTitle');
         const dateInput = document.getElementById('protocolDate');
+        const timeInput = document.getElementById('protocolTime');
+        const roomInput = document.getElementById('protocolRoom');
+        
+        console.log('🔍 البيانات القادمة من الباك إند:', data);
+        console.log('🔍 protocolTime:', data.protocolTime);
+        console.log('🔍 room:', data.room);
+        console.log('🔍 department_id:', data.department_id);
+        console.log('🔍 committee_id:', data.committee_id);
+        console.log('🔍 folder_id:', data.folder_id);
+        
         if (titleInput) titleInput.value = data.title || '';
         if (dateInput) dateInput.value = (data.protocolDate || '').split('T')[0] || '';
+        if (timeInput) timeInput.value = data.protocolTime || '';
+        if (roomInput) roomInput.value = data.room || '';
+
+        // تعبئة حقول القسم والمجلد واللجنة
+        // تأكد من تحميل الأقسام واللجان أولاً
+        await Promise.all([
+            loadDepartments(),
+            loadCommittees()
+        ]);
+
+        if (data.department_id) {
+            console.log('🔍 تعيين القسم:', data.department_id);
+            const departmentSelect = document.getElementById('protocolDepartment');
+            if (departmentSelect) {
+                departmentSelect.value = data.department_id;
+                console.log('✅ تم تعيين القسم:', departmentSelect.value);
+                // تحميل مجلدات القسم
+                await loadFoldersForDepartment();
+                if (data.folder_id) {
+                    const folderSelect = document.getElementById('protocolFolder');
+                    if (folderSelect) {
+                        folderSelect.value = data.folder_id;
+                        console.log('✅ تم تعيين المجلد:', folderSelect.value);
+                    }
+                }
+            }
+        } else {
+            console.log('⚠️ لا يوجد department_id في البيانات');
+        }
+
+        if (data.committee_id) {
+            console.log('🔍 تعيين اللجنة:', data.committee_id);
+            const committeeSelect = document.getElementById('protocolCommittee');
+            if (committeeSelect) {
+                committeeSelect.value = data.committee_id;
+                console.log('✅ تم تعيين اللجنة:', committeeSelect.value);
+                // تحميل مجلدات اللجنة
+                await loadFoldersForCommittee();
+                if (data.folder_id) {
+                    const committeeFolderSelect = document.getElementById('committeeFolder');
+                    if (committeeFolderSelect) {
+                        committeeFolderSelect.value = data.folder_id;
+                        console.log('✅ تم تعيين مجلد اللجنة:', committeeFolderSelect.value);
+                    }
+                }
+            }
+        } else {
+            console.log('⚠️ لا يوجد committee_id في البيانات');
+        }
+
+        // تحديد نوع التخصيص
+        if (data.department_id && data.committee_id) {
+            const bothOption = document.getElementById('optionBoth');
+            if (bothOption) bothOption.checked = true;
+        } else if (data.department_id) {
+            const departmentOption = document.getElementById('optionDepartment');
+            if (departmentOption) departmentOption.checked = true;
+        } else if (data.committee_id) {
+            const committeeOption = document.getElementById('optionCommittee');
+            if (committeeOption) committeeOption.checked = true;
+        }
+        
+        // تطبيق نوع التخصيص
+        toggleAssignmentType();
 
         // إنشاء المواضيع وملؤها
         const topics = Array.isArray(data.topics) ? data.topics : [];
@@ -68,6 +151,8 @@ async function maybeLoadProtocolForEdit() {
                 document.getElementById(`topicDiscussion-${idx}`).value = t.discussion || '';
                 document.getElementById(`topicDuration-${idx}`).value = t.duration || '';
                 document.getElementById(`topicEndDate-${idx}`).value = t.endDate ? String(t.endDate).split('T')[0] : '';
+                document.getElementById(`topicRecommendations-${idx}`).value = t.recommendations || '';
+                document.getElementById(`topicResponsibility-${idx}`).value = t.responsibility || '';
                 
                 // تحميل المناقشات الجانبية إن وجدت
                 if (Array.isArray(t.sideDiscussions) && t.sideDiscussions.length > 0) {
@@ -82,10 +167,14 @@ async function maybeLoadProtocolForEdit() {
                             const contentField = document.getElementById(`sideDiscussionContent-${sideId}`);
                             const durationField = document.getElementById(`sideDiscussionDuration-${sideId}`);
                             const endDateField = document.getElementById(`sideDiscussionEndDate-${sideId}`);
+                            const recommendationsField = document.getElementById(`sideDiscussionRecommendations-${sideId}`);
+                            const responsibilityField = document.getElementById(`sideDiscussionResponsibility-${sideId}`);
                             
                             if (contentField) contentField.value = sideDiscussion.content || '';
                             if (durationField) durationField.value = sideDiscussion.duration || '';
                             if (endDateField) endDateField.value = sideDiscussion.endDate ? String(sideDiscussion.endDate).split('T')[0] : '';
+                            if (recommendationsField) recommendationsField.value = sideDiscussion.recommendations || '';
+                            if (responsibilityField) responsibilityField.value = sideDiscussion.responsibility || '';
                         }
                     });
                 }
@@ -198,6 +287,19 @@ function addTopic() {
             </div>
         </div>
         
+        <div class="row">
+            <div class="form-group">
+                <label for="topicRecommendations-${topicCounter}" data-translate="topic-recommendations">التوصيات</label>
+                <textarea id="topicRecommendations-${topicCounter}" name="topics[${topicCounter}][recommendations]" 
+                          rows="2" placeholder="أدخل التوصيات هنا" data-translate-placeholder="placeholder-topic-recommendations"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="topicResponsibility-${topicCounter}" data-translate="topic-responsibility">المسؤولية</label>
+                <input type="text" id="topicResponsibility-${topicCounter}" name="topics[${topicCounter}][responsibility]" 
+                       placeholder="أدخل المسؤول هنا" data-translate-placeholder="placeholder-topic-responsibility" />
+            </div>
+        </div>
+        
         <!-- قسم المناقشات الجانبية -->
         <div class="side-discussions-section">
             <div class="side-discussions-header">
@@ -285,6 +387,19 @@ function addSideDiscussion(topicId) {
             <div class="form-group">
                 <label for="sideDiscussionEndDate-${uniqueId}" data-translate="side-discussion-end-date">تاريخ انتهاء</label>
                 <input type="date" id="sideDiscussionEndDate-${uniqueId}" name="topics[${topicId}][sideDiscussions][${sideDiscussionId}][endDate]" />
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="form-group">
+                <label for="sideDiscussionRecommendations-${uniqueId}" data-translate="side-discussion-recommendations">التوصيات</label>
+                <textarea id="sideDiscussionRecommendations-${uniqueId}" name="topics[${topicId}][sideDiscussions][${sideDiscussionId}][recommendations]" 
+                          rows="2" placeholder="أدخل التوصيات هنا" data-translate-placeholder="placeholder-side-discussion-recommendations"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="sideDiscussionResponsibility-${uniqueId}" data-translate="side-discussion-responsibility">المسؤولية</label>
+                <input type="text" id="sideDiscussionResponsibility-${uniqueId}" name="topics[${topicId}][sideDiscussions][${sideDiscussionId}][responsibility]" 
+                       placeholder="أدخل المسؤول هنا" data-translate-placeholder="placeholder-side-discussion-responsibility" />
             </div>
         </div>
     `;
@@ -392,12 +507,16 @@ function collectTopicsData() {
             const contentElement = document.getElementById(`sideDiscussionContent-${sideId}`);
             const durationElement = document.getElementById(`sideDiscussionDuration-${sideId}`);
             const endDateElement = document.getElementById(`sideDiscussionEndDate-${sideId}`);
+            const recommendationsElement = document.getElementById(`sideDiscussionRecommendations-${sideId}`);
+            const responsibilityElement = document.getElementById(`sideDiscussionResponsibility-${sideId}`);
             
             if (contentElement && contentElement.value.trim()) {
                 sideDiscussions.push({
                     content: contentElement.value.trim(),
                     duration: durationElement ? durationElement.value.trim() : '',
-                    endDate: endDateElement ? endDateElement.value : ''
+                    endDate: endDateElement ? endDateElement.value : '',
+                    recommendations: recommendationsElement ? recommendationsElement.value.trim() : '',
+                    responsibility: responsibilityElement ? responsibilityElement.value.trim() : ''
                 });
             }
         });
@@ -408,6 +527,8 @@ function collectTopicsData() {
             discussion: document.getElementById(`topicDiscussion-${topicId}`).value,
             duration: document.getElementById(`topicDuration-${topicId}`).value,
             endDate: document.getElementById(`topicEndDate-${topicId}`).value,
+            recommendations: document.getElementById(`topicRecommendations-${topicId}`).value,
+            responsibility: document.getElementById(`topicResponsibility-${topicId}`).value,
             sideDiscussions: sideDiscussions
         };
         topics.push(topicData);
@@ -440,6 +561,8 @@ function collectFormData() {
     return {
         protocolTitle: formData.get('protocolTitle'),
         protocolDate: formData.get('protocolDate'),
+        protocolTime: formData.get('protocolTime'),
+        room: formData.get('protocolRoom'),
         assignmentType: assignmentType,
         departmentId: departmentId,
         folderId: folderId,
@@ -668,6 +791,21 @@ function resetForm() {
             protocolDateInput.value = today;
         }
         
+        // إعادة تعيين الوقت الحالي
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const protocolTimeInput = document.getElementById('protocolTime');
+        if (protocolTimeInput) {
+            protocolTimeInput.value = `${hours}:${minutes}`;
+        }
+        
+        // إعادة تعيين القاعة
+        const protocolRoomInput = document.getElementById('protocolRoom');
+        if (protocolRoomInput) {
+            protocolRoomInput.value = '';
+        }
+        
         // إعادة تعيين الحقول الجديدة
         const departmentSelect = document.getElementById('protocolDepartment');
         const folderSelect = document.getElementById('protocolFolder');
@@ -815,6 +953,8 @@ async function loadDepartments() {
         console.error('❌ خطأ في تحميل الأقسام:', error);
         showToast('خطأ في جلب الأقسام: ' + error.message, 'error');
     }
+    
+    return Promise.resolve();
 }
 
 // تحميل مجلدات القسم المحدد
@@ -822,14 +962,14 @@ async function loadFoldersForDepartment() {
     const departmentSelect = document.getElementById('protocolDepartment');
     const folderSelect = document.getElementById('protocolFolder');
     
-    if (!departmentSelect || !folderSelect) return;
+    if (!departmentSelect || !folderSelect) return Promise.resolve();
     
     const departmentId = departmentSelect.value;
     
     if (!departmentId) {
         folderSelect.innerHTML = '<option value="">اختر القسم أولاً</option>';
         folderSelect.disabled = true;
-        return;
+        return Promise.resolve();
     }
     
     try {
@@ -880,6 +1020,8 @@ async function loadFoldersForDepartment() {
         folderSelect.innerHTML = '<option value="">خطأ في التحميل</option>';
         folderSelect.disabled = true;
     }
+    
+    return Promise.resolve();
 }
 
 // تحميل اللجان
@@ -932,6 +1074,8 @@ async function loadCommittees() {
         console.error('❌ خطأ في تحميل اللجان:', error);
         showToast('خطأ في جلب اللجان: ' + error.message, 'error');
     }
+    
+    return Promise.resolve();
 }
 
 // تبديل نوع التخصيص
@@ -984,14 +1128,14 @@ async function loadFoldersForCommittee() {
     const committeeSelect = document.getElementById('protocolCommittee');
     const committeeFolderSelect = document.getElementById('committeeFolder');
     
-    if (!committeeSelect || !committeeFolderSelect) return;
+    if (!committeeSelect || !committeeFolderSelect) return Promise.resolve();
     
     const committeeId = committeeSelect.value;
     
     if (!committeeId) {
         committeeFolderSelect.innerHTML = '<option value="">اختر اللجنة أولاً</option>';
         committeeFolderSelect.disabled = true;
-        return;
+        return Promise.resolve();
     }
     
     try {
@@ -1035,13 +1179,15 @@ async function loadFoldersForCommittee() {
         });
 
         committeeFolderSelect.disabled = false;
-        console.log('✅ تم تحميل', folders.length, 'مجلد للجنة', committeeId);
+        console.log('✅ تم تحميل مجلدات اللجنة', folders.length, 'مجلد للجنة', committeeId);
     } catch (error) {
         console.error('❌ خطأ في تحميل مجلدات اللجنة:', error);
         showToast('خطأ في جلب مجلدات اللجنة: ' + error.message, 'error');
         committeeFolderSelect.innerHTML = '<option value="">خطأ في التحميل</option>';
         committeeFolderSelect.disabled = true;
     }
+    
+    return Promise.resolve();
 }
 
 // تصدير الدوال للاستخدام العام
