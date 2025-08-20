@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 1) جلب مفاتيح الصلاحيات
   let permissionsKeys = [];
-  if (['admin', 'manager_ovr'].includes(userRole)) {
+  if (['admin', 'manager_ovr' , 'super_admin'].includes(userRole)) {
     // الإدمن يرى كل البطاقات
     permissionsKeys = ['*'];
   } else {

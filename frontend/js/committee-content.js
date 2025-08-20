@@ -175,7 +175,7 @@ async function fetchPermissions() {
 
     const { data: user } = await userRes.json();
 
-    if (user && user.role === 'admin') {
+    if (user && user.role === 'admin' || user && user.role === 'super_admin') {
       Object.keys(permissions).forEach(k => permissions[k] = true);
     } else {
       console.log("User is NOT admin or role is missing. Fetching specific permissions.");
@@ -707,7 +707,7 @@ async function fetchFolderContents(folderId, folderName) {
       : (Array.isArray(responseJson) ? responseJson : []);
     const decodedToken = await safeGetUserInfo(token);
     if (!decodedToken) return [];
-    const isAdmin = decodedToken.role === 'admin';
+    const isAdmin = decodedToken.role === 'admin' || decodedToken.role === 'super_admin';
     const filteredContents = isAdmin ? contents : contents.filter(content => content.approval_status === 'approved');
     allContents = filteredContents;
     window._lastCommitteeFilesData = {
@@ -1251,7 +1251,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   if (addApprovedContentBtn) {
     const token = window.localStorage.getItem('token');
     const tokenPayload = token ? await safeGetUserInfo(token) : null;
-    if (permissions.canAddApprovedContent || (tokenPayload && tokenPayload.role === 'admin')) {
+    if (permissions.canAddApprovedContent || (tokenPayload && tokenPayload.role === 'admin' || tokenPayload.role === 'super_admin')) {
       addApprovedContentBtn.style.display = 'inline-block';
     } else {
       addApprovedContentBtn.style.display = 'none';

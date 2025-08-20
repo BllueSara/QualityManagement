@@ -69,7 +69,7 @@ const profileStatus = document.getElementById('profile-status');
 const profileDept   = document.getElementById('profile-department');
 const profileRoleEl = document.getElementById('profile-role');
 const profileJobTitle = document.getElementById('profile-job-title');
-const profileJobName = document.getElementById('profile-job-name');
+// const profileJobName = document.getElementById('profile-job-name');
 const permissionsSection = document.querySelector('.permission-section');
 const btnDeleteUser = document.getElementById('btn-delete-user');
 const btnResetPwd   = document.getElementById('btn-reset-password');
@@ -87,8 +87,6 @@ btnRevokeDelegations.onclick = openRevokeDelegationsPopup;
 if (btnAddUser && btnAddUser.parentNode) {
   btnAddUser.parentNode.insertBefore(btnRevokeDelegations, btnAddUser.nextSibling);
 }
-// إظهار الزر فقط إذا كان للمستخدم صلاحية (admin أو من لديه صلاحية revoke_delegations)
-btnRevokeDelegations.style.display = 'none';
 
 // إضافة زر عرض اقرارات التفويض
 const btnViewDelegationConfirmations = document.getElementById('btn-view-delegation-confirmations');
@@ -99,7 +97,7 @@ if (btnViewDelegationConfirmations) {
 // زر مسح الكاش ميموري - للادمن فقط
 if (btnClearCache) {
   btnClearCache.onclick = async () => {
-    // تحقق من أن المستخدم admin
+    // تحقق من أن المستخدم admin أو لديه صلاحية clear_cache
     const authToken = localStorage.getItem('token') || '';
     const payload = await safeGetUserInfo(authToken);
     if (!payload) {
@@ -108,8 +106,8 @@ if (btnClearCache) {
     }
     const myRole = payload.role;
     
-    if (myRole !== 'admin') {
-      showToast('هذا الزر متاح للادمن فقط', 'warning');
+    if (myRole !== 'super_admin' && !myPermsSet.has('clear_cache')) {
+      showToast('هذا الزر متاح للسوبر ادمن أو من لديه صلاحية مسح الكاش فقط', 'warning');
       return;
     }
     
@@ -359,7 +357,7 @@ async function loadMyPermissions() {
     // إظهار زر سحب الملفات إذا كان admin أو لديه صلاحية revoke_files
     const myRole = payload.role;
     if (btnRevokeFiles) {
-      if (myRole === 'admin' || myPermsSet.has('revoke_files')) {
+      if (myRole === 'super_admin' || myPermsSet.has('revoke_files')) {
         // لا نعرض الزر هنا، سيتم عرضه عند اختيار مستخدم
         // btnRevokeFiles.style.display = '';
       } else {
@@ -367,11 +365,21 @@ async function loadMyPermissions() {
       }
     }
     
-    // إظهار زر مسح الكاش ميموري للادمن فقط
+    // إظهار زر مسح الكاش ميموري للسوبر ادمن فقط أو من لديه صلاحية
     if (btnClearCache) {
-      btnClearCache.style.display = (myRole === 'admin') ? '' : 'none';
+      btnClearCache.style.display = (myRole === 'super_admin' || myPermsSet.has('clear_cache')) ? '' : 'none';
     }
     
+    // إظهار زر إلغاء التفويضات إذا كان super_admin أو لديه صلاحية revoke_delegations
+    if (btnRevokeDelegations) {
+      btnRevokeDelegations.style.display = (myRole === 'super_admin' || myPermsSet.has('revoke_delegations')) ? '' : 'none';
+    }
+    
+    // إظهار زر عرض اقرارات التفويض إذا كان super_admin أو لديه صلاحية view_delegation_confirmations
+    const btnViewDelegationConfirmations = document.getElementById('btn-view-delegation-confirmations');
+    if (btnViewDelegationConfirmations) {
+      btnViewDelegationConfirmations.style.display = (myRole === 'super_admin' || myPermsSet.has('view_delegation_confirmations')) ? '' : 'none';
+    }
 
   } catch (e) {
     showToast('فشل جلب صلاحياتي.', 'error');
@@ -512,14 +520,14 @@ profileStatus.title = getTranslation(
 // 2) ربط حدث التغيير مع التأكيد المترجم
 profileStatus.onclick = async () => {
   // تحقق: لا يمكن تغيير حالة مستخدم admin
-  if (u.role === 'admin') {
+  if (u.role === 'admin' || u.role === 'super_admin') {
     return;
   }
   // تحقق: فقط admin أو من لديه change_status يمكنه التغيير
   const payload = await safeGetUserInfo(authToken);
   if (!payload) return;
   const myRole = payload.role;
-  if (!(myRole === 'admin' || myPermsSet.has('change_status'))) {
+    if (!(myRole === 'admin' || myRole === 'super_admin' || myPermsSet.has('change_status'))) {
     return;
   }
 
@@ -573,7 +581,6 @@ try {
   profileDept.textContent = '—';
 }
   profileRoleEl.textContent = u.role           || '—';
-  profileJobName.textContent = u.job_name      || '—';
   profileJobTitle.textContent = u.job_title    || '—';
 document.querySelector('.user-profile-header')?.classList.add('active');
 
@@ -581,13 +588,13 @@ document.querySelector('.user-profile-header')?.classList.add('active');
   const payload = await safeGetUserInfo(authToken);
   if (!payload) return;
   const myRole = payload.role;
-  const isAdmin = myRole === 'admin';
+  const isAdmin = myRole === 'admin' || myRole === 'super_admin';
 
   // زر إضافة مستخدم
   btnAddUser.style.display = (isAdmin || myPermsSet.has('add_user')) ? '' : 'none';
 
   // إذا الهدف Admin: أخفِ القسم كامل وأزرار الإدارة
-  if (u.role === 'admin') {
+  if (u.role === 'admin' || u.role === 'super_admin') {
     permissionsSection.style.display = 'none';
     btnDeleteUser.style.display = 'none';
     btnResetPwd.style.display   = 'none';
@@ -606,20 +613,30 @@ document.querySelector('.user-profile-header')?.classList.add('active');
   btnResetPwd.style.display   = (isAdmin || myPermsSet.has('change_password')) ? '' : 'none';
   btnChangeRole.style.display = (isAdmin || myPermsSet.has('change_role')) ? '' : 'none';
   
-  // إظهار زر سحب الملفات إذا كان admin أو لديه صلاحية revoke_files
+  // إظهار زر سحب الملفات إذا كان super_admin أو لديه صلاحية revoke_files
   if (btnRevokeFiles) {
-    btnRevokeFiles.style.display = (isAdmin || myPermsSet.has('revoke_files')) ? '' : 'none';
+    if (myRole === 'super_admin' || myPermsSet.has('revoke_files')) {
+      btnRevokeFiles.style.display = '';
+    } else {
+      btnRevokeFiles.style.display = 'none';
+    }
   }
 
   // جلب الأدوار للمستخدمين غير Admin
   const roles = await fetchJSON(`${apiBase}/users/roles`);
-  console.log('Roles from API:', roles);
   // إظهار manager_ovr فقط للادمن
   let filteredRoles = roles;
   console.log('isAdmin:', isAdmin);
   if (!isAdmin) {
     filteredRoles = roles.filter(r => r !== 'manager_ovr');
   }
+  
+  // إخفاء super_admin من الجميع إلا إذا كان المستخدم الحالي super_admin
+  const currentUserRole = (await safeGetUserInfo(authToken))?.role;
+  if (currentUserRole !== 'super_admin') {
+    filteredRoles = filteredRoles.filter(r => r !== 'super_admin');
+  }
+  
   roleSelect.innerHTML = filteredRoles.map(r => `
     <option value="${r}" ${u.role===r?'selected':''}>${r}</option>
   `).join('');
@@ -637,16 +654,28 @@ document.querySelector('.user-profile-header')?.classList.add('active');
     const key   = label.dataset.key;
 
     // إظهار البنود: Admin يرى الكل، ومُخول grant يرى فقط ما يملكه، ومُخول grant_all_permissions يرى الكل
-    if (!isAdmin && myRole !== 'admin' && !myPermsSet.has(key) && key !== 'grant_permissions' && key !== 'grant_all_permissions' && !canGrantAll) {
+    if (!isAdmin && myRole !== 'admin' && myRole !== 'super_admin' && !myPermsSet.has(key) && key !== 'grant_permissions' && key !== 'grant_all_permissions' && !canGrantAll) {
       item.style.display = 'none';
     } else {
       item.style.display = '';
     }
+    
+    // إخفاء الصلاحيات الحساسة إذا لم يكن المستخدم يملكها (إلا إذا كان super_admin)
+    const sensitivePermissions = ['clear_cache', 'view_delegation_confirmations', 'revoke_files', 'revoke_delegations'];
+    if (sensitivePermissions.includes(key) && myRole !== 'super_admin' && !myPermsSet.has(key)) {
+      item.style.display = 'none';
+    }
 
     // تأشير الحالة
     input.checked = targetSet.has(key);
+    
     // تمكين الصلاحيات: Admin يمكنه منح الكل، ومُخول grant يمكنه منح ما يملكه، ومُخول grant_all_permissions يمكنه منح الكل
+    // للصلاحيات الحساسة: يجب أن يكون المستخدم super_admin أو لديه الصلاحية نفسها (لا يمكن منحها عبر grant_all_permissions)
+    if (sensitivePermissions.includes(key)) {
+      input.disabled = !(myRole === 'super_admin' || myPermsSet.has(key));
+    } else {
     input.disabled = !(isAdmin || myPermsSet.has(key) || canGrantAll);
+    }
     
     // معالجة خاصة لصلاحية "منح جميع الصلاحيات"
     if (key === 'grant_all_permissions') {
@@ -748,12 +777,12 @@ document.querySelector('.user-profile-header')?.classList.add('active');
   // إظهار الزر حسب الصلاحية عند اختيار المستخدم
   showEditUserInfoButton(u);
 
-  // إظهار زر إلغاء التفويضات فقط إذا كان admin أو لديه صلاحية grant_permissions
-  btnRevokeDelegations.style.display = (isAdmin || myPermsSet.has('grant_permissions')) ? '' : 'none';
+  // إظهار زر إلغاء التفويضات فقط إذا كان super_admin أو لديه صلاحية revoke_delegations
+  btnRevokeDelegations.style.display = (myRole === 'super_admin' || myPermsSet.has('revoke_delegations')) ? '' : 'none';
   
-  // إظهار زر سحب الملفات إذا كان admin أو لديه صلاحية revoke_files
+  // إظهار زر سحب الملفات إذا كان super_admin أو لديه صلاحية revoke_files
   if (btnRevokeFiles) {
-    if (isAdmin || myPermsSet.has('revoke_files')) {
+    if (myRole === 'super_admin' || myPermsSet.has('revoke_files')) {
       btnRevokeFiles.style.display = '';
     } else {
       btnRevokeFiles.style.display = 'none';
@@ -1212,9 +1241,9 @@ async function showEditUserInfoButton(u) {
   const myId = payload.id;
   
   // إذا كان المستخدم المستهدف admin
-  if (u.role === 'admin') {
+  if (u.role === 'admin' || u.role === 'super_admin') {
     // فقط admin نفسه يمكنه تعديل معلوماته
-    if (myRole === 'admin' && Number(u.id) === Number(myId)) {
+    if ((myRole === 'admin' || myRole === 'super_admin') && Number(u.id) === Number(myId)) {
       btnEditUserInfo.style.display = '';
     } else {
       btnEditUserInfo.style.display = 'none';
@@ -1223,7 +1252,7 @@ async function showEditUserInfoButton(u) {
   }
   
   // للمستخدمين غير admin: admin أو من لديه الصلاحية يمكنه التعديل
-  if (myRole === 'admin' || myPermsSet.has('change_user_info')) {
+  if (myRole === 'admin' || myRole === 'super_admin' || myPermsSet.has('change_user_info')) {
     btnEditUserInfo.style.display = '';
   } else {
     btnEditUserInfo.style.display = 'none';
@@ -1242,7 +1271,7 @@ if (btnEditUserInfo) {
     if (!payload) return;
     
     // تحقق: إذا كان المستهدف admin، فقط admin نفسه يمكنه التعديل
-    if (u.role === 'admin' && !(payload.role === 'admin' && Number(u.id) === Number(payload.id))) {
+    if (u.role === 'admin' && !((payload.role === 'admin' || payload.role === 'super_admin') && Number(u.id) === Number(payload.id))) {
       showToast('لا يمكن تعديل معلومات admin آخر', 'warning');
       return;
     }
@@ -1504,7 +1533,7 @@ if (btnSaveEditUser) {
     // تحقق من الحقول المطلوبة
     // للادمن: فقط الاسم الأول واسم العائلة واسم المستخدم مطلوبة
     // للمستخدمين الآخرين: جميع الحقول مطلوبة
-    const isAdmin = editUserRole === 'admin';
+    const isAdmin = editUserRole === 'admin' || editUserRole === 'super_admin';
     
     if (isAdmin) {
       // للادمن: فقط الحقول الأساسية مطلوبة
@@ -1560,6 +1589,11 @@ if (btnSaveEditUser) {
 }
 
 // دالة إلغاء التفويض بالكامل (تربط على window)
+// المعاملات:
+// - delegatorId: معرف المستخدم المفوض (صاحب الصلاحيات)
+// - delegateeId: معرف المستخدم المفوض إليه (الذي تم تفويضه)
+// - isCommittee: نوع التفويض (0=ملفات، 1=لجان، 2=محاضر)
+// - btn: عنصر الزر المضغوط عليه
 window.__revokeAllToUser = async function(delegatorId, delegateeId, isCommittee, btn) {
   if (!confirm(getTranslation('confirm-revoke-all') || 'هل أنت متأكد من إلغاء جميع التفويضات لهذا الشخص؟')) return;
   btn.disabled = true;
@@ -1586,10 +1620,14 @@ window.__revokeAllToUser = async function(delegatorId, delegateeId, isCommittee,
       btn.textContent = getTranslation('revoked') || 'تم الإلغاء';
       btn.disabled = true;
       setTimeout(() => {
-        const stillActive = overlay.querySelectorAll('button:not([disabled])').length;
-        if (!stillActive) {
-          document.body.removeChild(overlay);
-          loadUsers();
+        // البحث عن overlay الأب للزر
+        const overlay = btn.closest('div[style*="position:fixed"]');
+        if (overlay) {
+          const stillActive = overlay.querySelectorAll('button:not([disabled])').length;
+          if (!stillActive) {
+            document.body.removeChild(overlay);
+            loadUsers();
+          }
         }
       }, 700);
     } else {
@@ -2440,28 +2478,31 @@ async function openRevokeDelegationsPopup() {
   } else {
     if (fileDelegates.length > 0) {
       box.innerHTML += `<div style='font-weight:bold;margin:12px 0 6px;'>${getTranslation('file-delegations')}:</div>`;
+      // ملفات: إلغاء تفويض selectedUserId (المفوض) إلى d.approver_id (المفوض إليه)
       fileDelegates.forEach(d => {
         box.innerHTML += `<div style='margin:8px 0;padding:8px 0;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:space-between;'>
           <span style='flex:1;text-align:right;'>${d.approver_name || d.email || getTranslation('user') + ' ' + d.approver_id} <span style='color:#888;font-size:0.95em;'>(${getTranslation('files-count')}: ${d.files_count})</span></span>
-          <button style='background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:4px 16px;cursor:pointer;margin-right:12px;' onclick='window.__revokeAllToUser(${d.approver_id},${selectedUserId},false,this)'>${getTranslation('revoke-delegations')}</button>
+          <button style='background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:4px 16px;cursor:pointer;margin-right:12px;' onclick='window.__revokeAllToUser(${selectedUserId},${d.approver_id},false,this)'>${getTranslation('revoke-delegations')}</button>
         </div>`;
       });
     }
     if (committeeDelegates.length > 0) {
       box.innerHTML += `<div style='font-weight:bold;margin:18px 0 6px;'>${getTranslation('committee-delegations')}:</div>`;
+      // لجان: إلغاء تفويض selectedUserId (المفوض) إلى d.approver_id (المفوض إليه)
       committeeDelegates.forEach(d => {
         box.innerHTML += `<div style='margin:8px 0;padding:8px 0;border-bottom:1px solid #eee;display:flex:align-items:center;justify-content:space-between;'>
           <span style='flex:1;text-align:right;'>${d.approver_name || d.email || getTranslation('user') + ' ' + d.approver_id} <span style='color:#888;font-size:0.95em;'>(${getTranslation('files-count')}: ${d.files_count})</span></span>
-          <button style='background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:4px 16px;cursor:pointer;margin-right:12px;' onclick='window.__revokeAllToUser(${d.approver_id},${selectedUserId},true,this)'>${getTranslation('revoke-delegations')}</button>
+          <button style='background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:4px 16px;cursor:pointer;margin-right:12px;' onclick='window.__revokeAllToUser(${selectedUserId},${d.approver_id},true,this)'>${getTranslation('revoke-delegations')}</button>
         </div>`;
       });
     }
     if (protocolDelegates.length > 0) {
       box.innerHTML += `<div style='font-weight:bold;margin:18px 0 6px;'>${getTranslation('protocol-delegations') || 'تفويضات المحاضر'}:</div>`;
+      // محاضر: إلغاء تفويض selectedUserId (المفوض) إلى d.approver_id (المفوض إليه)
       protocolDelegates.forEach(d => {
         box.innerHTML += `<div style='margin:8px 0;padding:8px 0;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:space-between;'>
           <span style='flex:1;text-align:right;'>${d.approver_name || d.email || getTranslation('user') + ' ' + d.approver_id} <span style='color:#888;font-size:0.95em;'>(${getTranslation('files-count')}: ${d.files_count})</span></span>
-          <button style='background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:4px 16px;cursor:pointer;margin-right:12px;' onclick='window.__revokeAllToUser(${d.approver_id},${selectedUserId},2,this)'>${getTranslation('revoke-delegations')}</button>
+          <button style='background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:4px 16px;cursor:pointer;margin-right:12px;' onclick='window.__revokeAllToUser(${selectedUserId},${d.approver_id},2,this)'>${getTranslation('revoke-delegations')}</button>
         </div>`;
       });
     }

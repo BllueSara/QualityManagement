@@ -33,7 +33,7 @@ const getStats = async (req, res) => {
     const userRole = payload.role;
 
     const permsSet = await getUserPerms(userId);
-    const canViewAll = (userRole === 'admin') || permsSet.has('view_dashboard');
+    const canViewAll = (userRole === 'admin') || (userRole === 'super_admin') || permsSet.has('view_dashboard');
 
     let sql, params = [];
     if (canViewAll) {
@@ -144,7 +144,7 @@ const getClosedWeek = async (req, res) => {
     const userRole = payload.role;
 
     const permsSet  = await getUserPerms(userId);
-    const canViewAll = (userRole === 'admin') || permsSet.has('view_dashboard');
+    const canViewAll = (userRole === 'admin') || (userRole === 'super_admin') || permsSet.has('view_dashboard');
 
     let sql, params = [];
     if (canViewAll) {
@@ -195,7 +195,7 @@ const exportDashboardExcel = async (req, res) => {
     const userRole = payload.role;
 
     const permsSet = await getUserPerms(userId);
-    const canViewAll = (userRole === 'admin') || permsSet.has('view_dashboard');
+    const canViewAll = (userRole === 'admin') || (userRole === 'super_admin') || permsSet.has('view_dashboard');
 
     // جلب البيانات الإحصائية للأحداث العارضة
     let statsSql, statsParams = [];
@@ -1004,7 +1004,7 @@ const getDepartmentStats = async (req, res) => {
     const userRole = payload.role;
 
     const permsSet = await getUserPerms(userId);
-    const canViewAll = (userRole === 'admin') || permsSet.has('view_dashboard');
+    const canViewAll = (userRole === 'admin') || (userRole === 'super_admin') || permsSet.has('view_dashboard');
 
     let sql, params = [];
           if (canViewAll) {
@@ -1068,7 +1068,7 @@ const getCommitteeStats = async (req, res) => {
     const userRole = payload.role;
 
     const permsSet = await getUserPerms(userId);
-    const canViewAll = (userRole === 'admin') || permsSet.has('view_dashboard');
+    const canViewAll = (userRole === 'admin') || (userRole === 'super_admin') || permsSet.has('view_dashboard');
 
     let sql, params = [];
           if (canViewAll) {
@@ -1134,7 +1134,7 @@ const getMonthlyPerformance = async (req, res) => {
     const userRole = payload.role;
 
     const permsSet = await getUserPerms(userId);
-    const canViewAll = (userRole === 'admin') || permsSet.has('view_dashboard');
+    const canViewAll = (userRole === 'admin') || (userRole === 'super_admin') || permsSet.has('view_dashboard');
 
     let sql, params = [];
     if (canViewAll) {
@@ -1193,7 +1193,7 @@ const getProtocolStats = async (req, res) => {
     const userRole = payload.role;
 
     const permsSet = await getUserPerms(userId);
-    const canViewAll = (userRole === 'admin') || permsSet.has('view_dashboard');
+    const canViewAll = (userRole === 'admin') || (userRole === 'super_admin') || permsSet.has('view_dashboard');
 
     let sql, params = [];
     if (canViewAll) {

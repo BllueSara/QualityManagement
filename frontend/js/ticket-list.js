@@ -17,7 +17,7 @@ async function fetchPermissions() {
 
   const headers = { 'Authorization': `Bearer ${token}` };
 
-  if (role === 'admin' || role === 'manager_ovr') {
+  if (role === 'admin' || role === 'super_admin' || role === 'manager_ovr') {
     permissions.canAdd = permissions.canEdit = permissions.canDelete = true; permissions.canTrack = true;
     return;
   }

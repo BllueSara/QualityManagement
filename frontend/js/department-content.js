@@ -600,7 +600,7 @@ async function fetchPermissions() {
   // كالمعتاد: جلب role
   const userRes = await fetch(`${apiBase}/users/${userId}`, { headers });
   const { data: user } = await userRes.json();
-  if (['admin'].includes(user.role)) {
+  if (['admin' , 'sub-admin' , 'super_admin'].includes(user.role)) {
     // للمسؤولين: صلاحيات كاملة
     Object.keys(permissions).forEach(k => permissions[k]=true);
     return;
@@ -2048,7 +2048,7 @@ addOldContentBtn.innerHTML =
       // دالة جلب صلاحيات المستخدم
       async function userCanAddOldContent() {
         const role = await getUserRoleFromToken();
-        if (role === 'admin') return true;
+        if (role === 'admin' || role === 'super_admin') return true;
         // تحقق من الصلاحيات الإضافية
         return permissions.canAddOldContent || false;
       }
@@ -2492,7 +2492,7 @@ async function checkSharedFolderAccess(folderId, userId) {
 
 // دالة لتصفية المجلدات حسب نوعها
 async function filterFoldersByType(folders, userRole, userDepartmentId) {
-  if (userRole === 'admin') {
+  if (userRole === 'admin' || userRole === 'super_admin') {
     return folders; // المسؤول يرى كل المجلدات
   }
 

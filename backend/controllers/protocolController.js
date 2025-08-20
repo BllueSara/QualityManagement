@@ -498,7 +498,7 @@ class ProtocolController {
                 WHERE up.user_id = ?
             `, [userId]);
             const permsSet = new Set(permRows.map(r => r.permission_key));
-            const canViewAll = userRole === 'admin' || permsSet.has('transfer_credits');
+            const canViewAll = userRole === 'admin' || userRole === 'super_admin' || permsSet.has('transfer_credits');
 
             let allRows = [];
 
@@ -792,7 +792,7 @@ class ProtocolController {
                 WHERE up.user_id = ?
             `, [currentUserId]);
             const perms = new Set(permRows.map(r => r.permission_key));
-            const isAdmin = (userRole === 'admin' || perms.has('transfer_credits'));
+            const isAdmin = (userRole === 'admin' || (userRole==='super_admin') ||perms.has('transfer_credits'));
 
             let allData = [];
             let protocolData = null;
@@ -2149,18 +2149,6 @@ class ProtocolController {
                 WHERE user_id = ? AND delegate_id = ?
             `, [delegatorId, delegateeId]);
 
-            // تسجيل الإجراء
-            try {
-                await logAction(
-                    delegatorId,
-                    'revoke_protocol_delegations',
-                    JSON.stringify({
-                        ar: `تم إلغاء تفويضات المحاضر للمستخدم ${delegateeId} وإعادة ترتيب التسلسل`,
-                        en: `Revoked protocol delegations for user ${delegateeId} and reordered sequence`
-                    }),
-                    'approval'
-                );
-            } catch (_) {}
 
             res.json({
                 status: 'success',

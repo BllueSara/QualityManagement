@@ -2,7 +2,7 @@
 const mysql = require('mysql2/promise');
 const nodemailer = require('nodemailer');
 const { promisify } = require('util');
-const { getFullNameSQLWithFallback } = require('./userUtils');
+const { getFullNameSQLWithAliasAndFallback } = require('./userUtils');
 
 const db = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
@@ -70,7 +70,7 @@ async function getUserPermissions(userId) {
 // دالة التحقق من صلاحية إلغاء الإشعارات
 async function canDisableNotifications(userId) {
   const permissions = await getUserPermissions(userId);
-  return permissions.has('disable_notifications') || permissions.has('admin');
+  return permissions.has('disable_notifications') || permissions.has('admin') ;
 }
 
 // دالة التحقق من صلاحية إلغاء الإيميلات
@@ -229,7 +229,7 @@ async function insertNotification(userId, title, message, type = 'ticket', messa
         }
       // جلب معلومات المستخدم
       const [userRows] = await db.execute(
-        `SELECT email, ${getFullNameSQLWithFallback()} AS full_name FROM users WHERE id = ?`,
+        `SELECT email, ${getFullNameSQLWithAliasAndFallback('u')} AS full_name FROM users u WHERE u.id = ?`,
         [userId]
       );
 

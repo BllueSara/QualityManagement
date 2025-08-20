@@ -100,7 +100,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!payload) return;
   
   const { role } = payload;
-  const isAdmin = role === 'admin' || role === 'manager_ovr';
+  const isAdmin = role === 'admin' || role === 'super_admin' || role === 'manager_ovr';
 
   // أخفِ كل العناصر المعلّمة بـ data-role="admin" إن لم يكن المستخدم Admin
   document.querySelectorAll('[data-role="admin"]').forEach(el => {

@@ -227,7 +227,7 @@ document.querySelector('[data-field="responding-dept"]').textContent = parseDept
   const userRole = tokenPayload.role;
 
   // إخفاء المرفقات وبيانات المبلغ لغير admin وmanager_ovr
-  if (userRole !== 'admin' && userRole !== 'manager_ovr') {
+          if (userRole !== 'admin' && userRole !== 'manager_ovr' && userRole !== 'super_admin') {
     const attachmentsSection = document.getElementById('attachmentsView')?.closest('.card-section');
     if (attachmentsSection) attachmentsSection.style.display = 'none';
     const reporterSection = document.querySelector('.card-section .section-title[data-translate="reporter-info"]')?.closest('.card-section');

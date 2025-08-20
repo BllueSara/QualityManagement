@@ -27,7 +27,7 @@ exports.getApprovalsReports = async (req, res) => {
       WHERE up.user_id = ? AND p.deleted_at IS NULL
     `, [userId]);
     const perms = new Set(permRows.map(r => r.permission_key));
-    const canViewAll = userRole === 'admin' || perms.has('view_all_reports_approvals');
+    const canViewAll = userRole === 'admin' || userRole === 'super_admin' || perms.has('view_all_reports_approvals');
     const canViewOwn = perms.has('view_reports_by_person_approvals');
 
     // استعلام تقارير القسم فقط مع startDate و endDate من جدول contents

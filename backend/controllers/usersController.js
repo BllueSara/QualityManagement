@@ -259,7 +259,7 @@ const updateUser = async (req, res) => {
 
   // للادمن: فقط الاسم الأول واسم العائلة واسم المستخدم والدور مطلوبة
   // للمستخدمين الآخرين: جميع الحقول مطلوبة
-  if (role === 'admin') {
+  if (role === 'admin' || role === 'super_admin') {
     if (!name || !first_name || !last_name || !role) {
       return res.status(400).json({ status:'error', message:'اسم المستخدم والاسم الأول واسم العائلة والدور مطلوبة للادمن' });
     }
@@ -462,7 +462,7 @@ const deleteUser = async (req, res) => {
   try {
     // جلب تفاصيل المستخدم قبل الحذف للتسجيل
     const [[userDetails]] = await db.execute(
-      `SELECT ${getFullNameSQLWithFallback()} AS full_name FROM users WHERE id = ? AND deleted_at IS NULL`,
+      `SELECT ${getFullNameSQLWithAliasAndFallback('u')} AS full_name FROM users u WHERE u.id = ? AND u.deleted_at IS NULL`,
       [id]
     );
 
@@ -533,7 +533,7 @@ const changeUserRole = async (req, res) => {
   try {
     // Fetch user details for logging
     const [[userDetails]] = await db.execute(
-      `SELECT ${getFullNameSQLWithFallback()} AS full_name, role as old_role FROM users WHERE id = ? AND deleted_at IS NULL`,
+      `SELECT ${getFullNameSQLWithAliasAndFallback('u')} AS full_name, role as old_role FROM users u WHERE u.id = ? AND u.deleted_at IS NULL`,
       [id]
     );
 
@@ -593,7 +593,7 @@ const adminResetPassword = async (req, res) => {
   try {
     // Fetch user details for logging
     const [[userDetails]] = await db.execute(
-      `SELECT ${getFullNameSQLWithFallback()} AS full_name FROM users WHERE id = ? AND deleted_at IS NULL`,
+      `SELECT ${getFullNameSQLWithAliasAndFallback('u')} AS full_name FROM users u WHERE u.id = ? AND u.deleted_at IS NULL`,
       [id]
     );
 
@@ -634,7 +634,7 @@ const adminResetPassword = async (req, res) => {
 
 // 8) جلب الأدوار المتاحة
 const getRoles = async (req, res) => {
-  const roles = ['admin', 'sub-admin', 'manager_ovr', 'user'];
+  const roles = ['admin', 'sub-admin', 'manager_ovr', 'user','super_admin'];
   return res.status(200).json({ 
     status: 'success', 
     data: roles 
@@ -793,7 +793,7 @@ const getNotifications = async (req, res) => {
       return res.status(400).json({ status: 'error', message: 'توكن غير صالح' });
     }
 
-    const isAdmin = payload.role === 'admin';
+    const isAdmin = payload.role === 'admin' || payload.role === 'super_admin';
 
     const query = isAdmin
       ? `
@@ -878,7 +878,7 @@ const markAllAsRead = async (req, res) => {
     return res.status(401).json({ message: 'توكن غير صالح' });
   }
 
-  const isAdmin = decoded.role === 'admin';
+  const isAdmin = decoded.role === 'admin' || decoded.role === 'super_admin';
 
   try {
     await db.execute(
@@ -909,7 +909,7 @@ const getUnreadCount = async (req, res) => {
     return res.status(401).json({ message: 'توكن غير صالح' });
   }
 
-  const isAdmin = decoded.role === 'admin';
+  const isAdmin = decoded.role === 'admin' || decoded.role === 'super_admin';
 
   try {
     const [rows] = await db.execute(
@@ -1029,7 +1029,7 @@ const updateUserStatus = async (req, res) => {
   }
 
   // فقط الـ admin يمكنه تغيير الحالة
-  if (payload.role !== 'admin') {
+  if (payload.role !== 'admin' && payload.role !== 'super_admin') {
     return res.status(403).json({ status: 'error', message: 'Forbidden' });
   }
 
@@ -1335,16 +1335,7 @@ const revokeUserFromFiles = async (req, res) => {
         }
       }
       
-      // سجل العملية في اللوقز
-      if (performedBy) {
-        const logDescription = {
-          ar: `تم سحب المستخدم ذو المعرف ${userId} من ملف رقم ${fileId} وإعادة ترتيب التسلسل`,
-          en: `User with ID ${userId} was revoked from file ID ${fileId} and sequence was reordered`
-        };
-        await logAction(performedBy, 'revoke_user_from_file', JSON.stringify(logDescription), 'content', fileId);
-        // سجل إضافي للمحاضر إن كان الملف محضراً
-        await logAction(performedBy, 'revoke_user_from_protocol', JSON.stringify({ ar: `تم سحب المستخدم ذو المعرف ${userId} من المحضر رقم ${fileId} وإعادة ترتيب التسلسل` }), 'protocol', fileId);
-      }
+
     }
     res.json({ status: 'success', message: 'تم سحب المستخدم من الملفات المحددة وإعادة ترتيب التسلسل' });
   } catch (err) {

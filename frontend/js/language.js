@@ -1345,6 +1345,8 @@ const translations = {
         'sentinel-events': 'الأحداث الجسيمة',
         'id-docs-consent': 'الهوية / المستندات والوثائق / الإقرارات',
 'revoke_files': 'سحب الملفات',
+'clear_cache': 'مسح الكاش ميموري',
+'view_delegation_confirmations': 'عرض اقرارات التفويض',
 'select-files-to-revoke': 'حدد الملفات لسحبها',
 'department-or-committee': 'القسم او اللجنة',
 'add-approved-content': 'اضافة محتوى معتمد',
@@ -1527,7 +1529,7 @@ const translations = {
         // أنواع التفويض
         'single-delegation': 'تفويض فردي',
         'bulk-delegation': 'تفويض شامل',
-        'comprehensive-delegation': 'تفويض شامل لجميع ملفات القسم المعلقة',
+        'comprehensive-delegation': 'تفويض شامل لجميع الملفات  ',
         
         // حقول التفويض
         'full-name': 'الاسم الكامل',
@@ -1560,7 +1562,7 @@ const translations = {
         'delegation-confirmation-message-2': 'ذو رقم الهوية',
         'delegation-confirmation-message-3': 'بالتوقيع بالنيابة عني على',
         'delegation-confirmation-message-4': 'الملفات المحددة',
-        'delegation-confirmation-message-5': 'جميع ملفات القسم المعلقة',
+        'delegation-confirmation-message-5': 'جميع الملفات  المعلقة',
         
         // رسائل الأخطاء
         'delegation-error-no-user': 'يرجى اختيار مستخدم للتفويض',
@@ -1667,7 +1669,7 @@ const translations = {
         // Delegation types
         'single-delegation': 'Single Delegation',
         'bulk-delegation': 'Bulk Delegation',
-        'comprehensive-delegation': 'Comprehensive delegation for all pending department files',
+        'comprehensive-delegation': 'Comprehensive delegation for all pending  files',
         
         // Delegation fields
         'full-name': 'Full Name',
@@ -2239,6 +2241,8 @@ const translations = {
         'placeholder-short-desc': 'Any brief details about the event',
 'accept-all-proxy-confirm': 'Accept All Proxy For Approval user ?',
         'revoke_files': 'Revoke Files',
+        'clear_cache': 'Clear Cache Memory',
+        'view_delegation_confirmations': 'View Delegation Confirmations',
         'accept-all-proxy': 'Accept All Proxy For Approval user',
         // Departments modals and search
         'search-department': 'Search department',

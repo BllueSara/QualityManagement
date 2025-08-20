@@ -26,7 +26,7 @@ exports.getClosedTicketsReport = async (req, res) => {
       WHERE up.user_id = ? AND p.deleted_at IS NULL
     `, [userId]);
     const perms = new Set(permRows.map(r => r.permission_key));
-    const canViewAll = userRole === 'admin' || userRole === 'manager_ovr' || perms.has('view_all_reports_tickets');
+    const canViewAll = userRole === 'admin' || userRole === 'super_admin' || userRole === 'manager_ovr' || perms.has('view_all_reports_tickets');
     const canViewOwn = perms.has('view_reports_by_person_tickets');
 
     // فلترة حسب الصلاحية

@@ -594,7 +594,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Check if user is admin
     try {
         const payload = JSON.parse(atob(token.split('.')[1]));
-        if (payload.role !== 'admin') {
+        if (payload.role !== 'admin' && payload.role !== 'super_admin') {
             showAlert('error', 'غير مسموح - يتطلب صلاحيات السوبر أدمن');
             setTimeout(() => {
                 window.location.href = '/html/dashboard.html';

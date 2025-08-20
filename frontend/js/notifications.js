@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   userId = payload.id;
-  isAdmin = payload.role === 'admin';
+  isAdmin = payload.role === 'admin' || payload.role === 'super_admin';
 
   // ✅ علّم كل الإشعارات كمقروءة
   await fetch(`${apiBase}/users/${userId}/notifications/mark-read`, {

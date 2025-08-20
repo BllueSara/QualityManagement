@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   const userId  = payload.id;
   const role    = payload.role;
-  const isAdmin = role === 'admin';
+  const isAdmin = role === 'admin' || role === 'super_admin';
   
   // التحقق من صحة التوكن
   if (!userId || !role) {
@@ -54,7 +54,7 @@ document.querySelectorAll('nav [data-permission], nav [data-role]').forEach(el =
   const permReq = el.dataset.permission;
   const roleReq = el.dataset.role;
   const hasPerm = permReq && (permissionsKeys.includes('*') || permissionsKeys.includes(permReq));
-  const hasRole = roleReq === 'admin' && isAdmin;
+  const hasRole = roleReq === 'admin'  && isAdmin;
   el.style.display = (hasPerm || hasRole) ? '' : 'none';
 });
 

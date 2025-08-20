@@ -324,7 +324,7 @@ const handleApproval = async (req, res) => {
       WHERE up.user_id = ?
     `, [currentUserId]);
     const perms = new Set(permRows.map(r => r.permission_key));
-    const isAdmin = (userRole === 'admin' || perms.has('transfer_credits'));
+    const isAdmin = (userRole === 'admin' ||userRole === 'super_admin' || perms.has('transfer_credits'));
 
     let allData = [];
     let contentData = null;
@@ -1459,7 +1459,7 @@ const getAssignedApprovals = async (req, res) => {
     const userRole = decoded.role;
 
     const permsSet = await getUserPermissions(userId);
-    const canViewAll = userRole === 'admin' || permsSet.has('transfer_credits');
+    const canViewAll = userRole === 'admin' || userRole === 'super_admin' ||permsSet.has('transfer_credits');
 
     let allRows = [];
 
@@ -3918,17 +3918,7 @@ const getDelegationConfirmations = async (req, res) => {
       return res.status(401).json({ status: 'error', message: 'غير مصرح' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const currentUserId = decoded.id;
 
-    // التحقق من أن المستخدم مدير
-    const [userRows] = await db.execute(`
-      SELECT role FROM users WHERE id = ? AND deleted_at IS NULL
-    `, [currentUserId]);
-
-    if (!userRows.length || (userRows[0].role !== 'admin' && userRows[0].role !== 'manager')) {
-      return res.status(403).json({ status: 'error', message: 'ليس لديك صلاحية للوصول لهذه البيانات' });
-    }
 
     
 
@@ -4042,11 +4032,7 @@ const getDelegationConfirmations = async (req, res) => {
           cleanContentId = log.content_id.replace('comm-', '');
         }
         
-        console.log('🔍 Looking for sender signature with:', {
-          content_id: cleanContentId,
-          delegated_by: log.delegated_by,
-          content_type: log.content_type
-        });
+  
         
         if (log.content_type === 'committee') {
           const [senderLogs] = await db.execute(`
@@ -4057,12 +4043,10 @@ const getDelegationConfirmations = async (req, res) => {
             LIMIT 1
           `, [cleanContentId, log.delegated_by]);
           
-          console.log('🔍 Committee sender logs found:', senderLogs.length);
           
           if (senderLogs.length > 0) {
             senderSignature = senderLogs[0].signature;
             senderElectronicSignature = senderLogs[0].electronic_signature;
-            console.log('🔍 Committee sender signature found:', senderSignature ? 'YES' : 'NO');
           }
         } else if (log.content_type === 'department') {
           const [senderLogs] = await db.execute(`
@@ -4073,12 +4057,10 @@ const getDelegationConfirmations = async (req, res) => {
             LIMIT 1
           `, [cleanContentId, log.delegated_by]);
           
-          console.log('🔍 Department sender logs found:', senderLogs.length);
           
           if (senderLogs.length > 0) {
             senderSignature = senderLogs[0].signature;
             senderElectronicSignature = senderLogs[0].electronic_signature;
-            console.log('🔍 Department sender signature found:', senderSignature ? 'YES' : 'NO');
           }
         } else if (log.content_type === 'protocol') {
           const [senderLogs] = await db.execute(`

@@ -398,6 +398,72 @@ const initializeApprovalRoles = async () => {
   }
 };
 
+// تهيئة حقل super_admin في جدول users وإضافة الصلاحيات الجديدة
+const initializeSuperAdminAndPermissions = async () => {
+  try {
+    const pool = mysql.createPool({
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0
+    });
+
+    const conn = await pool.getConnection();
+    
+    try {
+      // إضافة حقل super_admin في جدول users
+      try {
+        await conn.execute(`
+          ALTER TABLE users
+          MODIFY COLUMN role ENUM('admin','sub-admin','user','manager_ovr','super_admin') NOT NULL DEFAULT 'user'
+        `);
+        console.log('✅ تم تحديث حقل role في جدول users ليشمل super_admin');
+      } catch (columnExistsError) {
+        if (columnExistsError.code === 'ER_DUP_FIELDNAME') {
+          console.log('ℹ️ حقل super_admin موجود بالفعل في جدول users');
+        } else {
+          throw columnExistsError;
+        }
+      }
+
+      // إضافة الصلاحيات الجديدة في جدول permissions
+      const newPermissions = [
+        { name: 'clear_cache', description: 'مسح الكاش ميموري' },
+        { name: 'view_delegation_confirmations', description: 'عرض اقرارات التفويض' }
+      ];
+
+      for (const permission of newPermissions) {
+        try {
+          await conn.execute(`
+            INSERT INTO permissions (permission_key, description) 
+            VALUES (?, ?)
+          `, [permission.name, permission.description]);
+          console.log(`✅ تم إضافة صلاحية: ${permission.name}`);
+        } catch (insertError) {
+          if (insertError.code === 'ER_DUP_ENTRY') {
+            console.log(`ℹ️ صلاحية ${permission.name} موجودة بالفعل`);
+          } else {
+            throw insertError;
+          }
+        }
+      }
+
+    } finally {
+      conn.release();
+      await pool.end();
+    }
+    
+    console.log('✅ تم تهيئة حقل super_admin والصلاحيات الجديدة بنجاح');
+  } catch (error) {
+    console.error('❌ خطأ في تهيئة حقل super_admin والصلاحيات الجديدة:', error);
+    // لا نريد إيقاف الخادم بسبب خطأ في إضافة الحقل
+    console.log('سيستمر الخادم في العمل رغم خطأ إضافة حقل super_admin والصلاحيات الجديدة');
+  }
+};
+
 const PORT = process.env.PORT || 3006;
 app.listen(PORT, async () => {
   console.log(`Server running on http://localhost:${PORT}`);
@@ -436,6 +502,12 @@ app.listen(PORT, async () => {
     await initializeApprovalRoles();
   } catch (error) {
     console.error('خطأ في تهيئة حقل approval_role:', error);
+  }
+
+  try {
+    await initializeSuperAdminAndPermissions();
+  } catch (error) {
+    console.error('خطأ في تهيئة حقل super_admin والصلاحيات الجديدة:', error);
   }
 
   try {

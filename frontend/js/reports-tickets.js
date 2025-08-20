@@ -307,7 +307,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // إظهار أو إخفاء زر التنزيل حسب الدور أو الصلاحية
   const userRole = await getUserRoleFromToken();
   if (
-    userRole === 'admin' ||
+    userRole === 'admin' || userRole === 'super_admin' ||
     userRole === 'manager_ovr' ||
     permissions.canDownloadReport
   ) {
@@ -325,7 +325,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const dl = document.getElementById('downloadBtn');
     const userRole = await getUserRoleFromToken();
     if (
-      userRole === 'admin' ||
+      userRole === 'admin' || userRole === 'super_admin' ||
       userRole === 'manager_ovr' ||
       permissions.canDownloadReport
     ) {

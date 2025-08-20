@@ -319,7 +319,7 @@ class ProtocolModel {
             const params = [];
 
             // إذا لم يكن المستخدم أدمن، يرى المحاضر التي رفعها أو هو معتمد عليها
-            if (userRole !== 'admin') {
+            if (userRole !== 'admin' && userRole !== 'super_admin') {
                 query += ` AND (
                     p.created_by = ? OR 
                     EXISTS (
@@ -400,7 +400,7 @@ class ProtocolModel {
             const params = [protocolId];
 
             // إذا لم يكن المستخدم أدمن، يرى المحاضر التي رفعها أو هو معتمد عليها
-            if (userRole !== 'admin') {
+            if (userRole !== 'admin' && userRole !== 'super_admin') {
                 query += ` AND (
                     p.created_by = ? OR 
                     EXISTS (
@@ -902,7 +902,7 @@ class ProtocolModel {
             const params = [folderId];
 
             // إذا لم يكن المستخدم أدمن، يرى المحاضر التي رفعها أو هو معتمد عليها
-            if (userRole !== 'admin') {
+            if (userRole !== 'admin' && userRole !== 'super_admin') {
                 query += ` AND (
                     p.created_by = ? OR 
                     EXISTS (

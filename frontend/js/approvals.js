@@ -7,7 +7,7 @@ async function fetchPermissions() {
     const payload = await safeGetUserInfo(token);
     if (!payload) return;
     const role = payload.role;
-    if (role === 'admin') {
+    if (role === 'admin' || role === 'super_admin') {
         permissionsKeys = ['*'];
         return;
     }

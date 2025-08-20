@@ -910,6 +910,7 @@ async function processBulkDelegationUnified(delegationId, action) {
 
 
 async function loadDelegations() {
+  // ملاحظة: التفويض الشامل لا يظهر في هذا الجدول - يظهر كاقرار (بوب أب) فقط
   const token = localStorage.getItem('token');
   if (!token) {
     showToast('يجب تسجيل الدخول أولاً', 'error');
@@ -923,24 +924,25 @@ async function loadDelegations() {
   tbody.innerHTML = '';
 
   try {
-    // جلب التفويضات الجماعية (proxy)
-    const [deptRes, commRes] = await Promise.all([
-      fetch(apiBaseDept, { headers: authHeaders() }),
-      fetch(apiBaseComm, { headers: authHeaders() })
-    ]);
-    const deptJson = await deptRes.json();
-    const commJson = await commRes.json();
+    // جلب التفويضات الجماعية (proxy) - تم إزالتها لأن التفويض الشامل يظهر كاقرار فقط
+    // const [deptRes, commRes] = await Promise.all([
+    //   fetch(apiBaseDept, { headers: authHeaders() }),
+    //   fetch(apiBaseComm, { headers: authHeaders() })
+    // ]);
+    // const deptJson = await deptRes.json();
+    // const commJson = await commRes.json();
 
-    if (deptJson.status !== 'success' || commJson.status !== 'success') {
-      throw new Error(getTranslation('error-loading'));
-    }
+    // if (deptJson.status !== 'success' || commJson.status !== 'success') {
+    //   throw new Error(getTranslation('error-loading'));
+    // }
 
-    const deptData = deptJson.data.map(d => ({ ...d, type: 'dept', delegationType: 'bulk' }));
-    const commData = commJson.data.map(d => ({ ...d, type: 'committee', delegationType: 'bulk' }));
-    let allData = [...deptData, ...commData];
+    // const deptData = deptJson.data.map(d => ({ ...d, type: 'dept', delegationType: 'bulk' }));
+    // const commData = commJson.data.map(d => ({ ...d, type: 'committee', delegationType: 'bulk' }));
+    // let allData = [...deptData, ...commData];
 
     // إضافة تعليق توضيحي
-    console.log('🔍 Bulk delegations loaded:', { dept: deptData.length, committee: commData.length });
+    console.log('🔍 Bulk delegations removed - they only show as confirmations');
+    let allData = []; // لا توجد تفويضات شاملة في الجدول
 
     // جلب التفويضات الفردية أيضاً
     try {
@@ -1007,7 +1009,7 @@ async function loadDelegations() {
     // طباعة بيانات التفويضات في الكونسول للتشخيص
     console.log('🔍 Total delegations loaded:', allData.length);
     console.log('🔍 Breakdown by type:', {
-      bulk: allData.filter(d => d.delegationType === 'bulk').length,
+      bulk: 0, // التفويض الشامل لا يظهر في الجدول - يظهر كاقرار فقط
       single: allData.filter(d => d.delegationType === 'single').length
     });
 

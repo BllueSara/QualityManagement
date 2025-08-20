@@ -77,7 +77,7 @@ exports.getPendingApprovals = async (req, res) => {
   try {
     // 3) جلب صلاحيات المستخدم
     const permsSet = await getUserPerms(pool, userId);
-    const canViewAll = userRole === 'admin' || permsSet.has('transfer_credits');
+    const canViewAll = userRole === 'admin' || userRole === 'super_admin' || permsSet.has('transfer_credits');
 
     let params = [];
 

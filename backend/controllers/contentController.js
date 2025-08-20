@@ -284,7 +284,7 @@ const getContentsByFolderId = async (req, res) => {
         let params = [folderId];
 
         // إذا لم يكن المستخدم مسؤول، أظهر فقط المعتمدة أو المرفوعة منه
-        if (decodedToken.role !== 'admin') {
+        if (decodedToken.role !== 'admin' && decodedToken.role !== 'super_admin') {
             query += ' AND c.is_approved = 1 AND c.approval_status = "approved"';
         }
         
@@ -297,7 +297,7 @@ const getContentsByFolderId = async (req, res) => {
         const now = new Date();
         const nowMs = now.getTime();
         const oneDayMs = 24 * 60 * 60 * 1000;
-        const isAdmin = decodedToken.role === 'admin';
+        const isAdmin = decodedToken.role === 'admin' || decodedToken.role === 'super_admin';
         // TODO: إذا عندك صلاحية خاصة أضفها هنا
 
 const filtered = contents.filter(item => {
@@ -662,7 +662,7 @@ const deleteContent = async (req, res) => {
         }
 
         // فقط منشئ المحتوى أو المشرف يمكنه حذف المحتوى
-        if (content[0].created_by !== decodedToken.id && decodedToken.role !== 'admin') {
+        if (content[0].created_by !== decodedToken.id && decodedToken.role !== 'admin' && decodedToken.role !== 'super_admin') {
             connection.release();
             return res.status(403).json({ 
                 status: 'error',
@@ -671,7 +671,7 @@ const deleteContent = async (req, res) => {
         }
 
         // لا يمكن حذف محتوى معتمد
-        if (content[0].is_approved && decodedToken.role !== 'admin') {
+        if (content[0].is_approved && decodedToken.role !== 'admin' && decodedToken.role !== 'super_admin') {
             connection.release();
             return res.status(403).json({ 
                 status: 'error',

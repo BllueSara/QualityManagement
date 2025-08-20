@@ -51,7 +51,7 @@ async function getUserPendingCommitteeApprovals(req, res) {
       WHERE up.user_id = ?
     `, [userId]);
     const perms = new Set(permRows.map(r => r.permission_key));
-    const isAdmin = (userRole === 'admin' || perms.has('transfer_credits'));
+    const isAdmin = (userRole === 'admin' ||userRole === 'super_admin'  || perms.has('transfer_credits'));
 
     // تحقق إذا كان المستخدم مفوض له من active_delegations
     const [delegationRows] = await db.execute(
@@ -228,7 +228,7 @@ async function handleCommitteeApproval(req, res) {
       WHERE up.user_id = ?
     `, [currentUserId]);
     const perms = new Set(permRows.map(r => r.permission_key));
-    const isAdmin = (userRole === 'admin' || perms.has('transfer_credits'));
+    const isAdmin = (userRole === 'admin' || userRole === 'super_admin' || perms.has('transfer_credits'));
 
     let allData = [];
     let contentData = null;
@@ -674,7 +674,7 @@ async function getAssignedCommitteeApprovals(req, res) {
       WHERE up.user_id = ?
     `, [userId]);
     const perms = new Set(permRows.map(r => r.permission_key));
-    const canViewAll = (userRole === 'admin' || perms.has('transfer_credits'));
+    const canViewAll = (userRole === 'admin' || userRole === 'super_admin' || perms.has('transfer_credits'));
 
     let allRows = [];
 

@@ -200,7 +200,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       // 1) get user to check role
       const { data: user } = await apiCall(`${apiBase}/users/${userId}`);
-      if (user.role === 'admin') {
+      if (user.role === 'admin' || user.role === 'super_admin') {
         permissions.canAdd = permissions.canEdit = permissions.canDelete = true;
       }
 

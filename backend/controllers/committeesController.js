@@ -195,7 +195,7 @@ exports.getCommittees = async (req, res) => {
         let params = [];
 
         // إذا كان المستخدم admin أو ليس لديه صلاحية view_own_committees، اجلب كل اللجان
-        if (userRole === 'admin' || !canViewOwnCommittees) {
+        if (userRole === 'admin' || userRole === 'super_admin' || !canViewOwnCommittees) {
             query = 'SELECT * FROM committees WHERE deleted_at IS NULL';
         } else {
             // إذا كان لديه صلاحية view_own_committees، تحقق من وجود لجان مختارة
@@ -682,7 +682,7 @@ exports.getContents = async (req, res) => {
         if (!authHeader) return res.status(401).json({ message: 'مطلوب تسجيل الدخول' });
         const token = authHeader.split(' ')[1];
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const isAdmin = decoded.role === 'admin';
+        const isAdmin = decoded.role === 'admin' || decoded.role === 'super_admin';
 
         const folderId = req.params.folderId;
 

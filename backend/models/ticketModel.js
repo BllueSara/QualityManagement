@@ -117,7 +117,7 @@ static async findAllAndAssignments(userId, userRole) {
       [userId]
     );
     const userPerms = new Set(permRows.map(r => r.permission_key));
-    const canViewAll = userRole === 'admin' || userRole === 'manager_ovr' || userPerms.has('view_tickets');
+    const canViewAll = userRole === 'admin' || userRole === 'super_admin' || userRole === 'manager_ovr' || userPerms.has('view_tickets');
 
     // 2) SQL مع تجميع التصنيفات بشكل موثوق
     let baseSQL = `
@@ -234,7 +234,7 @@ static async findAll(userId, userRole) {
       LEFT JOIN users u      ON t.created_by = u.id AND u.deleted_at IS NULL
     `;
     const params = [];
-    if (userRole !== 'admin' && userRole !== 'manager_ovr') {
+    if (userRole !== 'admin' && userRole !== 'manager_ovr' && userRole !== 'super_admin') {
       // تصفية فقط على التذاكر التي أنشأها المستخدم
       sql += ` WHERE t.deleted_at IS NULL AND t.created_by = ?`;
       params.push(userId);

@@ -1188,7 +1188,7 @@ async function fetchPermissions() {
   const payload = await safeGetUserInfo(token);
   if (!payload) return;
   const userId = payload.id, role = payload.role;
-  if (role === 'admin') {
+  if (role === 'admin' || role === 'super_admin') {
     permissionsKeys = ['*'];
     return;
   }
@@ -3390,15 +3390,9 @@ async function processBulkDelegation(data) {
   console.log('🔍 senderSignature in data:', data.senderSignature ? 'PRESENT' : 'MISSING');
   
   try {
-    let endpoint;
-    if (data.isCommittee) {
-      endpoint = 'http://localhost:3006/api/committee-approvals/committee-delegations/bulk';
-    } else if (data.isProtocol) {
-      endpoint = 'http://localhost:3006/api/protocols/delegate-all-unified';
-    } else {
-      endpoint = 'http://localhost:3006/api/approvals/delegate-all-unified';
-    }
-    console.log('🔍 Using endpoint:', endpoint);
+    // استخدام endpoint واحد شامل للكل (الموافقات، اللجان، المحاضر)
+    const endpoint = 'http://localhost:3006/api/approvals/delegate-all-unified';
+    console.log('🔍 Using unified endpoint:', endpoint);
     
     const requestBody = {
       delegateTo: data.delegateTo,
@@ -3422,14 +3416,8 @@ async function processBulkDelegation(data) {
     console.log('🔍 Response from server:', result);
     
     if (result.status === 'success') {
-      let message;
-      if (data.isCommittee) {
-        message = getTranslation('bulk-committee-delegation-request-sent-success');
-      } else if (data.isProtocol) {
-        message = getTranslation('bulk-protocol-delegation-request-sent-success');
-      } else {
-        message = getTranslation('bulk-delegation-request-sent-success');
-      }
+      // رسالة موحدة للنجاح
+      const message = getTranslation('bulk-delegation-request-sent-success');
       showToast(message, 'success');
       // تحديث الصفحة أو إعادة تحميل البيانات
       setTimeout(() => {

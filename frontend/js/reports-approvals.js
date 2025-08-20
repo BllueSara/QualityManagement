@@ -238,7 +238,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // إظهار/إخفاء زر التحميل بناءً على الدور أو الصلاحية
   const userRole = await getUserRoleFromToken();
-  if (userRole === 'admin' || permissions.canDownloadReport) {
+  if (userRole === 'admin' || userRole === 'super_admin' || permissions.canDownloadReport) {
     downloadBtn.style.display = 'inline-block';
     downloadBtn.addEventListener('click', downloadCSV);
   } else {
