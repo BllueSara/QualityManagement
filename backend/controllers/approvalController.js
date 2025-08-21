@@ -2560,28 +2560,28 @@ const delegateAllApprovalsUnified = async (req, res) => {
       
       console.log('🔍 Bulk protocol delegation result:', bulkProtResult);
 
-      // إنشاء سجل منفصل لتوقيع المرسل (عام بدون ملف محدد)
-      try {
-        if (signature) {
-          await db.execute(`
-            INSERT IGNORE INTO approval_logs (
-              content_id, approver_id, delegated_by, signed_as_proxy, status, comments, signature, created_at
-            ) VALUES (NULL, ?, ?, 0, 'sender_signature', ?, ?, NOW())
-          `, [currentUserId, currentUserId, 'توقيع المرسل على اقرار التفويض الشامل', signature]);
+      // // إنشاء سجل منفصل لتوقيع المرسل (عام بدون ملف محدد)
+      // try {
+      //   if (signature) {
+      //     await db.execute(`
+      //       INSERT IGNORE INTO approval_logs (
+      //         content_id, approver_id, delegated_by, signed_as_proxy, status, comments, signature, created_at
+      //       ) VALUES (NULL, ?, ?, 0, 'sender_signature', ?, ?, NOW())
+      //     `, [currentUserId, currentUserId, 'توقيع المرسل على اقرار التفويض الشامل', signature]);
 
-          await db.execute(`
-            INSERT IGNORE INTO committee_approval_logs (
-              content_id, approver_id, delegated_by, signed_as_proxy, status, comments, signature, created_at
-            ) VALUES (NULL, ?, ?, 0, 'sender_signature', ?, ?, NOW())
-          `, [currentUserId, currentUserId, 'توقيع المرسل على اقرار التفويض الشامل', signature]);
+      //     await db.execute(`
+      //       INSERT IGNORE INTO committee_approval_logs (
+      //         content_id, approver_id, delegated_by, signed_as_proxy, status, comments, signature, created_at
+      //       ) VALUES (NULL, ?, ?, 0, 'sender_signature', ?, ?, NOW())
+      //     `, [currentUserId, currentUserId, 'توقيع المرسل على اقرار التفويض الشامل', signature]);
 
-          await db.execute(`
-            INSERT IGNORE INTO protocol_approval_logs (
-              protocol_id, approver_id, delegated_by, signed_as_proxy, status, comments, signature, created_at
-            ) VALUES (NULL, ?, ?, 0, 'sender_signature', ?, ?, NOW())
-          `, [currentUserId, currentUserId, 'توقيع المرسل على اقرار التفويض الشامل', signature]);
-        }
-      } catch (_) {}
+      //     await db.execute(`
+      //       INSERT IGNORE INTO protocol_approval_logs (
+      //         protocol_id, approver_id, delegated_by, signed_as_proxy, status, comments, signature, created_at
+      //       ) VALUES (NULL, ?, ?, 0, 'sender_signature', ?, ?, NOW())
+      //     `, [currentUserId, currentUserId, 'توقيع المرسل على اقرار التفويض الشامل', signature]);
+      //   }
+      // } catch (_) {}
       
       // أرسل إشعار جماعي حتى لو لم توجد ملفات
       try {
@@ -2671,11 +2671,32 @@ const delegateAllApprovalsUnified = async (req, res) => {
     // سجل منفصل لتوقيع المرسل على التفويض الشامل
     if (signature) {
       try {
-        await db.execute(`
-          INSERT IGNORE INTO approval_logs (
-            content_id, approver_id, delegated_by, signed_as_proxy, status, comments, signature, created_at
-          ) VALUES (?, ?, ?, 0, 'sender_signature', ?, ?, NOW())
-        `, [departmentRows[0]?.id || 0, currentUserId, currentUserId, 'توقيع المرسل على اقرار التفويض الشامل', signature]);
+        // سجل توقيع المرسل للأقسام
+        if (departmentRows.length > 0) {
+          await db.execute(`
+            INSERT INTO approval_logs (
+              content_id, approver_id, delegated_by, signed_as_proxy, status, comments, signature, created_at
+            ) VALUES (?, ?, ?, 0, 'sender_signature', ?, ?, NOW())
+          `, [departmentRows[0].id, delegateTo, currentUserId, 'توقيع المرسل على اقرار التفويض الشامل', signature]);
+        }
+
+        // سجل توقيع المرسل للجان
+        if (committeeRows.length > 0) {
+          await db.execute(`
+            INSERT INTO committee_approval_logs (
+              content_id, approver_id, delegated_by, signed_as_proxy, status, comments, signature, created_at
+            ) VALUES (?, ?, ?, 0, 'sender_signature', ?, ?, NOW())
+          `, [committeeRows[0].id, delegateTo, currentUserId, 'توقيع المرسل على اقرار التفويض الشامل', signature]);
+        }
+
+        // سجل توقيع المرسل للمحاضر
+        if (protocolRows.length > 0) {
+          await db.execute(`
+            INSERT INTO protocol_approval_logs (
+              protocol_id, approver_id, delegated_by, signed_as_proxy, status, comments, signature, created_at
+            ) VALUES (?, ?, ?, 0, 'sender_signature', ?, ?, NOW())
+          `, [protocolRows[0].id, delegateTo, currentUserId, 'توقيع المرسل على اقرار التفويض الشامل', signature]);
+        }
       } catch (_) {}
     }
     
@@ -2934,13 +2955,12 @@ const getAllPendingDelegationsUnified = async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ status: 'error', message: 'لا يوجد توكن' });
     
-  
-
-    // جلب جميع التفويضات الشاملة من جدول approval_logs فقط
-    const [delegations] = await db.execute(`
+    // جلب جميع التفويضات الشاملة من جدول approval_logs (الأقسام)
+    const [departmentDelegations] = await db.execute(`
       SELECT 
         al.id,
         al.content_id,
+        'department' as file_type,
         al.delegated_by,
         al.approver_id,
         al.signed_as_proxy,
@@ -2977,15 +2997,121 @@ const getAllPendingDelegationsUnified = async (req, res) => {
         AND al.status = 'sender_signature'
         AND u1.deleted_at IS NULL
         AND u2.deleted_at IS NULL
-      ORDER BY al.created_at DESC
     `);
 
-    console.log('Total comprehensive delegations found:', delegations.length);
-    if (delegations.length > 0) {
-      console.log('Sample delegation:', delegations[0]);
+    // جلب جميع التفويضات الشاملة من جدول committee_approval_logs (اللجان)
+    const [committeeDelegations] = await db.execute(`
+      SELECT 
+        cal.id,
+        cal.content_id,
+        'committee' as file_type,
+        cal.delegated_by,
+        cal.approver_id,
+        cal.signed_as_proxy,
+        cal.status,
+        cal.comments,
+        cal.created_at,
+        cal.signature,
+        cal.electronic_signature,
+        cal.approval_role,
+        u1.username as delegator_name,
+        u1.first_name as delegator_first_name,
+        u1.second_name as delegator_second_name,
+        u1.third_name as delegator_third_name,
+        u1.last_name as delegator_last_name,
+        u1.national_id as delegator_national_id,
+        u1.employee_number as delegator_employee_number,
+        u2.username as delegate_name,
+        u2.first_name as delegate_first_name,
+        u2.second_name as delegate_second_name,
+        u2.third_name as delegate_third_name,
+        u2.last_name as delegate_last_name,
+        u2.national_id as delegate_national_id,
+        u2.employee_number as delegate_employee_number,
+        d.name as department_name,
+        c.title as content_title,
+        f.name as folder_name
+      FROM committee_approval_logs cal
+      JOIN users u1 ON cal.delegated_by = u1.id
+      JOIN users u2 ON cal.approver_id = u2.id
+      LEFT JOIN contents c ON cal.content_id = c.id
+      LEFT JOIN folders f ON c.folder_id = f.id
+      LEFT JOIN departments d ON f.department_id = d.id
+      WHERE cal.comments LIKE '%توقيع المرسل على اقرار التفويض الشامل%'
+        AND cal.status = 'sender_signature'
+        AND u1.deleted_at IS NULL
+        AND u2.deleted_at IS NULL
+    `);
+
+    // جلب جميع التفويضات الشاملة من جدول protocol_approval_logs (المحاضر)
+    const [protocolDelegations] = await db.execute(`
+      SELECT 
+        pal.id,
+        pal.protocol_id as content_id,
+        'protocol' as file_type,
+        pal.delegated_by,
+        pal.approver_id,
+        pal.signed_as_proxy,
+        pal.status,
+        pal.comments,
+        pal.created_at,
+        pal.signature,
+        pal.electronic_signature,
+        u1.username as delegator_name,
+        u1.first_name as delegator_first_name,
+        u1.second_name as delegator_second_name,
+        u1.third_name as delegator_third_name,
+        u1.last_name as delegator_last_name,
+        u1.national_id as delegator_national_id,
+        u1.employee_number as delegator_employee_number,
+        u2.username as delegate_name,
+        u2.first_name as delegate_first_name,
+        u2.second_name as delegate_second_name,
+        u2.third_name as delegate_third_name,
+        u2.last_name as delegate_last_name,
+        u2.national_id as delegate_national_id,
+        u2.employee_number as delegate_employee_number,
+        d.name as department_name,
+        p.title as content_title,
+        'protocols' as folder_name
+      FROM protocol_approval_logs pal
+      JOIN users u1 ON pal.delegated_by = u1.id
+      JOIN users u2 ON pal.approver_id = u2.id
+      LEFT JOIN protocols p ON pal.protocol_id = p.id
+      LEFT JOIN departments d ON p.department_id = d.id
+      WHERE pal.comments LIKE '%توقيع المرسل على اقرار التفويض الشامل%'
+        AND pal.status = 'sender_signature'
+        AND u1.deleted_at IS NULL
+        AND u2.deleted_at IS NULL
+    `);
+
+    // دمج جميع النتائج
+    const allDelegations = [
+      ...departmentDelegations,
+      ...committeeDelegations,
+      ...protocolDelegations
+    ];
+
+    // ترتيب النتائج حسب تاريخ الإنشاء (الأحدث أولاً)
+    allDelegations.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    console.log('Total comprehensive delegations found:', allDelegations.length);
+
+    
+    if (allDelegations.length > 0) {
+      console.log('Sample delegation:', allDelegations[0]);
     }
 
-    res.status(200).json({ status: 'success', data: delegations });
+    res.status(200).json({ 
+      status: 'success', 
+      data: allDelegations,
+      stats: {
+        total: allDelegations.length,
+        departments: departmentDelegations.length,
+        committees: committeeDelegations.length,
+        protocols: protocolDelegations.length
+      }
+    });
   } catch (err) {
     console.error('getAllPendingDelegationsUnified error:', err);
     res.status(500).json({ status: 'error', message: 'فشل جلب جميع التفويضات الشاملة' });

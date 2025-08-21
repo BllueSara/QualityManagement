@@ -437,7 +437,7 @@ async function fetchDepartments() {
       departmentSelect.appendChild(option);
     });
 
-    console.log('✅ Successfully loaded', departments.length, 'departments');
+    
   } catch (error) {
     console.error('🚨 fetchDepartments error:', error);
     showToast('خطأ في جلب الأقسام: ' + error.message, 'error');
@@ -626,7 +626,7 @@ document.querySelector('.user-profile-header')?.classList.add('active');
   const roles = await fetchJSON(`${apiBase}/users/roles`);
   // إظهار manager_ovr فقط للادمن
   let filteredRoles = roles;
-  console.log('isAdmin:', isAdmin);
+  
   if (!isAdmin) {
     filteredRoles = roles.filter(r => r !== 'manager_ovr');
   }
@@ -923,8 +923,7 @@ if (btnSaveUser) {
       job_name_id: document.getElementById('jobName') ? document.getElementById('jobName').value : ''
     };
 
-    console.log('🚀 departmentId:', data.departmentId);
-    console.log('🚀 Sending user data:', data);
+    
 
     const method = selectedUserId ? 'PUT' : 'POST';
     const url    = selectedUserId
@@ -956,7 +955,7 @@ if (btnPdf) {
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
-  if (!authToken) return console.log('لا يوجد توكن؛ الرجاء تسجيل الدخول');
+        if (!authToken) return;
   await loadMyPermissions();
 
   loadUsers();
@@ -978,23 +977,17 @@ let selectedCommittees = new Set();
 let allCommittees = [];
 
 async function initializeCommitteesDropdown() {
-  console.log('🚀 Initializing committees dropdown...');
+  
   const dropdown = document.getElementById('committees-dropdown');
   const dropdownBtn = dropdown?.querySelector('.dropdown-btn');
   const dropdownContent = dropdown?.querySelector('.dropdown-content');
   const searchInput = dropdown?.querySelector('.committee-search');
   const committeesList = dropdown?.querySelector('.committees-list');
 
-  console.log('🔍 Dropdown elements found:', {
-    dropdown: !!dropdown,
-    dropdownBtn: !!dropdownBtn,
-    dropdownContent: !!dropdownContent,
-    searchInput: !!searchInput,
-    committeesList: !!committeesList
-  });
+
 
   if (!dropdown || !dropdownBtn || !dropdownContent || !searchInput || !committeesList) {
-    console.log('❌ Dropdown elements not found');
+
     return;
   }
 
@@ -1052,7 +1045,7 @@ async function initializeCommitteesDropdown() {
 }
 
 async function loadAllCommittees() {
-  console.log('🔄 Loading all committees...');
+
   try {
     const response = await fetch(`${apiBase}/committees`, {
       headers: { 'Authorization': `Bearer ${authToken}` }
@@ -1061,7 +1054,7 @@ async function loadAllCommittees() {
     if (!response.ok) throw new Error('Failed to fetch committees');
     
     allCommittees = await response.json();
-    console.log('✅ Loaded committees:', allCommittees.length);
+
     renderCommitteesList();
   } catch (error) {
     console.error('❌ Error loading committees:', error);
@@ -1069,25 +1062,21 @@ async function loadAllCommittees() {
 }
 
 async function loadUserCommittees(userId) {
-  console.log('🔄 Loading committees for user:', userId);
+
   try {
     const response = await fetch(`${apiBase}/users/${userId}/committees`, {
       headers: { 'Authorization': `Bearer ${authToken}` }
     });
     
-    console.log('📡 Response status:', response.status);
+
     
     if (response.ok) {
       const userCommittees = await response.json();
-      console.log('✅ User committees loaded:', userCommittees);
       selectedCommittees = new Set(userCommittees.map(c => c.id.toString()));
-      console.log('📝 Selected committees set:', Array.from(selectedCommittees));
       renderCommitteesList();
       updateDropdownButtonText();
     } else {
-      console.log('❌ Failed to load user committees, status:', response.status);
       const errorText = await response.text();
-      console.log('❌ Error response:', errorText);
     }
   } catch (error) {
     console.error('❌ Error loading user committees:', error);
@@ -1118,17 +1107,13 @@ async function saveUserCommittees() {
 }
 
 function renderCommitteesList() {
-  console.log('🎨 Rendering committees list...');
   const committeesList = document.querySelector('.committees-list');
   if (!committeesList) {
-    console.log('❌ Committees list element not found');
     return;
   }
 
   committeesList.innerHTML = '';
   const lang = localStorage.getItem('language') || 'ar';
-  console.log('📝 Rendering', allCommittees.length, 'committees for language:', lang);
-  console.log('📝 Selected committees:', Array.from(selectedCommittees));
 
   allCommittees.forEach(committee => {
     const item = document.createElement('div');
@@ -1143,7 +1128,6 @@ function renderCommitteesList() {
     }
 
     const isSelected = selectedCommittees.has(committee.id.toString());
-    console.log(`📋 Committee ${committee.id} (${committeeName}): ${isSelected ? 'SELECTED' : 'not selected'}`);
 
     item.innerHTML = `
       <input type="checkbox" id="committee-${committee.id}" value="${committee.id}" ${isSelected ? 'checked' : ''}>
@@ -1157,22 +1141,16 @@ function renderCommitteesList() {
     committeesList.appendChild(item);
   });
   setCommitteeSearchPlaceholder();
-  console.log('✅ Committees list rendered successfully');
 }
 
 function updateDropdownButtonText() {
-  console.log('🔄 Updating dropdown button text...');
   const dropdownBtn = document.querySelector('.dropdown-btn span');
   if (!dropdownBtn) {
-    console.log('❌ Dropdown button span not found');
     return;
   }
 
-  console.log('📝 Selected committees count:', selectedCommittees.size);
-
   if (selectedCommittees.size === 0) {
     dropdownBtn.textContent = getTranslation('select-committees');
-    console.log('✅ Set button text to:', getTranslation('select-committees'));
   } else if (selectedCommittees.size === 1) {
     const committeeId = Array.from(selectedCommittees)[0];
     const committee = allCommittees.find(c => c.id.toString() === committeeId);
@@ -1186,11 +1164,9 @@ function updateDropdownButtonText() {
         committeeName = committee.name;
       }
       dropdownBtn.textContent = committeeName;
-      console.log('✅ Set button text to single committee:', committeeName);
     }
   } else {
     dropdownBtn.textContent = `${selectedCommittees.size} ${getTranslation('committee-selected')}`;
-    console.log('✅ Set button text to multiple committees:', `${selectedCommittees.size} ${getTranslation('committee-selected')}`);
   }
 }
 
@@ -1208,21 +1184,14 @@ document.addEventListener('DOMContentLoaded', setCommitteeSearchPlaceholder);
 
 // Show/hide dropdown based on permission checkbox
 document.addEventListener('change', (e) => {
-  console.log('🔍 Change event detected:', e.target);
-  
   if (e.target.type === 'checkbox') {
     const label = e.target.closest('.switch');
-    console.log('🔍 Label found:', label);
-    console.log('🔍 Label data-key:', label?.dataset?.key);
     
     if (label && label.dataset.key === 'view_own_committees') {
-      console.log('✅ Found view_own_committees checkbox, updating dropdown visibility');
       const dropdown = document.getElementById('committees-dropdown');
-      console.log('🔍 Dropdown element:', dropdown);
       
       if (dropdown) {
         dropdown.style.display = e.target.checked ? 'block' : 'none';
-        console.log('✅ Dropdown visibility changed to:', e.target.checked ? 'block' : 'none');
         if (e.target.checked && selectedUserId) {
           // تحميل لجان المستخدم مباشرة عند التفعيل
           loadUserCommittees(selectedUserId);
@@ -2529,21 +2498,6 @@ if (editUserModal) {
 // دالة فتح modal اقرارات التفويض
 async function openDelegationConfirmationsModal() {
   try {
-    console.log('Opening delegation confirmations modal...');
-    console.log('Current authToken:', authToken ? 'exists' : 'missing');
-    
-    // إظهار دور المستخدم الحالي للـ debugging
-    if (authToken) {
-      try {
-        const payload = await safeGetUserInfo(authToken);
-        if (payload) {
-          console.log('Current user role:', payload.role);
-          console.log('Current user ID:', payload.id);
-        }
-      } catch (e) {
-        console.error('Error parsing JWT payload:', e);
-      }
-    }
     
     // إظهار loading
     const modal = document.getElementById('delegationConfirmationsModal');
@@ -2566,10 +2520,8 @@ async function openDelegationConfirmationsModal() {
     
     // جلب اقرارات التفويض
     const confirmations = await fetchDelegationConfirmations();
-    
 
-
-    if (confirmations.length === 0) {
+    if (!confirmations || confirmations.length === 0) {
       listContainer.innerHTML = `
         <div class="delegation-confirmations-empty">
           <i class="fas fa-clipboard-list"></i>
@@ -2609,17 +2561,15 @@ function closeDelegationConfirmationsModal() {
 // دالة جلب اقرارات التفويض من الخادم
 async function fetchDelegationConfirmations() {
     try {
-        const currentUserId = getCurrentUserId();
+        const currentUserId = await getCurrentUserId();
         if (!currentUserId) {
             console.error('No current user ID found');
             return;
         }
 
-
         // Fetch bulk delegations first
         let bulkDelegations = [];
         try {
-            console.log('Attempting to fetch bulk delegations from unified endpoint...');
             const bulkResponse = await fetch(`${apiBase}/approvals/pending-delegations-unified`, {
                 method: 'GET',
                 headers: {
@@ -2631,15 +2581,11 @@ async function fetchDelegationConfirmations() {
             
             if (bulkResponse.ok) {
                 const bulkData = await bulkResponse.json();
-                console.log('Bulk delegations raw response:', bulkData);
                 
                 if (bulkData && Array.isArray(bulkData.data)) {
                     bulkDelegations = bulkData.data;
-                    console.log('Successfully fetched bulk delegations:', bulkDelegations.length);
                 } else if (bulkData && Array.isArray(bulkData)) {
                     bulkDelegations = bulkData;
-                } else {
-                    console.log('Bulk delegations response structure unexpected:', bulkData);
                 }
             } else {
                 // Fallback to user-specific endpoint
@@ -2654,28 +2600,23 @@ async function fetchDelegationConfirmations() {
                 
                 if (userBulkResponse.ok) {
                     const userBulkData = await userBulkResponse.json();
-                    console.log('User-specific bulk delegations raw response:', userBulkData);
                     
                     if (userBulkData && Array.isArray(userBulkData.data)) {
                         bulkDelegations = userBulkData.data;
                     } else if (userBulkData && Array.isArray(userBulkData)) {
                         bulkDelegations = userBulkData;
-                    } else {
                     }
-                } else {
-                    console.log('User-specific bulk delegations endpoint also failed');
                 }
             }
         } catch (bulkError) {
             console.error('Error fetching bulk delegations:', bulkError);
         }
 
-        console.log('Final bulk delegations count:', bulkDelegations.length);
+
 
         // Fetch regular delegation confirmations
         let regularConfirmations = [];
         try {
-            console.log('Fetching regular delegation confirmations...');
             const confirmationsResponse = await fetch(`${apiBase}/approvals/delegation-confirmations`, {
                 method: 'GET',
                 headers: {
@@ -2684,39 +2625,27 @@ async function fetchDelegationConfirmations() {
                 }
             });
 
-            console.log('Regular confirmations response status:', confirmationsResponse.status);
             
             if (confirmationsResponse.ok) {
                 const confirmationsData = await confirmationsResponse.json();
-                console.log('Regular confirmations raw response:', confirmationsData);
                 
                 if (confirmationsData && Array.isArray(confirmationsData.data)) {
                     regularConfirmations = confirmationsData.data;
-                    console.log('Successfully fetched regular confirmations:', regularConfirmations.length);
                 } else if (confirmationsData && Array.isArray(confirmationsData)) {
                     regularConfirmations = confirmationsData;
-                    console.log('Successfully fetched regular confirmations (direct array):', regularConfirmations.length);
-                } else {
-                    console.log('Regular confirmations response structure unexpected:', confirmationsData);
                 }
-            } else {
-                console.log('Regular confirmations endpoint failed');
             }
         } catch (confirmationsError) {
             console.error('Error fetching regular confirmations:', confirmationsError);
         }
 
-        console.log('Final regular confirmations count:', regularConfirmations.length);
-
         // Process bulk delegations into confirmations format
         const bulkConfirmations = [];
-        console.log('Processing bulk delegations:', bulkDelegations.length);
         
         for (const bulkDelegation of bulkDelegations) {
-            console.log('Processing bulk delegation:', bulkDelegation);
-            
             // Extract delegator and delegate IDs with multiple fallback options
             let delegatorId = bulkDelegation.delegated_by || 
+                            bulkDelegation.delegation_id || 
                             bulkDelegation.delegator_id || 
                             bulkDelegation.user_id || 
                             bulkDelegation.from_user_id;
@@ -2725,16 +2654,12 @@ async function fetchDelegationConfirmations() {
                            bulkDelegation.delegate_id || 
                            bulkDelegation.to_user_id;
             
-            console.log('Extracted IDs - delegatorId:', delegatorId, 'delegateId:', delegateId);
-            
             if (!delegatorId || !delegateId) {
-                console.log('Missing delegatorId or delegateId, skipping...');
                 continue;
             }
 
-            // Only include if current user is the delegate
-            if (delegateId.toString() === currentUserId.toString()) {
-                console.log('Current user is delegate, processing...');
+            // Note: For bulk delegations, we include ALL of them regardless of current user
+            // This allows all users to see bulk delegation confirmations
                 
                 // Extract user information with multiple fallback options
                 let delegatorName = '';
@@ -2742,53 +2667,110 @@ async function fetchDelegationConfirmations() {
                 let delegateName = '';
                 let delegateIdNumber = '';
 
-                // Try to get delegator info
-                if (bulkDelegation.delegator_data) {
+                // Try to get delegator info from direct fields first (based on sample data structure)
+                if (bulkDelegation.delegator_name) {
+                    delegatorName = bulkDelegation.delegator_name;
+                } else if (bulkDelegation.delegator_first_name && bulkDelegation.delegator_last_name) {
+                    delegatorName = `${bulkDelegation.delegator_first_name} ${bulkDelegation.delegator_last_name}`.trim();
+                } else if (bulkDelegation.delegator_first_name) {
+                    delegatorName = bulkDelegation.delegator_first_name;
+                }
+
+                if (bulkDelegation.delegator_national_id) {
+                    delegatorIdNumber = bulkDelegation.delegator_national_id;
+                } else if (bulkDelegation.delegator_employee_number) {
+                    delegatorIdNumber = bulkDelegation.delegator_employee_number;
+                }
+
+                // Try to get delegate info from direct fields first
+                if (bulkDelegation.delegate_name) {
+                    delegateName = bulkDelegation.delegate_name;
+                } else if (bulkDelegation.delegate_first_name && bulkDelegation.delegate_last_name) {
+                    delegateName = `${bulkDelegation.delegate_first_name} ${bulkDelegation.delegate_last_name}`.trim();
+                } else if (bulkDelegation.delegate_first_name) {
+                    delegateName = bulkDelegation.delegate_first_name;
+                }
+
+                if (bulkDelegation.delegate_national_id) {
+                    delegateIdNumber = bulkDelegation.delegate_national_id;
+                } else if (bulkDelegation.delegate_employee_number) {
+                    delegateIdNumber = bulkDelegation.delegate_employee_number;
+                }
+
+                // Fallback to nested data if direct fields are not available
+                if (!delegatorName && bulkDelegation.delegator_data) {
                     const delegatorData = bulkDelegation.delegator_data.data || bulkDelegation.delegator_data;
                     delegatorName = delegatorData.name || delegatorData.username || delegatorData.first_name || 'Unknown';
                     delegatorIdNumber = delegatorData.national_id || delegatorData.id_number || delegatorData.employee_number || '';
                 }
 
-                // Try to get delegate info
-                if (bulkDelegation.approver_data) {
+                if (!delegateName && bulkDelegation.approver_data) {
                     const delegateData = bulkDelegation.approver_data.data || bulkDelegation.approver_data;
                     delegateName = delegateData.name || delegateData.username || delegateData.first_name || 'Unknown';
                     delegateIdNumber = delegateData.national_id || delegateData.id_number || delegateData.employee_number || '';
                 }
 
-                console.log('Extracted names - delegatorName:', delegatorName, 'delegateName:', delegateName);
+                // Final fallback if still no names
+                if (!delegatorName) delegatorName = 'Unknown';
+                if (!delegateName) delegateName = 'Unknown';
 
-                const bulkConfirmation = {
-                    id: bulkDelegation.id || bulkDelegation.delegation_id || bulkDelegation.request_id,
+                // إنشاء بنية البيانات المتوافقة مع renderDelegationConfirmations
+                // إنشاء اقرار للمرسل (sender)
+                const senderConfirmation = {
+                    id: `${bulkDelegation.id || bulkDelegation.delegation_id || bulkDelegation.request_id}_sender`,
                     type: 'bulk',
+                    is_bulk: true,
                     delegator_id: delegatorId,
-                    delegator_name: delegatorName,
-                    delegator_id_number: delegatorIdNumber,
                     delegate_id: delegateId,
-                    delegate_name: delegateName,
-                    delegate_id_number: delegateIdNumber,
                     created_at: bulkDelegation.created_at || bulkDelegation.delegation_date || bulkDelegation.request_date,
                     signature: bulkDelegation.signature || bulkDelegation.electronic_signature || '',
                     electronic_signature: bulkDelegation.electronic_signature || bulkDelegation.signature || '',
                     notes: bulkDelegation.notes || bulkDelegation.comments || '',
                     content_type: bulkDelegation.content_type || 'all',
                     department_id: bulkDelegation.department_id || bulkDelegation.dept_id,
-                    department_name: bulkDelegation.department_name || bulkDelegation.dept_name || 'All Departments'
+                    department_name: bulkDelegation.department_name || bulkDelegation.dept_name || 'All Departments',
+                    delegator: {
+                        fullName: delegatorName,
+                        idNumber: delegatorIdNumber
+                    },
+                    delegate: {
+                        fullName: delegateName,
+                        idNumber: delegateIdNumber
+                    },
+                    delegation_type: 'sender'
                 };
 
-                console.log('Created bulk confirmation object:', bulkConfirmation);
-                bulkConfirmations.push(bulkConfirmation);
-            } else {
-                console.log('Current user is not delegate, skipping...');
-            }
-        }
+                // إنشاء اقرار للمستقبل (receiver) بدون توقيع
+                const receiverConfirmation = {
+                    id: `${bulkDelegation.id || bulkDelegation.delegation_id || bulkDelegation.request_id}_receiver`,
+                    type: 'bulk',
+                    is_bulk: true,
+                    delegator_id: delegatorId,
+                    delegate_id: delegateId,
+                    created_at: bulkDelegation.created_at || bulkDelegation.delegation_date || bulkDelegation.request_date,
+                    signature: '', // لا يوجد توقيع للمستقبل
+                    electronic_signature: '', // لا يوجد توقيع إلكتروني للمستقبل
+                    notes: bulkDelegation.notes || bulkDelegation.comments || '',
+                    content_type: bulkDelegation.content_type || 'all',
+                    department_id: bulkDelegation.department_id || bulkDelegation.dept_id,
+                    department_name: bulkDelegation.department_name || bulkDelegation.dept_name || 'All Departments',
+                    delegator: {
+                        fullName: delegatorName,
+                        idNumber: delegatorIdNumber
+                    },
+                    delegate: {
+                        fullName: delegateName,
+                        idNumber: delegateIdNumber
+                    },
+                    delegation_type: 'receiver'
+                };
 
-        console.log('Bulk confirmations count:', bulkConfirmations.length);
-        console.log('Processing bulk delegations:', bulkDelegations.length);
+                bulkConfirmations.push(senderConfirmation);
+                bulkConfirmations.push(receiverConfirmation);
+        }
 
         // Combine and sort all confirmations
         const allConfirmations = [...bulkConfirmations, ...regularConfirmations];
-        console.log('Total confirmations (bulk + regular):', allConfirmations.length);
         
         // Sort by creation date (newest first)
         allConfirmations.sort((a, b) => {
@@ -2797,7 +2779,6 @@ async function fetchDelegationConfirmations() {
             return dateB - dateA;
         });
 
-        console.log('Final sorted confirmations:', allConfirmations.length);
         return allConfirmations;
 
     } catch (error) {
@@ -2830,14 +2811,9 @@ function getSignatureFromData(confirmation) {
 
 // دالة عرض اقرارات التفويض
 function renderDelegationConfirmations(confirmations) {
-  // الحصول على معرف المستخدم الحالي
-  const currentUserId = getCurrentUserId();
-  
   const listContainer = document.getElementById('delegationConfirmationsList');
   
-  console.log('Rendering confirmations:', confirmations.length);
-  console.log('Bulk confirmations:', confirmations.filter(c => c.is_bulk).length);
-  console.log('Regular confirmations:', confirmations.filter(c => !c.is_bulk).length);
+
   
   if (confirmations.length === 0) {
     listContainer.innerHTML = `
@@ -2873,10 +2849,10 @@ function renderDelegationConfirmations(confirmations) {
     
     // عرض اقرار منفصل حسب نوع التفويض
     if (confirmation.delegation_type === 'sender') {
-      delegationTypeBadge = `<span class="delegation-type-badge sender">اقرار المرسل: ${confirmation.delegator.fullName}</span>`;
+      delegationTypeBadge = `<span class="delegation-type-badge sender">اقرار المرسل: ${confirmation.delegator?.fullName || 'غير معروف'}</span>`;
       delegationTypeClass = 'delegation-sender';
     } else if (confirmation.delegation_type === 'receiver') {
-      delegationTypeBadge = `<span class="delegation-type-badge receiver">اقرار المستقبل: ${confirmation.delegate.fullName}</span>`;
+      delegationTypeBadge = `<span class="delegation-type-badge receiver">اقرار المستقبل: ${confirmation.delegate?.fullName || 'غير معروف'}</span>`;
       delegationTypeClass = 'delegation-receiver';
     }
 
@@ -2886,7 +2862,7 @@ function renderDelegationConfirmations(confirmations) {
         <div class="delegation-confirmation-files">
           <div class="delegation-confirmation-files-summary">
             <i class="fas fa-globe" style="color: #007bff; margin-left: 8px;"></i>
-            تفويض شامل لجميع الملفات المعلقة في ${contentTypeText}
+            تفويض شامل لجميع الملفات المعلقة  
           </div>
         </div>
       `;
@@ -2931,11 +2907,11 @@ function renderDelegationConfirmations(confirmations) {
             <h4>معلومات الموظف المفوض</h4>
             <div class="delegation-confirmation-info-row">
               <span class="delegation-confirmation-label">الاسم:</span>
-              <span class="delegation-confirmation-value">${confirmation.delegator.fullName}</span>
+              <span class="delegation-confirmation-value">${confirmation.delegator?.fullName || 'غير معروف'}</span>
             </div>
             <div class="delegation-confirmation-info-row">
               <span class="delegation-confirmation-label">رقم الهوية:</span>
-              <span class="delegation-confirmation-value">${confirmation.delegator.idNumber}</span>
+              <span class="delegation-confirmation-value">${confirmation.delegator?.idNumber || 'غير محدد'}</span>
             </div>
           </div>
           
@@ -2943,26 +2919,26 @@ function renderDelegationConfirmations(confirmations) {
             <h4>معلومات الموظف المفوض له</h4>
             <div class="delegation-confirmation-info-row">
               <span class="delegation-confirmation-label">الاسم:</span>
-              <span class="delegation-confirmation-value">${confirmation.delegate.fullName}</span>
+              <span class="delegation-confirmation-value">${confirmation.delegate?.fullName || 'غير معروف'}</span>
             </div>
             <div class="delegation-confirmation-info-row">
               <span class="delegation-confirmation-label">رقم الهوية:</span>
-              <span class="delegation-confirmation-value">${confirmation.delegate.idNumber}</span>
+              <span class="delegation-confirmation-value">${confirmation.delegate?.idNumber || 'غير محدد'}</span>
             </div>
           </div>
         </div>
         
         <div class="delegation-confirmation-statement">
           ${confirmation.delegation_type === 'sender' 
-            ? `أقر الموظف <strong>${confirmation.delegator.fullName}</strong> 
-               ذو رقم الهوية <strong>${confirmation.delegator.idNumber}</strong> 
-               بأنه يفوض الموظف <strong>${confirmation.delegate.fullName}</strong> 
-               ذو رقم الهوية <strong>${confirmation.delegate.idNumber}</strong> 
+            ? `أقر الموظف <strong>${confirmation.delegator?.fullName || 'غير معروف'}</strong> 
+               ذو رقم الهوية <strong>${confirmation.delegator?.idNumber || 'غير محدد'}</strong> 
+               بأنه يفوض الموظف <strong>${confirmation.delegate?.fullName || 'غير معروف'}</strong> 
+               ذو رقم الهوية <strong>${confirmation.delegate?.idNumber || 'غير محدد'}</strong> 
                بالتوقيع بالنيابة عنه على ${confirmation.is_bulk ? 'جميع الملفات المعلقة' : 'الملفات المحددة'}.`
-            : `أقر الموظف <strong>${confirmation.delegate.fullName}</strong> 
-               ذو رقم الهوية <strong>${confirmation.delegate.idNumber}</strong> 
-               بقبول التفويض من الموظف <strong>${confirmation.delegator.fullName}</strong> 
-               ذو رقم الهوية <strong>${confirmation.delegator.idNumber}</strong> 
+            : `أقر الموظف <strong>${confirmation.delegate?.fullName || 'غير معروف'}</strong> 
+               ذو رقم الهوية <strong>${confirmation.delegate?.idNumber || 'غير محدد'}</strong> 
+               بقبول التفويض من الموظف <strong>${confirmation.delegator?.fullName || 'غير معروف'}</strong> 
+               ذو رقم الهوية <strong>${confirmation.delegator?.idNumber || 'غير محدد'}</strong> 
                للتوقيع بالنيابة عنه على ${confirmation.is_bulk ? 'جميع الملفات المعلقة' : 'الملفات المحددة'}.`
           }
         </div>
