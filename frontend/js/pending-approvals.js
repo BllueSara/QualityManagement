@@ -568,9 +568,7 @@ async function handleRemoveApprover(approvalItem, approverName, contentId, conte
     // 4) إذا لم يتم الإرسال بعد، حذف من الواجهة فقط
     if (!isSent) {
       // حذف مباشر من الواجهة بدون استدعاء الخادم
-      updateApprovalItemUI(approvalItem, updatedNames, updatedIds);
-      approvalItem.dataset.assignedNames = JSON.stringify(updatedNames);
-      approvalItem.dataset.assignedIds = JSON.stringify(updatedIds);
+      updateLocalData(approvalItem, updatedNames, updatedIds);
       
       showToast('تم حذف المعتمد من القائمة', 'success');
       return; // انتهاء العملية هنا
@@ -604,7 +602,8 @@ async function handleRemoveApprover(approvalItem, approverName, contentId, conte
       
       requestBody = {
         contentId: contentId,
-        approvers: updatedIds
+        approvers: updatedIds,
+        removedUserId: removedUserId // إرسال معرف المعتمد المحذوف
       };
       
       await fetchJSON(endpoint, {
@@ -614,17 +613,16 @@ async function handleRemoveApprover(approvalItem, approverName, contentId, conte
     }
     
     // 6) تحديث الواجهة
-    updateApprovalItemUI(approvalItem, updatedNames, updatedIds);
+    updateLocalData(approvalItem, updatedNames, updatedIds);
     
-    // 7) تحديث البيانات المحفوظة
-    approvalItem.dataset.assignedNames = JSON.stringify(updatedNames);
-    approvalItem.dataset.assignedIds = JSON.stringify(updatedIds);
+    // 7) تحديث البيانات المحفوظة - تم نقله إلى updateLocalData
     
     showToast(getTranslation('approver-removed-success') || 'تم حذف المعتمد بنجاح', 'success');
     
     // 8) إعادة تحميل البيانات للتأكد من التحديث (فقط للمرسل)
-    await loadPendingApprovals();
-    await initDropdowns();
+    // تم إزالة إعادة التحميل التلقائية لمنع إعادة ظهور المعتمد المحذوف
+    // await loadPendingApprovals();
+    // await initDropdowns();
     
   } catch (error) {
     console.error('Error removing approver:', error);
@@ -2892,4 +2890,32 @@ function getTranslation(key) {
 
   const currentLang = localStorage.getItem('language') || 'ar';
   return translations[currentLang]?.[key] || key;
+}
+
+// دالة للتأكد من أن البيانات المحذوفة لا تعود
+function validateApproversData(approvalItem) {
+  const assignedNames = JSON.parse(approvalItem.dataset.assignedNames || '[]');
+  const assignedIds = JSON.parse(approvalItem.dataset.assignedIds || '[]');
+  
+  // التحقق من تطابق عدد الأسماء مع عدد المعرفات
+  if (assignedNames.length !== assignedIds.length) {
+    console.warn('Mismatch between assigned names and IDs:', { assignedNames, assignedIds });
+    return false;
+  }
+  
+  return true;
+}
+
+// دالة لتحديث البيانات المحلية بعد الحذف
+function updateLocalData(approvalItem, updatedNames, updatedIds) {
+  approvalItem.dataset.assignedNames = JSON.stringify(updatedNames);
+  approvalItem.dataset.assignedIds = JSON.stringify(updatedIds);
+  
+  // تحديث الواجهة
+  updateApprovalItemUI(approvalItem, updatedNames, updatedIds);
+  
+  // التحقق من صحة البيانات
+  if (!validateApproversData(approvalItem)) {
+    console.error('Data validation failed after update');
+  }
 }

@@ -519,7 +519,7 @@ exports.updateApprovers = async (req, res) => {
     return res.status(401).json({ status: 'error', message: 'Invalid token' });
   }
 
-  let { contentId, approvers } = req.body;
+  let { contentId, approvers, removedUserId } = req.body;
 
   if (typeof contentId === 'string' && contentId.includes('-')) {
     contentId = parseInt(contentId.split('-')[1], 10);
@@ -542,22 +542,42 @@ exports.updateApprovers = async (req, res) => {
   try {
     await conn.beginTransaction();
 
-    // حذف جميع المعتمدين الحاليين
-    await conn.execute(
-      'DELETE FROM committee_content_approvers WHERE content_id = ?',
-      [contentId]
-    );
-
-    // إضافة المعتمدين الجدد
-    if (approvers.length > 0) {
-      const values = approvers.map(approverId => [contentId, approverId]);
-      await conn.query(
-        'INSERT INTO committee_content_approvers (content_id, user_id) VALUES ?',
-        [values]
+    // إذا كان هناك معتمد محدد للحذف، احذفه فقط
+    if (removedUserId) {
+      await conn.execute(
+        'DELETE FROM committee_content_approvers WHERE content_id = ? AND user_id = ?',
+        [contentId, removedUserId]
+      );
+      
+      // حذف سجلات الاعتماد المرتبطة
+      await conn.execute(
+        'DELETE FROM committee_approval_logs WHERE content_id = ? AND approver_id = ? AND status = "pending"',
+        [contentId, removedUserId]
+      );
+      
+      // تحديث approvers_required في جدول committee_contents
+      await conn.execute(
+        'UPDATE committee_contents SET approvers_required = ? WHERE id = ?',
+        [JSON.stringify(approvers), contentId]
+      );
+      
+      console.log(`Removed committee approver ${removedUserId} from content ${contentId}`);
+    } else {
+      // إذا لم يكن هناك معتمد محدد للحذف، استخدم الطريقة القديمة (حذف وإعادة إدخال)
+      // حذف جميع المعتمدين الحاليين
+      await conn.execute(
+        'DELETE FROM committee_content_approvers WHERE content_id = ?',
+        [contentId]
       );
 
-      // ملاحظة: assigned_approvers يتم حسابه ديناميكياً في الاستعلامات باستخدام GROUP_CONCAT
-      // لذلك لا نحتاج لتحديثه هنا
+      // إضافة المعتمدين الجدد
+      if (approvers.length > 0) {
+        const values = approvers.map(approverId => [contentId, approverId]);
+        await conn.query(
+          'INSERT INTO committee_content_approvers (content_id, user_id) VALUES ?',
+          [values]
+        );
+      }
     }
 
     await conn.commit();

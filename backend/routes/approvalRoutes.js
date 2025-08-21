@@ -37,6 +37,8 @@ router.delete('/:id/delegation', require('../controllers/approvalController').re
 router.get('/delegated-by/:userId', require('../controllers/approvalController').getDelegationsByUser);
 // جلب التفويضات المعلقة الموحدة (أقسام ولجان)
 router.get('/pending-delegations-unified/:userId', require('../controllers/approvalController').getPendingDelegationsUnified);
+// جلب جميع التفويضات الشاملة (للمشرفين)
+router.get('/pending-delegations-unified', require('../controllers/approvalController').getAllPendingDelegationsUnified);
 // معالجة التفويض المباشر الموحد (أقسام ولجان)
 router.post('/direct-delegation-unified/process', require('../controllers/approvalController').processDirectDelegationUnified);
 // معالجة التفويض الجماعي الموحد (أقسام ولجان)

@@ -211,14 +211,7 @@ async function checkDelegationStatus() {
     // 0. فحص التفويضات المعلقة التي تحتاج تأكيد (بوب أب)
     await checkPendingDelegationConfirmations();
 
-    // 1. فحص التفويضات الفردية أولاً (ملف واحد فقط) - ستظهر في الجدول للقبول أو الرفض
-    const hasSingleDelegations = await checkSingleDelegations();
-    if (hasSingleDelegations) {
-      console.log('✅ Found single delegations, they will appear in the table for accept/reject');
-      // التفويضات الفردية لا تظهر بوب أب، فقط في الجدول
-    }
-
-    // 2. فحص التفويض المباشر من جدول active_delegations (جميع الملفات)
+    // 1. فحص التفويض المباشر من جدول active_delegations (جميع الملفات) - أولوية عالية
     const delegationUrl = `http://localhost:3006/api/users/${currentUserId}/delegation-status`;
     console.log('Calling delegation status URL:', delegationUrl);
     const delegationRes = await fetch(delegationUrl, {
@@ -234,7 +227,7 @@ async function checkDelegationStatus() {
 
     const delegationJson = await delegationRes.json();
     console.log('Delegation status response:', delegationJson);
-    console.log('🔍 Delegation data:', delegationJson.data);
+    console.log('�� Delegation data:', delegationJson.data);
 
     if (delegationJson.status === 'success' && delegationJson.data && delegationJson.data.delegated_by) {
       console.log('✅ Found direct delegation from user:', delegationJson.data.delegated_by);
@@ -252,8 +245,8 @@ async function checkDelegationStatus() {
       console.log('❌ No direct delegation found');
     }
 
-    // 3. فحص التفويضات المعلقة الموحدة (أقسام ولجان) - جميع الملفات
-    // ملاحظة: التفويضات الفردية لا تظهر هنا لأنها تظهر في الجدول فقط
+    // 2. فحص التفويضات الشاملة المعلقة أولاً - أولوية عالية
+    console.log('🔍 Checking for bulk delegations...');
     const pendingDelegationsUrl = `http://localhost:3006/api/approvals/pending-delegations-unified/${currentUserId}`;
     console.log('Calling pending delegations unified URL:', pendingDelegationsUrl);
     const pendingDelegationsRes = await fetch(pendingDelegationsUrl, {
@@ -275,69 +268,33 @@ async function checkDelegationStatus() {
       console.log('✅ Found pending unified delegations:', pendingDelegationsJson.data.length);
 
       // تحقق من سجلات الموافقة قبل عرض البوب أب
-      const latestDelegation = pendingDelegationsJson.data[0]; // أحدث تفويض
+      const latestDelegation = pendingDelegationsJson.data[0]; // أحدث تفويض شامل
       const hasProcessedDelegation = await checkDelegationApprovalLogs(latestDelegation.delegated_by, 'bulk', latestDelegation.id);
+
       if (!hasProcessedDelegation) {
-        // هناك تفويضات معلقة - عرض بوب أب التفويض الجماعي الموحد (جميع الملفات)
+        // هناك تفويض شامل - عرض بوب أب التفويض الشامل (جميع الملفات)
+        console.log('🔍 Showing bulk delegation popup for:', latestDelegation);
         await showBulkDelegationPopup(latestDelegation.id, latestDelegation.delegated_by_name);
+        console.log('🔍 Bulk delegation popup shown, returning early');
+        return; // مهم جداً: لا نفحص التفويضات الفردية إذا كان هناك شامل
       } else {
         console.log('✅ Bulk delegation already processed, skipping popup');
       }
-      return;
     } else {
       console.log('❌ No pending unified delegations found');
     }
 
+    // 3. فحص التفويضات الفردية فقط إذا لم يكن هناك تفويض شامل - أولوية منخفضة
+    console.log('🔍 No bulk delegations found, checking for single delegations...');
+    const hasSingleDelegations = await checkSingleDelegations();
+    if (hasSingleDelegations) {
+      console.log('✅ Found single delegations, they will appear in the table for accept/reject');
+      // التفويضات الفردية لا تظهر بوب أب، فقط في الجدول
+    }
+
     console.log('🔍 No delegations found for user:', currentUserId);
 
-    // تشخيص إضافي للتفويضات الجماعية
-    console.log('🔍 Checking for bulk delegations specifically...');
-    try {
-      const bulkCheckUrl = `http://localhost:3006/api/approvals/pending-delegations-unified/${currentUserId}`;
-      const bulkCheckRes = await fetch(bulkCheckUrl, { headers: authHeaders() });
-      if (bulkCheckRes.ok) {
-        const bulkCheckJson = await bulkCheckRes.json();
-        console.log('🔍 Bulk delegations check:', bulkCheckJson);
-        if (bulkCheckJson.status === 'success' && bulkCheckJson.data && bulkCheckJson.data.length > 0) {
-          console.log('🔍 Found bulk delegations but they were not processed:', bulkCheckJson.data);
-        } else {
-          console.log('🔍 No bulk delegations found in database');
-        }
-      }
-    } catch (err) {
-      console.error('❌ Error checking bulk delegations:', err);
-    }
-
-    // تشخيص إضافي لـ active_delegations
-    console.log('🔍 Checking active_delegations specifically...');
-    try {
-      const activeCheckUrl = `http://localhost:3006/api/users/${currentUserId}/delegation-status`;
-      const activeCheckRes = await fetch(activeCheckUrl, { headers: authHeaders() });
-      if (activeCheckRes.ok) {
-        const activeCheckJson = await activeCheckRes.json();
-        console.log('🔍 Active delegations check:', activeCheckJson);
-      }
-    } catch (err) {
-      console.error('❌ Error checking active delegations:', err);
-    }
-
-    // تشخيص إضافي للتفويضات الجماعية في approval_logs
-    console.log('🔍 Checking approval_logs for bulk delegations...');
-    try {
-      const approvalLogsUrl = `http://localhost:3006/api/approvals/delegation-logs/${currentUserId}/6`;
-      const approvalLogsRes = await fetch(approvalLogsUrl, { headers: authHeaders() });
-      if (approvalLogsRes.ok) {
-        const approvalLogsJson = await approvalLogsRes.json();
-        console.log('🔍 Approval logs check:', approvalLogsJson);
-        if (approvalLogsJson.status === 'success' && approvalLogsJson.data && approvalLogsJson.data.length > 0) {
-          const bulkLogs = approvalLogsJson.data.filter(log => log.content_id === null);
-          console.log('🔍 Bulk delegation logs found:', bulkLogs);
-        }
-      }
-    } catch (err) {
-      console.error('❌ Error checking approval logs:', err);
-    }
-
+    // ... existing code ...
   } catch (err) {
     console.error('خطأ في فحص حالة التفويض:', err);
     if (err.response) {
@@ -345,7 +302,6 @@ async function checkDelegationStatus() {
     }
   }
 }
-
 async function checkPendingDelegationConfirmations() {
   try {
     console.log('🔍 Checking for pending delegation confirmations...');
@@ -355,11 +311,72 @@ async function checkPendingDelegationConfirmations() {
     const processedDelegations = JSON.parse(localStorage.getItem('processedDelegations') || '[]');
     console.log('🔍 Processed delegations in current session:', processedDelegations);
 
-    // لا نتخطى الفحص - قد يكون لديه تفويضات جديدة معلقة
-    // if (processedDelegations.length > 0) {
-    //   console.log('🔍 Found processed delegations in current session, skipping popup check');
-    //   return;
-    // }
+    // 1. فحص التفويضات الشاملة المعلقة أولاً - أولوية عالية
+    console.log('🔍 Checking for bulk delegations FIRST...');
+    const bulkResponse = await fetch(`http://localhost:3006/api/approvals/pending-delegations-unified/${currentUserId}`, {
+      headers: authHeaders()
+    });
+
+    if (bulkResponse.ok) {
+      const bulkData = await bulkResponse.json();
+      if (bulkData.status === 'success' && bulkData.data && bulkData.data.length > 0) {
+        console.log('�� Found pending bulk delegations:', bulkData.data.length);
+
+        for (const delegation of bulkData.data) {
+          console.log('🔍 Processing bulk delegation:', delegation);
+          
+          // جلب بيانات المفوض مباشرة
+          const delegatorResponse = await fetch(`http://localhost:3006/api/users/${delegation.delegated_by}`, {
+            headers: authHeaders()
+          });
+          
+          if (delegatorResponse.ok) {
+            const delegatorData = await delegatorResponse.json();
+            const delegatorName = delegatorData.data?.name || delegatorData.data?.username || 'المفوض';
+            const delegatorIdNumber = delegatorData.data?.national_id || delegatorData.data?.id_number || 'غير محدد';
+
+            // جلب بيانات المفوض له (المستخدم الحالي)
+            const currentUserResponse = await fetch(`http://localhost:3006/api/users/${currentUserId}`, {
+              headers: authHeaders()
+            });
+            
+            if (currentUserResponse.ok) {
+              const currentUserData = await currentUserResponse.json();
+              const delegateName = currentUserData.data?.name || currentUserData.data?.username || 'المفوض له';
+              const delegateIdNumber = currentUserData.data?.national_id || currentUserData.data?.id_number || 'غير محدد';
+
+              // إنشاء بيانات التفويض
+              const delegatorInfo = {
+                fullName: delegatorName,
+                idNumber: delegatorIdNumber
+              };
+
+              const delegateInfo = {
+                fullName: delegateName,
+                idNumber: delegateIdNumber
+              };
+
+              console.log('🔍 Showing bulk delegation confirmation popup');
+              showDelegationConfirmationPopup(
+                delegatorInfo,
+                delegateInfo,
+                [], // لا توجد ملفات محددة للتفويض الشامل
+                true, // isBulk = true للتفويض الشامل
+                {
+                  delegationId: delegation.id,
+                  delegationType: 'bulk',
+                  delegatorId: delegation.delegated_by
+                }
+              );
+              return; // عرض بوب أب واحد فقط للتفويض الشامل
+            }
+          }
+        }
+      }
+    }
+
+    // 2. فحص التفويضات الفردية فقط إذا لم يكن هناك تفويض شامل
+    console.log('🔍 No bulk delegations found, checking for single delegations...');
 
     // فحص التفويضات الفردية المعلقة للأقسام
     console.log('🔍 Checking department single delegations...');
@@ -373,29 +390,43 @@ async function checkPendingDelegationConfirmations() {
         console.log('🔍 Found pending single department delegations:', singleDeptData.data.length);
 
         for (const delegation of singleDeptData.data) {
-          // جلب بيانات التأكيد للمفوض له
-          const confirmationResponse = await fetch('http://localhost:3006/api/approvals/delegation-confirmation-data', {
-            method: 'POST',
-            headers: {
-              ...authHeaders(),
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              delegationId: delegation.id,
-              delegationType: 'single',
-              contentType: 'department'
-            })
+          // جلب بيانات المفوض مباشرة
+          const delegatorResponse = await fetch(`http://localhost:3006/api/users/${delegation.delegated_by}`, {
+            headers: authHeaders()
           });
+          
+          if (delegatorResponse.ok) {
+            const delegatorData = await delegatorResponse.json();
+            const delegatorName = delegatorData.data?.name || delegatorData.data?.username || 'المفوض';
+            const delegatorIdNumber = delegatorData.data?.national_id || delegatorData.data?.id_number || 'غير محدد';
 
-          if (confirmationResponse.ok) {
-            const confirmationData = await confirmationResponse.json();
-            if (confirmationData.status === 'success' && confirmationData.confirmationData) {
+            // جلب بيانات المفوض له (المستخدم الحالي)
+            const currentUserResponse = await fetch(`http://localhost:3006/api/users/${currentUserId}`, {
+              headers: authHeaders()
+            });
+            
+            if (currentUserResponse.ok) {
+              const currentUserData = await currentUserResponse.json();
+              const delegateName = currentUserData.data?.name || currentUserData.data?.username || 'المفوض له';
+              const delegateIdNumber = currentUserData.data?.national_id || currentUserData.data?.id_number || 'غير محدد';
+
+              // إنشاء بيانات التفويض
+              const delegatorInfo = {
+                fullName: delegatorName,
+                idNumber: delegatorIdNumber
+              };
+
+              const delegateInfo = {
+                fullName: delegateName,
+                idNumber: delegateIdNumber
+              };
+
               console.log('🔍 Showing single department delegation confirmation popup');
               showDelegationConfirmationPopup(
-                confirmationData.confirmationData.delegator,
-                confirmationData.confirmationData.delegate,
-                confirmationData.confirmationData.file ? [confirmationData.confirmationData.file] : [],
-                false,
+                delegatorInfo,
+                delegateInfo,
+                [], // ملف واحد فقط
+                false, // isBulk = false للتفويض الفردي
                 {
                   delegationId: delegation.id,
                   delegationType: 'single',
@@ -410,7 +441,7 @@ async function checkPendingDelegationConfirmations() {
     }
 
     // فحص التفويضات الفردية المعلقة للجان
-    console.log('🔍 Checking committee single delegations...');
+    console.log('�� Checking committee single delegations...');
     const singleCommResponse = await fetch(`http://localhost:3006/api/committee-approvals/single-delegations/${currentUserId}`, {
       headers: authHeaders()
     });
@@ -421,29 +452,43 @@ async function checkPendingDelegationConfirmations() {
         console.log('🔍 Found pending single committee delegations:', singleCommData.data.length);
 
         for (const delegation of singleCommData.data) {
-          // جلب بيانات التأكيد للمفوض له
-          const confirmationResponse = await fetch('http://localhost:3006/api/approvals/delegation-confirmation-data', {
-            method: 'POST',
-            headers: {
-              ...authHeaders(),
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              delegationId: delegation.id,
-              delegationType: 'single',
-              contentType: 'committee'
-            })
+          // جلب بيانات المفوض مباشرة
+          const delegatorResponse = await fetch(`http://localhost:3006/api/users/${delegation.delegated_by}`, {
+            headers: authHeaders()
           });
+          
+          if (delegatorResponse.ok) {
+            const delegatorData = await delegatorResponse.json();
+            const delegatorName = delegatorData.data?.name || delegatorData.data?.username || 'المفوض';
+            const delegatorIdNumber = delegatorData.data?.national_id || delegatorData.data?.id_number || 'غير محدد';
 
-          if (confirmationResponse.ok) {
-            const confirmationData = await confirmationResponse.json();
-            if (confirmationData.status === 'success' && confirmationData.confirmationData) {
+            // جلب بيانات المفوض له (المستخدم الحالي)
+            const currentUserResponse = await fetch(`http://localhost:3006/api/users/${currentUserId}`, {
+              headers: authHeaders()
+            });
+            
+            if (currentUserResponse.ok) {
+              const currentUserData = await currentUserResponse.json();
+              const delegateName = currentUserData.data?.name || currentUserData.data?.username || 'المفوض له';
+              const delegateIdNumber = currentUserData.data?.national_id || currentUserData.data?.id_number || 'غير محدد';
+
+              // إنشاء بيانات التفويض
+              const delegatorInfo = {
+                fullName: delegatorName,
+                idNumber: delegatorIdNumber
+              };
+
+              const delegateInfo = {
+                fullName: delegateName,
+                idNumber: delegateIdNumber
+              };
+
               console.log('🔍 Showing single committee delegation confirmation popup');
               showDelegationConfirmationPopup(
-                confirmationData.confirmationData.delegator,
-                confirmationData.confirmationData.delegate,
-                confirmationData.confirmationData.file ? [confirmationData.confirmationData.file] : [],
-                false,
+                delegatorInfo,
+                delegateInfo,
+                [], // ملف واحد فقط
+                false, // isBulk = false للتفويض الفردي
                 {
                   delegationId: delegation.id,
                   delegationType: 'single',
@@ -473,107 +518,61 @@ async function checkPendingDelegationConfirmations() {
 
         for (const delegation of singleProtData.data) {
           console.log('🔍 Processing protocol delegation:', delegation);
-          console.log('🔍 delegation object keys:', Object.keys(delegation));
-          console.log('🔍 delegation.delegation_id:', delegation.delegation_id);
-          console.log('🔍 delegation.delegated_by:', delegation.delegated_by);
-          console.log('🔍 delegation.content_id:', delegation.content_id);
-
-          // جلب بيانات التأكيد للمفوض له
-          const confirmationResponse = await fetch('http://localhost:3006/api/protocols/delegation-confirmation-data', {
-            method: 'POST',
-            headers: {
-              ...authHeaders(),
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              delegateTo: delegation.delegated_by,
-              contentId: delegation.content_id,
-              contentType: 'protocol',
-              isBulk: false
-            })
+          
+          // جلب بيانات المفوض مباشرة
+          const delegatorResponse = await fetch(`http://localhost:3006/api/users/${delegation.delegated_by}`, {
+            headers: authHeaders()
           });
+          
+          if (delegatorResponse.ok) {
+            const delegatorData = await delegatorResponse.json();
+            const delegatorName = delegatorData.data?.name || delegatorData.data?.username || 'المفوض';
+            const delegatorIdNumber = delegatorData.data?.national_id || delegatorData.data?.id_number || 'غير محدد';
 
-          console.log('🔍 Protocol confirmation response status:', confirmationResponse.status);
+            // جلب بيانات المفوض له (المستخدم الحالي)
+            const currentUserResponse = await fetch(`http://localhost:3006/api/users/${currentUserId}`, {
+              headers: authHeaders()
+            });
+            
+            if (currentUserResponse.ok) {
+              const currentUserData = await currentUserResponse.json();
+              const delegateName = currentUserData.data?.name || currentUserData.data?.username || 'المفوض له';
+              const delegateIdNumber = currentUserData.data?.national_id || currentUserData.data?.id_number || 'غير محدد';
 
-          if (confirmationResponse.ok) {
-            const confirmationData = await confirmationResponse.json();
-            console.log('🔍 Protocol confirmation data:', confirmationData);
+              // إنشاء بيانات التفويض
+              const delegatorInfo = {
+                fullName: delegatorName,
+                idNumber: delegatorIdNumber
+              };
 
-            if (confirmationData.status === 'success' && confirmationData.confirmationData) {
+              const delegateInfo = {
+                fullName: delegateName,
+                idNumber: delegateIdNumber
+              };
+
               console.log('🔍 Showing single protocol delegation confirmation popup');
               const delegationData = {
-                delegationId: delegation.delegation_id,
+                delegationId: delegation.delegation_id || delegation.id,
                 delegationType: 'single',
                 contentType: 'protocol'
               };
-              console.log('🔍 delegationData being passed:', delegationData);
-              // التأكد من وجود الملفات - إما file أو files
-              const fileArray = confirmationData.confirmationData.files ||
-                (confirmationData.confirmationData.file ? [confirmationData.confirmationData.file] : []);
-
+              
               showDelegationConfirmationPopup(
-                confirmationData.confirmationData.delegator,
-                confirmationData.confirmationData.delegate,
-                fileArray,
-                false,
+                delegatorInfo,
+                delegateInfo,
+                [], // ملف واحد فقط
+                false, // isBulk = false للتفويض الفردي
                 delegationData
               );
               return; // عرض بوب أب واحد فقط
             }
-          } else {
-            console.error('🔍 Protocol confirmation request failed:', confirmationResponse.status, confirmationResponse.statusText);
           }
         }
       } else {
-        console.log('🔍 No protocol single delegations found or invalid response');
+        console.log('�� No protocol single delegations found or invalid response');
       }
     } else {
       console.error('🔍 Protocol single delegations request failed:', singleProtResponse.status, singleProtResponse.statusText);
-    }
-
-    // فحص التفويضات الشاملة المعلقة
-    const bulkResponse = await fetch(`http://localhost:3006/api/approvals/pending-delegations-unified/${currentUserId}`, {
-      headers: authHeaders()
-    });
-
-    if (bulkResponse.ok) {
-      const bulkData = await bulkResponse.json();
-      if (bulkData.status === 'success' && bulkData.data && bulkData.data.length > 0) {
-        console.log('🔍 Found pending bulk delegations:', bulkData.data.length);
-
-        for (const delegation of bulkData.data) {
-          // جلب بيانات التأكيد للمفوض له
-          const confirmationResponse = await fetch('http://localhost:3006/api/approvals/delegation-confirmation-data', {
-            method: 'POST',
-            headers: {
-              ...authHeaders(),
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              delegationId: delegation.id,
-              delegationType: 'bulk'
-            })
-          });
-
-          if (confirmationResponse.ok) {
-            const confirmationData = await confirmationResponse.json();
-            if (confirmationData.status === 'success' && confirmationData.confirmationData) {
-              console.log('🔍 Showing bulk delegation confirmation popup');
-              showDelegationConfirmationPopup(
-                confirmationData.confirmationData.delegator,
-                confirmationData.confirmationData.delegate,
-                [],
-                true,
-                {
-                  delegationId: delegation.id,
-                  delegationType: 'bulk'
-                }
-              );
-              return; // عرض بوب أب واحد فقط
-            }
-          }
-        }
-      }
     }
 
     console.log('🔍 No pending delegation confirmations found');

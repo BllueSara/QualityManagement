@@ -2608,44 +2608,202 @@ function closeDelegationConfirmationsModal() {
 
 // دالة جلب اقرارات التفويض من الخادم
 async function fetchDelegationConfirmations() {
-  try {
-    // التحقق من وجود token
-    if (!authToken) {
-      console.error('No authentication token found');
-      throw new Error('No authentication token found');
+    try {
+        const currentUserId = getCurrentUserId();
+        if (!currentUserId) {
+            console.error('No current user ID found');
+            return;
+        }
+
+
+        // Fetch bulk delegations first
+        let bulkDelegations = [];
+        try {
+            console.log('Attempting to fetch bulk delegations from unified endpoint...');
+            const bulkResponse = await fetch(`${apiBase}/approvals/pending-delegations-unified`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            
+            if (bulkResponse.ok) {
+                const bulkData = await bulkResponse.json();
+                console.log('Bulk delegations raw response:', bulkData);
+                
+                if (bulkData && Array.isArray(bulkData.data)) {
+                    bulkDelegations = bulkData.data;
+                    console.log('Successfully fetched bulk delegations:', bulkDelegations.length);
+                } else if (bulkData && Array.isArray(bulkData)) {
+                    bulkDelegations = bulkData;
+                } else {
+                    console.log('Bulk delegations response structure unexpected:', bulkData);
+                }
+            } else {
+                // Fallback to user-specific endpoint
+                const userBulkResponse = await fetch(`${apiBase}/approvals/pending-delegations-unified/${currentUserId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                
+                if (userBulkResponse.ok) {
+                    const userBulkData = await userBulkResponse.json();
+                    console.log('User-specific bulk delegations raw response:', userBulkData);
+                    
+                    if (userBulkData && Array.isArray(userBulkData.data)) {
+                        bulkDelegations = userBulkData.data;
+                    } else if (userBulkData && Array.isArray(userBulkData)) {
+                        bulkDelegations = userBulkData;
+                    } else {
+                    }
+                } else {
+                    console.log('User-specific bulk delegations endpoint also failed');
+                }
+            }
+        } catch (bulkError) {
+            console.error('Error fetching bulk delegations:', bulkError);
+        }
+
+        console.log('Final bulk delegations count:', bulkDelegations.length);
+
+        // Fetch regular delegation confirmations
+        let regularConfirmations = [];
+        try {
+            console.log('Fetching regular delegation confirmations...');
+            const confirmationsResponse = await fetch(`${apiBase}/approvals/delegation-confirmations`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            console.log('Regular confirmations response status:', confirmationsResponse.status);
+            
+            if (confirmationsResponse.ok) {
+                const confirmationsData = await confirmationsResponse.json();
+                console.log('Regular confirmations raw response:', confirmationsData);
+                
+                if (confirmationsData && Array.isArray(confirmationsData.data)) {
+                    regularConfirmations = confirmationsData.data;
+                    console.log('Successfully fetched regular confirmations:', regularConfirmations.length);
+                } else if (confirmationsData && Array.isArray(confirmationsData)) {
+                    regularConfirmations = confirmationsData;
+                    console.log('Successfully fetched regular confirmations (direct array):', regularConfirmations.length);
+                } else {
+                    console.log('Regular confirmations response structure unexpected:', confirmationsData);
+                }
+            } else {
+                console.log('Regular confirmations endpoint failed');
+            }
+        } catch (confirmationsError) {
+            console.error('Error fetching regular confirmations:', confirmationsError);
+        }
+
+        console.log('Final regular confirmations count:', regularConfirmations.length);
+
+        // Process bulk delegations into confirmations format
+        const bulkConfirmations = [];
+        console.log('Processing bulk delegations:', bulkDelegations.length);
+        
+        for (const bulkDelegation of bulkDelegations) {
+            console.log('Processing bulk delegation:', bulkDelegation);
+            
+            // Extract delegator and delegate IDs with multiple fallback options
+            let delegatorId = bulkDelegation.delegated_by || 
+                            bulkDelegation.delegator_id || 
+                            bulkDelegation.user_id || 
+                            bulkDelegation.from_user_id;
+            
+            let delegateId = bulkDelegation.approver_id || 
+                           bulkDelegation.delegate_id || 
+                           bulkDelegation.to_user_id;
+            
+            console.log('Extracted IDs - delegatorId:', delegatorId, 'delegateId:', delegateId);
+            
+            if (!delegatorId || !delegateId) {
+                console.log('Missing delegatorId or delegateId, skipping...');
+                continue;
+            }
+
+            // Only include if current user is the delegate
+            if (delegateId.toString() === currentUserId.toString()) {
+                console.log('Current user is delegate, processing...');
+                
+                // Extract user information with multiple fallback options
+                let delegatorName = '';
+                let delegatorIdNumber = '';
+                let delegateName = '';
+                let delegateIdNumber = '';
+
+                // Try to get delegator info
+                if (bulkDelegation.delegator_data) {
+                    const delegatorData = bulkDelegation.delegator_data.data || bulkDelegation.delegator_data;
+                    delegatorName = delegatorData.name || delegatorData.username || delegatorData.first_name || 'Unknown';
+                    delegatorIdNumber = delegatorData.national_id || delegatorData.id_number || delegatorData.employee_number || '';
+                }
+
+                // Try to get delegate info
+                if (bulkDelegation.approver_data) {
+                    const delegateData = bulkDelegation.approver_data.data || bulkDelegation.approver_data;
+                    delegateName = delegateData.name || delegateData.username || delegateData.first_name || 'Unknown';
+                    delegateIdNumber = delegateData.national_id || delegateData.id_number || delegateData.employee_number || '';
+                }
+
+                console.log('Extracted names - delegatorName:', delegatorName, 'delegateName:', delegateName);
+
+                const bulkConfirmation = {
+                    id: bulkDelegation.id || bulkDelegation.delegation_id || bulkDelegation.request_id,
+                    type: 'bulk',
+                    delegator_id: delegatorId,
+                    delegator_name: delegatorName,
+                    delegator_id_number: delegatorIdNumber,
+                    delegate_id: delegateId,
+                    delegate_name: delegateName,
+                    delegate_id_number: delegateIdNumber,
+                    created_at: bulkDelegation.created_at || bulkDelegation.delegation_date || bulkDelegation.request_date,
+                    signature: bulkDelegation.signature || bulkDelegation.electronic_signature || '',
+                    electronic_signature: bulkDelegation.electronic_signature || bulkDelegation.signature || '',
+                    notes: bulkDelegation.notes || bulkDelegation.comments || '',
+                    content_type: bulkDelegation.content_type || 'all',
+                    department_id: bulkDelegation.department_id || bulkDelegation.dept_id,
+                    department_name: bulkDelegation.department_name || bulkDelegation.dept_name || 'All Departments'
+                };
+
+                console.log('Created bulk confirmation object:', bulkConfirmation);
+                bulkConfirmations.push(bulkConfirmation);
+            } else {
+                console.log('Current user is not delegate, skipping...');
+            }
+        }
+
+        console.log('Bulk confirmations count:', bulkConfirmations.length);
+        console.log('Processing bulk delegations:', bulkDelegations.length);
+
+        // Combine and sort all confirmations
+        const allConfirmations = [...bulkConfirmations, ...regularConfirmations];
+        console.log('Total confirmations (bulk + regular):', allConfirmations.length);
+        
+        // Sort by creation date (newest first)
+        allConfirmations.sort((a, b) => {
+            const dateA = new Date(a.created_at || 0);
+            const dateB = new Date(b.created_at || 0);
+            return dateB - dateA;
+        });
+
+        console.log('Final sorted confirmations:', allConfirmations.length);
+        return allConfirmations;
+
+    } catch (error) {
+        console.error('Error in fetchDelegationConfirmations:', error);
+        return [];
     }
-
-    console.log('Fetching delegation confirmations with token:', authToken.substring(0, 20) + '...');
-    
-    const response = await fetch(`${apiBase}/approvals/delegation-confirmations`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`
-      }
-    });
-
-    console.log('Response status:', response.status);
-    console.log('Response headers:', response.headers);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Response error text:', errorText);
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    console.log('Response data:', data);
-    
-    if (data.status === 'success') {
-      return data.data || [];
-    } else {
-      throw new Error(data.message || 'فشل في جلب اقرارات التفويض');
-    }
-  } catch (error) {
-    console.error('Error fetching delegation confirmations:', error);
-    throw error;
-  }
 }
 
 // دالة استرجاع التوقيع من البيانات المرجعة من الخادم
@@ -2677,7 +2835,27 @@ function renderDelegationConfirmations(confirmations) {
   
   const listContainer = document.getElementById('delegationConfirmationsList');
   
-  const confirmationsHTML = confirmations.map(confirmation => {
+  console.log('Rendering confirmations:', confirmations.length);
+  console.log('Bulk confirmations:', confirmations.filter(c => c.is_bulk).length);
+  console.log('Regular confirmations:', confirmations.filter(c => !c.is_bulk).length);
+  
+  if (confirmations.length === 0) {
+    listContainer.innerHTML = `
+      <div class="delegation-confirmations-empty">
+        <i class="fas fa-clipboard-list"></i>
+        <h3>لا توجد اقرارات تفويض</h3>
+        <p>لم يتم العثور على أي اقرارات تفويض في النظام حتى الآن</p>
+        <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
+          اقرارات التفويض تظهر هنا عندما يقوم المستخدمون بتفويض صلاحياتهم للآخرين (الأقسام واللجان والمحاضر)
+        </p>
+      </div>
+    `;
+    return;
+  }
+  
+  const confirmationsHTML = confirmations.map((confirmation, index) => {
+    console.log(`Rendering confirmation ${index + 1}:`, confirmation);
+    
     const confirmationDate = new Date(confirmation.created_at).toLocaleDateString('ar-SA', {
       year: 'numeric',
       month: 'long',
@@ -2707,7 +2885,8 @@ function renderDelegationConfirmations(confirmations) {
       filesHTML = `
         <div class="delegation-confirmation-files">
           <div class="delegation-confirmation-files-summary">
-            تفويض شامل لجميع الملفات المعلقة
+            <i class="fas fa-globe" style="color: #007bff; margin-left: 8px;"></i>
+            تفويض شامل لجميع الملفات المعلقة في ${contentTypeText}
           </div>
         </div>
       `;
@@ -2729,16 +2908,23 @@ function renderDelegationConfirmations(confirmations) {
     }
 
     return `
-      <div class="delegation-confirmation-item ${delegationTypeClass}">
+      <div class="delegation-confirmation-item ${delegationTypeClass} ${confirmation.is_bulk ? 'bulk-delegation' : ''}">
         <div class="delegation-confirmation-header">
           <div class="delegation-confirmation-title-section">
-            <h3 class="delegation-confirmation-title">اقرار تفويض</h3>
+            <h3 class="delegation-confirmation-title">
+              ${confirmation.is_bulk ? '<i class="fas fa-globe" style="color: #007bff; margin-left: 8px;"></i>' : ''}
+              اقرار تفويض
+            </h3>
             ${delegationTypeBadge}
           </div>
           <span class="delegation-confirmation-date">${confirmationDate}</span>
         </div>
         
-        <div class="delegation-confirmation-type">${delegationTypeText}</div>
+        <div class="delegation-confirmation-type">
+          <span class="delegation-type-indicator ${confirmation.is_bulk ? 'bulk' : 'individual'}">
+            ${delegationTypeText}
+          </span>
+        </div>
         
         <div class="delegation-confirmation-details">
           <div class="delegation-confirmation-section">
@@ -2835,6 +3021,7 @@ function renderDelegationConfirmations(confirmations) {
   }).join('');
 
   listContainer.innerHTML = confirmationsHTML;
+  console.log('Finished rendering confirmations');
 }
 
 // دالة مساعدة للحصول على معرف المستخدم الحالي
