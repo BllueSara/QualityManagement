@@ -235,17 +235,21 @@ const getContentsByFolderId = async (req, res) => {
 
         // جلب معلومات المجلد
         const [folder] = await connection.execute(
-            `SELECT 
+             `SELECT 
                 f.id,
                 f.name,
                 f.department_id,
+                f.type,
                 d.name as department_name,
+                d.approval_sequence as department_approval_sequence,
                 f.created_by,
-                ${getFullNameSQLWithAliasAndFallback('u')} as created_by_username
+                u.username as created_by_username
             FROM folders f 
             JOIN departments d ON f.department_id = d.id
             LEFT JOIN users u ON f.created_by = u.id
-            WHERE f.id = ?`,
+            WHERE f.id = ?
+              AND f.deleted_at IS NULL
+              AND d.deleted_at IS NULL`,
             [folderId]
         );
 
@@ -293,29 +297,53 @@ const getContentsByFolderId = async (req, res) => {
         const [contents] = await connection.execute(query, params);
         connection.release();
 
-        // منطق الفلترة حسب الصلاحية
+        // منطق الفلترة حسب نوع المجلد وصلاحيات المستخدم
         const now = new Date();
         const nowMs = now.getTime();
         const oneDayMs = 24 * 60 * 60 * 1000;
         const isAdmin = decodedToken.role === 'admin' || decodedToken.role === 'super_admin';
-        // TODO: إذا عندك صلاحية خاصة أضفها هنا
+        const userDepartmentId = folder[0].department_id;
+        const folderType = folder[0].type || 'public';
 
 const filtered = contents.filter(item => {
-  if (!item.end_date) return true;
+          // 1) فلترة حسب انتهاء الصلاحية
+          if (item.end_date) {
   const endDate = new Date(item.end_date);
-  if (isNaN(endDate.getTime())) return true;
-
+            if (!isNaN(endDate.getTime())) {
   const diffDays = Math.ceil((endDate.getTime() - nowMs) / (1000 * 60 * 60 * 24));
 
   if (!isAdmin) {
-    // ✅ يظهر للمستخدم العادي إذا ما انتهى أو انتهى اليوم بالضبط
-    if (diffDays >= 0) return true;
-    // 🚫 لو انتهى من أمس أو قبل
+                // المستخدم العادي لا يرى المحتوى المنتهي
+                if (diffDays < 0) return false;
+              }
+            }
+          }
+
+          // 2) فلترة حسب نوع المجلد
+          switch (folderType) {
+            case 'public':
+              // المجلدات العامة: يراها الجميع
+              return true;
+              
+            case 'private':
+              // المجلدات الخاصة: فقط لأعضاء القسم
+              if (isAdmin) return true;
+              return decodedToken.department_id === userDepartmentId;
+              
+            case 'shared':
+              // المجلدات المشتركة: للمعتمدين فقط
+              if (isAdmin) return true;
+              // تحقق من أن المستخدم معتمد على هذا المحتوى
+              try {
+                const approversRequired = JSON.parse(item.approvers_required || '[]');
+                return approversRequired.includes(decodedToken.id);
+              } catch (e) {
     return false;
   }
 
-  // ✅ الأدمن يشوف الكل
+            default:
   return true;
+          }
 }).map(item => {
   let extra = {};
   if (item.end_date) {
@@ -331,9 +359,49 @@ const filtered = contents.filter(item => {
 });
 
 
+        // إضافة رسالة توضيحية حسب نوع المجلد
+        let accessMessage = '';
+        let accessMessageKey = '';
+        console.log('🔍 Debug folder access:', {
+            folderType,
+            isAdmin,
+            userDepartmentId: decodedToken.department_id,
+            folderDepartmentId: userDepartmentId
+        });
+        
+        // تحقق من إمكانية الوصول للمحتوى
+        let hasAccess = false;
+        if (folderType === 'public') {
+            hasAccess = true;
+        } else if (folderType === 'private') {
+            hasAccess = isAdmin || decodedToken.department_id === userDepartmentId;
+        } else if (folderType === 'shared') {
+            hasAccess = isAdmin || filtered.some(item => {
+                try {
+                    const approversRequired = JSON.parse(item.approvers_required || '[]');
+                    return approversRequired.includes(decodedToken.id);
+                } catch (e) {
+                    return false;
+                }
+            });
+        }
+
+        // عرض الرسالة فقط إذا لم يكن لدى المستخدم صلاحية الوصول
+        if (!hasAccess) {
+            if (folderType === 'private') {
+                accessMessageKey = 'folder-access-private-message';
+                console.log('🔒 Setting private folder message - no access');
+            } else if (folderType === 'shared') {
+                accessMessageKey = 'folder-access-shared-message';
+                console.log('🔒 Setting shared folder message - no access');
+            }
+        }
+        
+        console.log('🔍 Final accessMessageKey:', accessMessageKey);
+
         res.json({
             status: 'success',
-            message: 'تم جلب المحتويات بنجاح',
+            message: 'contents-fetched-success',
             folderName: folder[0].name,
             folder: {
                 id: folder[0].id,
@@ -341,13 +409,16 @@ const filtered = contents.filter(item => {
                 department_id: folder[0].department_id,
                 department_name: folder[0].department_name,
                 created_by: folder[0].created_by,
-                created_by_username: folder[0].created_by_username
+                created_by_username: folder[0].created_by_username,
+                type: folderType
             },
-            data: filtered
+            data: filtered,
+            accessMessage: accessMessage,
+            accessMessageKey: accessMessageKey
         });
     } catch (error) {
         console.error('getContentsByFolderId error:', error);
-        res.status(500).json({ message: 'خطأ في جلب المحتويات' });
+        res.status(500).json({ message: 'error-fetching-contents' });
     }
 };
 
@@ -1008,7 +1079,7 @@ const getMyUploadedContent = async (req, res) => {
       return res.json({ status: 'success', data });
 
     } catch (err) {
-      res.status(500).json({ status: 'error', message: 'خطأ في جلب المحتويات التي رفعتها' });
+      res.status(500).json({ status: 'error', message: 'error-fetching-user-contents' });
     }
   };
 

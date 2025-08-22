@@ -19,6 +19,15 @@ const translations = {
         'folder-type-private-desc': 'فقط لأعضاء القسم',
         'folder-type-shared': 'مشترك',
         'folder-type-shared-desc': 'للأشخاص المرسل لهم ملفات للاعتماد',
+        
+        // Folder Access Messages
+        'folder-access-private-message': 'هذا مجلد خاص. يمكنك رؤية المجلد لكن لا يمكنك الوصول لمحتوياته.',
+        'folder-access-shared-message': 'هذا مجلد مشترك. يمكنك رؤية المجلد لكن لا يمكنك الوصول لمحتوياته إلا إذا كنت معتمداً عليها.',
+        
+        // Content Messages
+        'contents-fetched-success': 'تم جلب المحتويات بنجاح',
+        'error-fetching-contents': 'خطأ في جلب المحتويات',
+        'error-fetching-user-contents': 'خطأ في جلب المحتويات التي رفعتها',
         'job-name-label': 'المسمى',
         'full-name-label': 'الاسم الكامل',
         // Main content
@@ -2614,6 +2623,16 @@ const translations = {
         'folder-type-shared': 'Shared',
         'folder-type-shared-desc': 'For people sent files for approval',
 
+        
+        // Folder Access Messages
+        'folder-access-private-message': 'This is a private folder. You can see the folder but cannot access its contents.',
+        'folder-access-shared-message': 'This is a shared folder. You can see the folder but cannot access its contents unless you are an approved approver.',
+        
+        // Content Messages
+        'contents-fetched-success': 'Contents fetched successfully',
+        'error-fetching-contents': 'Error fetching contents',
+        'error-fetching-user-contents': 'Error fetching contents you uploaded',
+
 
 
         // Sign page translations
@@ -3666,6 +3685,9 @@ function applyTranslations() {
 
 // تصدير الدالة للاستخدام العام
 window.applyTranslations = applyTranslations;
+
+// تصدير الترجمات للاستخدام العام
+window.translations = translations;
 
 // Initialize language switcher when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {

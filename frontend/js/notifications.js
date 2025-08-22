@@ -432,6 +432,9 @@ function getNotificationTranslation(text) {
   if (text === 'single_committee_delegation_accepted') {
     return 'Single committee file delegation accepted';
   }
+  if (text === 'single_committee_delegation_rejected') {
+    return 'Single committee file delegation rejected';
+  }
   
   // إشعارات التفويض الموحد
   if (text === 'proxy_bulk_unified') {
