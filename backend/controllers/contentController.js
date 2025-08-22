@@ -241,9 +241,8 @@ const getContentsByFolderId = async (req, res) => {
                 f.department_id,
                 f.type,
                 d.name as department_name,
-                d.approval_sequence as department_approval_sequence,
                 f.created_by,
-                u.username as created_by_username
+                ${getFullNameSQLWithAliasAndFallback('u')} as created_by_username
             FROM folders f 
             JOIN departments d ON f.department_id = d.id
             LEFT JOIN users u ON f.created_by = u.id
