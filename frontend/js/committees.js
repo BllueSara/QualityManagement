@@ -138,6 +138,266 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     return imagePath;
   }
+
+  // قائمة الصور المتاحة من مجلد frontend/images
+  const availableImagesList = [
+    'health information.png',
+    'wheat allergy centre.png',
+    'blood bank.png',
+    'patient experience.png',
+    'family management.png',
+    'admissions management and access support.png',
+    'oral and maxillofacial surgery.png',
+    'ophthalmology unit.png',
+    'vascular surgery.png',
+    'internal medicine rheumatology.png',
+    'internal medicine endocrinology.png',
+    'internal medicine palliative care.png',
+    'internal medicine neurology.png',
+    'internal medicine nephrology.png',
+    'internal medicine infectious diseases.png',
+    'internal medicine pulmonary.png',
+    'internal medicine cardiology.png',
+    'internal medicine hematology.png',
+    'digital health.png',
+    'cybersecurity.png',
+    'admissions office.png',
+    'patient affairs.png',
+    'medical services office.png',
+    'surgery.png',
+    'Virtual Clinics.png',
+    'Strategic and Transformation Management.png',
+    'Social Care Services.png',
+    'Self Resources.png',
+    'Respiratory Care Services.png',
+    'research and innovation.png',
+    'Rehabilitation.png',
+    'Radiology.png',
+    'quality and patient safety.png',
+    'QPS KPIs.png',
+    'Public Health.png',
+    'Provision of Care.png',
+    'Procurement.png',
+    'privileges and competencies.png',
+    'Pharmacy.png',
+    'Patient and Family Rights.png',
+    'Outpatient.png',
+    'Occupational Health.png',
+    'Nursing.png',
+    'Neurosurgery.png',
+    'Medical Statistics.png',
+    'Manual.png',
+    'Management of Information.png',
+    'Legal Affairs.png',
+    'Laboratory.png',
+    'internal control and audit.png',
+    'intensive care unit.png',
+    'Improvement Projects.png',
+    'Human Resources.png',
+    'Home Care Services.png',
+    'Hemodialysis.png',
+    'health informatics.png',
+    'Guest Services.png',
+    'Geriatric Medicine.png',
+    'financial management.png',
+    'finance.png',
+    'ent.png',
+    'Endoscopy.png',
+    'Emergency.png',
+    'Emergency Medicine.png',
+    'Dermatology.png',
+    'Dental Services.png',
+    'Day Procedure Unit.png',
+    'CSSD.png',
+    'Communications.png',
+    'Commitment.png',
+    'Clinics.png',
+    'Clinical Audit.png',
+    'CEO Office.png',
+    'Capacity Management.png',
+    'Anesthesia Care.png',
+    'ADAA KPIs.png',
+    'Urology.png',
+    'Supply Chain.png',
+    'Supervisor of Managers on Duty.png',
+    'Religious Awareness.png',
+    'Psychiatric Medical Care.png',
+    'Patient Safety KPIs.png',
+    'Orthopedic.png',
+    'Optometry Clinic.png',
+    'Operation Room.png',
+    'Mortuary.png',
+    'Medical Staff.png',
+    'Medical Coordinator.png',
+    'Leadership.png',
+    'Investment.png',
+    'Inventory Control.png',
+    'Internal Medicine.png',
+    'Infection Prevention andControl.png',
+    'Infection Prevention and Control.png',
+    'Health Education.png',
+    'General Services.png',
+    'Facilities Management and Safety.png',
+    'esr.png',
+    'Emergency Planning and Preparedness.png',
+    'Education and Academic Affairs.png'
+  ];
+
+  // دالة جلب الصور المتاحة
+  async function fetchAvailableImages() {
+    try {
+      const images = availableImagesList.map(imageName => ({
+        name: imageName,
+        path: `frontend/images/${imageName}`
+      }));
+      return images;
+    } catch (err) {
+      console.error('Error fetching available images:', err);
+      return [];
+    }
+  }
+
+  // دالة فتح نافذة اختيار الصور
+  function openImageSelector(currentImage = '', onImageSelect) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 10000;';
+    
+    modal.innerHTML = `
+      <div class="modal-content" style="background: white; padding: 20px; border-radius: 8px; max-width: 800px; max-height: 80vh; overflow-y: auto; position: relative;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <h3 style="margin: 0;">${getTranslation('select-image') || 'اختر صورة'}</h3>
+          <button class="close-btn" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; margin-bottom: 10px; font-weight: bold;">
+            ${getTranslation('upload-new-image') || 'رفع صورة جديدة:'}
+          </label>
+          <input type="file" id="newImageInput" accept="image/*" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; margin-bottom: 10px; font-weight: bold;">
+            ${getTranslation('select-existing-image') || 'أو اختر من الصور الموجودة:'}
+          </label>
+          <div id="imagesGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; max-height: 400px; overflow-y: auto;">
+            <div style="text-align: center; padding: 20px; color: #666;">
+              ${getTranslation('loading-images') || 'جاري تحميل الصور...'}
+            </div>
+          </div>
+        </div>
+        
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+          <button id="cancelImageSelect" style="padding: 8px 16px; border: 1px solid #ddd; background: #f8f9fa; border-radius: 4px; cursor: pointer;">
+            ${getTranslation('cancel') || 'إلغاء'}
+          </button>
+          <button id="confirmImageSelect" style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; display: none;">
+            ${getTranslation('confirm') || 'تأكيد'}
+          </button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // إغلاق النافذة
+    const closeModal = () => {
+      modal.remove();
+    };
+    
+    modal.querySelector('.close-btn').addEventListener('click', closeModal);
+    modal.querySelector('#cancelImageSelect').addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+    
+    // تحميل الصور المتاحة
+    let availableImages = [];
+    let selectedImage = null;
+    
+    fetchAvailableImages().then(images => {
+      availableImages = images;
+      const imagesGrid = modal.querySelector('#imagesGrid');
+      
+      if (images.length === 0) {
+        imagesGrid.innerHTML = `
+          <div style="text-align: center; padding: 20px; color: #666; grid-column: 1 / -1;">
+            ${getTranslation('no-images-available') || 'لا توجد صور متاحة'}
+          </div>
+        `;
+        return;
+      }
+      
+      imagesGrid.innerHTML = '';
+      images.forEach(image => {
+        const imageCard = document.createElement('div');
+        imageCard.className = 'image-card';
+        imageCard.style.cssText = 'border: 2px solid #ddd; border-radius: 8px; padding: 10px; cursor: pointer; text-align: center; transition: all 0.3s;';
+        imageCard.dataset.imagePath = image.path;
+        imageCard.dataset.imageName = image.name;
+        
+        // التحقق من استخدام الصورة
+        const isUsed = allCommittees.some(committee => committee.image === image.path);
+        if (isUsed) {
+          imageCard.style.opacity = '0.5';
+          imageCard.style.cursor = 'not-allowed';
+          imageCard.title = getTranslation('image-already-used') || 'هذه الصورة مستخدمة بالفعل';
+        }
+        
+        imageCard.innerHTML = `
+          <img src="../images/${image.name}" alt="${image.name}" 
+               style="width: 100%; height: 80px; object-fit: cover; border-radius: 4px; margin-bottom: 8px;">
+          <div style="font-size: 12px; color: #666; word-break: break-word;">${image.name}</div>
+          ${isUsed ? '<div style="font-size: 10px; color: #ff6b6b; margin-top: 4px;">مستخدمة</div>' : ''}
+        `;
+        
+        if (!isUsed) {
+          imageCard.addEventListener('click', () => {
+            // إزالة التحديد من جميع الصور
+            modal.querySelectorAll('.image-card').forEach(card => {
+              card.style.borderColor = '#ddd';
+              card.style.backgroundColor = 'transparent';
+            });
+            
+            // تحديد الصورة المختارة
+            imageCard.style.borderColor = '#007bff';
+            imageCard.style.backgroundColor = '#e3f2fd';
+            selectedImage = `frontend/images/${image.name}`;
+            
+            // إظهار زر التأكيد
+            modal.querySelector('#confirmImageSelect').style.display = 'inline-block';
+          });
+        }
+        
+        imagesGrid.appendChild(imageCard);
+      });
+    });
+    
+    // معالجة اختيار صورة جديدة
+    const newImageInput = modal.querySelector('#newImageInput');
+    newImageInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        // إزالة التحديد من الصور الموجودة
+        modal.querySelectorAll('.image-card').forEach(card => {
+          card.style.borderColor = '#ddd';
+          card.style.backgroundColor = 'transparent';
+        });
+        
+        selectedImage = { file: file, isNew: true };
+        modal.querySelector('#confirmImageSelect').style.display = 'inline-block';
+      }
+    });
+    
+    // تأكيد الاختيار
+    modal.querySelector('#confirmImageSelect').addEventListener('click', () => {
+      if (selectedImage) {
+        onImageSelect(selectedImage);
+        closeModal();
+      }
+    });
+  }
   async function getUserId() {
     const token = getToken();
     if (!token) return null;
@@ -248,6 +508,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       const committeeImageInput = document.getElementById('committeeImage');
       if (committeeImageInput) committeeImageInput.value = '';
+      
+      // مسح معاينة الصورة
+      const previewDiv = document.getElementById('committeeImagePreview');
+      if (previewDiv) previewDiv.innerHTML = '';
+      
+      // مسح الصورة المختارة
+      delete addModal.dataset.selectedExistingImage;
     }
     if (m === editModal) {
       // إعادة تعيين حقول التعديل
@@ -255,6 +522,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (editCommitteeNameArInput) editCommitteeNameArInput.value = '';
       if (editCommitteeNameEnInput) editCommitteeNameEnInput.value = '';
       if (editImage) editImage.value = '';
+      
+      // مسح معاينة الصورة
+      const previewDiv = document.getElementById('editCommitteeImagePreview');
+      if (previewDiv) previewDiv.innerHTML = '';
+      
+      // مسح الصورة المختارة
+      delete editModal.dataset.selectedExistingImage;
     }
   }
 
@@ -478,6 +752,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     // تنظيف مسار الصورة وحفظه
     editModal.dataset.currentImage = cleanImagePath(currentImage);
 
+    // عرض معاينة الصورة الحالية
+    const previewDiv = document.getElementById('editCommitteeImagePreview') || createPreviewDiv('editCommitteeImagePreview', editModal);
+    if (previewDiv && currentImage) {
+      const imageName = currentImage.replace('frontend/images/', '').replace('http://localhost:3006/', '');
+      previewDiv.innerHTML = `
+        <div style="margin-top: 10px; text-align: center;">
+          <img src="${currentImage.startsWith('http') ? currentImage : '../images/' + imageName}" alt="الصورة الحالية" style="max-width: 150px; max-height: 150px; border-radius: 8px; border: 2px solid #6c757d;">
+          <div style="margin-top: 5px; font-size: 12px; color: #6c757d;">الصورة الحالية</div>
+        </div>
+      `;
+    }
+
     showModal(editModal);
   }
 
@@ -488,8 +774,51 @@ document.addEventListener('DOMContentLoaded', async () => {
     showModal(deleteModal);
   }
 
+  // دالة معالجة اختيار الصور
+  function handleImageSelection(selectedImage, imageInput, imagePreview, isEdit = false) {
+    if (selectedImage.isNew) {
+      // صورة جديدة
+      const file = selectedImage.file;
+      imageInput.files = new DataTransfer().files; // مسح الملفات السابقة
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      imageInput.files = dt.files;
+      
+      // عرض معاينة الصورة
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        imagePreview.innerHTML = `
+          <div style="margin-top: 10px; text-align: center;">
+            <img src="${e.target.result}" alt="معاينة" style="max-width: 150px; max-height: 150px; border-radius: 8px; border: 2px solid #007bff;">
+            <div style="margin-top: 5px; font-size: 12px; color: #007bff;">صورة جديدة: ${file.name}</div>
+          </div>
+        `;
+      };
+      reader.readAsDataURL(file);
+    } else {
+      // صورة موجودة
+      imageInput.value = ''; // مسح input الملف
+      
+             // عرض معاينة الصورة
+       const imageName = selectedImage.replace('frontend/images/', '');
+       imagePreview.innerHTML = `
+         <div style="margin-top: 10px; text-align: center;">
+           <img src="../images/${imageName}" alt="معاينة" style="max-width: 150px; max-height: 150px; border-radius: 8px; border: 2px solid #28a745;">
+           <div style="margin-top: 10px; font-size: 12px; color: #28a745;">صورة موجودة: ${imageName}</div>
+         </div>
+       `;
+      
+      // حفظ مسار الصورة في dataset
+      if (isEdit) {
+        editModal.dataset.selectedExistingImage = selectedImage;
+      } else {
+        addModal.dataset.selectedExistingImage = selectedImage;
+      }
+    }
+  }
+
   // Helper function for form data creation
-  function createCommitteeFormData(nameAr, nameEn, file, currentImage = null) {
+  function createCommitteeFormData(nameAr, nameEn, file, currentImage = null, selectedExistingImage = null) {
     const name = JSON.stringify({ ar: nameAr, en: nameEn });
     const fd = new FormData();
     fd.append('name', name);
@@ -497,6 +826,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (file) {
       fd.append('image', file);
       console.log('تم رفع صورة جديدة:', file.name);
+    } else if (selectedExistingImage) {
+      // إذا تم اختيار صورة موجودة
+      fd.append('existingImage', selectedExistingImage);
+      console.log('تم اختيار صورة موجودة:', selectedExistingImage);
     } else if (currentImage && currentImage.trim() !== '') {
       // إذا لم يتم رفع صورة جديدة، أرسل الصورة الحالية كمسار نصي
       fd.append('currentImage', currentImage);
@@ -508,10 +841,70 @@ document.addEventListener('DOMContentLoaded', async () => {
       name: name,
       hasFile: !!file,
       fileName: file ? file.name : 'no file',
+      selectedExistingImage: selectedExistingImage || 'no selected existing image',
       currentImage: currentImage || 'no current image'
     });
     
     return fd;
+  }
+
+  // إضافة أزرار اختيار الصور
+  function addImageSelectionButtons() {
+    // إضافة زر اختيار الصور في نموذج الإضافة
+    const addImageInput = document.getElementById('committeeImage');
+    const addImageContainer = addImageInput ? addImageInput.parentElement : null;
+    if (addImageContainer && !addImageContainer.querySelector('.image-selector-btn')) {
+      const imageSelectorBtn = document.createElement('button');
+      imageSelectorBtn.type = 'button';
+      imageSelectorBtn.className = 'image-selector-btn';
+      imageSelectorBtn.innerHTML = `
+        <i class="fas fa-images"></i>
+        ${getTranslation('choose-image') || 'اختر صورة'}
+      `;
+      imageSelectorBtn.style.cssText = 'margin-left: 10px; padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;';
+      
+      imageSelectorBtn.addEventListener('click', () => {
+        openImageSelector('', (selectedImage) => {
+          const previewDiv = document.getElementById('committeeImagePreview') || createPreviewDiv('committeeImagePreview', addImageContainer);
+          handleImageSelection(selectedImage, addImageInput, previewDiv, false);
+        });
+      });
+      
+      addImageContainer.appendChild(imageSelectorBtn);
+    }
+
+    // إضافة زر اختيار الصور في نموذج التعديل
+    const editImageInput = editImage;
+    const editImageContainer = editImageInput ? editImageInput.parentElement : null;
+    if (editImageContainer && !editImageContainer.querySelector('.image-selector-btn')) {
+      const imageSelectorBtn = document.createElement('button');
+      imageSelectorBtn.type = 'button';
+      imageSelectorBtn.className = 'image-selector-btn';
+      imageSelectorBtn.innerHTML = `
+        <i class="fas fa-images"></i>
+        ${getTranslation('choose-image') || 'اختر صورة'}
+      `;
+      imageSelectorBtn.style.cssText = 'margin-left: 10px; padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;';
+      
+      imageSelectorBtn.addEventListener('click', () => {
+        const currentImage = editModal.dataset.currentImage || '';
+        const previewDiv = document.getElementById('editCommitteeImagePreview') || createPreviewDiv('editCommitteeImagePreview', editImageContainer);
+        openImageSelector(currentImage, (selectedImage) => {
+          handleImageSelection(selectedImage, editImageInput, previewDiv, true);
+        });
+      });
+      
+      editImageContainer.appendChild(imageSelectorBtn);
+    }
+  }
+
+  // دالة إنشاء div للمعاينة
+  function createPreviewDiv(id, container) {
+    const previewDiv = document.createElement('div');
+    previewDiv.id = id;
+    previewDiv.className = 'image-preview';
+    container.appendChild(previewDiv);
+    return previewDiv;
   }
 
   // Add committee
@@ -529,7 +922,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     try {
-      const formData = createCommitteeFormData(nameAr, nameEn, file);
+      const selectedExistingImage = addModal.dataset.selectedExistingImage;
+      const formData = createCommitteeFormData(nameAr, nameEn, file, null, selectedExistingImage);
       console.log('Sending formData:', formData);
       
       const result = await apiCall(`${apiBase}/committees`, {
@@ -751,4 +1145,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await fetchPermissions();
   updateAddButton();
   loadCommittees();
+  
+  // إضافة أزرار اختيار الصور
+  addImageSelectionButtons();
 });
