@@ -307,7 +307,12 @@ function getItemDisplayName(item) {
         return text;
     }
     
-    // Try different name fields based on table type
+    // First priority: use display_name from backend (most accurate)
+    if (item.display_name) {
+        return extractArabicText(item.display_name);
+    }
+    
+    // Fallback to other fields
     if (item.name) return extractArabicText(item.name);
     if (item.title) return extractArabicText(item.title);
     if (item.username) return item.username;
@@ -315,7 +320,7 @@ function getItemDisplayName(item) {
         return `${item.first_name || ''} ${item.last_name || ''}`.trim();
     }
     
-    // If we have table type info, show it in the fallback
+    // Last resort: show item number with table type
     if (item.table_type) {
         return `${getTranslation('item-number') || 'العنصر رقم'} ${item.id} ${getTranslation('from') || 'من'} ${tableNames[item.table_type] || item.table_type}`;
     }
