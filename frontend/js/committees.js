@@ -121,6 +121,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   function getToken() {
     return localStorage.getItem('token');
   }
+
+  // Utility to clean image path
+  function cleanImagePath(imagePath) {
+    if (!imagePath) return '';
+    
+    // إزالة http://localhost:3006/ من بداية المسار إذا كان موجوداً
+    if (imagePath.startsWith('http://localhost:3006/')) {
+      return imagePath.replace('http://localhost:3006/', '');
+    }
+    
+    // إزالة / من بداية المسار إذا كان موجوداً
+    if (imagePath.startsWith('/')) {
+      return imagePath.substring(1);
+    }
+    
+    return imagePath;
+  }
   async function getUserId() {
     const token = getToken();
     if (!token) return null;
@@ -371,23 +388,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     if (committee.image && committee.image.trim() !== '') {
       hasImage = true;
-      if (committee.image.startsWith('backend/uploads/')) {
-        // المسار الجديد: backend/uploads/images/filename.jpg
-        imgSrc = `http://localhost:3006/${committee.image}`;
-      } else if (committee.image.startsWith('uploads/')) {
-        // المسار القديم: uploads/images/filename.jpg
-        imgSrc = `http://localhost:3006/${committee.image}`;
-      } else if (committee.image.startsWith('frontend/images/')) {
-        // المسار القديم: frontend/images/filename.jpg
-        imgSrc = `http://localhost:3006/${committee.image}`;
-      } else if (committee.image.includes('\\') || committee.image.includes('/')) {
-        // مسار كامل للنظام، استخرج اسم الملف فقط
-        const fileName = committee.image.split(/[\\/]/).pop();
-        imgSrc = `http://localhost:3006/backend/uploads/images/${fileName}`;
-      } else {
-        // اسم ملف فقط
-        imgSrc = `http://localhost:3006/backend/uploads/images/${committee.image}`;
-      }
+      // تنظيف مسار الصورة وإضافة localhost إذا لم يكن موجوداً
+      const cleanPath = cleanImagePath(committee.image);
+      imgSrc = cleanPath.startsWith('http') ? cleanPath : `http://localhost:3006/${cleanPath}`;
     } else {
       // لا توجد صورة
       hasImage = false;
@@ -395,9 +398,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // إنشاء عنصر الصورة مع التعامل مع الحالات التي لا توجد فيها صورة
-    const imageElement = hasImage ? 
-        `<img src="${imgSrc}" alt="${committeeName}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` :
-        `<div style="font-size: 24px; color: #fff; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">${committeeName.charAt(0).toUpperCase()}</div>`;
+    let imageElement;
+    if (hasImage) {
+        imageElement = `<img src="${imgSrc}" alt="${committeeName}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.nextElementSibling.style.display='none';">`;
+    } else {
+        imageElement = `<div style="font-size: 24px; color: #fff; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">${committeeName.charAt(0).toUpperCase()}</div>`;
+    }
     
     // إضافة fallback للصور التي تفشل في التحميل
     const fallbackElement = `<div style="font-size: 24px; color: #fff; display: none; align-items: center; justify-content: center; width: 100%; height: 100%;">${committeeName.charAt(0).toUpperCase()}</div>`;
@@ -410,6 +416,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       </div>
       <div class="card-title">${committeeName}</div>
     `;
+
+    // إضافة معالج الأحداث للصورة
+    const imgElement = card.querySelector('img');
+    if (imgElement) {
+        imgElement.addEventListener('error', function() {
+            console.warn('فشل تحميل صورة اللجنة:', this.src);
+            this.style.display = 'none';
+            const fallback = this.nextElementSibling;
+            if (fallback) fallback.style.display = 'flex';
+        });
+        
+        imgElement.addEventListener('load', function() {
+            console.log('تم تحميل صورة اللجنة بنجاح:', this.src);
+            const fallback = this.nextElementSibling;
+            if (fallback) fallback.style.display = 'none';
+        });
+    }
 
     card.addEventListener('click', () => {
       window.location.href = `committee-content.html?committeeId=${committee.id}`;
@@ -435,12 +458,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // حفظ الصورة الحالية في dataset
-    const currentImage = el.closest('.card').querySelector('.card-icon img');
-    if (currentImage && currentImage.src) {
-      editModal.dataset.currentImage = currentImage.src;
+    const cardIcon = el.closest('.card').querySelector('.card-icon');
+    let currentImage = '';
+    
+    // البحث عن الصورة في card-icon
+    const imgElement = cardIcon.querySelector('img');
+    if (imgElement && imgElement.src) {
+      currentImage = imgElement.src;
     } else {
-      editModal.dataset.currentImage = '';
+      // إذا لم توجد صورة، استخدم الصورة من البيانات الأصلية
+      const card = el.closest('.card');
+      const committeeId = card.dataset.id;
+      const originalCommittee = allCommittees.find(c => c.id == committeeId);
+      if (originalCommittee && originalCommittee.image) {
+        currentImage = `http://localhost:3006/${originalCommittee.image}`;
+      }
     }
+    
+    // تنظيف مسار الصورة وحفظه
+    editModal.dataset.currentImage = cleanImagePath(currentImage);
 
     showModal(editModal);
   }
@@ -453,19 +489,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Helper function for form data creation
-  function createCommitteeFormData(nameAr, nameEn, file) {
+  function createCommitteeFormData(nameAr, nameEn, file, currentImage = null) {
     const name = JSON.stringify({ ar: nameAr, en: nameEn });
     const fd = new FormData();
     fd.append('name', name);
+    
     if (file) {
       fd.append('image', file);
+      console.log('تم رفع صورة جديدة:', file.name);
+    } else if (currentImage && currentImage.trim() !== '') {
+      // إذا لم يتم رفع صورة جديدة، أرسل الصورة الحالية كمسار نصي
+      fd.append('currentImage', currentImage);
+      console.log('تم حفظ الصورة الحالية:', currentImage);
     }
     
     // للتأكد من أن FormData تم إنشاؤه بشكل صحيح
     console.log('FormData created:', {
       name: name,
       hasFile: !!file,
-      fileName: file ? file.name : 'no file'
+      fileName: file ? file.name : 'no file',
+      currentImage: currentImage || 'no current image'
     });
     
     return fd;
@@ -559,7 +602,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     try {
-      const formData = createCommitteeFormData(nameAr, nameEn, file);
+      const currentImage = editModal.dataset.currentImage;
+      const formData = createCommitteeFormData(nameAr, nameEn, file, currentImage);
       console.log('Sending update formData:', formData);
       
       const result = await apiCall(`${apiBase}/committees/${id}`, {
@@ -573,11 +617,38 @@ document.addEventListener('DOMContentLoaded', async () => {
       hideModal(editModal);
       
       // تحديث اللجنة في البيانات المحلية
-      const updatedCommittee = result.committee || {
+      let updatedImage = '';
+      if (file) {
+        // إذا تم رفع صورة جديدة
+        updatedImage = `backend/uploads/images/${file.name}`;
+      } else {
+        // إذا لم يتم رفع صورة جديدة، استخدم الصورة الحالية
+        const currentImage = editModal.dataset.currentImage;
+        updatedImage = cleanImagePath(currentImage);
+      }
+      
+      // استخدام البيانات من الخادم إذا كانت متوفرة، وإلا استخدم البيانات المحلية
+      let updatedCommittee = result.committee || result.data || {
         id: id,
         name: JSON.stringify({ ar: nameAr, en: nameEn }),
-        image: file ? `backend/uploads/images/${file.name}` : editModal.dataset.currentImage || ''
+        image: updatedImage
       };
+      
+      // إذا كان الخادم لم يُرجع صورة، استخدم الصورة المحلية
+      if (!updatedCommittee.image && updatedImage) {
+        updatedCommittee.image = updatedImage;
+      }
+      
+      // تأكد من أن جميع الحقول موجودة
+      if (!updatedCommittee.id) updatedCommittee.id = id;
+      if (!updatedCommittee.name) updatedCommittee.name = JSON.stringify({ ar: nameAr, en: nameEn });
+      
+      // تنظيف مسار الصورة
+      if (updatedCommittee.image) {
+        updatedCommittee.image = cleanImagePath(updatedCommittee.image);
+      }
+      
+      console.log('اللجنة المُحدثة:', updatedCommittee);
       
       // التأكد من أن لدينا بيانات صحيحة
       if (!updatedCommittee.id) {
