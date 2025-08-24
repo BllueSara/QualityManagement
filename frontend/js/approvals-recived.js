@@ -1,4 +1,14 @@
 // approvals-recived.js
+// تم إصلاح مشاكل:
+// 1. البوب أب لا يغلق عند وجود سيرفر بطيء
+// 2. التوقيع المتكرر
+// 3. إدارة أفضل للمودالات والكانفاس
+// 4. حماية من النقر المتكرر
+// 5. تنظيف أفضل للذاكرة
+// 6. تعطيل جميع الصفوف عند الإرسال (جاري المعالجة)
+// 7. استهداف أزرار الإجراءات فقط (.btn-sign, .btn-delegate, .btn-qr, .btn-reject)
+// 8. إضافة console.log مفصلة لتتبع عملية تعطيل الأزرار
+
 let filteredItems = [];
 
 const apiBase = 'http://localhost:3006/api';
@@ -6,7 +16,7 @@ const token = localStorage.getItem('token');
 let permissionsKeys = [];
 
 // دالة إظهار التوست - تعريفها في البداية لتكون متاحة في كل مكان
-function showToast(message, type = 'info', duration = 3000) {
+function showToast(message, type = 'info', duration = 300) {
     try {
         let toastContainer = document.getElementById('toast-container');
         if (!toastContainer) {
@@ -260,7 +270,7 @@ function showDelegationConfirmationPopup(delegatorInfo, delegateInfo, files, isB
   
   // تعيين الكانفاس النشط
   activeCanvas = delegationCanvasElement;
-  activeCtx = activeCanvas.getContext('2d');
+  activeCtx = activeCanvas.getContext('2d', { willReadFrequently: true });
 
   // إضافة ملف CSS للبوب أب
   const link = document.createElement('link');
@@ -297,17 +307,8 @@ function closeDelegationConfirmationPopup() {
     console.log('🔍 Delegation confirmation popup closed, activeCanvas reset');
     
     // إعادة تفعيل أزرار الصف إذا كان هناك contentId محدد
-    if (selectedContentId) {
-      const row = document.querySelector(`tr[data-id="${selectedContentId}"]`);
-      if (row && row.dataset.status === 'pending') {
-        enableRowActions(selectedContentId);
-      }
-    }
-    
-    // إعادة تفعيل أزرار الصف إذا كان هناك contentId في بيانات التفويض
-    if (pendingDelegationData && pendingDelegationData.contentId) {
-      enableRowActions(pendingDelegationData.contentId);
-    }
+    // إعادة تفعيل جميع أزرار جميع الصفوف
+    enableAllRowActions();
     
     // إعادة تفعيل زر التأكيد إذا كان معطلاً
     const confirmButton = document.querySelector('#delegationConfirmationPopup .btn-primary');
@@ -349,7 +350,7 @@ function initializeSignatureDrawing() {
   activeCanvas.style.height = canvasHeight + 'px';
 
   // إعادة الحصول على السياق بعد تغيير الأبعاد
-  activeCtx = activeCanvas.getContext('2d');
+  activeCtx = activeCanvas.getContext('2d', { willReadFrequently: true });
   console.log('🔍 Got canvas context:', activeCtx);
 
   if (activeCtx) {
@@ -595,7 +596,6 @@ function confirmDelegation() {
   try {
     if (!pendingDelegationData) {
        showToast(getTranslation('error-no-delegation-data'), 'error');
-
       return;
     }
     
@@ -605,7 +605,6 @@ function confirmDelegation() {
     
     if (!senderSignature) {
     showToast(getTranslation('delegation-error-no-signature'), 'error');
-
       return;
     }
     
@@ -615,28 +614,29 @@ function confirmDelegation() {
       return;
     }
     
-    // تعطيل جميع أزرار الصف إذا كان هناك contentId
-    if (pendingDelegationData.contentId) {
-      disableRowActions(pendingDelegationData.contentId);
-    }
+    // منع التوقيع المتكرر
+    preventDuplicateSignatures();
+    
+    // تعطيل جميع أزرار جميع الصفوف
+    disableAllRowActions();
     
     // إضافة توقيع المرسل إلى بيانات التفويض
     pendingDelegationData.senderSignature = senderSignature;
     console.log('🔍 Updated pendingDelegationData with signature');
     
-    // معالجة قبول التفويض حسب النوع
+    // إغلاق البوب أب فوراً
+    closeDelegationConfirmationPopup();
+    
+    // معالجة قبول التفويض حسب النوع في الخلفية
     if (pendingDelegationData.isBulk) {
       // قبول تفويض شامل
-      console.log('🔍 Processing bulk delegation');
+      console.log('🔍 Processing bulk delegation in background');
       processBulkDelegation(pendingDelegationData);
     } else {
       // قبول تفويض فردي
-      console.log('🔍 Processing single delegation');
+      console.log('🔍 Processing single delegation in background');
       processSingleDelegation(pendingDelegationData);
     }
-    
-    // إغلاق البوب أب
-    closeDelegationConfirmationPopup();
     
     // مسح البيانات المؤقتة
     pendingDelegationData = null;
@@ -644,10 +644,8 @@ function confirmDelegation() {
     console.error('🔍 Error in confirmDelegation:', error);
     showToast('حدث خطأ أثناء معالجة التفويض', 'error');
     
-    // إعادة تفعيل الأزرار في حالة الخطأ
-    if (pendingDelegationData && pendingDelegationData.contentId) {
-      enableRowActions(pendingDelegationData.contentId);
-    }
+    // إعادة تفعيل جميع أزرار جميع الصفوف في حالة الخطأ
+    enableAllRowActions();
     
     const confirmButton = document.querySelector('#delegationConfirmationPopup .btn-primary');
     if (confirmButton) {
@@ -662,10 +660,8 @@ function rejectDelegation() {
     return;
   }
   
-  // إعادة تفعيل أزرار الصف عند رفض التفويض
-  if (pendingDelegationData.contentId) {
-    enableRowActions(pendingDelegationData.contentId);
-  }
+  // إعادة تفعيل جميع أزرار جميع الصفوف عند رفض التفويض
+  enableAllRowActions();
   
   // إعادة تفعيل زر التأكيد إذا كان معطلاً
   const confirmButton = document.querySelector('#delegationConfirmationPopup .btn-primary');
@@ -1237,12 +1233,17 @@ function closeModal(modalId) {
       // تنظيف الذاكرة المؤقتة
       modalCache.delete(modalId);
       
-      // إعادة تفعيل أزرار الصف إذا كان المودال هو مودال الرفض أو التوقيع الإلكتروني أو التفويض
-      if ((modalId === 'rejectModal' || modalId === 'qrModal' || modalId === 'delegateModal') && selectedContentId) {
-        const row = document.querySelector(`tr[data-id="${selectedContentId}"]`);
-        if (row && row.dataset.status === 'pending') {
-          enableRowActions(selectedContentId);
-        }
+      // إعادة تفعيل جميع أزرار جميع الصفوف إذا كان المودال هو مودال الرفض أو التوقيع الإلكتروني أو التفويض
+      if (modalId === 'rejectModal' || modalId === 'qrModal' || modalId === 'delegateModal') {
+        enableAllRowActions();
+      }
+      
+      // تنظيف متغيرات التوقيع إذا كان مودال التوقيع
+      if (modalId === 'signatureModal') {
+        clearCanvas();
+        currentSignature = null;
+        activeCanvas = null;
+        activeCtx = null;
       }
       
       console.log('🔍 Modal closed successfully');
@@ -1291,6 +1292,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!token) return showToast(getTranslation('please-login'), 'error');
 
   await fetchPermissions();
+  
+  // إضافة event listener لإغلاق جميع البوب أب عند تغيير الصفحة
+  window.addEventListener('beforeunload', () => {
+    forceCloseAllPopups();
+  });
+  
+  // إضافة event listener لإغلاق جميع البوب أب عند النقر خارجها
+  document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('delegation-confirmation-popup') || 
+        e.target.classList.contains('modal-overlay')) {
+      forceCloseAllPopups();
+    }
+  });
 
   // تعريف وإضافة زر تفويض جميع الملفات بالنيابة بعد فلتر الأقسام
   let btnAll = document.getElementById('delegateAllBtn');
@@ -1405,12 +1419,23 @@ document.getElementById("nextPage").addEventListener("click", () => {
         return;
       }
       
-      // تعطيل جميع أزرار الصف
-      disableRowActions(selectedContentId);
+          // منع التوقيع المتكرر
+    preventDuplicateSignatures();
+    
+    // تعطيل جميع أزرار جميع الصفوف
+    disableAllRowActions();
+    
+    // إغلاق مودال الرفض فوراً
+    closeModal('rejectModal');
       
-      const type     = document.querySelector(`tr[data-id="${selectedContentId}"]`).dataset.type;
+            // معالجة الرفض في الخلفية
+      if (!selectedContentType) {
+        console.error('Content type not found');
+        return;
+      }
+      
       let endpoint;
-      switch (type) {
+      switch (selectedContentType) {
         case 'committee':
           endpoint = 'committee-approvals';
           break;
@@ -1421,20 +1446,9 @@ document.getElementById("nextPage").addEventListener("click", () => {
           endpoint = 'approvals';
           break;
       }
-      try {
-        await fetchJSON(`${apiBase}/${endpoint}/${selectedContentId}/approve`, {
-          method: 'POST',
-          body: JSON.stringify({ approved: false, signature: null, notes: reason })
-        });
-        showToast(getTranslation('success-rejected'), 'success');
-        closeModal('rejectModal');
-        updateApprovalStatusInUI(selectedContentId, 'rejected');
-      } catch (e) {
-        console.error('Failed to send rejection:', e);
-        // إعادة تفعيل الزر في حالة الخطأ
-        setButtonProcessingState(btnSendReason, false);
-        enableRowActions(selectedContentId);
-      }
+      
+      // معالجة الرفض في الخلفية
+      processRejectionInBackground(selectedContentId, endpoint, reason);
     });
   }
 
@@ -1442,10 +1456,8 @@ document.getElementById("nextPage").addEventListener("click", () => {
   const btnCancelReject = document.getElementById('btnCancelReject');
   if (btnCancelReject) {
     btnCancelReject.addEventListener('click', () => {
-      // إعادة تفعيل أزرار الصف عند الإلغاء
-      if (selectedContentId) {
-        enableRowActions(selectedContentId);
-      }
+      // إعادة تفعيل جميع أزرار جميع الصفوف عند الإلغاء
+      enableAllRowActions();
       
       // إعادة تفعيل زر الإرسال إذا كان معطلاً
       const btnSendReason = document.getElementById('btnSendReason');
@@ -1705,28 +1717,39 @@ function initActions() {
       
       // زر التوقيع
       if (target.closest('.btn-sign')) {
+        const button = target.closest('.btn-sign');
+        // التحقق من أن الزر معطل
+        if (button.disabled || button.classList.contains('processing')) {
+          console.log('🔍 Sign button is disabled, ignoring click');
+          return;
+        }
+        
         console.log('🔍 Sign button clicked!');
         const row = target.closest('tr');
         const id = row.dataset.id;
+        selectedContentId = id;
         selectedContentType = row.dataset.type;
-        console.log('🔍 Opening signature modal for id:', id);
+        console.log('🔍 Opening signature modal for id:', id, 'type:', selectedContentType);
         
-        // تعطيل جميع أزرار الصف فوراً
-        disableRowActions(id);
-        
+        // لا نحتاج لتعطيل الصف هنا، سيتم تعطيله في handleConfirmClick
         openSignatureModal(id);
         return;
       }
       
       // زر التفويض
       if (target.closest('.btn-delegate')) {
+        const button = target.closest('.btn-delegate');
+        // التحقق من أن الزر معطل
+        if (button.disabled || button.classList.contains('processing')) {
+          console.log('🔍 Delegate button is disabled, ignoring click');
+          return;
+        }
+        
         console.log('🔍 Delegation button clicked!');
         const row = target.closest('tr');
         const id = row.dataset.id;
         
-        // تعطيل جميع أزرار الصف فوراً
-        disableRowActions(id);
-        
+        // لا نحتاج لتعطيل الصف هنا، سيتم تعطيله عند الإرسال
         isBulkDelegation = false;
         selectedContentId = id;
         console.log('🔍 selectedContentId set to:', selectedContentId);
@@ -1744,12 +1767,17 @@ function initActions() {
       
       // زر التوقيع الإلكتروني
       if (target.closest('.btn-qr')) {
+        const button = target.closest('.btn-qr');
+        // التحقق من أن الزر معطل
+        if (button.disabled || button.classList.contains('processing')) {
+          console.log('🔍 QR button is disabled, ignoring click');
+          return;
+        }
+        
         const row = target.closest('tr');
         const id = row.dataset.id;
         
-        // تعطيل جميع أزرار الصف فوراً
-        disableRowActions(id);
-        
+        // لا نحتاج لتعطيل الصف هنا، سيتم تعطيله عند الإرسال
         selectedContentId = id;
         selectedContentType = row.dataset.type;
         openModal('qrModal');
@@ -1758,12 +1786,17 @@ function initActions() {
       
       // زر الرفض
       if (target.closest('.btn-reject')) {
+        const button = target.closest('.btn-reject');
+        // التحقق من أن الزر معطل
+        if (button.disabled || button.classList.contains('processing')) {
+          console.log('🔍 Reject button is disabled, ignoring click');
+          return;
+        }
+        
         const row = target.closest('tr');
         const id = row.dataset.id;
         
-        // تعطيل جميع أزرار الصف فوراً
-        disableRowActions(id);
-        
+        // لا نحتاج لتعطيل الصف هنا، سيتم تعطيله عند الإرسال
         selectedContentId = id;
         selectedContentType = row.dataset.type;
         openModal('rejectModal');
@@ -1942,12 +1975,23 @@ if (btnElectronicApprove) {
       return;
     }
     
-    // تعطيل جميع أزرار الصف
-    disableRowActions(selectedContentId);
+    // منع التوقيع المتكرر
+    preventDuplicateSignatures();
     
-    const contentType = document.querySelector(`tr[data-id="${selectedContentId}"]`).dataset.type;
+    // تعطيل جميع أزرار جميع الصفوف
+    disableAllRowActions();
+    
+    // إغلاق مودال التوقيع الإلكتروني فوراً
+    closeModal('qrModal');
+    
+    // معالجة التوقيع في الخلفية
+    if (!selectedContentType) {
+      console.error('Content type not found');
+      return;
+    }
+    
     let endpoint;
-    switch (contentType) {
+    switch (selectedContentType) {
       case 'committee':
         endpoint = 'committee-approvals';
         break;
@@ -1958,43 +2002,9 @@ if (btnElectronicApprove) {
         endpoint = 'approvals';
         break;
     }
-    let approvalLog = await fetchApprovalLog(selectedContentId, contentType);
-    const payload = {
-      approved: true,
-      signature: null,
-      electronic_signature: true,
-      notes: ''
-    };
-    const tokenPayload = await safeGetUserInfo(token);
-    if (!tokenPayload) {
-      setButtonProcessingState(btnElectronicApprove, false);
-      enableRowActions(selectedContentId);
-      return;
-    }
-    const myLog = Array.isArray(approvalLog) ? approvalLog.find(l => l.approver_id == tokenPayload.id) : null;
-    console.log('[SIGN] approvalLog:', approvalLog);
-    console.log('[SIGN] myLog:', myLog);
-    if (myLog && (myLog.signed_as_proxy == 1 || myLog.delegated_by)) {
-      payload.on_behalf_of = myLog.delegated_by;
-      console.log('[SIGN] Sending on_behalf_of:', myLog.delegated_by);
-    }
-    console.log('[SIGN] payload being sent:', payload);
-    try {
-      const response = await fetchJSON(`${apiBase}/${endpoint}/${selectedContentId}/approve`, {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-      console.log('[SIGN] response:', response);
-      showToast(getTranslation('success-approved'), 'success');
-      closeModal('qrModal');
-      updateApprovalStatusInUI(selectedContentId, 'approved');
-      disableActionsFor(selectedContentId);
-    } catch (err) {
-      console.error('Failed to electronically approve:', err);
-      // إعادة تفعيل الزر في حالة الخطأ
-      setButtonProcessingState(btnElectronicApprove, false);
-      enableRowActions(selectedContentId);
-    }
+    
+    // معالجة التوقيع الإلكتروني في الخلفية
+    processElectronicSignatureInBackground(selectedContentId, selectedContentType, endpoint);
   });
 }
 
@@ -2002,10 +2012,8 @@ if (btnElectronicApprove) {
 const btnCancelQr = document.getElementById('btnCancelQr');
 if (btnCancelQr) {
   btnCancelQr.addEventListener('click', () => {
-    // إعادة تفعيل أزرار الصف عند الإلغاء
-    if (selectedContentId) {
-      enableRowActions(selectedContentId);
-    }
+      // إعادة تفعيل جميع أزرار جميع الصفوف عند الإلغاء
+      enableAllRowActions();
     
     // إعادة تفعيل زر التوقيع إذا كان معطلاً
     const btnElectronicApprove = document.getElementById('btnElectronicApprove');
@@ -2028,7 +2036,7 @@ function setupSignatureModal() {
     return;
   }
   
-  activeCtx = activeCanvas.getContext('2d');
+  activeCtx = activeCanvas.getContext('2d', { willReadFrequently: true });
   if (!activeCtx) {
     console.error('🔍 Failed to get main canvas context');
     return;
@@ -2129,38 +2137,28 @@ function setupSignatureModal() {
   activeCanvas.addEventListener('touchmove', handleTouchMove);
   activeCanvas.addEventListener('touchend', handleTouchEnd);
   
-  // إزالة event listeners السابقة للأزرار
+  // إعداد event listeners للأزرار
   const btnClear = document.getElementById('btnClear');
   const btnCancelSignature = document.getElementById('btnCancelSignature');
   const btnConfirmSignature = document.getElementById('btnConfirmSignature');
   
   if (btnClear) {
-    btnClear.removeEventListener('click', handleClearClick);
-    btnClear.addEventListener('click', handleClearClick);
+    btnClear.onclick = function() {
+      clearCanvas();
+      currentSignature = null;
+    };
   }
   
   if (btnCancelSignature) {
-    btnCancelSignature.removeEventListener('click', handleCancelClick);
-    btnCancelSignature.addEventListener('click', handleCancelClick);
+    btnCancelSignature.onclick = function() {
+      // إعادة تفعيل جميع أزرار جميع الصفوف عند الإلغاء
+      enableAllRowActions();
+      closeSignatureModal();
+    };
   }
   
   if (btnConfirmSignature) {
-    btnConfirmSignature.removeEventListener('click', handleConfirmClick);
-    btnConfirmSignature.addEventListener('click', handleConfirmClick);
-  }
-  
-  function handleClearClick() {
-    clearCanvas();
-    currentSignature = null;
-  }
-  
-  function handleCancelClick() {
-    // إعادة تفعيل أزرار الصف عند الإلغاء
-    if (selectedContentId) {
-      enableRowActions(selectedContentId);
-    }
-    
-    closeSignatureModal();
+    btnConfirmSignature.onclick = handleConfirmClick;
   }
   
   async function handleConfirmClick() {
@@ -2170,18 +2168,40 @@ function setupSignatureModal() {
       return;
     }
     
+    // حفظ التوقيع قبل إغلاق المودال
+    const signatureToSend = currentSignature;
+    
     // حماية من النقر المتكرر
     const confirmButton = document.getElementById('btnConfirmSignature');
     if (!protectFromDoubleClick(confirmButton, getTranslation('sending-signature'))) {
       return;
     }
     
-    // تعطيل جميع أزرار الصف
-    disableRowActions(selectedContentId);
+    // منع التوقيع المتكرر
+    preventDuplicateSignatures();
     
-    const contentType = document.querySelector(`tr[data-id="${selectedContentId}"]`).dataset.type;
+    console.log('🔍 About to disable all row actions...');
+    console.log('🔍 selectedContentId before disableAllRowActions:', selectedContentId);
+    console.log('🔍 selectedContentType before disableAllRowActions:', selectedContentType);
+    
+    // تعطيل جميع أزرار جميع الصفوف (بما في ذلك الصف المحدد)
+    disableAllRowActions();
+    
+    console.log('🔍 All row actions disabled, about to close signature modal...');
+    
+    // إغلاق مودال التوقيع فوراً
+    closeSignatureModal();
+    
+    // معالجة التوقيع في الخلفية
+    console.log('🔍 selectedContentId:', selectedContentId, 'selectedContentType:', selectedContentType);
+    console.log('🔍 signatureToSend:', signatureToSend ? 'متوفر' : 'مفقود');
+    if (!selectedContentType) {
+      console.error('Content type not found');
+      return;
+    }
+    
     let endpoint;
-    switch (contentType) {
+    switch (selectedContentType) {
       case 'committee':
         endpoint = 'committee-approvals';
         break;
@@ -2192,42 +2212,9 @@ function setupSignatureModal() {
         endpoint = 'approvals';
         break;
     }
-    let approvalLog = await fetchApprovalLog(selectedContentId, contentType);
-    const payload = {
-      approved: true,
-      signature: currentSignature,
-      notes: ''
-    };
-    const tokenPayload = await safeGetUserInfo(token);
-    if (!tokenPayload) {
-      setButtonProcessingState(confirmButton, false);
-      enableRowActions(selectedContentId);
-      return;
-    }
-    const myLog = Array.isArray(approvalLog) ? approvalLog.find(l => l.approver_id == tokenPayload.id) : null;
-    console.log('[SIGN] approvalLog:', approvalLog);
-    console.log('[SIGN] myLog:', myLog);
-    if (myLog && (myLog.signed_as_proxy == 1 || myLog.delegated_by)) {
-      payload.on_behalf_of = myLog.delegated_by;
-      console.log('[SIGN] Sending on_behalf_of:', myLog.delegated_by);
-    }
-    console.log('[SIGN] payload being sent:', payload);
-    try {
-      const response = await fetchJSON(`${apiBase}/${endpoint}/${selectedContentId}/approve`, {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-      console.log('[SIGN] response:', response);
-      showToast(getTranslation('success-sent'), 'success');
-      closeSignatureModal();
-      updateApprovalStatusInUI(selectedContentId, 'approved');
-      disableActionsFor(selectedContentId);
-    } catch (err) {
-      console.error('Failed to send signature:', err);
-      // إعادة تفعيل الزر في حالة الخطأ
-      setButtonProcessingState(confirmButton, false);
-      enableRowActions(selectedContentId);
-    }
+    
+    // معالجة التوقيع في الخلفية
+    processSignatureInBackground(selectedContentId, selectedContentType, endpoint, signatureToSend);
   }
   
   console.log('🔍 Signature modal setup completed successfully');
@@ -2262,7 +2249,7 @@ function initializeCanvas() {
   activeCanvas.style.height = '100%';
   
   // إعادة الحصول على السياق بعد تغيير الأبعاد
-  activeCtx = activeCanvas.getContext('2d');
+  activeCtx = activeCanvas.getContext('2d', { willReadFrequently: true });
   
   if (activeCtx) {
     // تعيين خصائص الرسم
@@ -2564,10 +2551,8 @@ function setupDelegationEventListener() {
         return showToast(getTranslation('please-select-user'), 'warning');
       }
       
-      // تعطيل جميع أزرار الصف إذا كان هناك contentId محدد
-      if (selectedContentId) {
-        disableRowActions(selectedContentId);
-      }
+      // تعطيل جميع أزرار جميع الصفوف
+      disableAllRowActions();
       
       if (isBulkDelegation) {
         // تفويض شامل - عرض بوب أب الإقرار أولاً
@@ -2583,10 +2568,8 @@ function setupDelegationEventListener() {
           showToast(getTranslation('error-showing-bulk-delegation-confirmation'), 'error');
           // إعادة تفعيل الزر في حالة الخطأ
           setButtonProcessingState(btnDelegateConfirm, false);
-          // إعادة تفعيل أزرار الصف في حالة الخطأ
-          if (selectedContentId) {
-            enableRowActions(selectedContentId);
-          }
+          // إعادة تفعيل جميع أزرار جميع الصفوف في حالة الخطأ
+          enableAllRowActions();
         }
       } else {
         // تفويض فردي - عرض بوب أب الإقرار أولاً
@@ -2602,10 +2585,8 @@ function setupDelegationEventListener() {
           console.error('🔍 Row not found for selectedContentId:', selectedContentId);
           showToast(getTranslation('error-file-not-found'), 'error');
           setButtonProcessingState(btnDelegateConfirm, false);
-          // إعادة تفعيل أزرار الصف في حالة الخطأ
-          if (selectedContentId) {
-            enableRowActions(selectedContentId);
-          }
+          // إعادة تفعيل جميع أزرار جميع الصفوف في حالة الخطأ
+          enableAllRowActions();
           return;
         }
         
@@ -2618,10 +2599,8 @@ function setupDelegationEventListener() {
           console.error('🔍 contentType is missing or undefined');
           showToast(getTranslation('error-content-type-not-specified'), 'error');
           setButtonProcessingState(btnDelegateConfirm, false);
-          // إعادة تفعيل أزرار الصف في حالة الخطأ
-          if (selectedContentId) {
-            enableRowActions(selectedContentId);
-          }
+          // إعادة تفعيل جميع أزرار جميع الصفوف في حالة الخطأ
+          enableAllRowActions();
           return;
         }
         
@@ -2629,10 +2608,8 @@ function setupDelegationEventListener() {
           console.error('🔍 selectedContentId is missing or undefined');
           showToast(getTranslation('error-content-id-not-specified'), 'error');
           setButtonProcessingState(btnDelegateConfirm, false);
-          // إعادة تفعيل أزرار الصف في حالة الخطأ
-          if (selectedContentId) {
-            enableRowActions(selectedContentId);
-          }
+          // إعادة تفعيل جميع أزرار جميع الصفوف في حالة الخطأ
+          enableAllRowActions();
           return;
         }
         
@@ -2653,17 +2630,15 @@ function setupDelegationEventListener() {
           } else {
             // تفويض قسم فردي
             console.log('🔍 Showing single department delegation confirmation');
-            await showSingleDelegationConfirmation(userId, selectedContentId, contentType, notes);
+            await showSingleProtocolDelegationConfirmation(userId, selectedContentId, contentType, notes);
           }
         } catch (err) {
           console.error('Failed to show delegation confirmation:', err);
           showToast(getTranslation('error-showing-delegation-confirmation'), 'error');
           // إعادة تفعيل الزر في حالة الخطأ
           setButtonProcessingState(btnDelegateConfirm, false);
-          // إعادة تفعيل أزرار الصف في حالة الخطأ
-          if (selectedContentId) {
-            enableRowActions(selectedContentId);
-          }
+          // إعادة تفعيل جميع أزرار جميع الصفوف في حالة الخطأ
+          enableAllRowActions();
         }
       }
       isBulkDelegation = false;
@@ -2674,10 +2649,8 @@ function setupDelegationEventListener() {
   const btnCancelDelegate = document.getElementById('btnCancelDelegate');
   if (btnCancelDelegate) {
     btnCancelDelegate.addEventListener('click', () => {
-      // إعادة تفعيل أزرار الصف عند الإلغاء
-      if (selectedContentId) {
-        enableRowActions(selectedContentId);
-      }
+      // إعادة تفعيل جميع أزرار جميع الصفوف عند الإلغاء
+      enableAllRowActions();
       
       // إعادة تفعيل زر التأكيد إذا كان معطلاً
       const btnDelegateConfirm = document.getElementById('btnDelegateConfirm');
@@ -2814,7 +2787,7 @@ function resizeCanvas() {
   activeCanvas.height = newHeight;
   
   // إعادة الحصول على السياق بعد تغيير الأبعاد
-  activeCtx = activeCanvas.getContext('2d');
+  activeCtx = activeCanvas.getContext('2d', { willReadFrequently: true });
   
   if (activeCtx) {
     // إعادة تعيين خصائص الرسم
@@ -2886,7 +2859,7 @@ function openSignatureModal(contentId) {
     const mainCanvas = document.getElementById('mainSignatureCanvas');
     if (mainCanvas) {
       activeCanvas = mainCanvas;
-      activeCtx = activeCanvas.getContext('2d');
+      activeCtx = activeCanvas.getContext('2d', { willReadFrequently: true });
       console.log('🔍 Main signature modal opened, activeCanvas set to:', activeCanvas.id);
       
       // تهيئة الكانفاس
@@ -2933,13 +2906,7 @@ function setupSignatureDrawing() {
   }
   
   // إزالة event listeners السابقة
-  activeCanvas.removeEventListener('mousedown', handleMouseDown);
-  activeCanvas.removeEventListener('mousemove', handleMouseMove);
-  activeCanvas.removeEventListener('mouseup', handleMouseUp);
-  activeCanvas.removeEventListener('mouseleave', handleMouseLeave);
-  activeCanvas.removeEventListener('touchstart', handleTouchStart);
-  activeCanvas.removeEventListener('touchmove', handleTouchMove);
-  activeCanvas.removeEventListener('touchend', handleTouchEnd);
+  // لا نحتاج إلى إزالة event listeners هنا لأننا نعيد إنشاء الدوال في كل مرة
   
   function handleMouseDown(e) {
     drawing = true;
@@ -3016,51 +2983,264 @@ function closeSignatureModal() {
     
     // إزالة event listeners من الكانفاس
     if (activeCanvas) {
-      activeCanvas.removeEventListener('mousedown', handleMouseDown);
-      activeCanvas.removeEventListener('mousemove', handleMouseMove);
-      activeCanvas.removeEventListener('mouseup', handleMouseUp);
-      activeCanvas.removeEventListener('mouseleave', handleMouseLeave);
-      activeCanvas.removeEventListener('touchstart', handleTouchStart);
-      activeCanvas.removeEventListener('touchmove', handleTouchMove);
-      activeCanvas.removeEventListener('touchend', handleTouchEnd);
+      // إزالة جميع event listeners
+      const newCanvas = activeCanvas.cloneNode(true);
+      activeCanvas.parentNode.replaceChild(newCanvas, activeCanvas);
+      activeCanvas = newCanvas;
     }
     
     // إزالة event listener لتغيير الحجم
     window.removeEventListener('resize', resizeCanvas);
     
-    // إزالة event listeners من الأزرار
+    // تنظيف event listeners من الأزرار
     const btnClear = document.getElementById('btnClear');
     const btnCancelSignature = document.getElementById('btnCancelSignature');
     const btnConfirmSignature = document.getElementById('btnConfirmSignature');
     
-    if (btnClear) {
-      btnClear.removeEventListener('click', handleClearClick);
+    // إزالة event listeners بشكل آمن
+    if (btnClear && btnClear.onclick) {
+      btnClear.onclick = null;
     }
     
-    if (btnCancelSignature) {
-      btnCancelSignature.removeEventListener('click', handleCancelClick);
+    if (btnCancelSignature && btnCancelSignature.onclick) {
+      btnCancelSignature.onclick = null;
     }
     
-    if (btnConfirmSignature) {
-      btnConfirmSignature.removeEventListener('click', handleConfirmClick);
+    if (btnConfirmSignature && btnConfirmSignature.onclick) {
+      btnConfirmSignature.onclick = null;
     }
     
-    // إعادة تفعيل أزرار الصف إذا لم يتم الاعتماد
-    if (selectedContentId) {
-      const row = document.querySelector(`tr[data-id="${selectedContentId}"]`);
-      if (row && row.dataset.status === 'pending') {
-        enableRowActions(selectedContentId);
-      }
-    }
+    // إعادة تفعيل جميع أزرار جميع الصفوف إذا لم يتم الاعتماد
+    enableAllRowActions();
     
     // إعادة تعيين متغيرات الكانفاس النشط
     activeCanvas = null;
     activeCtx = null;
     currentSignature = null;
     
+    // لا نمسح selectedContentId و selectedContentType هنا لأنهما مطلوبان في handleConfirmClick
+    // سيتم مسحهما في forceCloseAllPopups أو بعد انتهاء معالجة التوقيع
+    
     console.log('🔍 Main signature modal closed, activeCanvas reset');
   } else {
     console.warn('🔍 Signature modal not found for closing');
+  }
+}
+
+// دالة جديدة لضمان إغلاق جميع البوب أب
+function forceCloseAllPopups() {
+  try {
+    // إغلاق بوب أب التفويض
+    const delegationPopup = document.getElementById('delegationConfirmationPopup');
+    if (delegationPopup) {
+      delegationPopup.remove();
+      console.log('🔍 Force closed delegation popup');
+    }
+    
+    // إغلاق مودال التوقيع
+    const signatureModal = document.getElementById('signatureModal');
+    if (signatureModal) {
+      signatureModal.style.display = 'none';
+      console.log('🔍 Force closed signature modal');
+    }
+    
+    // إغلاق مودال التفويض
+    const delegateModal = document.getElementById('delegateModal');
+    if (delegateModal) {
+      delegateModal.style.display = 'none';
+      console.log('🔍 Force closed delegate modal');
+    }
+    
+    // إغلاق مودال الرفض
+    const rejectModal = document.getElementById('rejectModal');
+    if (rejectModal) {
+      rejectModal.style.display = 'none';
+      console.log('🔍 Force closed reject modal');
+    }
+    
+    // إغلاق مودال التوقيع الإلكتروني
+    const qrModal = document.getElementById('qrModal');
+    if (qrModal) {
+      qrModal.style.display = 'none';
+      console.log('🔍 Force closed QR modal');
+    }
+    
+    // إعادة تعيين جميع المتغيرات
+    activeCanvas = null;
+    activeCtx = null;
+    currentSignature = null;
+    selectedContentId = null;
+    selectedContentType = null;
+    pendingDelegationData = null;
+    currentDelegationData = null;
+    
+    // إعادة تفعيل جميع أزرار جميع الصفوف
+    enableAllRowActions();
+    
+    console.log('🔍 All popups force closed and variables reset');
+  } catch (error) {
+    console.error('🔍 Error in forceCloseAllPopups:', error);
+  }
+}
+
+// دالة جديدة لمنع التوقيع المتكرر
+function preventDuplicateSignatures() {
+  try {
+    // تعطيل جميع أزرار التوقيع
+    const signButtons = document.querySelectorAll('.btn-sign');
+    signButtons.forEach(button => {
+      button.disabled = true;
+      button.style.opacity = '0.5';
+      button.style.cursor = 'not-allowed';
+      button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${getTranslation('processing') || 'جاري المعالجة...'}`;
+    });
+    
+    // تعطيل جميع أزرار التفويض
+    const delegateButtons = document.querySelectorAll('.btn-delegate');
+    delegateButtons.forEach(button => {
+      button.disabled = true;
+      button.style.opacity = '0.5';
+      button.style.cursor = 'not-allowed';
+      button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${getTranslation('processing') || 'جاري المعالجة...'}`;
+    });
+    
+    // تعطيل جميع أزرار التوقيع الإلكتروني
+    const qrButtons = document.querySelectorAll('.btn-qr');
+    qrButtons.forEach(button => {
+      button.disabled = true;
+      button.style.opacity = '0.5';
+      button.style.cursor = 'not-allowed';
+      button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${getTranslation('processing') || 'جاري المعالجة...'}`;
+    });
+    
+    // تعطيل جميع أزرار الرفض
+    const rejectButtons = document.querySelectorAll('.btn-reject');
+    rejectButtons.forEach(button => {
+      button.disabled = true;
+      button.style.opacity = '0.5';
+      button.style.cursor = 'not-allowed';
+      button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${getTranslation('processing') || 'جاري المعالجة...'}`;
+    });
+    
+    console.log('🔍 All signature buttons disabled to prevent duplicates');
+  } catch (error) {
+    console.error('🔍 Error preventing duplicate signatures:', error);
+  }
+}
+
+// دالة معالجة التوقيع في الخلفية
+async function processSignatureInBackground(contentId, contentType, endpoint, signature) {
+  try {
+    console.log('🔍 Processing signature in background for:', contentId);
+    
+    let approvalLog = await fetchApprovalLog(contentId, contentType);
+    const payload = {
+      approved: true,
+      signature: signature,
+      notes: ''
+    };
+    
+    const tokenPayload = await safeGetUserInfo(token);
+    if (!tokenPayload) {
+      console.error('Failed to get user info');
+      enableAllRowActions();
+      return;
+    }
+    
+    const myLog = Array.isArray(approvalLog) ? approvalLog.find(l => l.approver_id == tokenPayload.id) : null;
+    if (myLog && (myLog.signed_as_proxy == 1 || myLog.delegated_by)) {
+      payload.on_behalf_of = myLog.delegated_by;
+    }
+    
+    const response = await fetchJSON(`${apiBase}/${endpoint}/${contentId}/approve`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    
+    console.log('🔍 Signature processed successfully:', response);
+    showToast(getTranslation('success-sent'), 'success');
+    updateApprovalStatusInUI(contentId, 'approved');
+    disableActionsFor(contentId);
+    
+  } catch (error) {
+    console.error('🔍 Error processing signature in background:', error);
+    showToast(getTranslation('signature-error') || 'حدث خطأ أثناء التوقيع', 'error');
+    enableAllRowActions();
+  } finally {
+    // مسح البيانات المؤقتة بعد انتهاء المعالجة
+    selectedContentId = null;
+    selectedContentType = null;
+  }
+}
+
+// دالة معالجة التوقيع الإلكتروني في الخلفية
+async function processElectronicSignatureInBackground(contentId, contentType, endpoint) {
+  try {
+    console.log('🔍 Processing electronic signature in background for:', contentId);
+    
+    let approvalLog = await fetchApprovalLog(contentId, contentType);
+    const payload = {
+      approved: true,
+      signature: null,
+      electronic_signature: true,
+      notes: ''
+    };
+    
+    const tokenPayload = await safeGetUserInfo(token);
+    if (!tokenPayload) {
+      console.error('Failed to get user info');
+      enableAllRowActions();
+      return;
+    }
+    
+    const myLog = Array.isArray(approvalLog) ? approvalLog.find(l => l.approver_id == tokenPayload.id) : null;
+    if (myLog && (myLog.signed_as_proxy == 1 || myLog.delegated_by)) {
+      payload.on_behalf_of = myLog.delegated_by;
+    }
+    
+    const response = await fetchJSON(`${apiBase}/${endpoint}/${contentId}/approve`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    
+    console.log('🔍 Electronic signature processed successfully:', response);
+    showToast(getTranslation('success-approved'), 'success');
+    updateApprovalStatusInUI(contentId, 'approved');
+    disableActionsFor(contentId);
+    
+  } catch (error) {
+    console.error('🔍 Error processing electronic signature in background:', error);
+    showToast(getTranslation('signature-error') || 'حدث خطأ أثناء التوقيع', 'error');
+    enableAllRowActions();
+  } finally {
+    // مسح البيانات المؤقتة بعد انتهاء المعالجة
+    selectedContentId = null;
+    selectedContentType = null;
+  }
+}
+
+// دالة معالجة الرفض في الخلفية
+async function processRejectionInBackground(contentId, endpoint, reason) {
+  try {
+    console.log('🔍 Processing rejection in background for:', contentId);
+    
+    const response = await fetchJSON(`${apiBase}/${endpoint}/${contentId}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ approved: false, signature: null, notes: reason })
+    });
+    
+    console.log('🔍 Rejection processed successfully:', response);
+    showToast(getTranslation('success-rejected'), 'success');
+    updateApprovalStatusInUI(contentId, 'rejected');
+    
+  } catch (error) {
+    console.error('🔍 Error processing rejection in background:', error);
+    showToast(getTranslation('rejection-error') || 'حدث خطأ أثناء الرفض', 'error');
+    enableAllRowActions();
+  } finally {
+    // مسح البيانات المؤقتة بعد انتهاء المعالجة
+    selectedContentId = null;
+    selectedContentType = null;
   }
 }
 
@@ -3353,8 +3533,15 @@ async function processSingleDelegation(data) {
         message = getTranslation('delegation-request-sent-success');
       }
       showToast(message, 'success');
+      
+      // إغلاق البوب أب بشكل صحيح
+      closeDelegationConfirmationPopup();
+      
       // تحديث الصفحة أو إعادة تحميل البيانات
       setTimeout(() => {
+        // إغلاق جميع البوب أب قبل التحديث
+        forceCloseAllPopups();
+        
         if (typeof refreshApprovalsData === 'function') {
           refreshApprovalsData();
         } else {
@@ -3363,24 +3550,23 @@ async function processSingleDelegation(data) {
       }, 1500);
     } else {
       showToast(result.message || getTranslation('delegation-request-failed'), 'error');
-      // إعادة تفعيل أزرار الصف في حالة الفشل
-      if (data.contentId) {
-        enableRowActions(data.contentId);
-      }
+      // إعادة تفعيل جميع أزرار جميع الصفوف في حالة الفشل
+      enableAllRowActions();
     }
   } catch (error) {
     console.error('🔍 Error processing single delegation:', error);
     showToast(getTranslation('delegation-request-error'), 'error');
-    // إعادة تفعيل أزرار الصف في حالة الخطأ
-    if (data.contentId) {
-      enableRowActions(data.contentId);
-    }
+    // إعادة تفعيل جميع أزرار جميع الصفوف في حالة الخطأ
+    enableAllRowActions();
   } finally {
     // إعادة تفعيل جميع الأزرار في حالة النجاح أو الفشل
     const confirmButton = document.querySelector('#delegationConfirmationPopup .btn-primary');
     if (confirmButton) {
       setButtonProcessingState(confirmButton, false);
     }
+    
+    // مسح البيانات المؤقتة
+    pendingDelegationData = null;
   }
 }
 
@@ -3419,8 +3605,15 @@ async function processBulkDelegation(data) {
       // رسالة موحدة للنجاح
       const message = getTranslation('bulk-delegation-request-sent-success');
       showToast(message, 'success');
+      
+      // إغلاق البوب أب بشكل صحيح
+      closeDelegationConfirmationPopup();
+      
       // تحديث الصفحة أو إعادة تحميل البيانات
       setTimeout(() => {
+        // إغلاق جميع البوب أب قبل التحديث
+        forceCloseAllPopups();
+        
         if (typeof refreshApprovalsData === 'function') {
           refreshApprovalsData();
         } else {
@@ -3429,24 +3622,23 @@ async function processBulkDelegation(data) {
       }, 1500);
     } else {
       showToast(result.message || getTranslation('bulk-delegation-request-failed'), 'error');
-      // إعادة تفعيل أزرار الصف في حالة الفشل
-      if (data.contentId) {
-        enableRowActions(data.contentId);
-      }
+      // إعادة تفعيل جميع أزرار جميع الصفوف في حالة الفشل
+      enableAllRowActions();
     }
   } catch (error) {
     console.error('🔍 Error processing bulk delegation:', error);
     showToast(getTranslation('bulk-delegation-request-error'), 'error');
-    // إعادة تفعيل أزرار الصف في حالة الخطأ
-    if (data.contentId) {
-      enableRowActions(data.contentId);
-    }
+    // إعادة تفعيل جميع أزرار جميع الصفوف في حالة الخطأ
+    enableAllRowActions();
   } finally {
     // إعادة تفعيل جميع الأزرار في حالة النجاح أو الفشل
     const confirmButton = document.querySelector('#delegationConfirmationPopup .btn-primary');
     if (confirmButton) {
       setButtonProcessingState(confirmButton, false);
     }
+    
+    // مسح البيانات المؤقتة
+    pendingDelegationData = null;
   }
 }
 
@@ -3513,17 +3705,21 @@ function protectFromDoubleClick(button, processingText = null) {
     // تعطيل الزر فوراً
     setButtonProcessingState(button, true, processingText);
     
-    // إعادة تفعيل الزر بعد 10 ثواني كحد أقصى (زيادة الوقت للسيرفر البطيء)
+    // إعادة تفعيل الزر بعد 15 ثانية كحد أقصى (زيادة الوقت للسيرفر البطيء)
     if (processingTimeout) {
       clearTimeout(processingTimeout);
     }
     
+    // لا نعيد تفعيل الزر تلقائياً إذا كان في حالة المعالجة العامة
+    // سيتم إعادة تفعيله بواسطة enableAllRowActions
     processingTimeout = setTimeout(() => {
-      if (button) {
+      if (button && !button.classList.contains('processing')) {
         setButtonProcessingState(button, false);
-        console.log('🔍 Button re-enabled after timeout');
+        console.log('🔍 Button re-enabled after timeout (not in global processing state)');
+      } else {
+        console.log('🔍 Button still in global processing state, not re-enabling automatically');
       }
-    }, 10000);
+    }, 15000);
     
     console.log('🔍 Button protected from double click');
     return true;
@@ -3580,6 +3776,251 @@ function disableRowActions(contentId) {
     console.log('🔍 Row actions disabled for contentId:', contentId);
   } catch (error) {
     console.error('🔍 Error in disableRowActions:', error);
+  }
+}
+
+// دالة لتعطيل جميع أزرار جميع الصفوف
+function disableAllRowActions() {
+  try {
+    // مسح أي timeouts موجودة لمنع التعارض
+    if (processingTimeout) {
+      clearTimeout(processingTimeout);
+      processingTimeout = null;
+      console.log('🔍 Cleared existing processing timeout in enableAllRowActions');
+    }
+    
+    const allRows = document.querySelectorAll('tr[data-id]');
+    if (allRows.length === 0) {
+      console.warn('🔍 No rows found to enable');
+      return;
+    }
+    
+    console.log('🔍 Found rows to disable:', allRows.length);
+    console.log('🔍 Current selectedContentId:', selectedContentId);
+    
+    allRows.forEach((row, index) => {
+      const rowId = row.dataset.id;
+      const rowType = row.dataset.type;
+      const rowStatus = row.dataset.status;
+      
+      console.log(`🔍 Row ${index + 1}: ID=${rowId}, Type=${rowType}, Status=${rowStatus}`);
+      
+      // التحقق من كون هذا الصف هو الصف المحدد
+      const isSelectedRow = rowId === selectedContentId;
+      if (isSelectedRow) {
+        console.log(`🔍 *** THIS IS THE SELECTED ROW (${rowId}) ***`);
+        console.log(`🔍 Selected row element:`, row);
+        console.log(`🔍 Selected row dataset:`, row.dataset);
+      }
+      
+      // استهداف فقط أزرار الإجراءات (التوقيع، التفويض، التوقيع الإلكتروني، الرفض)
+      const actionButtons = row.querySelectorAll('.btn-sign, .btn-delegate, .btn-qr, .btn-reject');
+      
+      console.log(`🔍 Row ${index + 1}: Found ${actionButtons.length} action buttons ${isSelectedRow ? '(SELECTED ROW)' : ''}`);
+      
+      // إذا كان هذا الصف المحدد، اطبع تفاصيل أكثر عن الأزرار
+      if (isSelectedRow) {
+        console.log(`🔍 Selected row action buttons:`, actionButtons);
+        actionButtons.forEach((btn, btnIndex) => {
+          console.log(`🔍 Selected row button ${btnIndex + 1}:`, {
+            className: btn.className,
+            textContent: btn.textContent,
+            disabled: btn.disabled,
+            dataset: btn.dataset
+          });
+        });
+      }
+      
+      // تعطيل أزرار الإجراءات في جميع الصفوف بنفس الطريقة
+      if (actionButtons.length > 0) {
+        actionButtons.forEach((button, buttonIndex) => {
+          try {
+            const buttonInfo = isSelectedRow ? `(SELECTED ROW) ${button.className}` : button.className;
+            console.log(`🔍 Disabling action button ${buttonIndex + 1} in row ${index + 1}: ${buttonInfo}`);
+            
+            button.disabled = true;
+            button.style.opacity = '0.5';
+            button.style.cursor = 'not-allowed';
+            button.style.pointerEvents = 'none';
+            
+            // إضافة مؤشر بصري
+            button.classList.add('processing');
+            
+            // حفظ النص الأصلي
+            if (!button.dataset.originalText) {
+              button.dataset.originalText = button.innerHTML;
+            }
+            
+            // إضافة نص المعالجة
+            button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${getTranslation('processing')}`;
+            
+            // إضافة CSS إضافي لتحسين المظهر
+            button.style.transition = 'all 0.3s ease';
+            button.style.transform = 'scale(0.95)';
+            button.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+            button.style.filter = 'grayscale(30%)';
+            
+            // إضافة تأكيد إضافي على حالة التعطيل
+            button.setAttribute('aria-disabled', 'true');
+            button.setAttribute('tabindex', '-1');
+            
+            const successInfo = isSelectedRow ? '(SELECTED ROW) disabled successfully' : 'disabled successfully';
+            console.log(`🔍 Action button ${buttonIndex + 1} in row ${index + 1} ${successInfo}`);
+            console.log(`🔍 Button disabled state:`, {
+              disabled: button.disabled,
+              ariaDisabled: button.getAttribute('aria-disabled'),
+              tabindex: button.getAttribute('tabindex'),
+              processingClass: button.classList.contains('processing'),
+              pointerEvents: button.style.pointerEvents
+            });
+          } catch (buttonError) {
+            console.error(`🔍 Error disabling action button ${buttonIndex + 1} in row ${index + 1}:`, buttonError);
+          }
+        });
+      }
+    });
+    
+    console.log('🔍 All row actions disabled');
+  } catch (error) {
+    console.error('🔍 Error in disableAllRowActions:', error);
+  }
+}
+
+// دالة لإعادة تفعيل جميع أزرار جميع الصفوف
+function enableAllRowActions() {
+  try {
+    // مسح أي timeouts موجودة لمنع التعارض
+    if (processingTimeout) {
+      clearTimeout(processingTimeout);
+      processingTimeout = null;
+      console.log('🔍 Cleared existing processing timeout in enableAllRowActions');
+    }
+    
+    const allRows = document.querySelectorAll('tr[data-id]');
+    if (allRows.length === 0) {
+      console.warn('🔍 No rows found to enable');
+      return;
+    }
+    
+    console.log('🔍 Found rows to enable:', allRows.length);
+    
+    allRows.forEach((row, index) => {
+      const rowId = row.dataset.id;
+      const rowType = row.dataset.type;
+      const rowStatus = row.dataset.status;
+      
+      console.log(`🔍 Row ${index + 1}: ID=${rowId}, Type=${rowType}, Status=${rowStatus}`);
+      
+      // إعادة تفعيل أزرار الإجراءات في جميع الصفوف بنفس الطريقة
+      const actionButtons = row.querySelectorAll('.btn-sign, .btn-delegate, .btn-qr, .btn-reject');
+      
+      console.log(`🔍 Row ${index + 1}: Found ${actionButtons.length} action buttons to enable`);
+      
+      if (actionButtons.length > 0) {
+        actionButtons.forEach((button, buttonIndex) => {
+          try {
+            console.log(`🔍 Enabling action button ${buttonIndex + 1} in row ${index + 1}:`, button.className);
+            
+            button.disabled = false;
+            button.style.opacity = '1';
+            button.style.cursor = 'pointer';
+            button.style.pointerEvents = 'auto';
+            
+            // إزالة المؤشر البصري
+            button.classList.remove('processing');
+            button.classList.remove('selected-row-processing');
+            
+            // إعادة النص الأصلي
+            if (button.dataset.originalText) {
+              button.innerHTML = button.dataset.originalText;
+            }
+            
+            // إعادة تعيين CSS
+            button.style.transform = 'scale(1)';
+            button.style.boxShadow = '';
+            button.style.filter = '';
+            button.style.border = '';
+            
+            // إزالة تأكيد التعطيل
+            button.removeAttribute('aria-disabled');
+            button.removeAttribute('tabindex');
+            
+            console.log(`🔍 Action button ${buttonIndex + 1} in row ${index + 1} enabled successfully`);
+            console.log(`🔍 Button enabled state:`, {
+              disabled: button.disabled,
+              ariaDisabled: button.getAttribute('aria-disabled'),
+              tabindex: button.getAttribute('tabindex'),
+              processingClass: button.classList.contains('processing'),
+              pointerEvents: button.style.pointerEvents
+            });
+          } catch (buttonError) {
+            console.error(`🔍 Error enabling action button ${buttonIndex + 1} in row ${index + 1}:`, buttonError);
+          }
+        });
+      }
+    });
+    
+    console.log('🔍 All row actions enabled');
+  } catch (error) {
+    console.error('🔍 Error in enableAllRowActions:', error);
+  }
+}
+
+// دالة خاصة لتعطيل الصف الأساسي فقط
+function disableSelectedRowActions() {
+  try {
+    if (!selectedContentId) {
+      console.warn('🔍 No selected content ID to disable');
+      return;
+    }
+    
+    const selectedRow = document.querySelector(`tr[data-id="${selectedContentId}"]`);
+    if (!selectedRow) {
+      console.warn('🔍 Selected row not found:', selectedContentId);
+      return;
+    }
+    
+    console.log('🔍 Disabling selected row actions for:', selectedContentId);
+    
+    // تعطيل أزرار الإجراءات في الصف الأساسي
+    const allButtonsInRow = selectedRow.querySelectorAll('.btn-sign, .btn-delegate, .btn-qr, .btn-reject');
+    console.log(`🔍 Selected row has ${allButtonsInRow.length} total buttons`);
+    
+    allButtonsInRow.forEach((button, buttonIndex) => {
+      try {
+        console.log(`🔍 Disabling button ${buttonIndex + 1} in selected row:`, button.className);
+        
+        button.disabled = true;
+        button.style.opacity = '0.5';
+        button.style.cursor = 'not-allowed';
+        button.style.pointerEvents = 'none';
+        
+        // إضافة مؤشر بصري
+        button.classList.add('processing');
+        
+        // حفظ النص الأصلي
+        if (!button.dataset.originalText) {
+          button.dataset.originalText = button.innerHTML;
+        }
+        
+        // إضافة نص المعالجة
+        button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${getTranslation('processing')}`;
+        
+        // إضافة CSS إضافي لتحسين المظهر
+        button.style.transition = 'all 0.3s ease';
+        button.style.transform = 'scale(0.95)';
+        button.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+        button.style.filter = 'grayscale(30%)';
+        
+        console.log(`🔍 Button ${buttonIndex + 1} in selected row disabled successfully`);
+      } catch (buttonError) {
+        console.error(`🔍 Error disabling button ${buttonIndex + 1} in selected row:`, buttonError);
+      }
+    });
+    
+    console.log('🔍 Selected row actions disabled successfully');
+  } catch (error) {
+    console.error('🔍 Error in disableSelectedRowActions:', error);
   }
 }
 
