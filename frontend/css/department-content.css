@@ -1035,3 +1035,237 @@ body[lang="en"] .toast-container,
 .view-protocol-icon:hover {
     background-color: #2563eb;
 }
+
+/* Transfer File Modal Styles */
+.transfer-modal {
+    max-width: 700px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.transfer-modal .modal-body {
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.transfer-modal .form-group {
+    margin-bottom: 20px;
+}
+
+/* Step Sections */
+.step-section {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid #e9ecef;
+}
+
+.step-title {
+    color: #495057;
+    margin-bottom: 20px;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #007bff;
+}
+
+.step-divider {
+    border: none;
+    height: 2px;
+    background: linear-gradient(to right, transparent, #007bff, transparent);
+    margin: 30px 0;
+}
+
+.transfer-modal .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+}
+
+.transfer-modal .form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+    background-color: #fff;
+    box-sizing: border-box;
+}
+
+.transfer-modal .form-control:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.transfer-modal .form-control:disabled {
+    background-color: #f8f9fa;
+    color: #6c757d;
+}
+
+.target-folder-display {
+    padding: 12px;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 5px;
+    color: #495057;
+    font-size: 14px;
+}
+
+.file-preview {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 5px;
+    gap: 15px;
+}
+
+.file-preview .file-icon img {
+    width: 40px;
+    height: 40px;
+}
+
+.file-preview .file-details {
+    flex: 1;
+}
+
+.file-preview .file-name {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.file-preview .file-meta {
+    font-size: 13px;
+    color: #6c757d;
+}
+
+.transfer-modal .modal-buttons {
+    padding: 20px;
+    border-top: 1px solid #e9ecef;
+    background-color: #f8f9fa;
+}
+
+.transfer-modal .btn-primary:disabled {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Transfer button in file controls */
+.transfer-files-btn {
+    background-color: #17a2b8;
+    border-color: #17a2b8;
+    margin-left: 10px;
+}
+
+.transfer-files-btn:hover {
+    background-color: #138496;
+    border-color: #117a8b;
+}
+
+/* Controls buttons container */
+.controls-buttons {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.controls-buttons .btn-primary {
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    .file-controls-bar {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .controls-buttons {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* ===== Footer Styles ===== */
+.main-footer {
+    background-color: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+    padding: 20px 0;
+    text-align: center;
+    direction: rtl;
+    font-family: 'Tajawal', sans-serif;
+    position: relative;
+    bottom: 0;
+    width: 100%;
+}
+
+.footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.copyright {
+    font-size: 14px;
+    color: #6c757d;
+    margin-bottom: 8px;
+    font-weight: 400;
+}
+
+.developers {
+    font-size: 13px;
+    color: #868e96;
+    font-weight: 300;
+    line-height: 1.4;
+}
+
+/* للغة الإنجليزية - تغيير اتجاه الفوتر */
+html[lang="en"] .main-footer,
+body[lang="en"] .main-footer,
+[dir="ltr"] .main-footer {
+    direction: ltr;
+}
+
+/* تحسينات للأجهزة المحمولة */
+@media (max-width: 768px) {
+    .main-footer {
+        padding: 15px 0;
+    }
+    
+    .footer-content {
+        padding: 0 15px;
+    }
+    
+    .copyright {
+        font-size: 13px;
+    }
+    
+    .developers {
+        font-size: 12px;
+    }
+}
+
+/* تأكيد أن الفوتر يظهر في نهاية المحتوى */
+body {
+    min-height: 100vh;
+    position: relative;
+}
+
+main {
+    padding-bottom: 100px; /* إضافة مساحة كافية أسفل المحتوى للفوتر */
+}
+
+.main-footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+}
