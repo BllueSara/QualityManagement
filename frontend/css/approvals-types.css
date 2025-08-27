@@ -441,5 +441,23 @@ body[lang="en"] .main-footer,
         font-size: 12px;
     }
 }
+/* تأكيد أن الفوتر يظهر في نهاية المحتوى */
+body {
+    min-height: 100vh;
+    position: relative;
+}
+
+main {
+    padding-bottom: 900px; /* إضافة مساحة كافية أسفل المحتوى للفوتر */
+}
+
+.main-footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+}
+
+
 
 /* تأكيد أن الفوتر يظهر في نهاية المحتوى *

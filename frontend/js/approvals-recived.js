@@ -614,11 +614,11 @@ function confirmDelegation() {
       return;
     }
     
-    // منع التوقيع المتكرر
-    preventDuplicateSignatures();
+    // منع التوقيع المتكرر للصف المحدد
+    preventDuplicateSignatures(contentId);
     
-    // تعطيل جميع أزرار جميع الصفوف
-    disableAllRowActions();
+    // تعطيل أزرار الصف المحدد فقط
+    disableRowActions(contentId);
     
     // إضافة توقيع المرسل إلى بيانات التفويض
     pendingDelegationData.senderSignature = senderSignature;
@@ -1419,11 +1419,11 @@ document.getElementById("nextPage").addEventListener("click", () => {
         return;
       }
       
-          // منع التوقيع المتكرر
-    preventDuplicateSignatures();
+          // منع التوقيع المتكرر للصف المحدد
+    preventDuplicateSignatures(contentId);
     
-    // تعطيل جميع أزرار جميع الصفوف
-    disableAllRowActions();
+    // تعطيل أزرار الصف المحدد فقط
+    disableRowActions(contentId);
     
     // إغلاق مودال الرفض فوراً
     closeModal('rejectModal');
@@ -1975,11 +1975,11 @@ if (btnElectronicApprove) {
       return;
     }
     
-    // منع التوقيع المتكرر
-    preventDuplicateSignatures();
+    // منع التوقيع المتكرر للصف المحدد
+    preventDuplicateSignatures(selectedContentId);
     
-    // تعطيل جميع أزرار جميع الصفوف
-    disableAllRowActions();
+    // تعطيل أزرار الصف المحدد فقط
+    disableRowActions(selectedContentId);
     
     // إغلاق مودال التوقيع الإلكتروني فوراً
     closeModal('qrModal');
@@ -2177,15 +2177,15 @@ function setupSignatureModal() {
       return;
     }
     
-    // منع التوقيع المتكرر
-    preventDuplicateSignatures();
+    // منع التوقيع المتكرر للصف المحدد
+    preventDuplicateSignatures(selectedContentId);
     
-    console.log('🔍 About to disable all row actions...');
-    console.log('🔍 selectedContentId before disableAllRowActions:', selectedContentId);
-    console.log('🔍 selectedContentType before disableAllRowActions:', selectedContentType);
+    console.log('🔍 About to disable row actions for:', selectedContentId);
+    console.log('🔍 selectedContentId before disableRowActions:', selectedContentId);
+    console.log('🔍 selectedContentType before disableRowActions:', selectedContentType);
     
-    // تعطيل جميع أزرار جميع الصفوف (بما في ذلك الصف المحدد)
-    disableAllRowActions();
+    // تعطيل أزرار الصف المحدد فقط
+    disableRowActions(selectedContentId);
     
     console.log('🔍 All row actions disabled, about to close signature modal...');
     
@@ -3083,46 +3083,83 @@ function forceCloseAllPopups() {
   }
 }
 
-// دالة جديدة لمنع التوقيع المتكرر
-function preventDuplicateSignatures() {
+// دالة جديدة لمنع التوقيع المتكرر للصف المحدد فقط
+function preventDuplicateSignatures(contentId = null) {
   try {
-    // تعطيل جميع أزرار التوقيع
-    const signButtons = document.querySelectorAll('.btn-sign');
-    signButtons.forEach(button => {
-      button.disabled = true;
-      button.style.opacity = '0.5';
-      button.style.cursor = 'not-allowed';
-      button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${getTranslation('processing') || 'جاري المعالجة...'}`;
-    });
-    
-    // تعطيل جميع أزرار التفويض
-    const delegateButtons = document.querySelectorAll('.btn-delegate');
-    delegateButtons.forEach(button => {
-      button.disabled = true;
-      button.style.opacity = '0.5';
-      button.style.cursor = 'not-allowed';
-      button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${getTranslation('processing') || 'جاري المعالجة...'}`;
-    });
-    
-    // تعطيل جميع أزرار التوقيع الإلكتروني
-    const qrButtons = document.querySelectorAll('.btn-qr');
-    qrButtons.forEach(button => {
-      button.disabled = true;
-      button.style.opacity = '0.5';
-      button.style.cursor = 'not-allowed';
-      button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${getTranslation('processing') || 'جاري المعالجة...'}`;
-    });
-    
-    // تعطيل جميع أزرار الرفض
-    const rejectButtons = document.querySelectorAll('.btn-reject');
-    rejectButtons.forEach(button => {
-      button.disabled = true;
-      button.style.opacity = '0.5';
-      button.style.cursor = 'not-allowed';
-      button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${getTranslation('processing') || 'جاري المعالجة...'}`;
-    });
-    
-    console.log('🔍 All signature buttons disabled to prevent duplicates');
+    if (contentId) {
+      // تعطيل أزرار الصف المحدد فقط
+      const row = document.querySelector(`tr[data-id="${contentId}"]`);
+      if (row) {
+        const signButtons = row.querySelectorAll('.btn-sign');
+        signButtons.forEach(button => {
+          button.disabled = true;
+          button.style.opacity = '0.5';
+          button.style.cursor = 'not-allowed';
+          button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${getTranslation('processing') || 'جاري المعالجة...'}`;
+        });
+        
+        const delegateButtons = row.querySelectorAll('.btn-delegate');
+        delegateButtons.forEach(button => {
+          button.disabled = true;
+          button.style.opacity = '0.5';
+          button.style.cursor = 'not-allowed';
+          button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${getTranslation('processing') || 'جاري المعالجة...'}`;
+        });
+        
+        const qrButtons = row.querySelectorAll('.btn-qr');
+        qrButtons.forEach(button => {
+          button.disabled = true;
+          button.style.opacity = '0.5';
+          button.style.cursor = 'not-allowed';
+          button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${getTranslation('processing') || 'جاري المعالجة...'}`;
+        });
+        
+        const rejectButtons = row.querySelectorAll('.btn-reject');
+        rejectButtons.forEach(button => {
+          button.disabled = true;
+          button.style.opacity = '0.5';
+          button.style.cursor = 'not-allowed';
+          button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${getTranslation('processing') || 'جاري المعالجة...'}`;
+        });
+        
+        console.log('🔍 Signature buttons disabled for specific row:', contentId);
+      }
+    } else {
+      // الحفاظ على السلوك القديم إذا لم يتم تمرير contentId (للتوافق مع الكود الموجود)
+      const signButtons = document.querySelectorAll('.btn-sign');
+      signButtons.forEach(button => {
+        button.disabled = true;
+        button.style.opacity = '0.5';
+        button.style.cursor = 'not-allowed';
+        button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${getTranslation('processing') || 'جاري المعالجة...'}`;
+      });
+      
+      const delegateButtons = document.querySelectorAll('.btn-delegate');
+      delegateButtons.forEach(button => {
+        button.disabled = true;
+        button.style.opacity = '0.5';
+        button.style.cursor = 'not-allowed';
+        button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${getTranslation('processing') || 'جاري المعالجة...'}`;
+      });
+      
+      const qrButtons = document.querySelectorAll('.btn-qr');
+      qrButtons.forEach(button => {
+        button.disabled = true;
+        button.style.opacity = '0.5';
+        button.style.cursor = 'not-allowed';
+        button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${getTranslation('processing') || 'جاري المعالجة...'}`;
+      });
+      
+      const rejectButtons = document.querySelectorAll('.btn-reject');
+      rejectButtons.forEach(button => {
+        button.disabled = true;
+        button.style.opacity = '0.5';
+        button.style.cursor = 'not-allowed';
+        button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${getTranslation('processing') || 'جاري المعالجة...'}`;
+      });
+      
+      console.log('🔍 All signature buttons disabled to prevent duplicates');
+    }
   } catch (error) {
     console.error('🔍 Error preventing duplicate signatures:', error);
   }
@@ -3132,6 +3169,9 @@ function preventDuplicateSignatures() {
 async function processSignatureInBackground(contentId, contentType, endpoint, signature) {
   try {
     console.log('🔍 Processing signature in background for:', contentId);
+    
+    // تعطيل أزرار الصف المحدد فقط
+    disableRowActions(contentId);
     
     let approvalLog = await fetchApprovalLog(contentId, contentType);
     const payload = {
@@ -3143,7 +3183,7 @@ async function processSignatureInBackground(contentId, contentType, endpoint, si
     const tokenPayload = await safeGetUserInfo(token);
     if (!tokenPayload) {
       console.error('Failed to get user info');
-      enableAllRowActions();
+      enableRowActions(contentId);
       return;
     }
     
@@ -3165,7 +3205,7 @@ async function processSignatureInBackground(contentId, contentType, endpoint, si
   } catch (error) {
     console.error('🔍 Error processing signature in background:', error);
     showToast(getTranslation('signature-error') || 'حدث خطأ أثناء التوقيع', 'error');
-    enableAllRowActions();
+    enableRowActions(contentId);
   } finally {
     // مسح البيانات المؤقتة بعد انتهاء المعالجة
     selectedContentId = null;
@@ -3178,6 +3218,9 @@ async function processElectronicSignatureInBackground(contentId, contentType, en
   try {
     console.log('🔍 Processing electronic signature in background for:', contentId);
     
+    // تعطيل أزرار الصف المحدد فقط
+    disableRowActions(contentId);
+    
     let approvalLog = await fetchApprovalLog(contentId, contentType);
     const payload = {
       approved: true,
@@ -3189,7 +3232,7 @@ async function processElectronicSignatureInBackground(contentId, contentType, en
     const tokenPayload = await safeGetUserInfo(token);
     if (!tokenPayload) {
       console.error('Failed to get user info');
-      enableAllRowActions();
+      enableRowActions(contentId);
       return;
     }
     
@@ -3211,7 +3254,7 @@ async function processElectronicSignatureInBackground(contentId, contentType, en
   } catch (error) {
     console.error('🔍 Error processing electronic signature in background:', error);
     showToast(getTranslation('signature-error') || 'حدث خطأ أثناء التوقيع', 'error');
-    enableAllRowActions();
+    enableRowActions(contentId);
   } finally {
     // مسح البيانات المؤقتة بعد انتهاء المعالجة
     selectedContentId = null;
@@ -3223,6 +3266,9 @@ async function processElectronicSignatureInBackground(contentId, contentType, en
 async function processRejectionInBackground(contentId, endpoint, reason) {
   try {
     console.log('🔍 Processing rejection in background for:', contentId);
+    
+    // تعطيل أزرار الصف المحدد فقط
+    disableRowActions(contentId);
     
     const response = await fetchJSON(`${apiBase}/${endpoint}/${contentId}/approve`, {
       method: 'POST',
@@ -3236,7 +3282,7 @@ async function processRejectionInBackground(contentId, endpoint, reason) {
   } catch (error) {
     console.error('🔍 Error processing rejection in background:', error);
     showToast(getTranslation('rejection-error') || 'حدث خطأ أثناء الرفض', 'error');
-    enableAllRowActions();
+    enableRowActions(contentId);
   } finally {
     // مسح البيانات المؤقتة بعد انتهاء المعالجة
     selectedContentId = null;

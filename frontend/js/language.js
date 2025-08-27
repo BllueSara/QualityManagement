@@ -20,7 +20,7 @@ const translations = {
         'folder-type-shared': 'مشترك',
         'folder-type-shared-desc': 'للأشخاص المرسل لهم ملفات للاعتماد',
         'all-rights-reserved': 'جميع الحقوق محفوظة 2025 ©',
-        'developed-by': 'إعداد المهندس هاني مياجان | تنفيذ المهندسة سارا اللهيبي',
+        'developed-by': ' المهندس هاني مياجان |  المهندسة سارا اللهيبي',
         // Folder Access Messages
         'folder-access-private-message': 'هذا مجلد خاص. يمكنك رؤية المجلد لكن لا يمكنك الوصول لمحتوياته.',
         'folder-access-shared-message': 'هذا مجلد مشترك. يمكنك رؤية المجلد لكن لا يمكنك الوصول لمحتوياته إلا إذا كنت معتمداً عليها.',
@@ -1701,7 +1701,7 @@ const translations = {
         "accreditations": "الإعتمادات",
         "enter-system": "دخول النظام",
         "copyright": "جميع الحقوق محفوظة 2025",
-        "developers": "إعداد المهندس هاني مياجان | تنفيذ المهندسة سارا اللهيبي",
+        "developers": " المهندس هاني مياجان |  المهندسة سارا اللهيبي",
                 // File Transfer
         'transfer-from-project': 'نقل إلى مشروع آخر',
         'transfer-file': 'نقل ملف من مشروع آخر',
@@ -1753,7 +1753,7 @@ const translations = {
         'file-preview': 'معاينة الملف:',
 
         'all-rights-reserved': 'جميع الحقوق محفوظة 2025 ©',
-        'developed-by': 'إعداد المهندس هاني مياجان | تنفيذ المهندسة سارا اللهيبي',
+        'developed-by': ' المهندس هاني مياجان |  المهندسة سارا اللهيبي',
     },
     en: {
               
@@ -3161,7 +3161,7 @@ const translations = {
         "accreditations": "Accreditations",
         "enter-system": "Enter System",
         "copyright": "All Rights Reserved 2025",
-        "developers": "Prepared by Engineer Hani Miyajan | Implemented by Engineer Sara Alluhaibi",
+        "developers": "  Engineer Hani Miyajan |  Engineer Sara Alluhaibi",
         'back': 'Back',
         'home': 'Home',
         'ticket-not-found': 'OVR ID not found',
@@ -3536,7 +3536,7 @@ const translations = {
         'accreditations': 'Accreditations',
         'enter-system': 'Enter System',
         'all-rights-reserved': 'All Rights Reserved 2025 ©',
-        'developed-by': 'Prepared by Engineer Hani Miyajan | Implemented by Engineer Sara Alluhaibi',
+        'developed-by': ' Engineer Hani Miyajan |   Engineer Sara Alluhaibi',
     }
 };
 window.translations = translations;

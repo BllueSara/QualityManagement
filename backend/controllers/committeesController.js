@@ -243,6 +243,7 @@ exports.getCommittee = async (req, res) => {
     }
 };
 
+
 exports.addCommittee = async (req, res) => {
     try {
       const { name } = req.body;
@@ -287,7 +288,13 @@ exports.addCommittee = async (req, res) => {
       // معالجة مسار الصورة - السماح بإضافة لجنة بدون صورة
       let imagePath = '';
       if (req.file) {
+        // صورة جديدة تم رفعها
         imagePath = path.posix.join('backend', 'uploads', 'images', req.file.filename);
+        console.log('🔍 New image uploaded:', imagePath);
+      } else if (req.body.existingImage) {
+        // صورة موجودة تم اختيارها
+        imagePath = req.body.existingImage;
+        console.log('🔍 Existing image selected:', imagePath);
       }
   
       const [exists] = await db.execute('SELECT id FROM committees WHERE name = ? AND deleted_at IS NULL', [name]);
@@ -381,9 +388,24 @@ exports.addCommittee = async (req, res) => {
       
       // معالجة مسار الصورة - السماح بتحديث لجنة بدون صورة
       let query, params;
+      let imagePath = '';
+      
       if (req.file) {
         // إذا تم رفع صورة جديدة
-        const imagePath = path.posix.join('backend', 'uploads', 'images', req.file.filename);
+        imagePath = path.posix.join('backend', 'uploads', 'images', req.file.filename);
+        console.log('🔍 New image uploaded:', imagePath);
+        query = 'UPDATE committees SET name = ?, image = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
+        params = [name, imagePath, id];
+      } else if (req.body.existingImage) {
+        // إذا تم اختيار صورة موجودة
+        imagePath = req.body.existingImage;
+        console.log('🔍 Existing image selected:', imagePath);
+        query = 'UPDATE committees SET name = ?, image = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
+        params = [name, imagePath, id];
+      } else if (req.body.currentImage) {
+        // إذا تم الاحتفاظ بالصورة الحالية
+        imagePath = req.body.currentImage;
+        console.log('🔍 Keeping current image:', imagePath);
         query = 'UPDATE committees SET name = ?, image = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
         params = [name, imagePath, id];
       } else {
@@ -433,6 +455,7 @@ exports.addCommittee = async (req, res) => {
       res.status(500).json({ message: 'خطأ في تعديل اللجنة', error });
     }
   };
+  
   
 
 exports.deleteCommittee = async (req, res) => {
