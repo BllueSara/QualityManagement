@@ -87,9 +87,9 @@ const PerformanceOptimizations = {
   preloadCriticalData() {
     // تحميل البيانات المهمة مسبقاً
     const criticalEndpoints = [
-      '/api/user/profile',
-      '/api/departments',
-      '/api/permissions'
+      'http://localhost:3006/api/auth/user-info',
+      'http://localhost:3006/api/departments',
+      'http://localhost:3006/api/permissions/definitions/permissions'
     ];
 
     criticalEndpoints.forEach(endpoint => {
