@@ -223,10 +223,12 @@ body[lang="en"] .toast-container,
     background-color: #f8f9fa;
     border-top: 1px solid #e9ecef;
     padding: 20px 0;
-    margin-top: 40px;
     text-align: center;
     direction: rtl;
     font-family: 'Tajawal', sans-serif;
+    position: relative;
+    bottom: 0;
+    width: 100%;
 }
 
 .footer-content {
@@ -260,7 +262,6 @@ body[lang="en"] .main-footer,
 @media (max-width: 768px) {
     .main-footer {
         padding: 15px 0;
-        margin-top: 30px;
     }
     
     .footer-content {
@@ -274,21 +275,4 @@ body[lang="en"] .main-footer,
     .developers {
         font-size: 12px;
     }
-}
-/* تأكيد أن الفوتر يظهر في الأسفل */
-body {
-    min-height: 100vh;
-    position: relative;
-}
-
-.maintenance-container {
-    margin-bottom: 100px; /* إضافة مساحة أسفل المحتوى للفوتر */
-}
-
-.main-footer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    z-index: 1000;
 }

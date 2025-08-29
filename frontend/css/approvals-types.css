@@ -448,7 +448,7 @@ body {
 }
 
 main {
-    padding-bottom: 900px; /* إضافة مساحة كافية أسفل المحتوى للفوتر */
+    padding-bottom: 100px; /* إضافة مساحة كافية أسفل المحتوى للفوتر */
 }
 
 .main-footer {

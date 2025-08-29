@@ -183,55 +183,53 @@ exports.sendApprovalRequest = async (req, res) => {
         [contentId]
     );
 
-    // معالجة التفويضات - تحديد المعتمدين النهائيين
+    // معالجة التفويضات - تحديد المعتمدين النهائيين (محسن للأداء)
     const finalApprovers = [];
+    
+    // جلب جميع التفويضات في استعلام واحد للتسريع
+    const [allDelegations] = await conn.execute(
+      `SELECT user_id, delegate_id FROM active_delegations 
+       WHERE user_id IN (${approvers.map(() => '?').join(',')}) 
+       OR delegate_id IN (${approvers.map(() => '?').join(',')})`,
+      [...approvers, ...approvers]
+    );
+    
+    // إنشاء خرائط للتفويضات للوصول السريع
+    const userToDelegateMap = new Map();
+    const delegateToUserMap = new Map();
+    
+    allDelegations.forEach(row => {
+      userToDelegateMap.set(row.user_id, row.delegate_id);
+      delegateToUserMap.set(row.delegate_id, row.user_id);
+    });
+    
+    // معالجة كل معتمد
     for (const approverId of approvers) {
-      // تحقق إذا كان هذا المعتمد مفوض له لشخص آخر (من active_delegations)
-      const [proxyRows] = await conn.execute(
-        'SELECT delegate_id FROM active_delegations WHERE user_id = ?',
-        [approverId]
-      );
-      
-      if (proxyRows.length > 0) {
+      // تحقق إذا كان هذا المعتمد مفوض له لشخص آخر
+      if (userToDelegateMap.has(approverId)) {
         // هذا المعتمد مفوض له، أضف المفوض له بدلاً منه
-        const delegateeId = proxyRows[0].delegate_id;
+        const delegateeId = userToDelegateMap.get(approverId);
         if (!finalApprovers.includes(delegateeId)) {
           finalApprovers.push(delegateeId);
         }
+      } else if (delegateToUserMap.has(approverId)) {
+        // هذا مفوض له، أضفه فقط
+        if (!finalApprovers.includes(approverId)) {
+          finalApprovers.push(approverId);
+        }
       } else {
-        // تحقق إذا كان هذا المعتمد مفوض له لشخص آخر (من active_delegations)
-        const [delegationRows] = await conn.execute(
-          'SELECT user_id FROM active_delegations WHERE delegate_id = ?',
-          [approverId]
-        );
-        
-        if (delegationRows.length) {
-          // هذا مفوض له، أضفه فقط (لا تضيف المفوض الأصلي)
-          if (!finalApprovers.includes(approverId)) {
-            finalApprovers.push(approverId); // أضف المفوض له فقط
-          }
-        } else {
-          // هذا ليس مفوض له، أضفه
-          if (!finalApprovers.includes(approverId)) {
-            finalApprovers.push(approverId);
-          }
+        // هذا ليس مفوض له، أضفه
+        if (!finalApprovers.includes(approverId)) {
+          finalApprovers.push(approverId);
         }
       }
     }
     
-    // إضافة التفويض المزدوج - إذا كان المستخدم في قائمة المعتمدين ومفوض له أيضاً
+    // إضافة التفويض المزدوج
     for (const approverId of approvers) {
-      // تحقق إذا كان هذا المعتمد مفوض له لشخص آخر
-      const [proxyRows] = await conn.execute(
-        'SELECT delegate_id FROM active_delegations WHERE user_id = ?',
-        [approverId]
-      );
-      
-      if (proxyRows.length > 0) {
-        // هذا المعتمد مفوض له، أضفه مرة ثانية للتفويض المزدوج
-        const delegateeId = proxyRows[0].delegate_id;
+      if (userToDelegateMap.has(approverId)) {
+        const delegateeId = userToDelegateMap.get(approverId);
         if (finalApprovers.includes(delegateeId)) {
-          // أضف نسخة ثانية للتفويض المزدوج
           finalApprovers.push(delegateeId);
         }
       }

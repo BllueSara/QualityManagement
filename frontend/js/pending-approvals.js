@@ -620,9 +620,9 @@ async function handleRemoveApprover(approvalItem, approverName, contentId, conte
     showToast(getTranslation('approver-removed-success') || 'تم حذف المعتمد بنجاح', 'success');
     
     // 8) إعادة تحميل البيانات للتأكد من التحديث (فقط للمرسل)
-    // تم إزالة إعادة التحميل التلقائية لمنع إعادة ظهور المعتمد المحذوف
-    // await loadPendingApprovals();
-    // await initDropdowns();
+    if (isSent) {
+      await refreshCurrentView();
+    }
     
   } catch (error) {
     console.error('Error removing approver:', error);
@@ -847,9 +847,94 @@ function updateApprovalItemUI(approvalItem, updatedNames, updatedIds) {
   }
  }
 
+// دالة لإظهار loading عام للصفحة
+function showPageLoading(message = null) {
+  // إزالة أي loading موجود مسبقاً
+  hidePageLoading();
+  
+  const loadingOverlay = document.createElement('div');
+  loadingOverlay.id = 'page-loading-overlay';
+  loadingOverlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    font-family: Arial, sans-serif;
+  `;
+  
+  const currentLang = localStorage.getItem('language') || 'ar';
+  const defaultMessage = currentLang === 'ar' ? 'جاري التحديث...' : 'Updating...';
+  
+  loadingOverlay.innerHTML = `
+    <div style="text-align: center;">
+      <div style="margin-bottom: 20px;">
+        <i class="fas fa-spinner fa-spin" style="font-size: 48px; color: #007bff;"></i>
+      </div>
+      <div style="font-size: 18px; color: #333; font-weight: 600;">
+        ${message || defaultMessage}
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(loadingOverlay);
+}
+
+// دالة لإخفاء loading العام
+function hidePageLoading() {
+  const existingOverlay = document.getElementById('page-loading-overlay');
+  if (existingOverlay) {
+    existingOverlay.remove();
+  }
+}
+
+// دالة مساعدة لفحص حالة الـ dropdown
+function debugDropdownState(approvalItem) {
+  const id = approvalItem.dataset.id;
+  console.log(`🔍 Debugging dropdown state for item: ${id}`);
+  
+  const internalDept = approvalItem.querySelector('[data-type=internal-dept]');
+  const internalUsers = approvalItem.querySelector('[data-type=internal-users]');
+  const externalDept = approvalItem.querySelector('[data-type=external-dept]');
+  const externalUsers = approvalItem.querySelector('[data-type=external-users]');
+  
+  console.log(`  ✅ Internal Dept: ${!!internalDept}`);
+  console.log(`  ✅ Internal Users: ${!!internalUsers}`);
+  console.log(`  ✅ External Dept: ${!!externalDept}`);
+  console.log(`  ✅ External Users: ${!!externalUsers}`);
+  
+  if (internalDept) {
+    const btn = internalDept.querySelector('.dropdown-btn');
+    const content = internalDept.querySelector('.dropdown-content');
+    const items = content?.querySelectorAll('.dropdown-item');
+    console.log(`  📋 Internal Dept - Btn: ${!!btn}, Content: ${!!content}, Items: ${items?.length || 0}`);
+  }
+  
+  if (internalUsers) {
+    const btn = internalUsers.querySelector('.dropdown-btn');
+    const content = internalUsers.querySelector('.dropdown-content');
+    const items = content?.querySelectorAll('.dropdown-item');
+    console.log(`  👥 Internal Users - Btn: ${!!btn}, Content: ${!!content}, Items: ${items?.length || 0}`);
+  }
+}
+
 async function initDropdowns() {
-  const departments = await fetchJSON(`${apiBase}/departments/all`);
-  document.querySelectorAll('.approval-item').forEach(approvalItem => {
+  try {
+    console.log('🔄 Initializing dropdowns...');
+    const departments = await fetchJSON(`${apiBase}/departments/all`);
+    const approvalItems = document.querySelectorAll('.approval-item');
+    console.log(`📦 Found ${approvalItems.length} approval items to initialize`);
+    
+    approvalItems.forEach(approvalItem => {
+    // فحص حالة الـ dropdown قبل التهيئة
+    debugDropdownState(approvalItem);
+    
     const internalDeptDrop = approvalItem.querySelector('[data-type=internal-dept]');
     const internalUserDrop = approvalItem.querySelector('[data-type=internal-users]');
     const externalDeptDrop = approvalItem.querySelector('[data-type=external-dept]');
@@ -857,7 +942,10 @@ async function initDropdowns() {
     const sendBtn  = approvalItem.querySelector('.btn-send');
     const contentType = approvalItem.dataset.type; // نقل إلى الأعلى
 
-    if (!sendBtn) return;
+    if (!sendBtn) {
+      console.warn('❌ Send button not found for approval item:', approvalItem.dataset.id);
+      return;
+    }
     
     // التحقق من وجود العناصر المطلوبة قبل المتابعة
     if (!internalDeptDrop || !internalUserDrop) {
@@ -1006,20 +1094,43 @@ async function initDropdowns() {
       const search = internalDeptList.querySelector('.dropdown-search');
       if (!search) return;
       
-      internalDeptBtn.addEventListener('click', e => {
+      // إزالة event listeners القديمة قبل إضافة الجديدة
+      const oldClickHandler = internalDeptBtn._clickHandler;
+      if (oldClickHandler) {
+        internalDeptBtn.removeEventListener('click', oldClickHandler);
+      }
+      
+      const clickHandler = (e) => {
         e.stopPropagation();
         internalDeptList.classList.toggle('active');
-      });
-      document.addEventListener('click', () => internalDeptList.classList.remove('active'));
-      internalDeptList.addEventListener('click', e => e.stopPropagation());
-      search.addEventListener('input', () => {
+      };
+      internalDeptBtn._clickHandler = clickHandler;
+      internalDeptBtn.addEventListener('click', clickHandler);
+      
+      // إغلاق عند النقر خارج الـ dropdown
+      const globalClickHandler = () => internalDeptList.classList.remove('active');
+      document.addEventListener('click', globalClickHandler);
+      
+      // منع إغلاق الـ dropdown عند النقر بداخله
+      const stopPropagationHandler = (e) => e.stopPropagation();
+      internalDeptList.addEventListener('click', stopPropagationHandler);
+      
+      // البحث في الأقسام
+      const searchHandler = () => {
         const v = search.value.trim();
         internalDeptList.querySelectorAll('.dropdown-item').forEach(i => {
           i.style.display = i.textContent.includes(v) ? 'block' : 'none';
         });
-      });
-      internalDeptList.addEventListener('click', async e => {
+      };
+      search.addEventListener('input', searchHandler);
+      
+      // النقر على عناصر الأقسام
+      const itemClickHandler = async (e) => {
         if (!e.target.classList.contains('dropdown-item')) return;
+        e.stopPropagation(); // منع إغلاق الـ dropdown
+        
+        console.log('🖱️ Department item clicked:', e.target.textContent);
+        
         const item = e.target;
         item.classList.toggle('selected');
         selectedInternalDepts = Array.from(internalDeptList.querySelectorAll('.dropdown-item.selected'))
@@ -1028,6 +1139,9 @@ async function initDropdowns() {
                                 name: i.textContent.trim(),
                                 transferType: 'internal'
                               }));
+        
+        console.log('📋 Selected internal departments:', selectedInternalDepts);
+        
         if (selectedInternalDepts.length === 0) {
           internalDeptBtn.textContent = getTranslation('select-department');
         } else if (selectedInternalDepts.length === 1) {
@@ -1036,7 +1150,14 @@ async function initDropdowns() {
           internalDeptBtn.textContent = `${selectedInternalDepts.length} ${getTranslation('departments-count')}`;
         }
         await rebuildInternalUsersList();
-      });
+      };
+      
+      // إزالة الـ event listener القديم إذا كان موجوداً
+      if (internalDeptList._itemClickHandler) {
+        internalDeptList.removeEventListener('click', internalDeptList._itemClickHandler);
+      }
+      internalDeptList._itemClickHandler = itemClickHandler;
+      internalDeptList.addEventListener('click', itemClickHandler);
     })();
 
     // إعداد القسم الخارجي (فقط إذا كان موجوداً)
@@ -1045,20 +1166,36 @@ async function initDropdowns() {
         const search = externalDeptList.querySelector('.dropdown-search');
         if (!search) return;
         
-        externalDeptBtn.addEventListener('click', e => {
+        // إزالة event listeners القديمة قبل إضافة الجديدة
+        const oldClickHandler = externalDeptBtn._clickHandler;
+        if (oldClickHandler) {
+          externalDeptBtn.removeEventListener('click', oldClickHandler);
+        }
+        
+        const clickHandler = (e) => {
           e.stopPropagation();
           externalDeptList.classList.toggle('active');
-        });
+        };
+        externalDeptBtn._clickHandler = clickHandler;
+        externalDeptBtn.addEventListener('click', clickHandler);
+        
         document.addEventListener('click', () => externalDeptList.classList.remove('active'));
         externalDeptList.addEventListener('click', e => e.stopPropagation());
+        
         search.addEventListener('input', () => {
           const v = search.value.trim();
           externalDeptList.querySelectorAll('.dropdown-item').forEach(i => {
             i.style.display = i.textContent.includes(v) ? 'block' : 'none';
           });
         });
-        externalDeptList.addEventListener('click', async e => {
+        
+        // النقر على عناصر الأقسام الخارجية
+        const externalItemClickHandler = async (e) => {
           if (!e.target.classList.contains('dropdown-item')) return;
+          e.stopPropagation(); // منع إغلاق الـ dropdown
+          
+          console.log('🖱️ External department item clicked:', e.target.textContent);
+          
           const item = e.target;
           item.classList.toggle('selected');
           selectedExternalDepts = Array.from(externalDeptList.querySelectorAll('.dropdown-item.selected'))
@@ -1067,6 +1204,9 @@ async function initDropdowns() {
                                   name: i.textContent.trim(),
                                   transferType: 'external'
                                 }));
+          
+          console.log('📋 Selected external departments:', selectedExternalDepts);
+          
           if (selectedExternalDepts.length === 0) {
             externalDeptBtn.textContent = getTranslation('select-department');
           } else if (selectedExternalDepts.length === 1) {
@@ -1075,7 +1215,14 @@ async function initDropdowns() {
             externalDeptBtn.textContent = `${selectedExternalDepts.length} ${getTranslation('departments-count')}`;
           }
           await rebuildExternalUsersList();
-        });
+        };
+        
+        // إزالة الـ event listener القديم إذا كان موجوداً
+        if (externalDeptList._itemClickHandler) {
+          externalDeptList.removeEventListener('click', externalDeptList._itemClickHandler);
+        }
+        externalDeptList._itemClickHandler = externalItemClickHandler;
+        externalDeptList.addEventListener('click', externalItemClickHandler);
       })();
     }
 
@@ -1645,14 +1792,30 @@ async function initDropdowns() {
     (function setupInternalUsersDropdown() {
       const btn = internalUserDrop.querySelector('.dropdown-btn');
       const list = internalUserDrop.querySelector('.dropdown-content');
-      btn.addEventListener('click', e => {
+      
+      // إزالة event listeners القديمة قبل إضافة الجديدة
+      const oldClickHandler = btn._clickHandler;
+      if (oldClickHandler) {
+        btn.removeEventListener('click', oldClickHandler);
+      }
+      
+      const clickHandler = (e) => {
         e.stopPropagation();
         list.classList.toggle('active');
-      });
+      };
+      btn._clickHandler = clickHandler;
+      btn.addEventListener('click', clickHandler);
+      
       document.addEventListener('click', () => list.classList.remove('active'));
       list.addEventListener('click', e => e.stopPropagation());
-      list.addEventListener('click', e => {
+      
+      // النقر على عناصر المستخدمين الداخليين
+      const internalUsersClickHandler = (e) => {
         if (!e.target.classList.contains('dropdown-item')) return;
+        e.stopPropagation(); // منع إغلاق الـ dropdown
+        
+        console.log('🖱️ Internal user item clicked:', e.target.textContent);
+        
         const item = e.target;
         const name = item.textContent;
         const deptId = item.dataset.deptId;
@@ -1669,14 +1832,24 @@ async function initDropdowns() {
             transferType: 'internal',
             role: 'approved' // الدور الافتراضي - سيتم تحديثه لاحقاً
           });
+          console.log('➕ Added internal user:', name);
         } else {
           // إزالة المعتمد
           selectedInternalUsers = selectedInternalUsers.filter(x => x.id !== userId);
+          console.log('➖ Removed internal user:', name);
         }
 
+        console.log('👥 Selected internal users:', selectedInternalUsers);
         btn.textContent = selectedInternalUsers.length ? `${selectedInternalUsers.length} ${getTranslation('selected-count')}` : getTranslation('select-people');
         updateSelectedApproversDisplay();
-      });
+      };
+      
+      // إزالة الـ event listener القديم إذا كان موجوداً
+      if (list._usersClickHandler) {
+        list.removeEventListener('click', list._usersClickHandler);
+      }
+      list._usersClickHandler = internalUsersClickHandler;
+      list.addEventListener('click', internalUsersClickHandler);
     })();
 
     // إعداد القسم الخارجي للمستخدمين (فقط إذا كان موجوداً)
@@ -1695,14 +1868,29 @@ async function initDropdowns() {
           return;
         }
         
-        btn.addEventListener('click', e => {
+        // إزالة event listeners القديمة قبل إضافة الجديدة
+        const oldClickHandler = btn._clickHandler;
+        if (oldClickHandler) {
+          btn.removeEventListener('click', oldClickHandler);
+        }
+        
+        const clickHandler = (e) => {
           e.stopPropagation();
           list.classList.toggle('active');
-        });
+        };
+        btn._clickHandler = clickHandler;
+        btn.addEventListener('click', clickHandler);
+        
         document.addEventListener('click', () => list.classList.remove('active'));
         list.addEventListener('click', e => e.stopPropagation());
-        list.addEventListener('click', e => {
+        
+        // النقر على عناصر المستخدمين الخارجيين
+        const externalUsersClickHandler = (e) => {
           if (!e.target.classList.contains('dropdown-item')) return;
+          e.stopPropagation(); // منع إغلاق الـ dropdown
+          
+          console.log('🖱️ External user item clicked:', e.target.textContent);
+          
           const item = e.target;
           const name = item.textContent;
           const deptId = item.dataset.deptId;
@@ -1719,14 +1907,24 @@ async function initDropdowns() {
               transferType: 'external',
               role: 'approved' // الدور الافتراضي - سيتم تحديثه لاحقاً
             });
+            console.log('➕ Added external user:', name);
           } else {
             // إزالة المعتمد
             selectedExternalUsers = selectedExternalUsers.filter(x => x.id !== userId);
+            console.log('➖ Removed external user:', name);
           }
 
+          console.log('👥 Selected external users:', selectedExternalUsers);
           btn.textContent = selectedExternalUsers.length ? `${selectedExternalUsers.length} ${getTranslation('selected-count')}` : getTranslation('select-people');
           updateSelectedApproversDisplay();
-        });
+        };
+        
+        // إزالة الـ event listener القديم إذا كان موجوداً
+        if (list._usersClickHandler) {
+          list.removeEventListener('click', list._usersClickHandler);
+        }
+        list._usersClickHandler = externalUsersClickHandler;
+        list.addEventListener('click', externalUsersClickHandler);
       })();
     }
 
@@ -1981,15 +2179,26 @@ async function initDropdowns() {
     }
 
     // داخل initDropdowns، بعد ربط الـ dropdowns وأيقونة Send
-    sendBtn.addEventListener('click', async () => {
+    // إزالة event listener القديم قبل إضافة الجديد
+    const oldSendHandler = sendBtn._sendHandler;
+    if (oldSendHandler) {
+      sendBtn.removeEventListener('click', oldSendHandler);
+    }
+    
+    const sendHandler = async () => {
       // تحقق من وجود approvalItem قبل المتابعة
       if (!approvalItem) {
         showToast('حدث خطأ: لم يتم العثور على العنصر.', 'error');
         return;
       }
       
-      // تعطيل الزر فوراً لمنع النقرات المتعددة
+      // تعطيل الزر فوراً لمنع النقرات المتعددة وإظهار loading
       sendBtn.disabled = true;
+      const originalButtonContent = sendBtn.innerHTML;
+      sendBtn.innerHTML = `
+        <i class="fas fa-spinner fa-spin"></i>
+        ${getTranslation('sending') || 'جاري الإرسال...'}
+      `;
       
       // 1) أقرأ الأسماء المخزّنة حالياً
       const existingAssignedNames = approvalItem.dataset.assignedNames
@@ -2027,7 +2236,9 @@ async function initDropdowns() {
        const newUsers = [...internalUsers, ...externalUsers];
 
       if (!newUsers.length) {
+        // إعادة تعيين الزر في حالة عدم وجود معتمدين جدد
         sendBtn.disabled = false;
+        sendBtn.innerHTML = originalButtonContent;
         return alert(getTranslation('no-new-approvers'));
       }
 
@@ -2227,20 +2438,38 @@ async function initDropdowns() {
 
           showToast(getTranslation('add-more-success'), 'success');
 
-          // 7) أعد تحميل الـ البيانات
-          await loadPendingApprovals();
-          await initDropdowns();
+          // 7) إظهار loading أثناء تحديث البيانات
+          sendBtn.innerHTML = `
+            <i class="fas fa-spinner fa-spin"></i>
+            ${getTranslation('updating') || 'جاري التحديث...'}
+          `;
+
+          // أعد تحميل البيانات بناءً على العرض الحالي
+          await refreshCurrentView();
+          
+          // إعادة تعيين الزر بعد التحديث
+          sendBtn.disabled = false;
+          sendBtn.innerHTML = originalButtonContent;
         } else {
           showToast(getTranslation('send-failed'), 'error');
           sendBtn.disabled = false;
+          sendBtn.innerHTML = originalButtonContent;
         }
       } catch (err) {
         console.error('فشل الإرسال:', err);
         showToast(getTranslation('send-failed'), 'error');
         sendBtn.disabled = false;
+        sendBtn.innerHTML = originalButtonContent;
       }
+    };
+    
+    sendBtn._sendHandler = sendHandler;
+    sendBtn.addEventListener('click', sendHandler);
     });
-  });
+    console.log('✅ Dropdowns initialization completed');
+  } catch (error) {
+    console.error('❌ Error initializing dropdowns:', error);
+  }
 }
 
 function parseLocalizedName(name) {
@@ -2389,9 +2618,12 @@ async function saveDeadlines() {
   const saveButton = document.querySelector('.deadline-btn-save');
   const originalText = saveButton.innerHTML;
   
-  // تعطيل الزر فوراً
+  // تعطيل الزر فوراً وإظهار loading
   saveButton.disabled = true;
-  saveButton.innerHTML = `<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...`;
+  saveButton.innerHTML = `
+    <i class="fas fa-spinner fa-spin"></i> 
+    ${getTranslation('saving') || 'جاري الحفظ...'}
+  `;
   
   try {
     const { contentId, contentType } = currentDeadlineData;
@@ -2467,15 +2699,29 @@ async function saveDeadlines() {
       showToast('تم تعيين المواعيد النهائية بنجاح', 'success');
       closeDeadlineModal();
       
+      // إظهار loading أثناء تحديث الواجهة
+      saveButton.innerHTML = `
+        <i class="fas fa-spinner fa-spin"></i> 
+        ${getTranslation('updating') || 'جاري التحديث...'}
+      `;
+      
       // تحديث الواجهة لعرض المواعيد النهائية
-      await loadPendingApprovals();
+      await refreshCurrentView();
+      
+      // إعادة تعيين الزر
+      saveButton.disabled = false;
+      saveButton.innerHTML = originalText;
     } else {
       showToast('فشل في تعيين المواعيد النهائية', 'error');
+      saveButton.disabled = false;
+      saveButton.innerHTML = originalText;
     }
 
   } catch (error) {
     console.error('Error saving deadlines:', error);
     showToast('حدث خطأ أثناء حفظ المواعيد النهائية', 'error');
+    saveButton.disabled = false;
+    saveButton.innerHTML = originalText;
   }
 }
 
@@ -2683,6 +2929,9 @@ async function loadSpecificContent(contentType) {
     // عرض البيانات
     displaySpecificContent(items, currentUserId, contentType);
     
+    // إعادة تهيئة الـ dropdowns بعد عرض البيانات
+    await initDropdowns();
+    
   } catch (err) {
     console.error('Error loading specific content:', err);
   }
@@ -2819,7 +3068,10 @@ function getTranslation(key) {
       'external': 'خارجي',
       'collapse-card': 'تصغير الكارد',
       'expand-card': 'تكبير الكارد',
-      'sent-to': 'مرسل إلى'
+      'sent-to': 'مرسل إلى',
+      'sending': 'جاري الإرسال...',
+      'updating': 'جاري التحديث...',
+      'saving': 'جاري الحفظ...'
     },
     'en': {
       'departments': 'Departments',
@@ -2884,12 +3136,93 @@ function getTranslation(key) {
       'external': 'External',
       'collapse-card': 'Collapse Card',
       'expand-card': 'Expand Card',
-      'sent-to': 'Sent to'
+      'sent-to': 'Sent to',
+      'sending': 'Sending...',
+      'updating': 'Updating...',
+      'saving': 'Saving...'
     }
   };
 
   const currentLang = localStorage.getItem('language') || 'ar';
   return translations[currentLang]?.[key] || key;
+}
+
+// دالة لإعادة تحميل العرض الحالي بناءً على الحالة
+async function refreshCurrentView() {
+  try {
+    // إظهار loading أثناء التحديث
+    showPageLoading(getTranslation('updating') || 'جاري التحديث...');
+    
+    // تحقق من العرض الحالي
+    const mainCardsContainer = document.querySelector('.main-cards-container');
+    const detailedView = document.querySelector('.detailed-view');
+    
+    // حفظ حالة الـ dropdowns المفتوحة قبل التحديث
+    const openDropdowns = [];
+    document.querySelectorAll('.dropdown-content.active').forEach(dropdown => {
+      const approvalItem = dropdown.closest('.approval-item');
+      if (approvalItem) {
+        openDropdowns.push({
+          itemId: approvalItem.dataset.id,
+          dropdownType: dropdown.closest('.dropdown-custom')?.dataset.type
+        });
+      }
+    });
+    
+    if (mainCardsContainer && mainCardsContainer.style.display !== 'none') {
+      // العرض الرئيسي مفعل - أعد تحميل البطاقات الرئيسية
+      await loadPendingApprovals();
+      await initDropdowns();
+    } else if (detailedView && detailedView.style.display !== 'none') {
+      // العرض التفصيلي مفعل - أعد تحميل المحتوى المحدد
+      const detailedTitle = document.getElementById('detailedTitle');
+      if (detailedTitle) {
+        const titleText = detailedTitle.textContent.trim();
+        let contentType = '';
+        
+        // تحديد نوع المحتوى من العنوان
+        if (titleText.includes('أقسام') || titleText.includes('Departments')) {
+          contentType = 'department';
+        } else if (titleText.includes('لجان') || titleText.includes('Committees')) {
+          contentType = 'committee';
+        } else if (titleText.includes('محاضر') || titleText.includes('Protocols')) {
+          contentType = 'protocol';
+        }
+        
+        if (contentType) {
+          await loadSpecificContent(contentType);
+          // إعادة تهيئة الـ dropdowns مضمونة هنا
+        }
+      }
+    } else {
+      // العرض الافتراضي
+      await loadPendingApprovals();
+      await initDropdowns();
+    }
+    
+    // استعادة حالة الـ dropdowns المفتوحة بعد التحديث (إزالة التأخير غير الضروري)
+    openDropdowns.forEach(({ itemId, dropdownType }) => {
+      const approvalItem = document.querySelector(`.approval-item[data-id="${itemId}"]`);
+      if (approvalItem && dropdownType) {
+        const dropdown = approvalItem.querySelector(`[data-type="${dropdownType}"] .dropdown-content`);
+        if (dropdown) {
+          dropdown.classList.add('active');
+        }
+      }
+    });
+    
+    // إخفاء loading بعد انتهاء التحديث
+    hidePageLoading();
+    
+  } catch (error) {
+    console.error('Error refreshing current view:', error);
+    // fallback إلى إعادة تحميل البيانات العادية
+    await loadPendingApprovals();
+    await initDropdowns();
+    
+    // إخفاء loading في حالة الخطأ أيضاً
+    hidePageLoading();
+  }
 }
 
 // دالة للتأكد من أن البيانات المحذوفة لا تعود
@@ -2914,8 +3247,53 @@ function updateLocalData(approvalItem, updatedNames, updatedIds) {
   // تحديث الواجهة
   updateApprovalItemUI(approvalItem, updatedNames, updatedIds);
   
+  // تحديث العدادات المرئية إذا كانت موجودة
+  updateVisibleCounts();
+  
   // التحقق من صحة البيانات
   if (!validateApproversData(approvalItem)) {
     console.error('Data validation failed after update');
+  }
+}
+
+// دالة لتحديث العدادات المرئية
+function updateVisibleCounts() {
+  try {
+    // عدد المهام المعلقة لكل نوع
+    const departmentItems = document.querySelectorAll('.approval-item[data-type="department"]').length;
+    const committeeItems = document.querySelectorAll('.approval-item[data-type="committee"]').length;
+    const protocolItems = document.querySelectorAll('.approval-item[data-type="protocol"]').length;
+    
+    // تحديث العدادات في البطاقات الرئيسية
+    const departmentCount = document.getElementById('departmentCount');
+    const committeeCount = document.getElementById('committeeCount');
+    const protocolCount = document.getElementById('protocolCount');
+    
+    if (departmentCount) departmentCount.textContent = departmentItems;
+    if (committeeCount) committeeCount.textContent = committeeItems;
+    if (protocolCount) protocolCount.textContent = protocolItems;
+    
+    // تحديث العداد في العرض التفصيلي إذا كان مفعلاً
+    const detailedCount = document.getElementById('detailedCount');
+    const detailedView = document.querySelector('.detailed-view');
+    if (detailedCount && detailedView && detailedView.style.display !== 'none') {
+      const detailedTitle = document.getElementById('detailedTitle');
+      if (detailedTitle) {
+        const titleText = detailedTitle.textContent.trim();
+        let count = 0;
+        
+        if (titleText.includes('أقسام') || titleText.includes('Departments')) {
+          count = departmentItems;
+        } else if (titleText.includes('لجان') || titleText.includes('Committees')) {
+          count = committeeItems;
+        } else if (titleText.includes('محاضر') || titleText.includes('Protocols')) {
+          count = protocolItems;
+        }
+        
+        detailedCount.textContent = `${count} ${getTranslation('item') || 'عنصر'}`;
+      }
+    }
+  } catch (error) {
+    console.error('Error updating visible counts:', error);
   }
 }

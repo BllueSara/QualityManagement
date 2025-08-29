@@ -537,7 +537,7 @@ class ProtocolController {
                 `);
                 allRows = rows;
             } else {
-                // رؤية المستخدم العادي - العناصر المكلف بها فقط
+                // رؤية المستخدم العادي - العناصر المكلف بها فقط (بدون قيود التسلسل)
                 const [rows] = await protocolModel.pool.execute(`
                     SELECT
                         p.id,
@@ -585,22 +585,7 @@ class ProtocolController {
                           AND pal.approver_id = ?
                           AND pal.status = 'approved'
                       )
-                      AND NOT EXISTS (
-                        SELECT 1
-                        FROM protocol_approvers pa_prev
-                        WHERE pa_prev.protocol_id = p.id
-                          AND pa_prev.sequence_number < pa.sequence_number
-                          AND NOT EXISTS (
-                            SELECT 1 FROM protocol_approval_logs pal_prev
-                            WHERE pal_prev.protocol_id = p.id
-                              AND (
-                                (pal_prev.approver_id = pa_prev.user_id AND pal_prev.signed_as_proxy = 0 AND pal_prev.status = 'approved')
-                                OR
-                                (pal_prev.delegated_by = pa_prev.user_id AND pal_prev.signed_as_proxy = 1 AND pal_prev.status = 'approved')
-                              )
-                          )
-                      )
-                    GROUP BY p.id, pa.sequence_number
+                    GROUP BY p.id
                 `, [userId, userId, userId, userId]);
                 allRows = rows;
             }
