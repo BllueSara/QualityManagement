@@ -198,6 +198,51 @@ function addEventListeners() {
     const form = document.getElementById('protocolForm');
     if (form) {
         form.addEventListener('submit', handleFormSubmit);
+        
+        // منع إرسال الفورم بـ Enter ولكن السماح بالانتقال بين الحقول
+        form.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                // منع الإرسال فقط، لكن اسمح بالانتقال للحقل التالي
+                e.preventDefault();
+                
+                // العثور على الحقل التالي القابل للتركيز
+                const focusableElements = form.querySelectorAll(
+                    'input:not([disabled]):not([type="hidden"]), textarea:not([disabled]), select:not([disabled]), button:not([disabled])'
+                );
+                
+                const currentIndex = Array.from(focusableElements).indexOf(document.activeElement);
+                if (currentIndex > -1 && currentIndex < focusableElements.length - 1) {
+                    focusableElements[currentIndex + 1].focus();
+                }
+                
+                return false;
+            }
+        });
+        
+        // منع Submit من أزرار Enter في جميع الحقول
+        const allFields = form.querySelectorAll('input:not([type="submit"]):not([type="button"]), textarea, select');
+        allFields.forEach(field => {
+            field.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    
+                    // للـ textarea، السماح بـ Enter إذا كان Shift مضغوط (للسطر الجديد)
+                    if (field.tagName.toLowerCase() === 'textarea' && e.shiftKey) {
+                        // إدراج سطر جديد يدوياً
+                        const start = field.selectionStart;
+                        const end = field.selectionEnd;
+                        const value = field.value;
+                        
+                        field.value = value.substring(0, start) + '\n' + value.substring(end);
+                        field.selectionStart = field.selectionEnd = start + 1;
+                        return;
+                    }
+                    
+                    // طريقة مبسطة للانتقال للحقل التالي
+                    moveToNextField(field);
+                }
+            });
+        });
     }
 
     // التحقق من صحة عنوان المحضر
@@ -205,6 +250,23 @@ function addEventListeners() {
     if (protocolTitleInput) {
         protocolTitleInput.addEventListener('input', validateProtocolTitle);
     }
+    
+    // إضافة مستمعي الأحداث للقوائم المنسدلة
+    const departmentSelect = document.getElementById('protocolDepartment');
+    if (departmentSelect) {
+        departmentSelect.addEventListener('change', loadFoldersForDepartment);
+    }
+    
+    const committeeSelect = document.getElementById('protocolCommittee');
+    if (committeeSelect) {
+        committeeSelect.addEventListener('change', loadFoldersForCommittee);
+    }
+    
+    // إضافة مستمعي الأحداث لتبديل نوع التخصيص
+    const assignmentRadios = document.querySelectorAll('input[name="assignmentType"]');
+    assignmentRadios.forEach(radio => {
+        radio.addEventListener('change', toggleAssignmentType);
+    });
 }
 
 // إنشاء المواضيع حسب العدد المحدد
@@ -317,6 +379,30 @@ function addTopic() {
     
     topicsContainer.appendChild(topicItem);
     
+    // منع إرسال الفورم بـ Enter من الحقول الجديدة ولكن السماح بالانتقال
+    const newFields = topicItem.querySelectorAll('input:not([type="submit"]):not([type="button"]), textarea, select');
+    newFields.forEach(field => {
+        field.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                
+                // للـ textarea، السماح بـ Enter إذا كان Shift مضغوط (للسطر الجديد)
+                if (field.tagName.toLowerCase() === 'textarea' && e.shiftKey) {
+                    const start = field.selectionStart;
+                    const end = field.selectionEnd;
+                    const value = field.value;
+                    
+                    field.value = value.substring(0, start) + '\n' + value.substring(end);
+                    field.selectionStart = field.selectionEnd = start + 1;
+                    return;
+                }
+                
+                // استخدام نفس دالة الانتقال المبسطة
+                moveToNextField(field);
+            }
+        });
+    });
+    
     // تطبيق الترجمات على العناصر الجديدة
     if (typeof applyTranslations === 'function') {
         applyTranslations();
@@ -405,6 +491,30 @@ function addSideDiscussion(topicId) {
     `;
     
     sideDiscussionsContainer.appendChild(sideDiscussionItem);
+    
+    // منع إرسال الفورم بـ Enter من حقول المناقشة الجانبية الجديدة ولكن السماح بالانتقال
+    const newFields = sideDiscussionItem.querySelectorAll('input:not([type="submit"]):not([type="button"]), textarea, select');
+    newFields.forEach(field => {
+        field.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                
+                // للـ textarea، السماح بـ Enter إذا كان Shift مضغوط (للسطر الجديد)
+                if (field.tagName.toLowerCase() === 'textarea' && e.shiftKey) {
+                    const start = field.selectionStart;
+                    const end = field.selectionEnd;
+                    const value = field.value;
+                    
+                    field.value = value.substring(0, start) + '\n' + value.substring(end);
+                    field.selectionStart = field.selectionEnd = start + 1;
+                    return;
+                }
+                
+                // استخدام نفس دالة الانتقال المبسطة
+                moveToNextField(field);
+            }
+        });
+    });
     
     // تطبيق الترجمات على العناصر الجديدة
     if (typeof applyTranslations === 'function') {
@@ -711,6 +821,43 @@ function validateForm() {
     return isValid;
 }
 
+// دالة للانتقال للحقل التالي
+function moveToNextField(currentField) {
+    const form = document.getElementById('protocolForm');
+    if (!form) return;
+    
+    // جمع جميع الحقول القابلة للتركيز
+    const allFields = Array.from(form.querySelectorAll(
+        'input:not([type="submit"]):not([type="button"]):not([type="hidden"]), textarea, select'
+    ));
+    
+    // تصفية الحقول المرئية والمفعلة فقط
+    const visibleFields = allFields.filter(field => {
+        const style = window.getComputedStyle(field);
+        const rect = field.getBoundingClientRect();
+        
+        return (
+            !field.disabled &&
+            style.display !== 'none' &&
+            style.visibility !== 'hidden' &&
+            field.offsetParent !== null &&
+            rect.width > 0 &&
+            rect.height > 0
+        );
+    });
+    
+    const currentIndex = visibleFields.indexOf(currentField);
+    if (currentIndex >= 0 && currentIndex < visibleFields.length - 1) {
+        const nextField = visibleFields[currentIndex + 1];
+        nextField.focus();
+        
+        // للـ input، تحديد النص إذا كان موجود
+        if (nextField.tagName.toLowerCase() === 'input' && nextField.type === 'text') {
+            nextField.select();
+        }
+    }
+}
+
 // التحقق من صحة عنوان المحضر
 function validateProtocolTitle() {
     const protocolTitle = this.value.trim();
@@ -903,6 +1050,224 @@ function getAuthToken() {
 // وظائف تحميل الأقسام والمجلدات واللجان
 // =====================
 
+// إنشاء dropdown قابل للبحث
+function createSearchableDropdown(selectElement, placeholder = 'ابحث...') {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'searchable-dropdown-wrapper';
+    
+    // إنشاء الزر الذي يظهر كـ select
+    const dropdownButton = document.createElement('div');
+    dropdownButton.className = 'dropdown-button';
+    dropdownButton.setAttribute('tabindex', '0');
+    
+    const buttonText = document.createElement('span');
+    buttonText.className = 'dropdown-button-text';
+    buttonText.textContent = selectElement.options[0]?.textContent || 'اختر من القائمة';
+    
+    const dropdownArrow = document.createElement('span');
+    dropdownArrow.className = 'dropdown-arrow';
+    dropdownArrow.innerHTML = '▼';
+    
+    dropdownButton.appendChild(buttonText);
+    dropdownButton.appendChild(dropdownArrow);
+    
+    // إنشاء القائمة المنسدلة
+    const dropdownMenu = document.createElement('div');
+    dropdownMenu.className = 'dropdown-menu';
+    
+    // إنشاء مربع البحث داخل القائمة
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.className = 'dropdown-search';
+    searchInput.placeholder = placeholder;
+    
+    // إنشاء قائمة الخيارات
+    const optionsList = document.createElement('div');
+    optionsList.className = 'dropdown-options';
+    
+    dropdownMenu.appendChild(searchInput);
+    dropdownMenu.appendChild(optionsList);
+    
+    // إخفاء الـ select الأصلي
+    selectElement.style.display = 'none';
+    
+    // إدراج العناصر الجديدة
+    selectElement.parentNode.insertBefore(wrapper, selectElement.nextSibling);
+    wrapper.appendChild(dropdownButton);
+    wrapper.appendChild(dropdownMenu);
+    
+    // تطبيق حالة disabled إذا كانت موجودة
+    if (selectElement.disabled) {
+        dropdownButton.classList.add('disabled');
+    }
+    
+    let allOptions = [];
+    let isOpen = false;
+    
+    // دالة لتحديث الخيارات
+    function updateOptions() {
+        allOptions = Array.from(selectElement.options).map(option => ({
+            value: option.value,
+            text: option.textContent,
+            html: option.innerHTML,
+            element: option
+        }));
+        filterOptions('');
+        updateButtonText();
+    }
+    
+    // دالة لتحديث نص الزر
+    function updateButtonText() {
+        const selectedOption = allOptions.find(option => option.value === selectElement.value);
+        if (selectedOption && selectedOption.value !== '') {
+            // التحقق من وجود HTML في النص (للـ badges)
+            if (selectedOption.element && selectedOption.element.innerHTML && selectedOption.element.innerHTML.includes('folder-type-badge')) {
+                buttonText.innerHTML = selectedOption.element.innerHTML;
+            } else {
+                buttonText.textContent = selectedOption.text;
+            }
+        } else {
+            buttonText.textContent = allOptions[0]?.text || 'اختر من القائمة';
+        }
+    }
+    
+    // دالة لتصفية الخيارات
+    function filterOptions(searchTerm) {
+        const filtered = allOptions.filter(option => 
+            option.text.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        
+        optionsList.innerHTML = '';
+        
+        const validOptions = filtered.filter(option => option.value !== '');
+        
+        if (validOptions.length === 0 && searchTerm) {
+            const noResultsItem = document.createElement('div');
+            noResultsItem.className = 'dropdown-no-results';
+            noResultsItem.textContent = 'لا توجد نتائج مطابقة';
+            optionsList.appendChild(noResultsItem);
+            return;
+        }
+        
+        filtered.forEach(option => {
+            const item = document.createElement('div');
+            item.className = 'dropdown-option';
+            
+            // التحقق من وجود HTML في النص (للـ badges)
+            if (option.element && option.element.innerHTML && option.element.innerHTML.includes('folder-type-badge')) {
+                item.innerHTML = option.element.innerHTML;
+            } else {
+                item.textContent = option.text;
+            }
+            
+            item.dataset.value = option.value;
+            
+            if (option.value === selectElement.value) {
+                item.classList.add('selected');
+            }
+            
+            item.addEventListener('click', () => {
+                selectElement.value = option.value;
+                updateButtonText();
+                closeDropdown();
+                
+                // إطلاق حدث التغيير
+                const event = new Event('change', { bubbles: true });
+                selectElement.dispatchEvent(event);
+            });
+            
+            optionsList.appendChild(item);
+        });
+    }
+    
+    // دالة لفتح القائمة
+    function openDropdown() {
+        if (isOpen) return;
+        isOpen = true;
+        dropdownMenu.style.display = 'block';
+        dropdownButton.classList.add('open');
+        searchInput.value = '';
+        searchInput.focus();
+        filterOptions('');
+    }
+    
+    // دالة لإغلاق القائمة
+    function closeDropdown() {
+        if (!isOpen) return;
+        isOpen = false;
+        dropdownMenu.style.display = 'none';
+        dropdownButton.classList.remove('open');
+        searchInput.value = '';
+    }
+    
+    // مستمعي الأحداث
+    dropdownButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (selectElement.disabled || dropdownButton.classList.contains('disabled')) {
+            return;
+        }
+        if (isOpen) {
+            closeDropdown();
+        } else {
+            openDropdown();
+        }
+    });
+    
+    dropdownButton.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openDropdown();
+        }
+    });
+    
+    searchInput.addEventListener('input', (e) => {
+        filterOptions(e.target.value);
+    });
+    
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeDropdown();
+            dropdownButton.focus();
+        }
+    });
+    
+    // إغلاق القائمة عند النقر خارجها
+    document.addEventListener('click', (e) => {
+        if (!wrapper.contains(e.target)) {
+            closeDropdown();
+        }
+    });
+    
+    // منع إغلاق القائمة عند النقر داخلها
+    dropdownMenu.addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
+    
+    // مراقب لتحديث القائمة عند تغيير الخيارات
+    const observer = new MutationObserver(updateOptions);
+    observer.observe(selectElement, { childList: true, subtree: true });
+    
+    // تحديث أولي
+    updateOptions();
+    
+    return {
+        updateOptions,
+        updateButtonText,
+        setDisabled: (disabled) => {
+            if (disabled) {
+                dropdownButton.classList.add('disabled');
+            } else {
+                dropdownButton.classList.remove('disabled');
+            }
+        },
+        destroy: () => {
+            observer.disconnect();
+            wrapper.remove();
+            selectElement.style.display = 'block';
+        }
+    };
+}
+
 // تحميل الأقسام
 async function loadDepartments() {
     try {
@@ -948,6 +1313,13 @@ async function loadDepartments() {
             departmentSelect.appendChild(option);
         });
 
+        // إنشاء dropdown قابل للبحث للأقسام
+        if (!departmentSelect.searchableDropdown) {
+            departmentSelect.searchableDropdown = createSearchableDropdown(departmentSelect, 'ابحث عن القسم...');
+        } else {
+            departmentSelect.searchableDropdown.updateOptions();
+        }
+
         console.log('✅ تم تحميل', departments.length, 'قسم');
     } catch (error) {
         console.error('❌ خطأ في تحميل الأقسام:', error);
@@ -969,6 +1341,9 @@ async function loadFoldersForDepartment() {
     if (!departmentId) {
         folderSelect.innerHTML = '<option value="">اختر القسم أولاً</option>';
         folderSelect.disabled = true;
+        if (folderSelect.searchableDropdown) {
+            folderSelect.searchableDropdown.setDisabled(true);
+        }
         return Promise.resolve();
     }
     
@@ -1003,9 +1378,48 @@ async function loadFoldersForDepartment() {
                 if (typeof name === 'string' && name.trim().startsWith('{')) {
                     name = JSON.parse(name);
                 }
-                option.textContent = typeof name === 'object'
+                const displayName = typeof name === 'object'
                     ? (name[lang] || name.ar || name.en || '')
                     : name;
+                
+                // إضافة نوع المجلد إذا كان متوفراً مع badge ملون (للأقسام فقط)
+                if (folder.type) {
+                    const typeTranslations = {
+                        'private': {
+                            ar: 'خاص',
+                            en: 'Private',
+                            color: '#ef4444' // أحمر
+                        },
+                        'shared': {
+                            ar: 'مشترك',
+                            en: 'Shared', 
+                            color: '#f59e0b' // برتقالي
+                        },
+                        'public': {
+                            ar: 'عام',
+                            en: 'Public',
+                            color: '#10b981' // أخضر
+                        }
+                    };
+                    
+                    const typeInfo = typeTranslations[folder.type] || {
+                        ar: folder.type,
+                        en: folder.type,
+                        color: '#6b7280'
+                    };
+                    
+                    const folderTypeText = lang === 'ar' ? typeInfo.ar : typeInfo.en;
+                    
+                    // إنشاء عنصر مع badge ملون
+                    option.innerHTML = `
+                        <span class="folder-name">${displayName}</span>
+                        <span class="folder-type-badge" style="background-color: ${typeInfo.color}; color: white; padding: 2px 6px; border-radius: 10px; font-size: 11px; margin-right: 8px; font-weight: 500;">
+                            ${folderTypeText}
+                        </span>
+                    `;
+                } else {
+                    option.textContent = displayName;
+                }
             } catch {
                 option.textContent = name || '';
             }
@@ -1013,12 +1427,24 @@ async function loadFoldersForDepartment() {
         });
 
         folderSelect.disabled = false;
+        
+        // إنشاء dropdown قابل للبحث للمجلدات
+        if (!folderSelect.searchableDropdown) {
+            folderSelect.searchableDropdown = createSearchableDropdown(folderSelect, 'ابحث عن المجلد...');
+        } else {
+            folderSelect.searchableDropdown.updateOptions();
+            folderSelect.searchableDropdown.setDisabled(false);
+        }
+        
         console.log('✅ تم تحميل', folders.length, 'مجلد للقسم', departmentId);
     } catch (error) {
         console.error('❌ خطأ في تحميل مجلدات القسم:', error);
         showToast('خطأ في جلب مجلدات القسم: ' + error.message, 'error');
         folderSelect.innerHTML = '<option value="">خطأ في التحميل</option>';
         folderSelect.disabled = true;
+        if (folderSelect.searchableDropdown) {
+            folderSelect.searchableDropdown.setDisabled(true);
+        }
     }
     
     return Promise.resolve();
@@ -1068,6 +1494,13 @@ async function loadCommittees() {
             }
             committeeSelect.appendChild(option);
         });
+
+        // إنشاء dropdown قابل للبحث للجان
+        if (!committeeSelect.searchableDropdown) {
+            committeeSelect.searchableDropdown = createSearchableDropdown(committeeSelect, 'ابحث عن اللجنة...');
+        } else {
+            committeeSelect.searchableDropdown.updateOptions();
+        }
 
         console.log('✅ تم تحميل', committees.length, 'لجنة');
     } catch (error) {
@@ -1135,6 +1568,9 @@ async function loadFoldersForCommittee() {
     if (!committeeId) {
         committeeFolderSelect.innerHTML = '<option value="">اختر اللجنة أولاً</option>';
         committeeFolderSelect.disabled = true;
+        if (committeeFolderSelect.searchableDropdown) {
+            committeeFolderSelect.searchableDropdown.setDisabled(true);
+        }
         return Promise.resolve();
     }
     
@@ -1169,9 +1605,12 @@ async function loadFoldersForCommittee() {
                 if (typeof name === 'string' && name.trim().startsWith('{')) {
                     name = JSON.parse(name);
                 }
-                option.textContent = typeof name === 'object'
+                const displayName = typeof name === 'object'
                     ? (name[lang] || name.ar || name.en || '')
                     : name;
+                
+                // اللجان لا تحتوي على أنواع مجلدات، فقط عرض الاسم
+                option.textContent = displayName;
             } catch {
                 option.textContent = name || '';
             }
@@ -1179,15 +1618,253 @@ async function loadFoldersForCommittee() {
         });
 
         committeeFolderSelect.disabled = false;
+        
+        // إنشاء dropdown قابل للبحث لمجلدات اللجنة
+        if (!committeeFolderSelect.searchableDropdown) {
+            committeeFolderSelect.searchableDropdown = createSearchableDropdown(committeeFolderSelect, 'ابحث عن مجلد اللجنة...');
+        } else {
+            committeeFolderSelect.searchableDropdown.updateOptions();
+            committeeFolderSelect.searchableDropdown.setDisabled(false);
+        }
+        
         console.log('✅ تم تحميل مجلدات اللجنة', folders.length, 'مجلد للجنة', committeeId);
     } catch (error) {
         console.error('❌ خطأ في تحميل مجلدات اللجنة:', error);
         showToast('خطأ في جلب مجلدات اللجنة: ' + error.message, 'error');
         committeeFolderSelect.innerHTML = '<option value="">خطأ في التحميل</option>';
         committeeFolderSelect.disabled = true;
+        if (committeeFolderSelect.searchableDropdown) {
+            committeeFolderSelect.searchableDropdown.setDisabled(true);
+        }
     }
     
     return Promise.resolve();
+}
+
+// إضافة CSS للقوائم القابلة للبحث
+function addSearchableDropdownStyles() {
+    if (document.getElementById('searchableDropdownStyles')) return;
+    
+    const style = document.createElement('style');
+    style.id = 'searchableDropdownStyles';
+    style.textContent = `
+        /* Wrapper للـ dropdown الجديد */
+        .searchable-dropdown-wrapper {
+            position: relative;
+            width: 100%;
+        }
+        
+        /* الزر الذي يظهر كـ select */
+        .dropdown-button {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            background-color: #fff;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            min-height: 20px;
+        }
+        
+        .dropdown-button:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .dropdown-button:hover {
+            border-color: #9ca3af;
+        }
+        
+        .dropdown-button.open {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .dropdown-button-text {
+            flex: 1;
+            text-align: right;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #374151;
+        }
+        
+        .dropdown-arrow {
+            color: #6b7280;
+            font-size: 12px;
+            transition: transform 0.2s ease;
+            margin-left: 8px;
+        }
+        
+        .dropdown-button.open .dropdown-arrow {
+            transform: rotate(180deg);
+        }
+        
+        /* القائمة المنسدلة */
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-top: none;
+            border-radius: 0 0 6px 6px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            z-index: 1000;
+            display: none;
+            max-height: 250px;
+            overflow: hidden;
+        }
+        
+        /* مربع البحث داخل القائمة */
+        .dropdown-search {
+            width: 100%;
+            padding: 8px 12px;
+            border: none;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 14px;
+            background-color: #f9fafb;
+            box-sizing: border-box;
+        }
+        
+        .dropdown-search:focus {
+            outline: none;
+            background-color: #fff;
+        }
+        
+        .dropdown-search::placeholder {
+            color: #9ca3af;
+        }
+        
+        /* قائمة الخيارات */
+        .dropdown-options {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .dropdown-option {
+            padding: 10px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f3f4f6;
+            transition: background-color 0.2s ease;
+            font-size: 14px;
+            line-height: 1.4;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .dropdown-option:last-child {
+            border-bottom: none;
+        }
+        
+        .dropdown-option:hover {
+            background-color: #f3f4f6;
+        }
+        
+        .dropdown-option.selected {
+            background-color: #e5e7eb;
+            font-weight: 500;
+        }
+        
+        .dropdown-no-results {
+            padding: 12px;
+            text-align: center;
+            color: #6b7280;
+            font-size: 14px;
+            font-style: italic;
+        }
+        
+        /* scrollbar مخصص */
+        .dropdown-options::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .dropdown-options::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        
+        .dropdown-options::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+        
+        .dropdown-options::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        
+        /* تحسينات للموبايل */
+        @media (max-width: 768px) {
+            .dropdown-menu {
+                max-height: 200px;
+            }
+            
+            .dropdown-options {
+                max-height: 150px;
+            }
+            
+            .dropdown-option {
+                padding: 12px;
+                font-size: 16px;
+            }
+            
+            .dropdown-search {
+                padding: 10px 12px;
+                font-size: 16px;
+            }
+        }
+        
+        /* حالة disabled */
+        .dropdown-button.disabled {
+            background-color: #f3f4f6;
+            color: #9ca3af;
+            cursor: not-allowed;
+        }
+        
+        .dropdown-button.disabled:hover {
+            border-color: #d1d5db;
+        }
+        
+        .dropdown-button.disabled .dropdown-arrow {
+            color: #d1d5db;
+        }
+        
+        /* تنسيقات الـ badges الملونة للمجلدات */
+        .folder-type-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 500;
+            color: white;
+            margin-right: 8px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        
+        .folder-name {
+            display: inline-block;
+        }
+        
+        .dropdown-option .folder-type-badge {
+            float: left;
+            margin-left: 8px;
+            margin-right: 0;
+        }
+        
+        .dropdown-button-text .folder-type-badge {
+            float: left;
+            margin-left: 8px;
+            margin-right: 0;
+        }
+    `;
+    
+    document.head.appendChild(style);
 }
 
 // تصدير الدوال للاستخدام العام
@@ -1201,4 +1878,17 @@ window.removeSideDiscussion = removeSideDiscussion;
 window.loadFoldersForDepartment = loadFoldersForDepartment;
 window.loadFoldersForCommittee = loadFoldersForCommittee;
 window.toggleAssignmentType = toggleAssignmentType;
+window.moveToNextField = moveToNextField;
+
+// إضافة CSS عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', () => {
+    addSearchableDropdownStyles();
+});
+
+// تأكد من إضافة الـ CSS حتى لو كانت الصفحة محملة بالفعل
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', addSearchableDropdownStyles);
+} else {
+    addSearchableDropdownStyles();
+}
 
