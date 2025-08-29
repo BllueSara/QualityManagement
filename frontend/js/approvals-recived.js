@@ -3165,7 +3165,7 @@ function preventDuplicateSignatures(contentId = null) {
   }
 }
 
-// دالة معالجة التوقيع في الخلفية
+// دالة معالجة التوقيع في الخلفية - محسنة للأداء
 async function processSignatureInBackground(contentId, contentType, endpoint, signature) {
   try {
     console.log('🔍 Processing signature in background for:', contentId);
@@ -3173,30 +3173,20 @@ async function processSignatureInBackground(contentId, contentType, endpoint, si
     // تعطيل أزرار الصف المحدد فقط
     disableRowActions(contentId);
     
-    let approvalLog = await fetchApprovalLog(contentId, contentType);
     const payload = {
       approved: true,
       signature: signature,
       notes: ''
     };
     
-    const tokenPayload = await safeGetUserInfo(token);
-    if (!tokenPayload) {
-      console.error('Failed to get user info');
-      enableRowActions(contentId);
-      return;
-    }
-    
-    const myLog = Array.isArray(approvalLog) ? approvalLog.find(l => l.approver_id == tokenPayload.id) : null;
-    if (myLog && (myLog.signed_as_proxy == 1 || myLog.delegated_by)) {
-      payload.on_behalf_of = myLog.delegated_by;
-    }
-    
+    // تحسين: إرسال الطلب مباشرة بدون جلب بيانات إضافية
+    const startTime = Date.now();
     const response = await fetchJSON(`${apiBase}/${endpoint}/${contentId}/approve`, {
       method: 'POST',
       body: JSON.stringify(payload)
     });
-    
+    const endTime = Date.now();
+    console.log(`⚡ التوقيع مكتمل في ${endTime - startTime}ms`);
     console.log('🔍 Signature processed successfully:', response);
     showToast(getTranslation('success-sent'), 'success');
     updateApprovalStatusInUI(contentId, 'approved');
@@ -3213,7 +3203,7 @@ async function processSignatureInBackground(contentId, contentType, endpoint, si
   }
 }
 
-// دالة معالجة التوقيع الإلكتروني في الخلفية
+// دالة معالجة التوقيع الإلكتروني في الخلفية - محسنة للأداء
 async function processElectronicSignatureInBackground(contentId, contentType, endpoint) {
   try {
     console.log('🔍 Processing electronic signature in background for:', contentId);
@@ -3221,7 +3211,6 @@ async function processElectronicSignatureInBackground(contentId, contentType, en
     // تعطيل أزرار الصف المحدد فقط
     disableRowActions(contentId);
     
-    let approvalLog = await fetchApprovalLog(contentId, contentType);
     const payload = {
       approved: true,
       signature: null,
@@ -3229,23 +3218,14 @@ async function processElectronicSignatureInBackground(contentId, contentType, en
       notes: ''
     };
     
-    const tokenPayload = await safeGetUserInfo(token);
-    if (!tokenPayload) {
-      console.error('Failed to get user info');
-      enableRowActions(contentId);
-      return;
-    }
-    
-    const myLog = Array.isArray(approvalLog) ? approvalLog.find(l => l.approver_id == tokenPayload.id) : null;
-    if (myLog && (myLog.signed_as_proxy == 1 || myLog.delegated_by)) {
-      payload.on_behalf_of = myLog.delegated_by;
-    }
-    
+    // تحسين: إرسال الطلب مباشرة بدون جلب بيانات إضافية
+    const startTime = Date.now();
     const response = await fetchJSON(`${apiBase}/${endpoint}/${contentId}/approve`, {
       method: 'POST',
       body: JSON.stringify(payload)
     });
-    
+    const endTime = Date.now();
+    console.log(`⚡ التوقيع الإلكتروني مكتمل في ${endTime - startTime}ms`);
     console.log('🔍 Electronic signature processed successfully:', response);
     showToast(getTranslation('success-approved'), 'success');
     updateApprovalStatusInUI(contentId, 'approved');

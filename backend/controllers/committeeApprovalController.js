@@ -605,25 +605,8 @@ async function handleCommitteeApproval(req, res) {
 
 
 
-    // تحديث PDF بعد كل اعتماد للجان - جعلها غير متزامنة لتجنب التأخير
-    if (approved) {
-      // تشغيل تحديث PDF في الخلفية بدون انتظار مع تحسين الأداء
-      setImmediate(() => {
-        updateCommitteePDFAfterApproval(contentId).catch(err => {
-          console.error('Error updating committee PDF after approval:', err);
-        });
-      });
-    }
-
     // الاعتماد النهائي للملف - التحقق من أن جميع التوقيعات كانت موافقة
     if (shouldApproveFile && approved) {
-      // تشغيل توليد PDF النهائي في الخلفية بدون انتظار مع تحسين الأداء
-      setImmediate(() => {
-        generateFinalSignedCommitteePDF(contentId).catch(err => {
-          console.error('Error generating final committee PDF:', err);
-        });
-      });
-      
       const updateResult = await db.execute(`
         UPDATE committee_contents
         SET is_approved     = 1,
@@ -633,14 +616,23 @@ async function handleCommitteeApproval(req, res) {
         WHERE id = ?
       `, [approverId, contentId]);
       
-      // إشعار لصاحب الملف عند الاعتماد النهائي
-      // استخدام البيانات المحفوظة مسبقاً للإشعارات
-      const ownerId = data.created_by;
-      const fileTitle = data.title || '';
-      await sendOwnerApprovalNotification(ownerId, fileTitle, approved, true);
+      // إشعار لصاحب الملف عند الاعتماد النهائي في الخلفية
+      setImmediate(async () => {
+        try {
+          const ownerId = data.created_by;
+          const fileTitle = data.title || '';
+          await sendOwnerApprovalNotification(ownerId, fileTitle, approved, true);
+        } catch (err) {
+          console.error('Error sending final approval notification:', err);
+        }
+      });
       
-      // لا نحذف المستخدم المفوض له من قائمة المعتمدين حتى نتحقق من اكتمال الاعتماد
-      // هذا الحذف سيتم في مكان آخر عند الحاجة
+      // تشغيل توليد PDF النهائي في الخلفية فوراً
+      process.nextTick(() => {
+        generateFinalSignedCommitteePDF(contentId).catch(err => {
+          console.error('Error generating final committee PDF:', err);
+        });
+      });
     } else {
       // Still waiting for remaining approvers or admin approval
     }

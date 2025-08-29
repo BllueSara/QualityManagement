@@ -1187,21 +1187,8 @@ class ProtocolController {
 
 
 
-            // تحديث PDF بعد كل اعتماد - جعلها غير متزامنة لتجنب التأخير
-            if (approved) {
-                // تشغيل تحديث PDF في الخلفية بدون انتظار مع تحسين الأداء
-                setImmediate(() => {
-                    updateProtocolPDFAfterApproval(protocolId, protocolModel).catch(err => {
-                        console.error('Error updating protocol PDF after approval:', err);
-                    });
-                });
-            }
-
             // التحقق من أن جميع التوقيعات كانت موافقة قبل تحديث الحالة إلى معتمد
             if (remaining[0].count === 0 && approved) {
-                // تشغيل توليد PDF النهائي في الخلفية بدون انتظار مع تحسين الأداء
-
-                
                 await protocolModel.pool.execute(`
                     UPDATE ${protocolsTable}
                     SET is_approved = 1,
@@ -1210,6 +1197,13 @@ class ProtocolController {
                         updated_at = NOW()
                     WHERE id = ?
                 `, [approverId, protocolId]);
+                
+                // تشغيل تحديث PDF النهائي في الخلفية فوراً
+                process.nextTick(() => {
+                    updateProtocolPDFAfterApproval(protocolId, protocolModel).catch(err => {
+                        console.error('Error updating protocol PDF after approval:', err);
+                    });
+                });
             }
 
             res.status(200).json({ status: 'success', message: 'تم التوقيع بنجاح' });
