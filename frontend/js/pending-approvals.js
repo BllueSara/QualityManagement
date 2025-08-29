@@ -509,7 +509,8 @@ async function handleViewFile(item) {
             console.warn('Invalid content ID:', item.id);
             return;
           }
-          await fetchJSON(`${apiBase}/contents/log-view`, {
+          // تحسين: إرسال في الخلفية بدون انتظار
+          fetchJSON(`${apiBase}/contents/log-view`, {
             method: 'POST',
             body: JSON.stringify({
               contentId: numericItemId,
@@ -518,6 +519,8 @@ async function handleViewFile(item) {
               sourceName: item.source_name,
               folderName: item.folder_name || item.folderName || ''
             })
+          }).catch(err => {
+            console.error('Failed to log content view:', err);
           });
         } catch (err) {
           console.error('Failed to log content view:', err);
@@ -619,9 +622,14 @@ async function handleRemoveApprover(approvalItem, approverName, contentId, conte
     
     showToast(getTranslation('approver-removed-success') || 'تم حذف المعتمد بنجاح', 'success');
     
-    // 8) إعادة تحميل البيانات للتأكد من التحديث (فقط للمرسل)
+    // 8) تحسين: تحديث سريع بدون إعادة تحميل كامل (فقط للمرسل)
     if (isSent) {
-      await refreshCurrentView();
+      // تحديث سريع للواجهة فقط
+      const statusBadge = approvalItem.querySelector('.status-badge');
+      if (statusBadge) {
+        statusBadge.textContent = getTranslation('sent') || 'تم الإرسال';
+        statusBadge.className = 'status-badge badge-sent';
+      }
     }
     
   } catch (error) {
@@ -2378,54 +2386,16 @@ async function initDropdowns() {
             // إضافة الأرقام للأقسام فقط، بدون أرقام للجان والمحاضر
             const contentType = approvalItem.dataset.type;
             
-            // تحقق إذا كان هذا المستخدم مفوض له
-            const isNewUser = sortedNewUsers.some(u => u.name === name);
-            if (isNewUser) {
-              const newUser = sortedNewUsers.find(u => u.name === name);
-              try {
-                const delegationResponse = await fetchJSON(`${apiBase}/users/${newUser.id}/delegation-status`);
-                if (delegationResponse && delegationResponse.delegated_by) {
-                  // هذا مفوض له، أضف إشارة
-                  const displayText = contentType === 'department' 
-                    ? `${sequenceNumber}. ${name} (مفوض له)` 
-                    : `${name} (مفوض له)`;
-                  badge.textContent = displayText;
-                  badge.style.backgroundColor = '#ff6b6b'; // لون مختلف للمفوض له
-                } else {
-                  const displayText = contentType === 'department' 
-                    ? `${sequenceNumber}. ${name}` 
-                    : name;
-                  badge.textContent = displayText;
-                  // لون حسب الترتيب
-                  if (sequenceNumber === 1) {
-                    badge.style.backgroundColor = '#28a745'; // أخضر للمعتمد الأول
-                  } else {
-                    badge.style.backgroundColor = '#6c757d'; // رمادي للمعتمدين الآخرين
-                  }
-                }
-              } catch (err) {
-                // إذا فشل التحقق، استخدم الاسم العادي
-                const displayText = contentType === 'department' 
-                  ? `${sequenceNumber}. ${name}` 
-                  : name;
-                badge.textContent = displayText;
-                if (sequenceNumber === 1) {
-                  badge.style.backgroundColor = '#28a745';
-                } else {
-                  badge.style.backgroundColor = '#6c757d';
-                }
-              }
+            // تحسين: استخدام الاسم العادي مباشرة بدون فحص التفويض
+            const displayText = contentType === 'department' 
+              ? `${sequenceNumber}. ${name}` 
+              : name;
+            badge.textContent = displayText;
+            // لون حسب الترتيب
+            if (sequenceNumber === 1) {
+              badge.style.backgroundColor = '#28a745'; // أخضر للمعتمد الأول
             } else {
-              // معتمد قديم
-              const displayText = contentType === 'department' 
-                ? `${sequenceNumber}. ${name}` 
-                : name;
-              badge.textContent = displayText;
-              if (sequenceNumber === 1) {
-                badge.style.backgroundColor = '#28a745'; // أخضر للمعتمد الأول
-              } else {
-                badge.style.backgroundColor = '#6c757d'; // رمادي للمعتمدين الآخرين
-              }
+              badge.style.backgroundColor = '#6c757d'; // رمادي للمعتمدين الآخرين
             }
             
             badge.style.color = 'white';
@@ -2438,18 +2408,24 @@ async function initDropdowns() {
 
           showToast(getTranslation('add-more-success'), 'success');
 
-          // 7) إظهار loading أثناء تحديث البيانات
+          // 7) تحسين: تحديث سريع بدون إعادة تحميل كامل
           sendBtn.innerHTML = `
-            <i class="fas fa-spinner fa-spin"></i>
-            ${getTranslation('updating') || 'جاري التحديث...'}
+            <i class="fas fa-check"></i>
+            ${getTranslation('success') || 'تم بنجاح'}
           `;
-
-          // أعد تحميل البيانات بناءً على العرض الحالي
-          await refreshCurrentView();
           
-          // إعادة تعيين الزر بعد التحديث
-          sendBtn.disabled = false;
-          sendBtn.innerHTML = originalButtonContent;
+          // تحديث حالة الإرسال في الواجهة فقط
+          const statusBadge = approvalItem.querySelector('.status-badge');
+          if (statusBadge) {
+            statusBadge.textContent = getTranslation('sent') || 'تم الإرسال';
+            statusBadge.className = 'status-badge badge-sent';
+          }
+          
+          // إعادة تعيين الزر بعد ثانية واحدة
+          setTimeout(() => {
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = originalButtonContent;
+          }, 1000);
         } else {
           showToast(getTranslation('send-failed'), 'error');
           sendBtn.disabled = false;
@@ -2699,18 +2675,17 @@ async function saveDeadlines() {
       showToast('تم تعيين المواعيد النهائية بنجاح', 'success');
       closeDeadlineModal();
       
-      // إظهار loading أثناء تحديث الواجهة
+      // تحسين: تحديث سريع بدون إعادة تحميل كامل
       saveButton.innerHTML = `
-        <i class="fas fa-spinner fa-spin"></i> 
-        ${getTranslation('updating') || 'جاري التحديث...'}
+        <i class="fas fa-check"></i> 
+        ${getTranslation('success') || 'تم بنجاح'}
       `;
       
-      // تحديث الواجهة لعرض المواعيد النهائية
-      await refreshCurrentView();
-      
-      // إعادة تعيين الزر
-      saveButton.disabled = false;
-      saveButton.innerHTML = originalText;
+      // إعادة تعيين الزر بعد ثانية واحدة
+      setTimeout(() => {
+        saveButton.disabled = false;
+        saveButton.innerHTML = originalText;
+      }, 1000);
     } else {
       showToast('فشل في تعيين المواعيد النهائية', 'error');
       saveButton.disabled = false;
@@ -3071,7 +3046,8 @@ function getTranslation(key) {
       'sent-to': 'مرسل إلى',
       'sending': 'جاري الإرسال...',
       'updating': 'جاري التحديث...',
-      'saving': 'جاري الحفظ...'
+      'saving': 'جاري الحفظ...',
+      'success': 'تم بنجاح'
     },
     'en': {
       'departments': 'Departments',
@@ -3139,7 +3115,8 @@ function getTranslation(key) {
       'sent-to': 'Sent to',
       'sending': 'Sending...',
       'updating': 'Updating...',
-      'saving': 'Saving...'
+      'saving': 'Saving...',
+      'success': 'Success'
     }
   };
 
