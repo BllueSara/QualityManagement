@@ -496,46 +496,69 @@ const handleApproval = async (req, res) => {
     
     if (isDelegated) {
       // التوقيع المزدوج للمستخدم المفوض له
+      // التحقق من السجلات الموجودة للحفاظ على approval_role
+      const [personalRecord] = await db.execute(`
+        SELECT id FROM ${approvalLogsTable} 
+        WHERE content_id = ? AND approver_id = ? AND delegated_by IS NULL AND signed_as_proxy = 0
+      `, [contentId, approverId]);
+
+      const [proxyRecord] = await db.execute(`
+        SELECT id FROM ${approvalLogsTable} 
+        WHERE content_id = ? AND approver_id = ? AND delegated_by = ? AND signed_as_proxy = 1
+      `, [contentId, approverId, delegatorId]);
+
       await Promise.all([
         // التوقيع الأول: شخصي
-        db.execute(`
-          INSERT INTO ${approvalLogsTable} (
-            content_id, approver_id, delegated_by, signed_as_proxy, status, signature, electronic_signature, comments, created_at
-          ) VALUES (?, ?, NULL, 0, ?, ?, ?, ?, NOW())
-          ON DUPLICATE KEY UPDATE 
-            status = VALUES(status),
-            signature = VALUES(signature),
-            electronic_signature = VALUES(electronic_signature),
-            comments = VALUES(comments),
-            created_at = NOW()
-        `, [contentId, approverId, approvalStatus, signatureData, electronicSignatureData, notesData]),
+        personalRecord.length > 0 
+          ? db.execute(`
+              UPDATE ${approvalLogsTable} 
+              SET status = ?, signature = ?, electronic_signature = ?, comments = ?, created_at = NOW()
+              WHERE content_id = ? AND approver_id = ? AND delegated_by IS NULL AND signed_as_proxy = 0
+            `, [approvalStatus, signatureData, electronicSignatureData, notesData, contentId, approverId])
+          : db.execute(`
+              INSERT INTO ${approvalLogsTable} (
+                content_id, approver_id, delegated_by, signed_as_proxy, status, signature, electronic_signature, comments, created_at
+              ) VALUES (?, ?, NULL, 0, ?, ?, ?, ?, NOW())
+            `, [contentId, approverId, approvalStatus, signatureData, electronicSignatureData, notesData]),
         
         // التوقيع الثاني: بالنيابة
-        db.execute(`
-          INSERT INTO ${approvalLogsTable} (
-            content_id, approver_id, delegated_by, signed_as_proxy, status, signature, electronic_signature, comments, created_at
-          ) VALUES (?, ?, ?, 1, ?, ?, ?, ?, NOW())
-          ON DUPLICATE KEY UPDATE 
-            status = VALUES(status),
-            signature = VALUES(signature),
-            electronic_signature = VALUES(electronic_signature),
-            comments = VALUES(comments),
-            created_at = NOW()
-        `, [contentId, approverId, delegatorId, approvalStatus, signatureData, electronicSignatureData, notesData])
+        proxyRecord.length > 0
+          ? db.execute(`
+              UPDATE ${approvalLogsTable} 
+              SET status = ?, signature = ?, electronic_signature = ?, comments = ?, created_at = NOW()
+              WHERE content_id = ? AND approver_id = ? AND delegated_by = ? AND signed_as_proxy = 1
+            `, [approvalStatus, signatureData, electronicSignatureData, notesData, contentId, approverId, delegatorId])
+          : db.execute(`
+              INSERT INTO ${approvalLogsTable} (
+                content_id, approver_id, delegated_by, signed_as_proxy, status, signature, electronic_signature, comments, created_at
+              ) VALUES (?, ?, ?, 1, ?, ?, ?, ?, NOW())
+            `, [contentId, approverId, delegatorId, approvalStatus, signatureData, electronicSignatureData, notesData])
       ]);
     } else {
-      // المستخدم العادي - اعتماد واحد فقط
-      await db.execute(`
-        INSERT INTO ${approvalLogsTable} (
-          content_id, approver_id, delegated_by, signed_as_proxy, status, signature, electronic_signature, comments, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
-        ON DUPLICATE KEY UPDATE 
-          status = VALUES(status),
-          signature = VALUES(signature),
-          electronic_signature = VALUES(electronic_signature),
-          comments = VALUES(comments),
-          created_at = NOW()
-      `, [contentId, approverId, delegatedBy, isProxy ? 1 : 0, approvalStatus, signatureData, electronicSignatureData, notesData]);
+      // التحقق من وجود سجل موجود للحفاظ على approval_role
+      const [existingRecord] = await db.execute(`
+        SELECT id FROM ${approvalLogsTable} 
+        WHERE content_id = ? AND approver_id = ? AND delegated_by ${delegatedBy ? '= ?' : 'IS NULL'} AND signed_as_proxy = ?
+      `, delegatedBy ? [contentId, approverId, delegatedBy, isProxy ? 1 : 0] : [contentId, approverId, isProxy ? 1 : 0]);
+
+      if (existingRecord.length > 0) {
+        // تحديث السجل الموجود مع الحفاظ على approval_role
+        await db.execute(`
+          UPDATE ${approvalLogsTable} 
+          SET status = ?, signature = ?, electronic_signature = ?, comments = ?, created_at = NOW()
+          WHERE content_id = ? AND approver_id = ? AND delegated_by ${delegatedBy ? '= ?' : 'IS NULL'} AND signed_as_proxy = ?
+        `, delegatedBy ? 
+          [approvalStatus, signatureData, electronicSignatureData, notesData, contentId, approverId, delegatedBy, isProxy ? 1 : 0] :
+          [approvalStatus, signatureData, electronicSignatureData, notesData, contentId, approverId, isProxy ? 1 : 0]
+        );
+      } else {
+        // إنشاء سجل جديد
+        await db.execute(`
+          INSERT INTO ${approvalLogsTable} (
+            content_id, approver_id, delegated_by, signed_as_proxy, status, signature, electronic_signature, comments, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        `, [contentId, approverId, delegatedBy, isProxy ? 1 : 0, approvalStatus, signatureData, electronicSignatureData, notesData]);
+      }
     }
 
     // تحسين: إزالة العمليات غير الضرورية لتسريع العملية
@@ -754,10 +777,10 @@ async function generateFinalSignedPDF(contentId) {
   const getSignatureCell = (log) => {
     if (log.signature && log.signature.startsWith('data:image')) {
       // صورة توقيع يدوي
-      return { image: log.signature, width: 40, height: 20, alignment: 'center' };
+      return { image: log.signature, width: 120, height: 60, alignment: 'center' };
     } else if (log.electronic_signature) {
       // اعتماد إلكتروني: دائماً صورة الختم
-      return { image: electronicSealDataUrl, width: 40, height: 20, alignment: 'center' };
+      return { image: electronicSealDataUrl, width: 120, height: 60, alignment: 'center' };
     } else {
       // لا يوجد توقيع
       return { text: '✓', style: 'tableCell' };
@@ -765,15 +788,8 @@ async function generateFinalSignedPDF(contentId) {
   };
   for (const log of logs) {
     // نوع الاعتماد
-    // استخدام الدور المحدد من قاعدة البيانات إذا كان موجوداً
-    let approvalType;
-    if (log.approval_role) {
-      approvalType = log.approval_role;
-    } else {
-      // استخدام المنطق القديم كاحتياطي
-      approvalType = rowIndex === 1 ? 'Reviewed' : 
-                    rowIndex === logs.length ? 'Approver' : 'Reviewed';
-    }
+    // استخدام الدور المحدد من قاعدة البيانات دائماً
+    const approvalType = log.approval_role;
     
     // طريقة الاعتماد
     const approvalMethod = log.signature ? 'Hand Signature' : 
@@ -828,34 +844,37 @@ async function generateFinalSignedPDF(contentId) {
   // 7) إنشاء تعريف المستند باستخدام pdfmake
   const docDefinition = {
     pageSize: 'A4',
-    pageMargins: [40, 60, 40, 60],
+    pageMargins: [20, 30, 20, 30],
     defaultStyle: {
       font: 'Amiri',
-      fontSize: 10
+      fontSize: 12
     },
     styles: {
       title: {
-        fontSize: 18,
+        fontSize: 22,
         bold: true,
         alignment: 'center',
-        margin: [0, 0, 0, 20]
+        margin: [0, 0, 0, 25]
       },
       tableHeader: {
         bold: true,
-        fontSize: 9,
-        color: 'black',
+        fontSize: 12,
+        color: 'white',
         alignment: 'center',
-        fillColor: '#e6e6e6'
+        fillColor: '#428499',
+        margin: [3, 6, 3, 6]
       },
       tableCell: {
-        fontSize: 8,
-        alignment: 'center'
+        fontSize: 11,
+        alignment: 'center',
+        margin: [3, 6, 3, 6]
       },
       proxyCell: {
-        fontSize: 8,
+        fontSize: 10,
         alignment: 'center',
         color: '#666666',
-        fillColor: '#f9f9f9'
+        fillColor: '#f9f9f9',
+        margin: [3, 5, 3, 5]
       }
     },
     content: [
@@ -868,7 +887,7 @@ async function generateFinalSignedPDF(contentId) {
       {
         table: {
           headerRows: 1,
-          widths: ['15%', '20%', '20%', '20%', '10%', '15%'],
+          widths: ['12%', '16%', '16%', '16%', '22%', '18%'],
           body: approvalTableBody
         },
         layout: {
@@ -1108,15 +1127,8 @@ async function updatePDFAfterApproval(contentId) {
     };
 
     for (const log of logs) {
-      // استخدام الدور المحدد من قاعدة البيانات إذا كان موجوداً
-      let approvalType;
-      if (log.approval_role) {
-        approvalType = log.approval_role;
-      } else {
-        // استخدام المنطق القديم كاحتياطي
-        approvalType = rowIndex === 1 ? 'Reviewed' : 
-                      rowIndex === logs.length ? 'Approver' : 'Reviewed';
-      }
+      // استخدام الدور المحدد من قاعدة البيانات دائماً
+      const approvalType = log.approval_role;
       
       const approvalMethod = log.signature ? 'Hand Signature' : 
                             log.electronic_signature ? 'Electronic Signature' : 'Not Specified';

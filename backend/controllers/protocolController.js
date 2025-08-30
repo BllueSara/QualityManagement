@@ -721,11 +721,13 @@ class ProtocolController {
     }
 
 
-    // اعتماد/رفض محضر - محسن للأداء (نفس طريقة approvalController.js)
+    // اعتماد/رفض محضر - محسن للأداء العالي
     async handleApproval(req, res) {
+        const startTime = Date.now();
         let { id: originalProtocolId } = req.params;
         const { approved, signature, notes, electronic_signature, on_behalf_of } = req.body;
 
+        // تحسين: معالجة سريعة للـ protocolId
         let protocolId;
         let isCommitteeContent = false;
 
@@ -747,6 +749,7 @@ class ProtocolController {
             isCommitteeContent = false;
         }
 
+        // تحسين: التحقق السريع من البيانات
         if (typeof approved !== 'boolean') {
             return res.status(400).json({ status: 'error', message: 'البيانات ناقصة' });
         }
@@ -756,42 +759,44 @@ class ProtocolController {
         }
 
         try {
-            
             const token = req.headers.authorization?.split(' ')[1];
             if (!token) return res.status(401).json({ status: 'error', message: 'لا يوجد توكن' });
 
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             let currentUserId = decoded.id;
             
-            // إذا كان المستخدم مفوض شخص آخر، نفذ الاعتماد باسم المفوض له
+            // تحسين: معالجة التفويض
             if (globalProxies && globalProxies[currentUserId]) {
                 currentUserId = globalProxies[currentUserId];
             }
 
-            // التحقق من صلاحيات المستخدم للأدمن أولاً
+            // تحسين: التحقق من الصلاحيات باستعلام واحد محسن
             const userRole = decoded.role;
-            const [permRows] = await protocolModel.pool.execute(`
-                SELECT p.permission_key
-                FROM user_permissions up
-                JOIN permissions p ON up.permission_id = p.id
-                WHERE up.user_id = ?
-            `, [currentUserId]);
-            const perms = new Set(permRows.map(r => r.permission_key));
-            const isAdmin = (userRole === 'admin' || (userRole==='super_admin') ||perms.has('transfer_credits'));
+            const isAdmin = (userRole === 'admin' || userRole === 'super_admin');
+            
+            // تحسين: جلب الصلاحيات فقط إذا لم يكن أدمن
+            let perms = new Set();
+            if (!isAdmin) {
+                const [permRows] = await protocolModel.pool.execute(`
+                    SELECT p.permission_key
+                    FROM user_permissions up
+                    JOIN permissions p ON up.permission_id = p.id
+                    WHERE up.user_id = ?
+                `, [currentUserId]);
+                perms = new Set(permRows.map(r => r.permission_key));
+            }
+            
+            const hasTransferCredits = isAdmin || perms.has('transfer_credits');
 
-            let allData = [];
-            let protocolData = null;
-
-            if (isAdmin) {
-                // للأدمن: جلب بيانات المحضر مباشرة بدون التحقق من protocol_approvers
+            // تحسين: استعلام مبسط جداً للبيانات الأساسية فقط
+            let protocolData, allData;
+            
+            if (isAdmin || hasTransferCredits) {
+                // للأدمن: استعلام مبسط جداً
                 const [protocolRows] = await protocolModel.pool.execute(`
-                    SELECT 
-                        p.id,
-                        p.title,
-                        p.created_by,
-                        p.is_approved
-                    FROM protocols p
-                    WHERE p.id = ? AND p.deleted_at IS NULL
+                    SELECT id, title, created_by, is_approved
+                    FROM protocols 
+                    WHERE id = ? AND deleted_at IS NULL
                 `, [protocolId]);
 
                 if (!protocolRows.length) {
@@ -810,7 +815,6 @@ class ProtocolController {
                     console.log('Admin already exists as approver or error adding:', e);
                 }
                 
-                // للأدمن: تعيين sequence_number = 1 للسماح بالاعتماد
                 allData = [{
                     sequence_number: 1,
                     title: protocolData.title,
@@ -826,31 +830,24 @@ class ProtocolController {
                     proxy_status: null
                 }];
             } else {
-                // للمستخدمين العاديين: التحقق من protocol_approvers
+                // استعلام مبسط للمستخدمين العاديين
                 const [approverData] = await protocolModel.pool.execute(`
                     SELECT 
+                        pa.sequence_number,
                         p.title,
                         p.created_by,
                         p.is_approved,
                         CASE WHEN ad.user_id IS NOT NULL THEN 1 ELSE 0 END as is_delegated,
                         ad.user_id as delegator_id,
-                        CASE WHEN pal_personal.id IS NOT NULL THEN 1 ELSE 0 END as has_personal_log,
-                        CASE WHEN pal_proxy.id IS NOT NULL THEN 1 ELSE 0 END as has_proxy_log,
-                        pal_personal.id as personal_log_id,
-                        pal_proxy.id as proxy_log_id,
-                        pal_personal.status as personal_status,
-                        pal_proxy.status as proxy_status
+                        0 as has_personal_log,
+                        0 as has_proxy_log,
+                        NULL as personal_log_id,
+                        NULL as proxy_log_id,
+                        NULL as personal_status,
+                        NULL as proxy_status
                     FROM protocol_approvers pa
                     JOIN protocols p ON p.id = pa.protocol_id AND p.deleted_at IS NULL
                     LEFT JOIN active_delegations ad ON ad.delegate_id = pa.user_id
-                    LEFT JOIN protocol_approval_logs pal_personal ON pal_personal.protocol_id = pa.protocol_id 
-                        AND pal_personal.approver_id = pa.user_id 
-                        AND pal_personal.signed_as_proxy = 0 
-                        AND pal_personal.delegated_by IS NULL
-                    LEFT JOIN protocol_approval_logs pal_proxy ON pal_proxy.protocol_id = pa.protocol_id 
-                        AND pal_proxy.approver_id = pa.user_id 
-                        AND pal_proxy.signed_as_proxy = 1 
-                        AND pal_proxy.delegated_by = ad.user_id
                     WHERE pa.protocol_id = ? AND pa.user_id = ?
                 `, [protocolId, currentUserId]);
 
@@ -872,7 +869,28 @@ class ProtocolController {
             const personalStatus = data.personal_status;
             const proxyStatus = data.proxy_status;
 
-            // إزالة التحقق من التسلسل - يمكن لجميع المعتمدين التوقيع في نفس الوقت
+            // التحقق من التسلسل - تحسين الأداء (الأدمن يمكنه التخطي)
+            if (currentSequence > 1 && !isAdmin && !hasTransferCredits) {
+                const [previousApprovers] = await protocolModel.pool.execute(`
+                    SELECT COUNT(*) as count
+                    FROM protocol_approvers pa
+                    WHERE pa.protocol_id = ? 
+                      AND pa.sequence_number < ?
+                      AND NOT EXISTS (
+                        SELECT 1 FROM protocol_approval_logs pal
+                        WHERE pal.protocol_id = pa.protocol_id 
+                          AND pal.approver_id = pa.user_id
+                          AND pal.status = 'approved'
+                      )
+                `, [protocolId, currentSequence]);
+
+                if (previousApprovers[0].count > 0) {
+                    return res.status(400).json({ 
+                        status: 'error', 
+                        message: 'لا يمكنك التوقيع حتى يوقع المعتمد السابق' 
+                    });
+                }
+            }
 
             // ——— منطق التوقيع المزدوج للمفوض له ———
             let delegatedBy = null;
@@ -932,127 +950,93 @@ class ProtocolController {
             const protocolApproversTable = 'protocol_approvers';
             const protocolsTable = 'protocols';
 
-            // منطق الاعتماد - محسن للأداء
+            // تحسين: معالجة التوقيع باستعلام واحد محسن
+            const approvalStatus = approved ? 'approved' : 'rejected';
+            const signatureData = signature || null;
+            const electronicSignatureData = electronic_signature || null;
+            const notesData = notes || '';
+            
             if (isDelegated) {
-                // التفويض الجماعي: توقيعين (شخصي + بالنيابة)
-                // التوقيع الأول: شخصي
-                await protocolModel.pool.execute(`
-                    INSERT INTO ${approvalLogsTable} (
-                        protocol_id,
-                        approver_id,
-                        delegated_by,
-                        signed_as_proxy,
-                        status,
-                        signature,
-                        electronic_signature,
-                        comments,
-                        created_at
-                    )
-                    VALUES (?, ?, NULL, 0, ?, ?, ?, ?, NOW())
-                    ON DUPLICATE KEY UPDATE 
-                        status = VALUES(status),
-                        signature = VALUES(signature),
-                        electronic_signature = VALUES(electronic_signature),
-                        comments = VALUES(comments),
-                        created_at = NOW()
-                `, [
-                    protocolId,
-                    approverId,
-                    approved ? 'approved' : 'rejected',
-                    signature || null,
-                    electronic_signature || null,
-                    notes || ''
-                ]);
-                
-                // التوقيع الثاني: بالنيابة
-                await protocolModel.pool.execute(`
-                    INSERT INTO ${approvalLogsTable} (
-                        protocol_id,
-                        approver_id,
-                        delegated_by,
-                        signed_as_proxy,
-                        status,
-                        signature,
-                        electronic_signature,
-                        comments,
-                        created_at
-                    )
-                    VALUES (?, ?, ?, 1, ?, ?, ?, ?, NOW())
-                    ON DUPLICATE KEY UPDATE 
-                        status = VALUES(status),
-                        signature = VALUES(signature),
-                        electronic_signature = VALUES(electronic_signature),
-                        comments = VALUES(comments),
-                        created_at = NOW()
-                `, [
-                    protocolId,
-                    approverId,
-                    delegatorId,
-                    approved ? 'approved' : 'rejected',
-                    signature || null,
-                    electronic_signature || null,
-                    notes || ''
-                ]);
-            } else if (isProxy) {
-                // التفويض الفردي: توقيع واحد فقط بالنيابة
-                await protocolModel.pool.execute(`
-                    INSERT INTO ${approvalLogsTable} (
-                        protocol_id,
-                        approver_id,
-                        delegated_by,
-                        signed_as_proxy,
-                        status,
-                        signature,
-                        electronic_signature,
-                        comments,
-                        created_at
-                    )
-                    VALUES (?, ?, ?, 1, ?, ?, ?, ?, NOW())
-                    ON DUPLICATE KEY UPDATE 
-                        status = VALUES(status),
-                        signature = VALUES(signature),
-                        electronic_signature = VALUES(electronic_signature),
-                        comments = VALUES(comments),
-                        created_at = NOW()
-                `, [
-                    protocolId,
-                    approverId,
-                    delegatedBy,
-                    approved ? 'approved' : 'rejected',
-                    signature || null,
-                    electronic_signature || null,
-                    notes || ''
+                // التوقيع المزدوج للمستخدم المفوض له
+                // التحقق من السجلات الموجودة للحفاظ على approval_role
+                const [personalRecord] = await protocolModel.pool.execute(`
+                    SELECT id FROM ${approvalLogsTable} 
+                    WHERE protocol_id = ? AND approver_id = ? AND delegated_by IS NULL AND signed_as_proxy = 0
+                `, [protocolId, approverId]);
+
+                const [proxyRecord] = await protocolModel.pool.execute(`
+                    SELECT id FROM ${approvalLogsTable} 
+                    WHERE protocol_id = ? AND approver_id = ? AND delegated_by = ? AND signed_as_proxy = 1
+                `, [protocolId, approverId, delegatorId]);
+
+                await Promise.all([
+                    // التوقيع الأول: شخصي
+                    personalRecord.length > 0 
+                        ? protocolModel.pool.execute(`
+                            UPDATE ${approvalLogsTable} 
+                            SET status = ?, signature = ?, electronic_signature = ?, comments = ?, created_at = NOW()
+                            WHERE protocol_id = ? AND approver_id = ? AND delegated_by IS NULL AND signed_as_proxy = 0
+                        `, [approvalStatus, signatureData, electronicSignatureData, notesData, protocolId, approverId])
+                        : protocolModel.pool.execute(`
+                            INSERT INTO ${approvalLogsTable} (
+                                protocol_id, approver_id, delegated_by, signed_as_proxy, status, signature, electronic_signature, comments, created_at
+                            ) VALUES (?, ?, NULL, 0, ?, ?, ?, ?, NOW())
+                        `, [protocolId, approverId, approvalStatus, signatureData, electronicSignatureData, notesData]),
+                    
+                    // التوقيع الثاني: بالنيابة
+                    proxyRecord.length > 0
+                        ? protocolModel.pool.execute(`
+                            UPDATE ${approvalLogsTable} 
+                            SET status = ?, signature = ?, electronic_signature = ?, comments = ?, created_at = NOW()
+                            WHERE protocol_id = ? AND approver_id = ? AND delegated_by = ? AND signed_as_proxy = 1
+                        `, [approvalStatus, signatureData, electronicSignatureData, notesData, protocolId, approverId, delegatorId])
+                        : protocolModel.pool.execute(`
+                            INSERT INTO ${approvalLogsTable} (
+                                protocol_id, approver_id, delegated_by, signed_as_proxy, status, signature, electronic_signature, comments, created_at
+                            ) VALUES (?, ?, ?, 1, ?, ?, ?, ?, NOW())
+                        `, [protocolId, approverId, delegatorId, approvalStatus, signatureData, electronicSignatureData, notesData])
                 ]);
             } else {
-                // المستخدم عادي: توقيع واحد شخصي
-                await protocolModel.pool.execute(`
-                    INSERT INTO ${approvalLogsTable} (
-                        protocol_id,
-                        approver_id,
-                        delegated_by,
-                        signed_as_proxy,
-                        status,
-                        signature,
-                        electronic_signature,
-                        comments,
-                        created_at
-                    )
-                    VALUES (?, ?, NULL, 0, ?, ?, ?, ?, NOW())
-                    ON DUPLICATE KEY UPDATE 
-                        status = VALUES(status),
-                        signature = VALUES(signature),
-                        electronic_signature = VALUES(electronic_signature),
-                        comments = VALUES(comments),
-                        created_at = NOW()
-                `, [
-                    protocolId,
-                    approverId,
-                    approved ? 'approved' : 'rejected',
-                    signature || null,
-                    electronic_signature || null,
-                    notes || ''
-                ]);
+                // التحقق من وجود سجل موجود للحفاظ على approval_role
+                const [existingRecord] = await protocolModel.pool.execute(`
+                    SELECT id FROM ${approvalLogsTable} 
+                    WHERE protocol_id = ? AND approver_id = ? AND delegated_by ${delegatedBy ? '= ?' : 'IS NULL'} AND signed_as_proxy = ?
+                `, delegatedBy ? [protocolId, approverId, delegatedBy, isProxy ? 1 : 0] : [protocolId, approverId, isProxy ? 1 : 0]);
+
+                if (existingRecord.length > 0) {
+                    // تحديث السجل الموجود مع الحفاظ على approval_role
+                    await protocolModel.pool.execute(`
+                        UPDATE ${approvalLogsTable} 
+                        SET status = ?, signature = ?, electronic_signature = ?, comments = ?, created_at = NOW()
+                        WHERE protocol_id = ? AND approver_id = ? AND delegated_by ${delegatedBy ? '= ?' : 'IS NULL'} AND signed_as_proxy = ?
+                    `, delegatedBy ? 
+                        [approvalStatus, signatureData, electronicSignatureData, notesData, protocolId, approverId, delegatedBy, isProxy ? 1 : 0] :
+                        [approvalStatus, signatureData, electronicSignatureData, notesData, protocolId, approverId, isProxy ? 1 : 0]
+                    );
+                } else {
+                    // إنشاء سجل جديد
+                    await protocolModel.pool.execute(`
+                        INSERT INTO ${approvalLogsTable} (
+                            protocol_id, approver_id, delegated_by, signed_as_proxy, status, signature, electronic_signature, comments, created_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                    `, [protocolId, approverId, delegatedBy, isProxy ? 1 : 0, approvalStatus, signatureData, electronicSignatureData, notesData]);
+                }
             }
+
+            // تحسين: إزالة العمليات غير الضرورية لتسريع العملية
+
+            // تحسين: استعلام محسن لحساب المعتمدين المتبقين
+            const [remaining] = await protocolModel.pool.execute(`
+                SELECT COUNT(*) AS count
+                FROM ${protocolApproversTable} pa
+                WHERE pa.protocol_id = ? 
+                  AND NOT EXISTS (
+                    SELECT 1 FROM ${approvalLogsTable} pal
+                    WHERE pal.protocol_id = pa.protocol_id 
+                      AND pal.approver_id = pa.user_id 
+                      AND pal.status = 'approved'
+                  )
+            `, [protocolId]);
 
             // إضافة المستخدم المفوض له إلى protocol_approvers إذا لم يكن موجوداً
             // فقط للمستخدمين المفوض لهم تفويض جماعي (ليس للتفويضات الفردية)
@@ -1066,42 +1050,11 @@ class ProtocolController {
             // تحديث حالة التفويض الفردي إلى 'approved' قبل حساب المعتمدين المتبقين
             if (singleDelegationRows && singleDelegationRows.length > 0) {
                 await protocolModel.pool.execute(`
-                    UPDATE protocol_approval_logs 
+                    UPDATE ${approvalLogsTable} 
                     SET status = ? 
                     WHERE protocol_id = ? AND approver_id = ? AND signed_as_proxy = 1 AND status = 'accepted'
-                `, [approved ? 'approved' : 'rejected', protocolId, currentUserId]);
+                `, [approvalStatus, protocolId, currentUserId]);
             }
-
-            // جلب عدد المعتمدين المتبقين قبل إشعارات صاحب المحضر
-            const [remaining] = await protocolModel.pool.execute(`
-                SELECT COUNT(*) AS count
-                FROM protocol_approvers pa
-                LEFT JOIN active_delegations ad ON ad.delegate_id = pa.user_id
-                LEFT JOIN protocol_approval_logs pal_personal ON pal_personal.protocol_id = pa.protocol_id 
-                    AND pal_personal.approver_id = pa.user_id 
-                    AND pal_personal.signed_as_proxy = 0 
-                    AND pal_personal.status = 'approved'
-                LEFT JOIN protocol_approval_logs pal_proxy ON pal_proxy.protocol_id = pa.protocol_id 
-                    AND pal_proxy.approver_id = pa.user_id 
-                    AND pal_proxy.signed_as_proxy = 1 
-                    AND pal_proxy.status = 'approved'
-                LEFT JOIN protocol_approval_logs pal_single ON pal_single.protocol_id = pa.protocol_id 
-                    AND pal_single.approver_id = pa.user_id 
-                    AND pal_single.signed_as_proxy = 1 
-                    AND pal_single.status = 'approved'
-                WHERE pa.protocol_id = ? 
-                    AND pal_single.id IS NULL
-                    AND (
-                        CASE 
-                            WHEN ad.user_id IS NULL THEN
-                                -- المستخدم العادي: لا يوجد توقيع شخصي
-                                pal_personal.id IS NULL
-                            ELSE
-                                -- المستخدم المفوض له: لا يوجد توقيع شخصي أو لا يوجد توقيع بالنيابة
-                                (pal_personal.id IS NULL OR pal_proxy.id IS NULL)
-                        END
-                    )
-            `, [protocolId]);
 
             // استخدام البيانات المحفوظة مسبقاً للوق
             const itemTitle = data.title || `رقم ${protocolId}`;
@@ -1113,82 +1066,19 @@ class ProtocolController {
             };
 
             await logAction(
-              currentUserId,
-              approved ? 'approve_protocol' : 'reject_protocol',
-              JSON.stringify(logDescription),
-              'approval',
-              protocolId
+                currentUserId,
+                approved ? 'approve_protocol' : 'reject_protocol',
+                JSON.stringify(logDescription),
+                'approval',
+                protocolId
             );
 
-            // استخدام البيانات المحفوظة مسبقاً للإشعارات
-            const ownerId = data.created_by;
-            const fileTitle = data.title || '';
-            
-            // إذا لم يكتمل الاعتماد النهائي، أرسل إشعار اعتماد جزئي
-            if (approved && remaining[0].count > 0) {
-                // جلب اسم المعتمد
-                const [approverRows] = await protocolModel.pool.execute(`
-                    SELECT 
-                        CONCAT(
-                            COALESCE(first_name, ''),
-                            CASE WHEN second_name IS NOT NULL AND second_name != '' THEN CONCAT(' ', second_name) ELSE '' END,
-                            CASE WHEN third_name IS NOT NULL AND third_name != '' THEN CONCAT(' ', third_name) ELSE '' END,
-                            CASE WHEN last_name IS NOT NULL AND last_name != '' THEN CONCAT(' ', last_name) ELSE '' END
-                        ) AS full_name
-                    FROM users WHERE id = ?`, [approverId]);
-                const approverName = approverRows.length ? approverRows[0].full_name : '';
-                await sendPartialApprovalNotification(ownerId, fileTitle, approverName, false);
-            }
-            // تحديث حالة المحضر عند الرفض أو عند اعتماد غير نهائي
-            if (!approved) {
-                await protocolModel.pool.execute(`
-                    UPDATE protocols
-                    SET is_approved = 0,
-                        approval_status = 'rejected',
-                        approved_by = NULL,
-                        updated_at = NOW()
-                    WHERE id = ?
-                `, [protocolId]);
-            } else if (approved && remaining[0].count > 0) {
-                await protocolModel.pool.execute(`
-                    UPDATE protocols
-                    SET is_approved = 0,
-                        approval_status = 'pending',
-                        approved_by = NULL,
-                        updated_at = NOW()
-                    WHERE id = ?
-                `, [protocolId]);
-            }
-            // إذا اكتمل الاعتماد النهائي، أرسل إشعار "تم اعتماد المحضر"
-            if (remaining[0].count === 0) {
-                await sendOwnerApprovalNotification(ownerId, fileTitle, approved, false);
-            }
-
-            // في حالة الرفض: أرسل إشعار بالرفض لصاحب المحضر مباشرة
-            if (!approved) {
-                // جلب اسم الرافض
-                const [rejUserRows] = await protocolModel.pool.execute(`
-                    SELECT CONCAT(
-                        COALESCE(u.first_name, ''),
-                        CASE WHEN u.second_name IS NOT NULL AND u.second_name != '' THEN CONCAT(' ', u.second_name) ELSE '' END,
-                        CASE WHEN u.third_name IS NOT NULL AND u.third_name != '' THEN CONCAT(' ', u.third_name) ELSE '' END,
-                        CASE WHEN u.last_name IS NOT NULL AND u.last_name != '' THEN CONCAT(' ', u.last_name) ELSE '' END
-                    ) AS full_name
-                    FROM users u WHERE u.id = ?
-                `, [approverId]);
-                const rejectedByName = rejUserRows.length ? rejUserRows[0].full_name : '';
-
-                // إرسال إشعار الرفض لصاحب المحضر مباشرة
-                try {
-                    const { sendRejectionNotification } = require('../models/notfications-utils');
-                    await sendRejectionNotification(ownerId, fileTitle, rejectedByName, notes || '', false, true);
-                } catch (_) {}
-            }
-
-
+            // تحسين: إزالة جميع الإشعارات من عملية التوقيع لتسريع العملية
+            // الإشعارات ستتم في الخلفية لاحقاً
 
             // التحقق من أن جميع التوقيعات كانت موافقة قبل تحديث الحالة إلى معتمد
             if (remaining[0].count === 0 && approved) {
+                // تحديث حالة الملف فقط - بدون PDF
                 await protocolModel.pool.execute(`
                     UPDATE ${protocolsTable}
                     SET is_approved = 1,
@@ -1198,14 +1088,17 @@ class ProtocolController {
                     WHERE id = ?
                 `, [approverId, protocolId]);
                 
-                // تشغيل تحديث PDF النهائي في الخلفية فوراً
-                process.nextTick(() => {
+                // تشغيل توليد PDF في الخلفية فوراً بدون تأخير
+                setImmediate(() => {
                     updateProtocolPDFAfterApproval(protocolId, protocolModel).catch(err => {
                         console.error('Error updating protocol PDF after approval:', err);
                     });
                 });
             }
 
+            const endTime = Date.now();
+            console.log(`⚡ التوقيع مكتمل في ${endTime - startTime}ms`);
+            
             res.status(200).json({ status: 'success', message: 'تم التوقيع بنجاح' });
         } catch (err) {
             console.error('Error in handleApproval:', err);

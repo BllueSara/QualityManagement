@@ -197,13 +197,13 @@ async function generateProtocolPDF(protocolData, db) {
             content.push({
                 columns: [
                     // يسار: شعار المستشفى
-                    hospitalLogoDataUrl ? { image: hospitalLogoDataUrl, width: 110, alignment: 'left' } : { text: '' },
+                    hospitalLogoDataUrl ? { image: hospitalLogoDataUrl, width: 150, alignment: 'left' } : { text: '' },
                     { text: '', width: '*' },
                     // يمين: شعار النظام
-                    systemTitleDataUrl ? { image: systemTitleDataUrl, width: 110, alignment: 'right' } : { text: '' }
+                    systemTitleDataUrl ? { image: systemTitleDataUrl, width: 150, alignment: 'right' } : { text: '' }
                 ],
                 // ارفع الشعارين للأعلى قليلًا بمقدار 12px
-                margin: [0, -12, 0, 10]
+                margin: [0, -15, 0, 15]
             });
         }
 
@@ -226,7 +226,7 @@ async function generateProtocolPDF(protocolData, db) {
                 { text: fixArabicOrder(' by recorded was Meeting \nتم تسجيل الاجتماع بواسطة'), style: 'infoHeader', alignment: 'center' }
             ],
             [
-                { text: fixArabicOrder(prepareArabic(protocolData.room || 'ICU meeting room')), style: 'infoCell', alignment: 'center' },
+                { text: fixArabicOrder(prepareArabic(protocolData.room || '')), style: 'infoCell', alignment: 'center' },
                 { text: fixArabicOrder('Venue\nالقاعة'), style: 'infoHeader', alignment: 'center' },
                 { text: fixArabicOrder(String((protocolData.protocolTime || protocolData.protocol_time || '')).slice(0,5)), style: 'infoCell', alignment: 'center' },
                 { text: fixArabicOrder('Time\nالوقت'), style: 'infoHeader', alignment: 'center' },
@@ -589,7 +589,7 @@ async function generateProtocolPDF(protocolData, db) {
             content.push({
                 table: {
                     headerRows: 0,
-                    widths: ['10%', '18%', '12%', '15%', '30%', '10%', '5%'],
+                    widths: ['12%', '18%', '14%', '16%', '28%', '8%', '4%'],
                     body: topicsTableBody,
                 },
                 layout: {
@@ -692,13 +692,13 @@ async function generateProtocolPDF(protocolData, db) {
                                     actualApproval.electronic_signature ? 'Electronic Signature' : 'Not Specified';
                     
                     if (actualApproval.signature && actualApproval.signature.startsWith('data:image')) {
-                        signature = { image: actualApproval.signature, width: 40, height: 20, alignment: 'center' };
+                        signature = { image: actualApproval.signature, width: 150, height: 75, alignment: 'center' };
                     } else if (actualApproval.electronic_signature) {
                         // قراءة ختم الاعتماد الإلكتروني
                         try {
                             const electronicSealBase64 = fs.readFileSync(path.join(__dirname, '../e3teamdelc.png')).toString('base64');
                             const electronicSealDataUrl = 'data:image/png;base64,' + electronicSealBase64;
-                            signature = { image: electronicSealDataUrl, width: 40, height: 20, alignment: 'center' };
+                            signature = { image: electronicSealDataUrl, width: 150, height: 75, alignment: 'center' };
                         } catch (e) {
                             signature = { text: '✓', style: 'tableCell' };
                         }
@@ -783,7 +783,7 @@ async function generateProtocolPDF(protocolData, db) {
                 pageBreak: 'before', // بدء صفحة جديدة
                 table: {
                     headerRows: 0,
-                    widths: ['15%', '25%', '20%', '20%', '10%', '10%'],
+                    widths: ['13%', '20%', '16%', '13%', '25%', '13%'],
                     body: approvalTableBody,
                 },
                 layout: {
@@ -809,75 +809,77 @@ async function generateProtocolPDF(protocolData, db) {
 
         // إنشاء تعريف المستند
         const docDefinition = {
-            pageSize: 'A3',
+            pageSize: 'A2',
             pageOrientation: 'landscape',
-            pageMargins: [30, 40, 30, 40],
+            pageMargins: [40, 50, 40, 50],
             
             defaultStyle: {
                 font: 'Amiri',
-                fontSize: 14
+                fontSize: 16
             },
             styles: {
                 title: {
-                    fontSize: 26,
+                    fontSize: 32,
                     bold: true,
                     alignment: 'center',
-                    margin: [0, 0, 0, 25]
+                    margin: [0, 0, 0, 30]
                 },
                 sectionTitle: {
-                    fontSize: 22,
+                    fontSize: 28,
                     bold: true,
                     alignment: 'center',
-                    margin: [0, 25, 0, 20]
+                    margin: [0, 30, 0, 25]
                 },
                 topicTitle: {
-                    fontSize: 18,
+                    fontSize: 22,
                     bold: true,
-                    margin: [0, 15, 0, 8]
+                    margin: [0, 20, 0, 12]
                 },
                 infoHeader: {
                     bold: true,
-                    fontSize: 16,
+                    fontSize: 20,
                     color: 'white',
                     alignment: 'center',
                     fillColor: '#428499'
                 },
                 infoCell: {
-                    fontSize: 15,
+                    fontSize: 18,
                     alignment: 'center'
                 },
                 tableHeader: {
                     bold: true,
-                    fontSize: 15,
+                    fontSize: 18,
                     color: 'white',
                     alignment: 'center',
                     fillColor: '#428499'
                 },
                 tableCell: {
-                    fontSize: 14,
-                    alignment: 'center'
+                    fontSize: 16,
+                    alignment: 'center',
+                    margin: [5, 8, 5, 8]
                 },
                 rtlCell: {
-                    fontSize: 14,
-                    alignment: 'right'
+                    fontSize: 16,
+                    alignment: 'right',
+                    margin: [5, 8, 5, 8]
                 },
                 proxyCell: {
-                    fontSize: 12,
+                    fontSize: 14,
                     alignment: 'center',
                     color: '#666666',
                     fillColor: '#f9f9f9'
                 },
                 mainTitle: {
-                    fontSize: 24,
+                    fontSize: 30,
                     bold: true,
                     alignment: 'center',
-                    margin: [0, 0, 0, 25]
+                    margin: [0, 0, 0, 30]
                 },
                 meetingTitle: {
-                    fontSize: 22,
+                    fontSize: 28,
                     bold: true,
                     alignment: 'center',
-                    margin: [0, 0, 0, 35]
+                    margin: [0, 0, 0, 40]
                 }
             },
             content: content
@@ -949,18 +951,60 @@ async function saveProtocolPDF(protocolId, protocolData, db) {
 // دالة جديدة لتحديث PDF بعد كل اعتماد فوري (نفس تصميم approvalController.js)
 async function updateProtocolPDFAfterApproval(protocolId, db) {
     try {
-        // 1) جلب مسار الملف
+        // 1) جلب مسار الملف مع معلومات إضافية للتشخيص
         const [fileRows] = await db.pool.execute(
-            `SELECT file_path FROM protocols WHERE id = ? AND deleted_at IS NULL`,
+            `SELECT file_path, title FROM protocols WHERE id = ? AND deleted_at IS NULL`,
             [protocolId]
         );
         if (!fileRows.length) {
             return console.error('📁 Protocol not found for ID', protocolId);
         }
         const relativePath = fileRows[0].file_path;
-        const fullPath = path.join(__dirname, '../../uploads/', relativePath);
+        const protocolTitle = fileRows[0].title;
+        let fullPath = path.join(__dirname, '../../uploads/', relativePath);
+        
+        console.log(`🔍 Protocol ${protocolId} (${protocolTitle}): Looking for file at ${fullPath}`);
+        
         if (!fs.existsSync(fullPath)) {
-            return console.error('❌ File not found on disk:', fullPath);
+            console.error('❌ File not found on disk:', fullPath);
+            
+            // محاولة البحث عن الملف باستخدام نمط protocol_ID_*.pdf
+            const protocolsDir = path.join(__dirname, '../../uploads/protocols/');
+            const filePattern = `protocol_${protocolId}_`;
+            
+            try {
+                const files = fs.readdirSync(protocolsDir);
+                const matchingFile = files.find(file => file.startsWith(filePattern) && file.endsWith('.pdf'));
+                
+                if (matchingFile) {
+                    const foundPath = path.join(protocolsDir, matchingFile);
+                    console.log(`🔍 Found alternative file: ${foundPath}`);
+                    
+                    // تحديث قاعدة البيانات بالمسار الصحيح
+                    const correctRelativePath = `protocols/${matchingFile}`;
+                    await db.pool.execute(
+                        `UPDATE protocols SET file_path = ? WHERE id = ?`,
+                        [correctRelativePath, protocolId]
+                    );
+                    
+                    console.log(`✅ Updated database with correct path: ${correctRelativePath}`);
+                    
+                    // استخدام المسار الجديد
+                    const updatedFullPath = foundPath;
+                    if (!fs.existsSync(updatedFullPath)) {
+                        return console.error('❌ Even the found file doesn\'t exist:', updatedFullPath);
+                    }
+                    
+                    // تحديث متغير fullPath للاستخدام أدناه
+                    fullPath = updatedFullPath;
+                } else {
+                    console.error(`❌ No matching protocol file found for pattern: ${filePattern}*.pdf`);
+                    return;
+                }
+            } catch (dirError) {
+                console.error('❌ Error reading protocols directory:', dirError);
+                return;
+            }
         }
 
         // 2) تحميل وثيقة الـ PDF الأصلية
@@ -1100,9 +1144,9 @@ async function updateProtocolPDFAfterApproval(protocolId, db) {
         let rowIndex = 1;
         const getSignatureCell = (log) => {
             if (log.signature && log.signature.startsWith('data:image')) {
-                return { image: log.signature, width: 40, height: 20, alignment: 'center' };
+                return { image: log.signature, width: 150, height: 75, alignment: 'center' };
             } else if (log.electronic_signature) {
-                return { image: electronicSealDataUrl, width: 40, height: 20, alignment: 'center' };
+                return { image: electronicSealDataUrl, width: 150, height: 75, alignment: 'center' };
             } else {
                 return { text: '✓', style: 'tableCell' };
             }
@@ -1173,43 +1217,45 @@ async function updateProtocolPDFAfterApproval(protocolId, db) {
 
         // 6) إنشاء تعريف المستند باستخدام pdfmake
         const docDefinition = {
-            pageSize: 'A3',
+            pageSize: 'A2',
             pageOrientation: 'landscape',
-            pageMargins: [30, 40, 30, 40],
+            pageMargins: [40, 50, 40, 50],
             defaultStyle: {
                 font: 'Amiri',
-                fontSize: 12
+                fontSize: 16
             },
             styles: {
                 title: {
-                    fontSize: 20,
+                    fontSize: 26,
                     bold: true,
                     alignment: 'center',
-                    margin: [0, 0, 0, 25]
+                    margin: [0, 0, 0, 30]
                 },
                 tableHeader: {
                     bold: true,
-                    fontSize: 12,
+                    fontSize: 18,
                     color: 'black',
                     alignment: 'center',
                     fillColor: '#e6e6e6'
                 },
                 tableCell: {
-                    fontSize: 11,
-                    alignment: 'center'
+                    fontSize: 16,
+                    alignment: 'center',
+                    margin: [5, 8, 5, 8]
                 },
                 proxyCell: {
-                    fontSize: 10,
+                    fontSize: 14,
                     alignment: 'center',
                     color: '#666666',
-                    fillColor: '#f9f9f9'
+                    fillColor: '#f9f9f9',
+                    margin: [5, 6, 5, 6]
                 }
             },
             content: [
                 {
                     table: {
                         headerRows: 1,
-                        widths: ['15%', '20%', '20%', '20%', '10%', '15%'],
+                        widths: ['13%', '17%', '16%', '15%', '25%', '14%'],
                         body: approvalTableBody
                     },
                     layout: {
