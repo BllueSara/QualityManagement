@@ -184,9 +184,8 @@ exports.sendApprovalRequest = async (req, res) => {
     );
 
     // معالجة التفويضات - تحديد المعتمدين النهائيين (محسن للأداء)
-    const finalApprovers = [];
     
-    // جلب جميع التفويضات في استعلام واحد للتسريع
+    // ⚡ تحسين: جلب جميع التفويضات في استعلام واحد للتسريع
     const [allDelegations] = await conn.execute(
       `SELECT user_id, delegate_id FROM active_delegations 
        WHERE user_id IN (${approvers.map(() => '?').join(',')}) 
@@ -194,7 +193,7 @@ exports.sendApprovalRequest = async (req, res) => {
       [...approvers, ...approvers]
     );
     
-    // إنشاء خرائط للتفويضات للوصول السريع
+    // ⚡ تحسين: إنشاء خرائط للتفويضات للوصول السريع
     const userToDelegateMap = new Map();
     const delegateToUserMap = new Map();
     
@@ -203,25 +202,17 @@ exports.sendApprovalRequest = async (req, res) => {
       delegateToUserMap.set(row.delegate_id, row.user_id);
     });
     
+    // ⚡ تحسين: معالجة أسرع باستخدام Set بدلاً من array
+    const finalApproversSet = new Set();
+    
     // معالجة كل معتمد
     for (const approverId of approvers) {
-      // تحقق إذا كان هذا المعتمد مفوض له لشخص آخر
       if (userToDelegateMap.has(approverId)) {
-        // هذا المعتمد مفوض له، أضف المفوض له بدلاً منه
-        const delegateeId = userToDelegateMap.get(approverId);
-        if (!finalApprovers.includes(delegateeId)) {
-          finalApprovers.push(delegateeId);
-        }
+        finalApproversSet.add(userToDelegateMap.get(approverId));
       } else if (delegateToUserMap.has(approverId)) {
-        // هذا مفوض له، أضفه فقط
-        if (!finalApprovers.includes(approverId)) {
-          finalApprovers.push(approverId);
-        }
+        finalApproversSet.add(approverId);
       } else {
-        // هذا ليس مفوض له، أضفه
-        if (!finalApprovers.includes(approverId)) {
-          finalApprovers.push(approverId);
-        }
+        finalApproversSet.add(approverId);
       }
     }
     
@@ -229,11 +220,13 @@ exports.sendApprovalRequest = async (req, res) => {
     for (const approverId of approvers) {
       if (userToDelegateMap.has(approverId)) {
         const delegateeId = userToDelegateMap.get(approverId);
-        if (finalApprovers.includes(delegateeId)) {
-          finalApprovers.push(delegateeId);
+        if (finalApproversSet.has(delegateeId)) {
+          finalApproversSet.add(delegateeId);
         }
       }
     }
+    
+    const finalApprovers = Array.from(finalApproversSet);
     // حماية ضد قائمة فارغة
     console.log('DEBUG approvers:', approvers);
     console.log('DEBUG finalApprovers:', finalApprovers);
@@ -263,61 +256,67 @@ exports.sendApprovalRequest = async (req, res) => {
     );
     const existing = rows.map(r => r.user_id);
 
-    // 2) احسب الجدد فقط
-    const toAdd = finalApprovers.filter(id => !existing.includes(id));
-    
-    // 2.5) إزالة التكرار من toAdd
+    // ⚡ تحسين: احسب الجدد فقط بشكل أسرع باستخدام Set
+    const existingSet = new Set(existing);
+    const toAdd = finalApprovers.filter(id => !existingSet.has(id));
     const uniqueToAdd = [...new Set(toAdd)];
 
-    // 3) أدخل الجدد فقط، وسجّل لهم سجلّ اعتماد
-    const processedUsers = new Set(); // لتجنب التكرار
-    
-    for (let i = 0; i < uniqueToAdd.length; i++) {
-      const userId = uniqueToAdd[i];
-      if (processedUsers.has(userId)) continue; // تجنب التكرار
-      
-      // حساب رقم التسلسل (بعد المعتمدين الموجودين)
-      const sequenceNumber = existing.length + i + 1;
+    // ⚡ تحسين: إدراج مجمع للمعتمدين الجدد
+    if (uniqueToAdd.length > 0) {
+      // إدراج جميع المعتمدين الجدد في استعلام واحد
+      const approverValues = uniqueToAdd.map((userId, index) => 
+        `(${contentId}, ${userId}, ${existing.length + index + 1})`
+      ).join(', ');
       
       await conn.execute(
-        `INSERT INTO content_approvers (content_id, user_id, sequence_number) VALUES (?, ?, ?)`,
-        [contentId, userId, sequenceNumber]
+        `INSERT INTO content_approvers (content_id, user_id, sequence_number) VALUES ${approverValues}`
       );
-      
-      // تحقق إذا كان هذا المستخدم مفوض له
-      const [delegationRows] = await conn.execute(
-        'SELECT user_id FROM active_delegations WHERE delegate_id = ?',
-        [userId]
+    }
+
+    // ⚡ تحسين: جلب جميع التفويضات للمعتمدين الجدد في استعلام واحد (مع حماية من القائمة الفارغة)
+    let delegationData = [];
+    if (uniqueToAdd.length > 0) {
+      const [data] = await conn.execute(
+        `SELECT delegate_id, user_id FROM active_delegations WHERE delegate_id IN (${uniqueToAdd.map(() => '?').join(',')})`,
+        uniqueToAdd
       );
-      
-      // الحصول على الدور المحدد لهذا المستخدم
+      delegationData = data;
+    }
+    
+    const delegationMap = new Map();
+    delegationData.forEach(row => {
+      delegationMap.set(row.delegate_id, row.user_id);
+    });
+
+    // ⚡ تحسين: إدراج مجمع لسجلات الاعتماد
+    const logValues = [];
+    const notificationPromises = [];
+    
+    for (const userId of uniqueToAdd) {
       const userRole = roleMap.get(userId) || 'approved';
+      const delegatedBy = delegationMap.get(userId);
       
-      if (delegationRows.length) {
-        // هذا مفوض له، أضف سجل بالنيابة فقط
-        await conn.execute(
-          `INSERT INTO approval_logs
-             (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, approval_role, created_at)
-           VALUES (?, ?, 'pending', NULL, 1, ?, ?, CURRENT_TIMESTAMP)`,
-          [contentId, userId, delegationRows[0].user_id, userRole]
-        );
+      if (delegatedBy) {
+        logValues.push(`(${contentId}, ${userId}, 'pending', NULL, 1, ${delegatedBy}, '${userRole}', CURRENT_TIMESTAMP)`);
       } else {
-        // هذا معتمد عادي، أضف سجل عادي
-        await conn.execute(
-          `INSERT INTO approval_logs
-             (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, approval_role, created_at)
-           VALUES (?, ?, 'pending', NULL, 0, NULL, ?, CURRENT_TIMESTAMP)`,
-          [contentId, userId, userRole]
-        );
+        logValues.push(`(${contentId}, ${userId}, 'pending', NULL, 0, NULL, '${userRole}', CURRENT_TIMESTAMP)`);
       }
       
-      processedUsers.add(userId);
-      
-      await insertNotification(
-        userId,
-        'تم تفويضك للتوقيع',
-        `تم تفويضك للتوقيع على ملف جديد رقم ${contentId}`,
-        'proxy'
+      // ⚡ تحسين: تجميع الإشعارات للتنفيذ المؤجل
+      notificationPromises.push(
+        insertNotification(
+          userId,
+          'تم تفويضك للتوقيع',
+          `تم تفويضك للتوقيع على ملف جديد رقم ${contentId}`,
+          'proxy'
+        )
+      );
+    }
+    
+    if (logValues.length > 0) {
+      await conn.execute(
+        `INSERT INTO approval_logs (content_id, approver_id, status, comments, signed_as_proxy, delegated_by, approval_role, created_at) 
+         VALUES ${logValues.join(', ')}`
       );
     }
     
@@ -368,9 +367,21 @@ exports.sendApprovalRequest = async (req, res) => {
         ar: `أرسل المحتوى '${titleAR}' في القسم '${localizedDeptNameAR}' للموافقة إلى: ${approverNames}`,
         en: `Sent content '${titleEN}' in department '${localizedDeptNameEN}' for approval to: ${approverNames}`
     };
-    await logAction(userId, 'send_approval_request', JSON.stringify(logDescription), 'content', contentId);
-
     await conn.commit();
+    
+    // ⚡ تحسين: تنفيذ الإشعارات والـ logging في الخلفية لتسريع الاستجابة
+    setImmediate(async () => {
+      try {
+        // تنفيذ جميع الإشعارات المؤجلة
+        await Promise.allSettled(notificationPromises);
+        
+        // تسجيل العملية
+        await logAction(userId, 'send_approval_request', JSON.stringify(logDescription), 'content', contentId);
+      } catch (bgError) {
+        console.error('Background tasks error:', bgError);
+      }
+    });
+
     res.status(200).json({ status: 'success', message: 'تم الإرسال بنجاح' });
   } catch (err) {
     await conn.rollback();

@@ -47,7 +47,7 @@ body {
 
 main {
     padding-top: 90px;
-    max-width: 1800px;
+    max-width: 10000px;
     margin: auto;
 }
 
@@ -432,21 +432,4 @@ body[lang="en"] .main-footer,
     .developers {
         font-size: 12px;
     }
-}
-/* تأكيد أن الفوتر يظهر في الأسفل */
-body {
-    min-height: 100vh;
-    position: relative;
-}
-
-.maintenance-container {
-    margin-bottom: 100px; /* إضافة مساحة أسفل المحتوى للفوتر */
-}
-
-.main-footer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    z-index: 1000;
 }

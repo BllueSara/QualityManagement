@@ -1126,23 +1126,26 @@ class ProtocolController {
             let delegatedBy = null;
             let signedAsProxy = 0;
 
-            // الحالة 1: المستخدم الأصلي قام بتفويض شامل لشخص آخر → استخدم المفوض له بدلاً منه
-            const [delegatedToRows] = await protocolModel.pool.execute(
-                'SELECT delegate_id FROM active_delegations WHERE user_id = ? LIMIT 1',
-                [userId]
+            // ⚡ تحسين: جلب التفويضات في استعلام واحد
+            const [delegationRows] = await protocolModel.pool.execute(
+                `SELECT 
+                   CASE WHEN user_id = ? THEN delegate_id ELSE NULL END as delegated_to,
+                   CASE WHEN delegate_id = ? THEN user_id ELSE NULL END as delegated_by
+                 FROM active_delegations 
+                 WHERE user_id = ? OR delegate_id = ? 
+                 LIMIT 1`,
+                [userId, userId, userId, userId]
             );
-            if (delegatedToRows.length) {
-                finalApproverId = delegatedToRows[0].delegate_id;
-                delegatedBy = userId;
-                signedAsProxy = 1;
-            } else {
-                // الحالة 2: المستخدم هو مفوض له لشخص آخر
-                const [delegationRows] = await protocolModel.pool.execute(
-                    'SELECT user_id FROM active_delegations WHERE delegate_id = ? LIMIT 1',
-                    [userId]
-                );
-                if (delegationRows.length) {
-                    delegatedBy = delegationRows[0].user_id;
+            
+            if (delegationRows.length) {
+                if (delegationRows[0].delegated_to) {
+                    // المستخدم الأصلي قام بتفويض شامل لشخص آخر
+                    finalApproverId = delegationRows[0].delegated_to;
+                    delegatedBy = userId;
+                    signedAsProxy = 1;
+                } else if (delegationRows[0].delegated_by) {
+                    // المستخدم هو مفوض له لشخص آخر
+                    delegatedBy = delegationRows[0].delegated_by;
                     signedAsProxy = 1;
                 }
             }
@@ -1203,20 +1206,25 @@ class ProtocolController {
                 message: result.message
             });
 
-            try {
-                await logAction(
-                    currentUserId,
-                    'add_protocol_approver',
-                    JSON.stringify({
-                        ar: `تمت إضافة معتمد للمحضر رقم ${id} (المستخدم ${userId})${sequenceNumber ? ` بالتسلسل ${sequenceNumber}` : ''}`,
-                        en: `Added approver to protocol #${id} (user ${userId})${sequenceNumber ? ` at sequence ${sequenceNumber}` : ''}`
-                    }),
-                    'approval',
-                    id
-                );
-                // إشعار المعتمد المضاف
-                try { await sendProxyNotification(finalApproverId, id, false); } catch (_) {}
-            } catch (_) {}
+            // ⚡ تحسين: تنفيذ الـ logging والإشعارات في الخلفية لتسريع الاستجابة
+            setImmediate(async () => {
+                try {
+                    await logAction(
+                        currentUserId,
+                        'add_protocol_approver',
+                        JSON.stringify({
+                            ar: `تمت إضافة معتمد للمحضر رقم ${id} (المستخدم ${userId})${sequenceNumber ? ` بالتسلسل ${sequenceNumber}` : ''}`,
+                            en: `Added approver to protocol #${id} (user ${userId})${sequenceNumber ? ` at sequence ${sequenceNumber}` : ''}`
+                        }),
+                        'approval',
+                        id
+                    );
+                    // إشعار المعتمد المضاف
+                    await sendProxyNotification(finalApproverId, id, false);
+                } catch (bgError) {
+                    console.error('Background tasks error in addApprover:', bgError);
+                }
+            });
 
         } catch (error) {
             console.error('Error adding approver:', error);
